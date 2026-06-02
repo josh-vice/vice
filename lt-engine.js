@@ -1723,15 +1723,15 @@ function startExam() {
 }
 
 function renderExamQuestion() {
-  const q   = LT_EXAM_QUESTIONS[state.examQuestion];
+  const q   = getExamQuestions()[state.examQuestion];
   const idx = state.examQuestion;
 
   const counter = document.getElementById('exam-q-counter');
   const fill    = document.getElementById('exam-progress-fill');
   const body    = document.getElementById('exam-body');
 
-  if (counter) counter.textContent = `Question ${idx + 1} of ${LT_EXAM_QUESTIONS.length}`;
-  if (fill)    fill.style.width = `${Math.round((idx / LT_EXAM_QUESTIONS.length) * 100)}%`;
+  if (counter) counter.textContent = `Question ${idx + 1} of ${getExamQuestions().length}`;
+  if (fill)    fill.style.width = `${Math.round((idx / getExamQuestions().length) * 100)}%`;
 
   if (!body) return;
 
@@ -1739,7 +1739,7 @@ function renderExamQuestion() {
 
   body.innerHTML = `
     <div class="exam-q-card">
-      <div class="exam-q-num">Question ${idx + 1} of ${LT_EXAM_QUESTIONS.length}</div>
+      <div class="exam-q-num">Question ${idx + 1} of ${getExamQuestions().length}</div>
       <div class="exam-q-text">${q.question}</div>
       <div class="exam-q-chapter">Chapter ${q.chapterIndex + 1}: ${q.chapterTitle}</div>
       <div class="exam-answers" id="exam-answers-${idx}">
@@ -1752,7 +1752,7 @@ function renderExamQuestion() {
         `).join('')}
       </div>
       <button class="exam-next-btn" id="exam-next-btn" onclick="examNext()">
-        ${idx === LT_EXAM_QUESTIONS.length - 1 ? 'Submit Exam <i data-lucide="arrow-right" style="width:14px;height:14px;"></i>' : 'Next Question <i data-lucide="arrow-right" style="width:14px;height:14px;"></i>'}
+        ${idx === getExamQuestions().length - 1 ? 'Submit Exam <i data-lucide="arrow-right" style="width:14px;height:14px;"></i>' : 'Next Question <i data-lucide="arrow-right" style="width:14px;height:14px;"></i>'}
       </button>
     </div>`;
   if (typeof lucide !== 'undefined') lucide.createIcons();
@@ -1763,7 +1763,7 @@ window.handleExamAnswer = function(qIdx, answerId) {
 
   state.examAnswers[qIdx] = answerId;
 
-  const q      = LT_EXAM_QUESTIONS[qIdx];
+  const q      = getExamQuestions()[qIdx];
   const correct = q.answers.find(a => a.id === answerId && a.correct);
 
   // Style buttons
@@ -1789,7 +1789,7 @@ window.examNext = function() {
     return;
   }
 
-  if (idx === LT_EXAM_QUESTIONS.length - 1) {
+  if (idx === getExamQuestions().length - 1) {
     finishExam();
   } else {
     state.examQuestion++;
@@ -1807,13 +1807,13 @@ function finishExam() {
 
   // Score
   let correct = 0;
-  LT_EXAM_QUESTIONS.forEach((q, i) => {
+  getExamQuestions().forEach((q, i) => {
     const ans     = state.examAnswers[i];
     const answerDef = q.answers.find(a => a.id === ans);
     if (answerDef && answerDef.correct) correct++;
   });
 
-  const total    = LT_EXAM_QUESTIONS.length;
+  const total    = getExamQuestions().length;
   const pct      = Math.round((correct / total) * 100);
   const passed   = pct >= 70;
 
@@ -1824,7 +1824,7 @@ function finishExam() {
   if (result) result.classList.remove('hidden');
 
   // Find weak chapters
-  const weak = LT_EXAM_QUESTIONS
+  const weak = getExamQuestions()
     .filter((q, i) => {
       const ans = state.examAnswers[i];
       const def = q.answers.find(a => a.id === ans);
@@ -1877,7 +1877,7 @@ window.restartExam = function() {
   const fill    = document.getElementById('exam-progress-fill');
   const counter = document.getElementById('exam-q-counter');
   if (fill)    fill.style.width = '0%';
-  if (counter) counter.textContent = 'Question 1 of 13';
+  if (counter) counter.textContent = `Question 1 of ${getExamQuestions().length}`;
 };
 
 window.exitExam = function() {
@@ -2245,3 +2245,12 @@ function showSettings() {
   renderSettingsPage('content-area');
   if (typeof lucide !== 'undefined') lucide.createIcons();
 }
+
+window.showSimulator = function() {
+  disposeAllCharts();
+  if (typeof renderSimulator === 'function') {
+    renderSimulator('content-area');
+  } else {
+    showToast('Simulator not available.');
+  }
+};
