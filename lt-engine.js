@@ -886,6 +886,16 @@ function renderIntro(chapter) {
   }, 80);
 }
 
+function _practiceBtnHtml(chapter) {
+  if (typeof getSimPatternForChapter !== 'function') return '';
+  const pattern = getSimPatternForChapter(chapter.title);
+  if (!pattern) return '';
+  return `<button class="chapter-practice-btn" onclick="window.showSimulator({pattern:'${pattern}',label:'${chapter.title.replace(/'/g,"\\'")}',courseMode:true})">
+    <i data-lucide="activity" style="width:13px;height:13px;"></i>
+    Practice This Pattern
+  </button>`;
+}
+
 function renderLesson(chapter) {
   const { lesson, lessonChart } = chapter;
 
@@ -895,12 +905,14 @@ function renderLesson(chapter) {
       <h2 class="content-card-heading content-card-heading--lesson">${lesson.heading}</h2>
       <p class="content-card-body">${lesson.body}</p>
       ${bulletsHtml(lesson.bullets)}
+      ${_practiceBtnHtml(chapter)}
     </div>
     ${chartCardHtml('chart-lesson', lessonChart.title, lessonChart.type === 'line' ? 'Line' : 'Candles', true, lessonChart.chartHeight)}`;
 
   setContent(html);
   setTimeout(() => {
     renderTeachingChart('chart-lesson', lessonChart);
+    if (typeof lucide !== 'undefined') lucide.createIcons();
   }, 80);
 }
 
@@ -2246,10 +2258,10 @@ function showSettings() {
   if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
-window.showSimulator = function() {
+window.showSimulator = function(opts) {
   disposeAllCharts();
   if (typeof renderSimulator === 'function') {
-    renderSimulator('content-area');
+    renderSimulator('content-area', opts || {});
   } else {
     showToast('Simulator not available.');
   }
