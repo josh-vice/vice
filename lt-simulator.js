@@ -305,6 +305,17 @@ const _INJECTORS = {
 };
 
 const _TF_FACTOR = { '4h': 4, '6h': 6, '12h': 12, '1d': 24 };
+const _TF_HOURS  = { '4h': 4, '6h': 6, '12h': 12, '1d': 24 };
+const _SIM_MON   = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+// Format a candle timestamp for the x-axis. Higher TF → date only; intraday →
+// time, with the date shown at each midnight boundary.
+function _simFmtTime(d, tf) {
+ const mo = _SIM_MON[d.getUTCMonth()], day = d.getUTCDate();
+ if (tf === '1d') return mo + ' ' + day;
+ const h = d.getUTCHours();
+ return h === 0 ? mo + ' ' + day : (h < 10 ? '0' : '') + h + ':00';
+}
 
 // Generate the single source-of-truth base (1h) market. No timeframe — callers view it via viewMarket.
 function generateMarket(simPattern, seed) {
@@ -319,7 +330,11 @@ function viewMarket(market, timeframe) {
  const factor = _TF_FACTOR[timeframe] || 24; // 4h=4, 6h=6, 12h=12, 1d=24
  const ohlc = aggregateCandles(market.ohlcBase, factor);
  const cutIndex = Math.max(1, Math.min(ohlc.length - 2, Math.floor(market.cutIndexBase / factor)));
- const labels = ohlc.map((_, i) => { const d = i - cutIndex; return d === 0 ? 'T0' : (d > 0 ? '+' + d : String(d)); });
+ // Coordinated simulated time axis: each candle is `timeframe` apart, anchored
+ // (midnight-aligned, varied per seed) so the dates/times line up with the TF.
+ const stepMs   = (_TF_HOURS[timeframe] || 24) * 3600 * 1000;
+ const anchorMs = Date.UTC(2024, 0, 1) + ((market.seed || 1) % 200) * 86400000;
+ const labels = ohlc.map((_, i) => _simFmtTime(new Date(anchorMs + (i - cutIndex) * stepMs), timeframe));
  return {
  ohlc, labels, cutIndex,
  markLines: [{ yAxis: +market.keyLevel.toFixed(2), label: market.patternLabel, color: '#00d4d4' }],

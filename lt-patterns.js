@@ -13,13 +13,13 @@ const LT_PATTERNS = [
  patternLabel:"Hammer",
  explanation:"After the LUNA collapse May 2022, BTC printed a hammer at $26.7K. Long lower wick showed sellers exhausted. Buyers stepped in aggressively." },
 
- { id:"sd-1", concept:"Supply and Demand Zones", pattern:"Demand Zone Bounce",
+ { id:"sd-1", concept:"Components of a Market", pattern:"Demand Zone Bounce",
  symbol:"BTCUSDT", interval:"4h", decisionTime:1652486400000,
  lookback:30, reveal:12, correctAnswer:"buy", keyLevel:25400,
  patternLabel:"Demand Zone",
  explanation:"Price tapped a major demand zone at $25.4K with long lower wicks showing buyers defending. Exhaustion point of the LUNA selling pressure." },
 
- { id:"sd-2", concept:"Supply and Demand Zones", pattern:"Supply Zone Rejection",
+ { id:"sd-2", concept:"Components of a Market", pattern:"Supply Zone Rejection",
  symbol:"BTCUSDT", interval:"4h", decisionTime:1671321600000,
  lookback:30, reveal:12, correctAnswer:"sell", keyLevel:18500,
  patternLabel:"Supply Zone",
@@ -73,7 +73,7 @@ const LT_PATTERNS = [
  patternLabel:"BOS Bearish",
  explanation:"May 2022 BTC broke below the $33K swing low confirming bearish market structure. First clear BOS of the 2022 bear market." },
 
- { id:"srf-1", concept:"SR Flips and Break of Structure", pattern:"Resistance Becomes Support",
+ { id:"srf-1", concept:"Identifying Market Structure", pattern:"Resistance Becomes Support",
  symbol:"BTCUSDT", interval:"1d", decisionTime:1676764800000,
  lookback:25, reveal:10, correctAnswer:"buy", keyLevel:25000,
  patternLabel:"SR Flip",
@@ -161,7 +161,7 @@ const LT_PATTERNS = [
    symbol:"BTCUSDT", interval:"1d", decisionTime:1714521600000,
    lookback:20, reveal:10, correctAnswer:"buy", keyLevel:57500,
    patternLabel:"Limit Buy Setup",
-   explanation:"May 1 2024: BTC had set its pre-halving ATH at $73K before pulling back sharply to $57.5K — a prior breakout level that had flipped to support. A limit buy at $57.5K (not a market buy at wherever price was) captured the optimal fill: maker fee, guaranteed price, at the key level. A market order at the lows would have chased; a limit order at the predefined support waited and filled precisely. Correct order type for a planned swing entry."}
+   explanation:"May 1 2024: BTC had set its pre-halving ATH at $73K before pulling back sharply to $57.5K — a prior breakout level that had flipped to support. A limit buy at $57.5K (not a market buy at wherever price was) captured the optimal fill: maker fee, guaranteed price, at the key level. A market order at the lows would have chased; a limit order at the predefined support waited and filled precisely. Correct order type for a planned swing entry."},
 
 
  /* ── Course 4 patterns ─────────────────────────────────────────────── */

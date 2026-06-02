@@ -1,0 +1,26 @@
+# Internal docs / agent files — never deploy publicly
+AGENTS.md
+BUILD-PLAN.md
+HEARTBEAT.md
+IDENTITY.md
+SOUL.md
+TOOLS.md
+USER.md
+course1-notes.md
+course2-notes.md
+course3-notes.md
+course4-notes.md
+
+# Legacy / prototype pages superseded by index.html + lt-index.html
+liquidity-theory-course1.html
+sim-test.html
+trading-demo.html
+trading-quiz.html
+
+# Build/source artifacts not needed at runtime
+og-card.svg        # source for og-image.png (the exported PNG is what's served)
+serve.json         # local `npx serve` config only; Vercel uses vercel.json
+
+# OS / tooling junk
+.DS_Store
+.claude

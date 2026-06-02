@@ -1349,7 +1349,7 @@ const LT_CHAPTERS = [
       revealMarkPoints: [
         { dataIndex: 13, label: "Target Hit!\n+$10 (2R)", position: "top", color: "#00d4d4" }
       ],
-      explanation: "Risk = $100 − $95 = <strong>$5</strong>. Reward = $110 − $100 = <strong>$10</strong>. Reward ÷ Risk = 10 ÷ 5 = <strong>2:1 (2R)</strong>. You're risking one unit to potentially earn two. This is the type of asymmetric setup you should consistently seek. If you win only 40% of trades with 2:1 R, you're profitable.",
+      explanation: "Risk = $100 − $95 = <strong>$5</strong>. Reward = $110 − $100 = <strong>$10</strong>. Risk:Reward = 5:10 = <strong>1:2</strong>, i.e. Reward ÷ Risk = <strong>2R</strong>. You're risking one unit to potentially earn two. This is the type of asymmetric setup you should consistently seek. If you win only 40% of trades at 2R, you're profitable.",
       rule: "📌 Always pre-define risk before entry. Seek R multiples > 1. Ideal: 2:1 or better."
     }
   },

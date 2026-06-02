@@ -8,14 +8,18 @@
 
 /* ── Constants ────────────────────────────────────────────────────────────── */
 var LT_DARK_THEME = {
-  '--bg':      '#000000',
-  '--bg2':     '#080808',
-  '--bg3':     '#0f0f0f',
-  '--bg4':     '#141414',
-  '--text':    '#ffffff',
-  '--text2':   '#888888',
-  '--border':  '#1e1e1e',
-  '--border2': '#2a2a2a',
+  '--bg':         '#000000',
+  '--bg2':        '#080808',
+  '--bg3':        '#0f0f0f',
+  '--bg4':        '#141414',
+  '--bg5':        '#1a1a1a',
+  '--text':       '#ffffff',
+  '--text2':      '#888888',
+  '--text3':      '#555555',
+  '--border':     '#1e1e1e',
+  '--border2':    '#2a2a2a',
+  '--teal-dim':   'rgba(0,212,212,0.10)',
+  '--teal-faint': 'rgba(0,212,212,0.05)',
 };
 
 var LT_LIGHT_THEME = {
@@ -54,6 +58,56 @@ function ltApplySavedSettings() {
       document.documentElement.style.setProperty(k, vars[k]);
     });
   }
+
+  ltApplyFont(localStorage.getItem('lt_font') || 'default');
+}
+
+function ltApplyFont(f) {
+  var html = document.documentElement;
+  html.classList.remove('font-pixelify', 'font-inter');
+  if (f === 'pixelify') html.classList.add('font-pixelify');
+  else if (f === 'inter') html.classList.add('font-inter');
+}
+
+/* ── EXPORT / IMPORT PROGRESS (no account needed) ─────────────────────────── */
+function ltExportProgress() {
+  var data = {};
+  for (var i = 0; i < localStorage.length; i++) {
+    var k = localStorage.key(i);
+    if (k && k.indexOf('lt_') === 0) data[k] = localStorage.getItem(k);
+  }
+  var payload = { app: 'LiquidityTheory', version: 1, exported: new Date().toISOString(), data: data };
+  var blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  var stamp = new Date().toISOString().slice(0, 10);
+  a.href = url;
+  a.download = 'liquidity-theory-progress-' + stamp + '.json';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+  if (typeof showToast === 'function') showToast('✓ Progress backup downloaded');
+}
+
+function ltImportProgress(file) {
+  var reader = new FileReader();
+  reader.onload = function () {
+    var obj;
+    try { obj = JSON.parse(reader.result); } catch (e) { obj = null; }
+    var data = obj && (obj.data || (obj.app ? null : obj));
+    if (!data || typeof data !== 'object') {
+      if (typeof showToast === 'function') showToast('⚠ That file isn\'t a valid Liquidity Theory backup.');
+      else alert('That file isn\'t a valid Liquidity Theory backup.');
+      return;
+    }
+    if (!window.confirm('Restore this backup? It will replace the progress currently saved in this browser.')) return;
+    Object.keys(data).forEach(function (k) {
+      if (k.indexOf('lt_') === 0) { try { localStorage.setItem(k, data[k]); } catch (e) {} }
+    });
+    location.reload();
+  };
+  reader.readAsText(file);
 }
 
 ltApplySavedSettings();
@@ -265,6 +319,23 @@ function renderSettingsPage(containerId) {
       '  color: #ff8888;',
       '}',
 
+      '.lt-btn-secondary {',
+      '  padding: 8px 18px;',
+      '  background: transparent;',
+      '  border: 1.5px solid var(--border3);',
+      '  border-radius: 6px;',
+      '  color: var(--text2);',
+      '  font-size: 13px;',
+      '  font-weight: 600;',
+      '  font-family: "Barlow", sans-serif;',
+      '  cursor: pointer;',
+      '  transition: all 0.15s;',
+      '}',
+      '.lt-btn-secondary:hover {',
+      '  border-color: var(--teal);',
+      '  color: var(--teal);',
+      '}',
+
       /* confirm dialog */
       '.lt-confirm-overlay {',
       '  position: fixed;',
@@ -385,6 +456,7 @@ function renderSettingsPage(containerId) {
   /* ── read saved prefs ─────────────────────────────────────────────────── */
   var savedColor = localStorage.getItem('lt_bullish_color') || '#00d4d4';
   var savedTheme = localStorage.getItem('lt_theme') || 'dark';
+  var savedFont  = localStorage.getItem('lt_font') || 'default';
 
   /* ── sample candle SVG helper ─────────────────────────────────────────── */
   function candleSvg(color) {
@@ -460,6 +532,20 @@ function renderSettingsPage(containerId) {
           '</div>' +
         '</div>' +
       '</div>' +
+
+      '<div class="lt-settings-row">' +
+        '<div class="lt-settings-row-info">' +
+          '<div class="lt-settings-row-label">Font</div>' +
+          '<div class="lt-settings-row-desc">Choose the site-wide typeface</div>' +
+        '</div>' +
+        '<div class="lt-settings-row-control">' +
+          '<div class="lt-font-opts">' +
+            '<button class="lt-font-btn' + (savedFont === 'default'  ? ' active' : '') + '" data-font="default">Default</button>' +
+            '<button class="lt-font-btn' + (savedFont === 'pixelify' ? ' active' : '') + '" data-font="pixelify" style="font-family:\'Pixelify Sans\',sans-serif;">Pixelify</button>' +
+            '<button class="lt-font-btn' + (savedFont === 'inter'    ? ' active' : '') + '" data-font="inter" style="font-family:\'Inter\',sans-serif;">Inter</button>' +
+          '</div>' +
+        '</div>' +
+      '</div>' +
     '</div>' +
 
     /* ══ SECTION 3 — PROGRESS ══ */
@@ -473,6 +559,33 @@ function renderSettingsPage(containerId) {
         '</div>' +
         '<div class="lt-settings-row-control">' +
           '<button class="lt-btn-danger" id="lt-reset-btn">Reset Progress</button>' +
+        '</div>' +
+      '</div>' +
+    '</div>' +
+
+    /* ══ SECTION 3b — BACKUP & RESTORE ══ */
+    '<div class="lt-settings-section" id="lt-s-backup">' +
+      '<div class="lt-settings-section-label">Backup &amp; Restore</div>' +
+      '<div class="lt-settings-row-desc" style="padding:16px 20px 2px;">Your progress is already saved automatically in this browser — no account needed. Export a backup file if you want to keep a copy or move it to another device or browser.</div>' +
+
+      '<div class="lt-settings-row">' +
+        '<div class="lt-settings-row-info">' +
+          '<div class="lt-settings-row-label">Export Progress</div>' +
+          '<div class="lt-settings-row-desc">Download a backup file of your courses, simulator stats and settings</div>' +
+        '</div>' +
+        '<div class="lt-settings-row-control">' +
+          '<button class="lt-btn-secondary" id="lt-export-btn">Export Backup</button>' +
+        '</div>' +
+      '</div>' +
+
+      '<div class="lt-settings-row">' +
+        '<div class="lt-settings-row-info">' +
+          '<div class="lt-settings-row-label">Import Progress</div>' +
+          '<div class="lt-settings-row-desc">Restore from a backup file (replaces your current progress)</div>' +
+        '</div>' +
+        '<div class="lt-settings-row-control">' +
+          '<button class="lt-btn-secondary" id="lt-import-btn">Import Backup</button>' +
+          '<input type="file" id="lt-import-file" accept="application/json,.json" style="display:none;">' +
         '</div>' +
       '</div>' +
     '</div>' +
@@ -557,6 +670,32 @@ function renderSettingsPage(containerId) {
     themeLabel.textContent = isLight ? 'Light' : 'Dark';
     localStorage.setItem('lt_theme', isLight ? 'light' : 'dark');
   });
+
+  /* ── CONTROL: font selector (Default · Pixelify · VT323) ──────────────── */
+  var fontBtns = wrap.querySelectorAll('.lt-font-btn');
+  fontBtns.forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var f = btn.getAttribute('data-font');
+      ltApplyFont(f);
+      fontBtns.forEach(function(b) { b.classList.remove('active'); });
+      btn.classList.add('active');
+      localStorage.setItem('lt_font', f);
+    });
+  });
+
+  /* ── CONTROL: export / import progress ────────────────────────────────── */
+  var exportBtn = wrap.querySelector('#lt-export-btn');
+  if (exportBtn) exportBtn.addEventListener('click', ltExportProgress);
+
+  var importBtn  = wrap.querySelector('#lt-import-btn');
+  var importFile = wrap.querySelector('#lt-import-file');
+  if (importBtn && importFile) {
+    importBtn.addEventListener('click', function() { importFile.click(); });
+    importFile.addEventListener('change', function() {
+      if (importFile.files && importFile.files[0]) ltImportProgress(importFile.files[0]);
+      importFile.value = '';
+    });
+  }
 
   /* ── CONTROL: reset button + confirmation ─────────────────────────────── */
   var resetBtn = wrap.querySelector('#lt-reset-btn');

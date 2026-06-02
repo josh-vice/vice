@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Liquidity Theory — Learn to Trade Crypto, Free</title>
+  <link rel="icon" type="image/svg+xml" href="lt-logo.svg" />
+  <meta name="description" content="A free, no-account crypto trading academy. Four interactive courses, a live practice simulator, glossary, flashcards, and a final-exam certificate. Your progress saves automatically." />
+  <meta name="theme-color" content="#00d4d4" />
+
+  <!-- ⚠ Replace https://workspace-mu-rust.vercel.app with your real deployed domain so
+       social previews and crawlers resolve the absolute URLs below. -->
+  <link rel="canonical" href="https://workspace-mu-rust.vercel.app/" />
+
+  <!-- Open Graph (Discord, Facebook, LinkedIn, iMessage) -->
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Liquidity Theory" />
+  <meta property="og:title" content="Liquidity Theory — Learn to Trade Crypto, Free" />
+  <meta property="og:description" content="A free, interactive crypto trading academy — 4 courses, a live practice simulator, and real charts. No account needed; your progress saves automatically." />
+  <meta property="og:url" content="https://workspace-mu-rust.vercel.app/" />
+  <meta property="og:image" content="https://workspace-mu-rust.vercel.app/og-image.png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:image:alt" content="Liquidity Theory — master crypto trading, one candle at a time." />
+
+  <!-- Twitter / X -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Liquidity Theory — Learn to Trade Crypto, Free" />
+  <meta name="twitter:description" content="A free, interactive crypto trading academy — 4 courses, a live practice simulator, and real charts. No account needed." />
+  <meta name="twitter:image" content="https://workspace-mu-rust.vercel.app/og-image.png" />
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;600;700;800&family=Barlow:wght@300;400;500;600&family=JetBrains+Mono:wght@500;700;800&display=swap" rel="stylesheet" />
+
+  <!-- ECharts for the animated hero chart -->
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+  <!-- Lucide icons -->
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+
+  <style>
+    :root{
+      --bg:#000;--bg2:#080808;--bg3:#0f0f0f;--bg4:#141414;--bg5:#1a1a1a;
+      --border:#1e1e1e;--border2:#2a2a2a;--border3:#333;
+      --teal:#00d4d4;--teal2:#00b8b8;--teal-dim:rgba(0,212,212,.10);--teal-glow:rgba(0,212,212,.22);--teal-faint:rgba(0,212,212,.05);
+      --gold:#e0b020;--purple:#a855f7;--red:#cc2222;--green:#00c878;
+      --text:#fff;--text2:#888;--text3:#555;
+      --radius:4px;--radius-lg:8px;--radius-xl:16px;
+      --maxw:1180px;
+      --mono:'JetBrains Mono',ui-monospace,'SFMono-Regular',Menlo,monospace;
+    }
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+    html{scroll-behavior:smooth;}
+    body{
+      font-family:'Barlow',system-ui,-apple-system,sans-serif;
+      background:var(--bg);color:var(--text);font-size:16px;line-height:1.6;
+      -webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;
+      overflow-x:hidden;
+    }
+    h1,h2,h3,h4{font-family:'Barlow Condensed',sans-serif;line-height:1.05;font-weight:800;}
+    a{color:inherit;text-decoration:none;}
+    .wrap{max-width:var(--maxw);margin:0 auto;padding:0 24px;}
+    .accent-teal{color:var(--teal);}
+
+    /* faint global candle grid backdrop */
+    body::before{
+      content:"";position:fixed;inset:0;z-index:0;pointer-events:none;
+      background:
+        radial-gradient(900px 480px at 78% -8%, rgba(0,212,212,.10), transparent 60%),
+        radial-gradient(760px 520px at 0% 12%, rgba(168,85,247,.06), transparent 55%),
+        linear-gradient(rgba(255,255,255,.018) 1px,transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,.018) 1px,transparent 1px);
+      background-size:auto,auto,44px 44px,44px 44px;
+    }
+    .wrap,nav.topnav{position:relative;z-index:1;}
+
+    /* ── NAV ─────────────────────────────────────────── */
+    nav.topnav{
+      position:sticky;top:0;z-index:50;
+      backdrop-filter:blur(12px);background:rgba(0,0,0,.62);
+      border-bottom:1px solid var(--border);
+    }
+    .topnav-inner{display:flex;align-items:center;gap:20px;height:64px;max-width:var(--maxw);margin:0 auto;padding:0 24px;}
+    .brand{display:flex;align-items:center;gap:9px;font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:21px;letter-spacing:.3px;}
+    .brand .brand-logo{width:26px;height:26px;display:block;filter:drop-shadow(0 0 8px rgba(22,233,208,.4));}
+    .nav-links{display:flex;gap:26px;margin-left:18px;}
+    .nav-links a{color:var(--text2);font-size:14px;font-weight:500;transition:color .15s;}
+    .nav-links a:hover{color:var(--text);}
+    .nav-spacer{flex:1;}
+    .nav-ticker{display:flex;align-items:center;gap:7px;font-size:13px;color:var(--text2);padding:6px 11px;border:1px solid var(--border2);border-radius:var(--radius);background:var(--bg3);}
+    .nav-ticker .dot{width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);animation:pulse 1.8s infinite;}
+    .nav-ticker b{color:var(--text);font-family:var(--mono);font-weight:700;font-size:12px;}
+    @keyframes pulse{0%,100%{opacity:1;}50%{opacity:.35;}}
+
+    .btn{
+      display:inline-flex;align-items:center;gap:9px;font-family:'Barlow',sans-serif;
+      font-weight:700;font-size:15px;padding:12px 22px;border-radius:var(--radius);
+      border:1px solid transparent;cursor:pointer;transition:all .16s;white-space:nowrap;
+    }
+    .btn svg{width:17px;height:17px;}
+    .btn-primary{background:var(--teal);color:#04201f;border-color:var(--teal);box-shadow:0 6px 22px var(--teal-glow);}
+    .btn-primary:hover{filter:brightness(1.08);transform:translateY(-1px);box-shadow:0 10px 30px var(--teal-glow);}
+    .btn-ghost{background:transparent;color:var(--text);border-color:var(--border3);}
+    .btn-ghost:hover{border-color:var(--teal);color:var(--teal);}
+    .btn-sm{padding:9px 16px;font-size:14px;}
+
+    /* ── HERO ────────────────────────────────────────── */
+    .hero{padding:80px 0 70px;position:relative;}
+    .hero::before{content:"";position:absolute;right:-4%;top:2%;width:640px;height:540px;z-index:0;pointer-events:none;
+      background:radial-gradient(circle at 58% 42%, rgba(0,212,212,.22), rgba(0,212,212,.05) 42%, transparent 70%);
+      filter:blur(24px);}
+    .hero-grid{display:grid;grid-template-columns:1.05fr .95fr;gap:54px;align-items:center;position:relative;z-index:1;}
+    .eyebrow{display:inline-flex;align-items:center;gap:8px;font-size:12.5px;font-weight:600;letter-spacing:1.4px;text-transform:uppercase;color:var(--teal);background:var(--teal-dim);border:1px solid rgba(0,212,212,.25);padding:6px 13px;border-radius:100px;margin-bottom:22px;}
+    .hero h1{font-size:67px;letter-spacing:-.5px;margin-bottom:20px;}
+    .hero h1 .grad{background:linear-gradient(110deg,var(--teal),#7ef9f9 60%,var(--teal));-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;}
+    .hero p.lead{font-size:18.5px;color:var(--text2);max-width:520px;margin-bottom:30px;}
+    .hero-cta{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:24px;}
+    .trust{display:flex;gap:20px;flex-wrap:wrap;font-size:13.5px;color:var(--text3);}
+    .trust span{display:inline-flex;align-items:center;gap:7px;}
+    .trust svg{width:15px;height:15px;color:var(--teal);}
+
+    .hero-chart-card{
+      background:linear-gradient(180deg,var(--bg3),var(--bg2));border:1px solid var(--border2);
+      border-radius:var(--radius-xl);padding:16px 16px 8px;box-shadow:0 30px 80px rgba(0,0,0,.6),0 0 60px rgba(0,212,212,.08);position:relative;overflow:hidden;
+    }
+    .hero-chart-card::after{content:"";position:absolute;inset:0;border-radius:var(--radius-xl);border:1px solid rgba(0,212,212,.10);pointer-events:none;}
+    .hcc-head{display:flex;align-items:center;justify-content:space-between;padding:6px 8px 12px;}
+    .hcc-left{display:flex;align-items:center;gap:13px;}
+    .hcc-dots{display:flex;gap:6px;}
+    .hcc-dots i{width:9px;height:9px;border-radius:50%;display:inline-block;}
+    .hcc-sym{display:flex;align-items:center;gap:9px;font-family:'Barlow Condensed';font-weight:700;font-size:17px;}
+    .hcc-sym .bub{width:22px;height:22px;display:inline-flex;flex-shrink:0;}
+    .hcc-sym .bub svg{width:22px;height:22px;display:block;}
+    .hcc-right{display:flex;align-items:center;gap:10px;}
+    .hcc-price{font-family:var(--mono);font-weight:800;font-size:17px;letter-spacing:-.3px;}
+    .hcc-chg{font-family:var(--mono);font-size:11px;font-weight:700;padding:3px 8px;border-radius:4px;}
+    .hcc-chg.up{color:var(--green);background:rgba(0,200,120,.13);}
+    .hcc-chg.down{color:#ff5a5a;background:rgba(204,34,34,.15);}
+    .hcc-live{font-size:11px;font-weight:600;letter-spacing:1px;color:var(--green);display:flex;align-items:center;gap:6px;}
+    .hcc-live .dot{width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);animation:pulse 1.8s infinite;}
+    #hero-chart{width:100%;height:288px;}
+    .hcc-rail{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--border);border-top:1px solid var(--border);margin:8px -16px -8px;}
+    .hcc-rail > div{background:var(--bg2);padding:11px 16px;}
+    .hcc-rail .k{font-size:9.5px;letter-spacing:1.2px;text-transform:uppercase;color:var(--text3);}
+    .hcc-rail .v{font-family:var(--mono);font-weight:700;font-size:14px;letter-spacing:-.3px;margin-top:4px;color:var(--text);}
+    .hcc-rail .v.up{color:var(--green);}
+    .hcc-rail .v.down{color:#ff5a5a;}
+
+    /* ── VALUE PILL BAR ──────────────────────────────── */
+    .pillbar{border-top:1px solid var(--border);border-bottom:1px solid var(--border);background:var(--bg2);}
+    .pillbar-inner{display:grid;grid-template-columns:repeat(4,1fr);max-width:var(--maxw);margin:0 auto;}
+    .pillbar-cell{display:flex;align-items:center;justify-content:center;gap:9px;padding:18px 16px;
+      border-left:1px solid var(--border);font-family:var(--mono);font-weight:700;font-size:12.5px;
+      letter-spacing:1.2px;text-transform:uppercase;color:var(--text2);text-align:center;}
+    .pillbar-cell:first-child{border-left:none;}
+    .pillbar-cell svg{width:16px;height:16px;color:var(--teal);flex-shrink:0;}
+
+    /* ── LOGOS STRIP ─────────────────────────────────── */
+    .logos-band{border-top:1px solid var(--border);border-bottom:1px solid var(--border);background:rgba(8,8,8,.5);}
+    .logos-inner{display:flex;align-items:center;justify-content:center;gap:34px;flex-wrap:wrap;padding:22px 24px;}
+    .logos-label{font-size:11.5px;font-weight:600;letter-spacing:1.4px;text-transform:uppercase;color:var(--text3);}
+    .logos-row{display:flex;align-items:center;gap:30px;flex-wrap:wrap;}
+    .logo-pill{display:inline-flex;align-items:center;gap:9px;color:var(--text2);font-family:'Barlow Condensed';font-weight:700;font-size:19px;letter-spacing:.3px;opacity:.62;transition:opacity .18s,color .18s;}
+    .logo-pill:hover{opacity:1;color:var(--text);}
+    .logo-pill img{width:22px;height:22px;border-radius:5px;object-fit:contain;}
+
+    /* ── STATS ───────────────────────────────────────── */
+    .stats{border-top:1px solid var(--border);border-bottom:1px solid var(--border);background:var(--bg2);}
+    .stats-grid{display:grid;grid-template-columns:repeat(4,1fr);}
+    .stat{padding:30px 24px;text-align:center;border-left:1px solid var(--border);}
+    .stat:first-child{border-left:none;}
+    .stat .num{font-family:var(--mono);font-weight:800;font-size:38px;letter-spacing:-1px;color:var(--text);line-height:1;}
+    .stat .num span{color:var(--teal);}
+    .stat .lab{font-size:13px;color:var(--text2);margin-top:8px;letter-spacing:.3px;}
+
+    /* ── SECTION SHELL ───────────────────────────────── */
+    section.block{padding:88px 0;}
+    .sec-head{text-align:center;max-width:680px;margin:0 auto 52px;}
+    .sec-head .kicker{font-size:12.5px;font-weight:600;letter-spacing:1.6px;text-transform:uppercase;color:var(--teal);margin-bottom:14px;}
+    .sec-head h2{font-size:46px;letter-spacing:-.3px;margin-bottom:16px;}
+    .sec-head p{font-size:17px;color:var(--text2);}
+
+    /* ── COURSES ─────────────────────────────────────── */
+    .courses{display:grid;grid-template-columns:repeat(2,1fr);gap:20px;}
+    .course-card{
+      position:relative;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius-lg);
+      padding:26px 26px 24px;overflow:hidden;transition:transform .18s,border-color .18s,box-shadow .18s;
+      --c:var(--teal);
+    }
+    .course-card::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--c);}
+    .course-card:hover{transform:translateY(-4px);border-color:color-mix(in srgb,var(--c) 55%,var(--border2));box-shadow:0 18px 44px rgba(0,0,0,.5);}
+    .cc-no{font-family:'Barlow Condensed';font-weight:800;font-size:14px;letter-spacing:2px;color:var(--c);margin-bottom:10px;}
+    .course-card h3{font-size:27px;margin-bottom:9px;}
+    .course-card p{font-size:14.5px;color:var(--text2);margin-bottom:18px;}
+    .cc-meta{display:flex;align-items:center;gap:14px;font-size:12.5px;color:var(--text3);}
+    .cc-meta .chip{display:inline-flex;align-items:center;gap:6px;}
+    .cc-meta svg{width:14px;height:14px;color:var(--c);}
+
+    /* ── FEATURES (bento) ────────────────────────────── */
+    .feat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;}
+    .feat{position:relative;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius-lg);padding:26px 24px;transition:border-color .18s,transform .18s;overflow:hidden;}
+    .feat:hover{border-color:var(--border3);transform:translateY(-3px);}
+    .feat-ic{width:46px;height:46px;border-radius:12px;background:var(--teal-dim);border:1px solid rgba(0,212,212,.2);display:flex;align-items:center;justify-content:center;margin-bottom:16px;}
+    .feat-ic svg{width:22px;height:22px;color:var(--teal);}
+    .feat h3{font-size:21px;margin-bottom:8px;}
+    .feat p{font-size:14px;color:var(--text2);max-width:30ch;}
+    /* featured wide tile */
+    .feat--wide{grid-column:span 2;display:flex;flex-direction:column;justify-content:space-between;
+      background:radial-gradient(120% 130% at 0% 0%, rgba(0,212,212,.10), transparent 55%), var(--bg3);
+      border-color:rgba(0,212,212,.22);}
+    .feat--wide h3{font-size:26px;}
+    .feat--wide p{font-size:15px;max-width:42ch;}
+    .feat-spark{display:flex;align-items:flex-end;gap:4px;height:42px;margin-top:20px;}
+    .feat-spark i{flex:1;border-radius:2px 2px 0 0;display:block;transform-origin:bottom;animation:sparkRise .9s cubic-bezier(.2,.8,.2,1) backwards;}
+    @keyframes sparkRise{from{transform:scaleY(.2);opacity:.3;}to{transform:scaleY(1);opacity:1;}}
+
+    /* ── HOW IT WORKS ────────────────────────────────── */
+    .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;counter-reset:step;}
+    .step{position:relative;padding:28px 24px;border:1px dashed var(--border3);border-radius:var(--radius-lg);}
+    .step .n{font-family:'Barlow Condensed';font-weight:800;font-size:15px;color:#04201f;background:var(--teal);width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;margin-bottom:16px;}
+    .step h3{font-size:21px;margin-bottom:8px;}
+    .step p{font-size:14px;color:var(--text2);}
+
+    /* ── COMMUNITY ───────────────────────────────────── */
+    .comm{background:var(--bg2);border-top:1px solid var(--border);border-bottom:1px solid var(--border);}
+    .comm-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;}
+    .comm-card{display:flex;flex-direction:column;align-items:flex-start;gap:12px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius-lg);padding:24px 22px;transition:transform .18s,border-color .18s;}
+    .comm-card:hover{transform:translateY(-3px);border-color:var(--border3);}
+    .comm-ic{width:48px;height:48px;border-radius:13px;display:flex;align-items:center;justify-content:center;}
+    .comm-ic svg{width:24px;height:24px;color:#fff;}
+    .comm-ic-img{padding:7px;overflow:hidden;}
+    .comm-ic-img img{max-width:100%;max-height:100%;width:auto;height:auto;object-fit:contain;display:block;}
+    .comm-card h3{font-size:20px;}
+    .comm-card p{font-size:13px;color:var(--text2);flex:1;}
+    .comm-card .go{font-size:13px;font-weight:700;color:var(--teal);display:inline-flex;align-items:center;gap:6px;}
+    .comm-card .go svg{width:14px;height:14px;}
+
+    /* ── FINAL CTA ───────────────────────────────────── */
+    .cta-band{padding:96px 0;text-align:center;}
+    .cta-inner{max-width:720px;margin:0 auto;background:linear-gradient(160deg,rgba(0,212,212,.12),rgba(0,212,212,.02));border:1px solid rgba(0,212,212,.25);border-radius:var(--radius-xl);padding:56px 40px;}
+    .cta-inner h2{font-size:50px;margin-bottom:16px;}
+    .cta-inner p{font-size:18px;color:var(--text2);margin-bottom:30px;}
+
+    /* ── FOOTER ──────────────────────────────────────── */
+    footer.site{border-top:1px solid var(--border);padding:44px 0;}
+    .foot-grid{display:flex;justify-content:space-between;align-items:center;gap:24px;flex-wrap:wrap;}
+    .foot-links{display:flex;gap:24px;font-size:14px;}
+    .foot-links a{color:var(--text2);transition:color .15s;}
+    .foot-links a:hover{color:var(--text);}
+    .foot-copy{font-size:13px;color:var(--text3);}
+
+    /* reveal on scroll */
+    .reveal{opacity:0;transform:translateY(22px);transition:opacity .6s ease,transform .6s ease;}
+    .reveal.in{opacity:1;transform:none;}
+
+    /* ── RESPONSIVE ──────────────────────────────────── */
+    @media(max-width:920px){
+      .hero-grid{grid-template-columns:1fr;gap:40px;}
+      .hero h1{font-size:54px;}
+      .hero-chart-card{order:-1;}
+      .stats-grid{grid-template-columns:repeat(2,1fr);}
+      .stat:nth-child(3){border-left:none;}
+      .courses,.feat-grid,.steps,.comm-grid{grid-template-columns:1fr;}
+      .feat-grid,.steps{grid-template-columns:repeat(2,1fr);}
+      .feat--wide{grid-column:span 2;}
+      .pillbar-inner{grid-template-columns:repeat(2,1fr);}
+      .pillbar-cell:nth-child(3){border-left:none;}
+      .nav-links{display:none;}
+    }
+    @media(max-width:560px){
+      .hero h1{font-size:42px;}
+      .sec-head h2{font-size:36px;}
+      .cta-inner h2{font-size:38px;}
+      .feat-grid,.steps,.comm-grid{grid-template-columns:1fr;}
+      .feat--wide{grid-column:auto;}
+      .pillbar-inner{grid-template-columns:1fr 1fr;}
+      .pillbar-cell{font-size:11px;letter-spacing:.8px;padding:14px 10px;}
+      .feat-liveprice{font-size:24px;}
+      .stats-grid{grid-template-columns:repeat(2,1fr);}
+      .logos-inner{gap:18px;}
+      .logos-row{gap:20px;}
+      .nav-ticker{display:none;}
+      section.block{padding:64px 0;}
+    }
+    @media(prefers-reduced-motion:reduce){
+      .reveal{opacity:1;transform:none;transition:none;}
+      html{scroll-behavior:auto;}
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ════════ NAV ════════ -->
+  <nav class="topnav">
+    <div class="topnav-inner">
+      <a href="#top" class="brand"><img class="brand-logo" src="lt-logo.svg" alt="" aria-hidden="true" />Liquidity Theory</a>
+      <div class="nav-links">
+        <a href="#courses">Courses</a>
+        <a href="#features">Features</a>
+        <a href="#how">How it works</a>
+        <a href="#community">Community</a>
+      </div>
+      <div class="nav-spacer"></div>
+      <div class="nav-ticker" title="Live BTC price">
+        <span class="dot"></span>BTC <b id="nav-btc">—</b>
+      </div>
+      <a href="lt-index.html" class="btn btn-primary btn-sm">Launch App <i data-lucide="arrow-right"></i></a>
+    </div>
+  </nav>
+
+  <!-- ════════ HERO ════════ -->
+  <header id="top" class="hero">
+    <div class="wrap hero-grid">
+      <div>
+        <span class="eyebrow"><i data-lucide="sparkles" style="width:14px;height:14px;"></i> Free · No account needed</span>
+        <h1>Master crypto trading,<br><span class="grad">one candle at a time.</span></h1>
+        <p class="lead">A complete, interactive academy that takes you from your first candlestick to advanced liquidity theory — with a live practice simulator, real charts, and zero fluff.</p>
+        <div class="hero-cta">
+          <a href="lt-index.html" class="btn btn-primary"><i data-lucide="graduation-cap"></i> Start Learning Free</a>
+          <a href="#courses" class="btn btn-ghost"><i data-lucide="list"></i> Explore Courses</a>
+        </div>
+        <div class="trust">
+          <span><i data-lucide="check"></i> Your progress saves automatically — no account needed</span>
+        </div>
+      </div>
+
+      <div class="hero-chart-card">
+        <div class="hcc-head">
+          <div class="hcc-left">
+            <span class="hcc-dots"><i style="background:#ff5f56"></i><i style="background:#ffbd2e"></i><i style="background:#27c93f"></i></span>
+            <span class="hcc-sym"><span class="bub" aria-hidden="true"><svg viewBox="0 0 32 32"><circle cx="16" cy="16" r="16" fill="#F7931A"/><path fill="#fff" d="M23 14.2c.3-2-1.2-3-3.3-3.8l.7-2.7-1.7-.4-.7 2.6c-.4-.1-.9-.2-1.3-.3l.7-2.6-1.6-.4-.7 2.7c-.4-.1-.7-.2-1-.2l-2.3-.6-.4 1.8s1.2.3 1.2.3c.7.2.8.6.8 1l-.8 3c.1 0 .1 0 .1.1l-.1 0-1.1 4.3c-.1.2-.3.5-.7.4 0 0-1.2-.3-1.2-.3l-.8 1.9 2.2.5c.4.1.8.2 1.2.3l-.7 2.7 1.6.4.7-2.7c.4.1.9.2 1.3.3l-.7 2.7 1.7.4.7-2.7c2.8.5 4.9.3 5.8-2.2.7-2 0-3.2-1.5-3.9 1.1-.3 1.9-1 2.1-2.4zm-3.7 5.2c-.5 2-3.9.9-5 .6l.9-3.6c1.1.3 4.6.8 4.1 3zm.5-5.3c-.5 1.8-3.3.9-4.2.7l.8-3.3c.9.2 3.9.6 3.4 2.6z"/></svg></span> BTC / USDT</span>
+          </div>
+          <div class="hcc-right">
+            <span class="hcc-price" id="hcc-price">—</span>
+            <span class="hcc-chg up" id="hcc-chg">+0.00%</span>
+            <span class="hcc-live"><span class="dot"></span> LIVE</span>
+          </div>
+        </div>
+        <div id="hero-chart"></div>
+        <div class="hcc-rail">
+          <div><div class="k">24h High</div><div class="v" id="hcc-high">—</div></div>
+          <div><div class="k">24h Low</div><div class="v" id="hcc-low">—</div></div>
+          <div><div class="k">24h Change</div><div class="v up" id="hcc-change">—</div></div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ════════ VALUE PILL BAR ════════ -->
+  <div class="pillbar">
+    <div class="pillbar-inner">
+      <div class="pillbar-cell"><i data-lucide="gift"></i> 100% Free</div>
+      <div class="pillbar-cell"><i data-lucide="user-x"></i> No Account</div>
+      <div class="pillbar-cell"><i data-lucide="mouse-pointer-click"></i> Interactive</div>
+      <div class="pillbar-cell"><i data-lucide="trending-up"></i> Beginner → Advanced</div>
+    </div>
+  </div>
+
+  <!-- ════════ LOGOS / DATA SOURCES ════════ -->
+  <div class="logos-band">
+    <div class="wrap logos-inner">
+      <span class="logos-label">Live market data powered by</span>
+      <div class="logos-row">
+        <span class="logo-pill"><img src="https://cdn.brandfetch.io/binance.com/w/48/h/48/logo" alt="" onerror="if(this.dataset.s!=='1'){this.dataset.s='1';this.src='https://www.google.com/s2/favicons?sz=64&domain=binance.com';}else{this.style.display='none';}">Binance</span>
+        <span class="logo-pill"><img src="https://cdn.brandfetch.io/coinbase.com/w/48/h/48/logo" alt="" onerror="if(this.dataset.s!=='1'){this.dataset.s='1';this.src='https://www.google.com/s2/favicons?sz=64&domain=coinbase.com';}else{this.style.display='none';}">Coinbase</span>
+        <span class="logo-pill"><img src="https://cdn.brandfetch.io/coingecko.com/w/48/h/48/logo" alt="" onerror="if(this.dataset.s!=='1'){this.dataset.s='1';this.src='https://www.google.com/s2/favicons?sz=64&domain=coingecko.com';}else{this.style.display='none';}">CoinGecko</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════ STATS ════════ -->
+  <div class="stats">
+    <div class="wrap stats-grid">
+      <div class="stat"><div class="num">4</div><div class="lab">Structured courses</div></div>
+      <div class="stat"><div class="num">300<span>+</span></div><div class="lab">Interactive lessons</div></div>
+      <div class="stat"><div class="num">80<span>+</span></div><div class="lab">Glossary terms</div></div>
+      <div class="stat"><div class="num"><span>$0</span></div><div class="lab">Cost to learn</div></div>
+    </div>
+  </div>
+
+  <!-- ════════ COURSES ════════ -->
+  <section id="courses" class="block">
+    <div class="wrap">
+      <div class="sec-head reveal">
+        <div class="kicker">The Curriculum</div>
+        <h2>Four courses. One clear path.</h2>
+        <p>Start from absolute zero and build all the way to institutional-grade liquidity concepts. Each course unlocks the next — or jump straight to any topic you want.</p>
+      </div>
+      <div class="courses">
+        <a href="lt-index.html" class="course-card reveal" style="--c:var(--teal)">
+          <div class="cc-no">COURSE 01</div>
+          <h3>Laying the Foundation</h3>
+          <p>Candlesticks, price action, support &amp; resistance, and how markets actually move. The bedrock every trader needs.</p>
+          <div class="cc-meta"><span class="chip"><i data-lucide="book-open"></i> Beginner</span><span class="chip"><i data-lucide="layers"></i> Core concepts</span></div>
+        </a>
+        <a href="lt-index.html" class="course-card reveal" style="--c:var(--gold)">
+          <div class="cc-no">COURSE 02</div>
+          <h3>Building Your Toolbox</h3>
+          <p>Supply &amp; demand zones, the order book, leverage, contracts, and executing positions with confidence.</p>
+          <div class="cc-meta"><span class="chip"><i data-lucide="wrench"></i> Intermediate</span><span class="chip"><i data-lucide="layers"></i> Mechanics</span></div>
+        </a>
+        <a href="lt-index.html" class="course-card reveal" style="--c:var(--purple)">
+          <div class="cc-no">COURSE 03</div>
+          <h3>Sharpening Your Edge</h3>
+          <p>Ichimoku, ranges, DBS/SSR strategies, and building a repeatable trading system you can trust.</p>
+          <div class="cc-meta"><span class="chip"><i data-lucide="target"></i> Advanced</span><span class="chip"><i data-lucide="layers"></i> Strategy</span></div>
+        </a>
+        <a href="lt-index.html" class="course-card reveal" style="--c:var(--red)">
+          <div class="cc-no">COURSE 04</div>
+          <h3>Liquidity Theory</h3>
+          <p>The headline curriculum: liquidity pools, cumulative delta, futures basis, mark price, and reading the smart money.</p>
+          <div class="cc-meta"><span class="chip"><i data-lucide="zap"></i> Mastery</span><span class="chip"><i data-lucide="layers"></i> 30 sessions</span></div>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ════════ FEATURES ════════ -->
+  <section id="features" class="block" style="background:var(--bg2);border-top:1px solid var(--border);border-bottom:1px solid var(--border);">
+    <div class="wrap">
+      <div class="sec-head reveal">
+        <div class="kicker">Why Liquidity Theory</div>
+        <h2>Learn by doing — not by watching.</h2>
+        <p>Every concept is paired with real, interactive charts and tools so it actually sticks.</p>
+      </div>
+      <div class="feat-grid">
+        <div class="feat feat--wide reveal">
+          <div>
+            <div class="feat-ic"><i data-lucide="activity"></i></div>
+            <h3>Practice Simulator</h3>
+            <p>Place trades on live-feeling charts with draggable take-profit and stop-loss orders. Build instincts and rehearse risk management — completely risk-free, no real money.</p>
+          </div>
+          <div class="feat-spark" id="feat-spark"></div>
+        </div>
+        <div class="feat reveal"><div class="feat-ic"><i data-lucide="candlestick-chart"></i></div><h3>Interactive Charts</h3><p>Every lesson is built on real candlestick charts you can read, replay, and learn to anticipate.</p></div>
+        <div class="feat reveal"><div class="feat-ic"><i data-lucide="book-open"></i></div><h3>Glossary &amp; Search</h3><p>80+ cross-referenced terms with diagrams. Search any concept instantly from anywhere in the app.</p></div>
+        <div class="feat reveal"><div class="feat-ic"><i data-lucide="layers"></i></div><h3>Flashcards</h3><p>Per-course decks to drill the vocabulary, then review only the ones you got wrong.</p></div>
+        <div class="feat reveal"><div class="feat-ic"><i data-lucide="award"></i></div><h3>Exam &amp; Certificate</h3><p>Test yourself with a final exam and earn a printable certificate of completion.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ════════ HOW IT WORKS ════════ -->
+  <section id="how" class="block">
+    <div class="wrap">
+      <div class="sec-head reveal">
+        <div class="kicker">Dead Simple</div>
+        <h2>Get started in seconds.</h2>
+        <p>No email, no password, no credit card. Just open it and learn.</p>
+      </div>
+      <div class="steps">
+        <div class="step reveal"><div class="n">1</div><h3>Open the app</h3><p>Click Launch and you're in. There's no account to create and nothing to download.</p></div>
+        <div class="step reveal"><div class="n">2</div><h3>Work through the courses</h3><p>Follow the path or jump to any topic. Quizzes and charts make every lesson interactive.</p></div>
+        <div class="step reveal"><div class="n">3</div><h3>Your progress saves itself</h3><p>Everything is stored right in your browser. Want a copy? Export a backup anytime in Settings.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ════════ COMMUNITY ════════ -->
+  <section id="community" class="comm block">
+    <div class="wrap">
+      <div class="sec-head reveal">
+        <div class="kicker">You're Not Alone</div>
+        <h2>Join the community.</h2>
+        <p>Trade ideas, ask questions, and learn alongside thousands of other traders.</p>
+      </div>
+      <div class="comm-grid">
+        <a href="https://discord.gg/LiquidityTheory" target="_blank" rel="noopener noreferrer" class="comm-card reveal">
+          <div class="comm-ic" style="background:#5865F2;box-shadow:0 8px 22px rgba(88,101,242,.4);">
+            <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M20.317 4.3698a19.7913 19.7913 0 0 0-4.8851-1.5152.0741.0741 0 0 0-.0785.0371c-.211.3753-.4447.8648-.6083 1.2495-1.8447-.2762-3.68-.2762-5.4868 0-.1636-.3933-.4058-.8742-.6177-1.2495a.077.077 0 0 0-.0785-.037 19.7363 19.7363 0 0 0-4.8852 1.515.0699.0699 0 0 0-.0321.0277C.5334 9.0458-.319 13.5799.0992 18.0578a.0824.0824 0 0 0 .0312.0561c2.0528 1.5076 4.0413 2.4228 5.9929 3.0294a.0777.0777 0 0 0 .0842-.0276c.4616-.6304.8731-1.2952 1.226-1.9942a.076.076 0 0 0-.0416-.1057c-.6528-.2476-1.2743-.5495-1.8722-.8923a.077.077 0 0 1-.0076-.1277c.1258-.0943.2517-.1923.3718-.2914a.0743.0743 0 0 1 .0776-.0105c3.9278 1.7933 8.18 1.7933 12.0614 0a.0739.0739 0 0 1 .0785.0095c.1202.099.246.1981.3728.2924a.077.077 0 0 1-.0066.1276 12.2986 12.2986 0 0 1-1.873.8914.0766.0766 0 0 0-.0407.1067c.3604.698.7719 1.3628 1.225 1.9932a.076.076 0 0 0 .0842.0286c1.961-.6067 3.9495-1.5219 6.0023-3.0294a.077.077 0 0 0 .0313-.0552c.5004-5.177-.8382-9.6739-3.5485-13.6604a.061.061 0 0 0-.0312-.0286zM8.02 15.3312c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9555-2.4189 2.157-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.9555 2.4189-2.1569 2.4189zm7.9748 0c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9554-2.4189 2.1569-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.946 2.4189-2.1568 2.4189Z"/></svg>
+          </div>
+          <h3>Discord</h3><p>Live chat, trade setups, and a friendly room of fellow learners.</p>
+          <span class="go">Join server <i data-lucide="arrow-up-right"></i></span>
+        </a>
+        <a href="https://www.youtube.com/@LiquidityTheory" target="_blank" rel="noopener noreferrer" class="comm-card reveal">
+          <div class="comm-ic" style="background:#FF0000;box-shadow:0 8px 22px rgba(255,0,0,.35);">
+            <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M9.5 16.5l7-4.5-7-4.5v9z"/></svg>
+          </div>
+          <h3>YouTube</h3><p>Deep-dive videos and breakdowns that pair with the courses.</p>
+          <span class="go">Watch now <i data-lucide="arrow-up-right"></i></span>
+        </a>
+        <a href="https://x.com/Captain_Kole" target="_blank" rel="noopener noreferrer" class="comm-card reveal">
+          <div class="comm-ic" style="background:#000;border:1px solid var(--border3);">
+            <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231 5.45-6.231zm-1.161 17.52h1.833L7.084 4.126H5.117l11.966 15.644z"/></svg>
+          </div>
+          <h3>X / Twitter</h3><p>Daily market takes from the founders, Captain Kole &amp; Mike BTC.</p>
+          <span class="go">Follow along <i data-lucide="arrow-up-right"></i></span>
+        </a>
+        <a href="https://partner.blofin.com/d/LiquidityTheory" target="_blank" rel="noopener noreferrer" class="comm-card reveal">
+          <div class="comm-ic comm-ic-img" style="background:#fff;box-shadow:0 8px 22px rgba(255,106,26,.35);">
+            <img src="https://logo.clearbit.com/blofin.com" alt="BloFin"
+                 onerror="if(this.dataset.s!=='1'){this.dataset.s='1';this.src='https://cdn.brandfetch.io/blofin.com/w/400/h/100/logo';}else if(this.dataset.s!=='2'){this.dataset.s='2';this.src='https://www.google.com/s2/favicons?sz=128&domain=blofin.com';}else{var p=this.parentNode;p.style.background='#ff6a1a';p.innerHTML='<span style=\'font-family:Barlow Condensed,sans-serif;font-weight:800;font-size:26px;color:#fff\'>B</span>';}" />
+          </div>
+          <h3>Trade on BloFin</h3><p>Put your skills to work on our partner exchange when you're ready.</p>
+          <span class="go">Get started <i data-lucide="arrow-up-right"></i></span>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ════════ FINAL CTA ════════ -->
+  <section class="cta-band">
+    <div class="wrap">
+      <div class="cta-inner reveal">
+        <h2>Ready to read the markets?</h2>
+        <p>Start the first course right now. It's free, it's interactive, and your progress is saved the moment you begin.</p>
+        <a href="lt-index.html" class="btn btn-primary"><i data-lucide="graduation-cap"></i> Start Learning Free</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ════════ FOOTER ════════ -->
+  <footer class="site">
+    <div class="wrap foot-grid">
+      <a href="#top" class="brand"><img class="brand-logo" src="lt-logo.svg" alt="" aria-hidden="true" />Liquidity Theory</a>
+      <div class="foot-links">
+        <a href="#courses">Courses</a>
+        <a href="#features">Features</a>
+        <a href="#community">Community</a>
+        <a href="lt-index.html">Launch App</a>
+      </div>
+      <div class="foot-copy">© <span id="year"></span> Liquidity Theory · Educational content only — not financial advice.</div>
+    </div>
+  </footer>
+
+  <script>
+    document.getElementById('year').textContent = new Date().getFullYear();
+    if (window.lucide) lucide.createIcons();
+
+    /* ── Scroll reveal ── */
+    (function(){
+      var io = new IntersectionObserver(function(entries){
+        entries.forEach(function(e){ if(e.isIntersecting){ e.target.classList.add('in'); io.unobserve(e.target); } });
+      },{threshold:.12});
+      document.querySelectorAll('.reveal').forEach(function(el,i){
+        el.style.transitionDelay = (Math.min(i,6)*40)+'ms';
+        io.observe(el);
+      });
+    })();
+
+    /* ── Animated candlestick hero chart (synthetic, drifts live) ── */
+    (function(){
+      var el = document.getElementById('hero-chart');
+      if (!el || typeof echarts === 'undefined') return;
+      var chart = echarts.init(el, null, {renderer:'canvas'});
+      var N = 60, data = [], last = 64000;
+      function step(prev){
+        var drift = (Math.random()-0.48)*prev*0.012;
+        var open = prev, close = prev + drift;
+        var high = Math.max(open,close) + Math.random()*prev*0.006;
+        var low  = Math.min(open,close) - Math.random()*prev*0.006;
+        return [open, close, low, high];
+      }
+      for (var i=0;i<N;i++){ var c = step(last); data.push(c); last = c[1]; }
+
+      function render(){
+        var prices = data.map(function(d){return d[1];});
+        var min = Math.min.apply(null,data.map(function(d){return d[2];}));
+        var max = Math.max.apply(null,data.map(function(d){return d[3];}));
+        chart.setOption({
+          animation:true, animationDuration:300,
+          grid:{left:6,right:54,top:10,bottom:18},
+          xAxis:{type:'category',show:false,data:data.map(function(_,i){return i;})},
+          yAxis:{
+            scale:true,position:'right',min:min,max:max,
+            axisLine:{show:false},axisTick:{show:false},
+            splitLine:{lineStyle:{color:'rgba(255,255,255,.04)'}},
+            axisLabel:{color:'#555',fontSize:10,formatter:function(v){return Math.round(v/1000)+'k';}}
+          },
+          series:[{
+            type:'candlestick',
+            data:data,
+            itemStyle:{color:'#00d4d4',color0:'#cc2222',borderColor:'#00d4d4',borderColor0:'#cc2222'},
+            markLine:{
+              symbol:'none',
+              data:[{yAxis:prices[prices.length-1]}],
+              lineStyle:{color:'#00d4d4',type:'dashed',width:1,opacity:.8},
+              label:{formatter:'${c|0}'.replace('{c|0}',Math.round(prices[prices.length-1]).toLocaleString()),
+                     color:'#04201f',backgroundColor:'#00d4d4',padding:[3,6],borderRadius:3,fontSize:10,fontWeight:700}
+            }
+          }]
+        });
+      }
+      function money(v){ return '$'+Math.round(v).toLocaleString(); }
+      function updateMeta(){
+        var closes = data.map(function(d){return d[1];});
+        var last = closes[closes.length-1];
+        var first = closes[0];
+        var hi = Math.max.apply(null, data.map(function(d){return d[3];}));
+        var lo = Math.min.apply(null, data.map(function(d){return d[2];}));
+        var pct = ((last-first)/first)*100;
+        var up = pct >= 0;
+        var set = function(id,txt,cls){ var e=document.getElementById(id); if(!e)return; e.textContent=txt; if(cls!==undefined){e.className=cls;} };
+        set('hcc-price', money(last));
+        var chgEl = document.getElementById('hcc-chg');
+        if (chgEl){ chgEl.textContent=(up?'+':'')+pct.toFixed(2)+'%'; chgEl.className='hcc-chg '+(up?'up':'down'); }
+        set('hcc-high', money(hi));
+        set('hcc-low', money(lo));
+        var ch = document.getElementById('hcc-change');
+        if (ch){ ch.textContent=(up?'+':'')+pct.toFixed(2)+'%'; ch.className='v '+(up?'up':'down'); }
+      }
+      render(); updateMeta();
+      setInterval(function(){
+        var prev = data[data.length-1][1];
+        data.push(step(prev));
+        data.shift();
+        render(); updateMeta();
+      }, 1600);
+      window.addEventListener('resize', function(){ chart.resize(); });
+    })();
+
+    /* ── Simulator tile spark bars ── */
+    (function(){
+      var el = document.getElementById('feat-spark');
+      if (!el) return;
+      var n = 22, html = '';
+      for (var i=0;i<n;i++){
+        var h = 28 + Math.round(Math.random()*70);
+        var up = Math.random() > 0.42;
+        html += '<i style="height:'+h+'%;background:'+(up?'#00d4d4':'#cc2222')+';animation-delay:'+(i*28)+'ms"></i>';
+      }
+      el.innerHTML = html;
+    })();
+
+    /* ── Live BTC price (nav ticker + features banner) ── */
+    (function(){
+      var elp = document.getElementById('nav-btc');
+      function fmt(p){ return '$'+Number(p).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}); }
+      async function fetchBtc(){
+        var urls=['https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT',
+                  'https://api.binance.us/api/v3/ticker/price?symbol=BTCUSDT'];
+        for (var i=0;i<urls.length;i++){
+          try{ var r=await fetch(urls[i],{cache:'no-store'}); if(r.ok){var d=await r.json(); var p=parseFloat(d.price); if(isFinite(p)) return p;} }catch(e){}
+        }
+        try{ var r2=await fetch('https://api.coinbase.com/v2/prices/BTC-USD/spot',{cache:'no-store'}); if(r2.ok){var d2=await r2.json(); var p2=parseFloat(d2.data.amount); if(isFinite(p2)) return p2;} }catch(e){}
+        return null;
+      }
+      async function tick(){ var p=await fetchBtc(); if(p!=null){ var t=fmt(p); if(elp)elp.textContent=t; } }
+      tick(); setInterval(tick, 4000);
+    })();
+  </script>
+</body>
+</html>

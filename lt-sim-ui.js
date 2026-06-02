@@ -54,6 +54,9 @@ const CHAPTER_PATTERN_MAP = {
 const SIM_ALL_PATTERNS = Object.keys(SIM_CONCEPTS);
 const SIM_TIMEFRAMES   = ['4h','6h','12h','1d'];
 const SIM_STORAGE      = 'lt_sim_stats';
+// Chart plot padding — shared by the candlestick render AND the draggable
+// order lines so pixel↔price conversions line up exactly.
+const SIM_GRID = { left:56, right:16, top:22, bottom:34 };
 
 /* ── STATE ────────────────────────────────────────────────────────────────── */
 let _simStats       = null;
@@ -75,8 +78,18 @@ let _simEntryPrice  = 0;
 function _bc() { return localStorage.getItem('lt_bullish_color') || '#00d4d4'; }
 
 function simLoadStats() {
-  try { const r = localStorage.getItem(SIM_STORAGE); if (r) return JSON.parse(r); } catch(_) {}
-  return { equity:1000, trades:0, wins:0, streak:0, bestStreak:0, history:[1000] };
+  try {
+    const r = localStorage.getItem(SIM_STORAGE);
+    if (r) {
+      const s = JSON.parse(r);
+      // backfill fields added in later versions
+      if (!Array.isArray(s.history)) s.history = [s.equity || 1000];
+      if (!Array.isArray(s.log))     s.log = [];
+      if (typeof s.skips !== 'number') s.skips = 0;
+      return s;
+    }
+  } catch(_) {}
+  return { equity:1000, trades:0, wins:0, streak:0, bestStreak:0, skips:0, history:[1000], log:[] };
 }
 function simSaveStats(s) {
   try { localStorage.setItem(SIM_STORAGE, JSON.stringify(s)); } catch(_) {}
@@ -119,10 +132,20 @@ function _calcMetrics(direction, entry, sl, tp, riskPct, leverage, equity) {
   return { slDist, tpDist, rr, riskUSD, notional, margin, marginPct, liqPrice, liqPct, valid };
 }
 
-function _checkHit(direction, sl, tp, candle) {
+function _checkHit(direction, sl, tp, candle, liqPrice) {
   const [, , lo, hi] = candle;
-  if (direction === 'long')  { if (lo <= sl) return 'sl'; if (hi >= tp) return 'tp'; }
-  if (direction === 'short') { if (hi >= sl) return 'sl'; if (lo <= tp) return 'tp'; }
+  // Liquidation can fire before the stop if leverage pushes the liq price
+  // closer to entry than the SL. The adverse level nearest entry is hit first.
+  if (direction === 'long') {
+    const adverse = (liqPrice > 0 && liqPrice >= sl) ? { lvl: liqPrice, type: 'liq' } : { lvl: sl, type: 'sl' };
+    if (lo <= adverse.lvl) return adverse.type;
+    if (hi >= tp) return 'tp';
+  }
+  if (direction === 'short') {
+    const adverse = (liqPrice > 0 && liqPrice <= sl) ? { lvl: liqPrice, type: 'liq' } : { lvl: sl, type: 'sl' };
+    if (hi >= adverse.lvl) return adverse.type;
+    if (lo <= tp) return 'tp';
+  }
   return null;
 }
 
@@ -140,17 +163,21 @@ function _simStyles() {
   .sim2-heading { font-family:'Barlow Condensed',sans-serif; font-size:26px; font-weight:800; color:var(--text); }
   .sim2-sub { font-size:12px; color:var(--text3); margin-top:2px; }
 
-  /* ── pattern selector ── */
+  /* ── pattern selector (single scrollable row) ── */
   .sim2-pattern-bar {
-    display:flex; align-items:center; gap:8px; flex-wrap:wrap;
+    display:flex; align-items:center; gap:8px; flex-wrap:nowrap; overflow-x:auto;
     background:var(--bg3); border:1px solid var(--border); border-radius:var(--radius-lg);
-    padding:10px 14px; margin-bottom:14px;
+    padding:9px 14px; margin-bottom:12px; scrollbar-width:thin;
   }
-  .sim2-pattern-label { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.8px; color:var(--text3); flex-shrink:0; margin-right:4px; }
+  .sim2-pattern-bar::-webkit-scrollbar { height:5px; }
+  .sim2-pattern-bar::-webkit-scrollbar-thumb { background:var(--border2); border-radius:3px; }
+  .sim2-pattern-bar::-webkit-scrollbar-track { background:transparent; }
+  .sim2-pattern-label { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.8px; color:var(--text3); flex-shrink:0; margin-right:2px; position:sticky; left:0; background:var(--bg3); padding-right:6px; z-index:1; }
   .sim2-pat-btn {
     padding:4px 10px; border-radius:10px; border:1px solid var(--border2);
     background:var(--bg4); color:var(--text3); font-size:11px; font-weight:600;
     cursor:pointer; font-family:'Barlow',sans-serif; white-space:nowrap; transition:all .15s;
+    flex:0 0 auto;
   }
   .sim2-pat-btn:hover { border-color:var(--teal); color:var(--teal); }
   .sim2-pat-btn.active { background:var(--teal-dim); border-color:var(--teal); color:var(--teal); }
@@ -164,18 +191,26 @@ function _simStyles() {
   .sim2-stat-val { font-size:20px; font-weight:800; font-variant-numeric:tabular-nums; color:var(--teal); }
   .sim2-stat-val.down { color:#cc2222; }
 
-  /* ── main grid (chart + terminal) ── */
-  .sim2-grid { display:grid; grid-template-columns:1fr 340px; gap:12px; margin-bottom:14px; align-items:start; }
+  /* ── main grid (chart + terminal) — equal heights so it snaps together ── */
+  .sim2-grid { display:grid; grid-template-columns:1fr 340px; gap:12px; margin-bottom:12px; align-items:stretch; }
   @media(max-width:860px) { .sim2-grid { grid-template-columns:1fr; } }
 
-  /* ── chart card ── */
-  .sim2-chart-card { background:var(--bg3); border:1px solid var(--border); border-radius:var(--radius-lg); overflow:hidden; }
-  .sim2-chart-topbar { display:flex; align-items:center; justify-content:space-between; padding:8px 14px; border-bottom:1px solid var(--border); }
-  .sim2-chart-sym { font-size:12px; font-weight:700; color:var(--text); }
-  .sim2-chart-badge { font-size:10px; font-weight:700; letter-spacing:.8px; text-transform:uppercase; padding:2px 8px; border-radius:10px; background:var(--teal-dim); border:1px solid var(--teal); color:var(--teal); }
+  /* ── chart card (flex column so the chart fills to match the terminal) ── */
+  .sim2-chart-card { background:var(--bg3); border:1px solid var(--border); border-radius:var(--radius-lg); overflow:hidden; display:flex; flex-direction:column; min-width:0; }
+  .sim2-chart-topbar { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:7px 12px; border-bottom:1px solid var(--border); flex:0 0 auto; }
+  .sim2-chart-topL { display:flex; align-items:center; gap:12px; min-width:0; }
+  .sim2-chart-sym { font-size:12px; font-weight:700; color:var(--text); white-space:nowrap; }
+  .sim2-chart-badge { font-size:10px; font-weight:700; letter-spacing:.8px; text-transform:uppercase; padding:2px 8px; border-radius:10px; background:var(--teal-dim); border:1px solid var(--teal); color:var(--teal); white-space:nowrap; }
   .sim2-chart-badge.revealing { background:rgba(200,150,12,.12); border-color:#c8960c; color:#c8960c; }
   .sim2-chart-badge.revealed  { background:rgba(0,200,120,.10); border-color:#00c878; color:#00c878; }
-  #sim2-chart-el { width:100%; height:340px; }
+  #sim2-chart-el { width:100%; flex:1 1 auto; min-height:420px; }
+
+  /* ── timeframe segmented control ── */
+  .sim2-tf-group { display:inline-flex; gap:2px; background:var(--bg4); border:1px solid var(--border2); border-radius:8px; padding:2px; }
+  .sim2-tf-btn { padding:2px 9px; border:none; background:none; color:var(--text3); font-size:11px; font-weight:700; cursor:pointer; font-family:'Barlow',sans-serif; border-radius:6px; transition:all .12s; }
+  .sim2-tf-btn:hover { color:var(--text); }
+  .sim2-tf-btn.active { background:var(--teal-dim); color:var(--teal); }
+  .sim2-tf-btn:disabled { opacity:.4; cursor:not-allowed; }
 
   /* ── terminal panel ── */
   .sim2-terminal {
@@ -301,10 +336,59 @@ function _simStyles() {
   .sim2-next-btn { width:100%; padding:13px; background:var(--teal); border:none; border-radius:var(--radius); color:#000; font-size:14px; font-weight:800; cursor:pointer; font-family:'Barlow',sans-serif; transition:all .15s; margin-bottom:14px; }
   .sim2-next-btn:hover { background:var(--teal2); box-shadow:var(--glow-teal); }
 
+  /* account summary row */
+  .sim2-acct-row { display:flex; border-bottom:1px solid var(--border2); }
+  .sim2-acct-cell { flex:1; padding:7px 12px; display:flex; flex-direction:column; gap:2px; border-right:1px solid var(--border); }
+  .sim2-acct-cell:last-child { border-right:none; }
+  .sim2-acct-cell-lbl { font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:.6px; color:var(--text3); }
+  .sim2-acct-cell-val { font-size:13px; font-weight:800; color:var(--text2); font-variant-numeric:tabular-nums; }
+
+  /* flat direction button */
+  .sim2-dir-flat { background:var(--bg4); color:var(--text2); border-left:1px solid var(--border2); border-right:1px solid var(--border2); }
+  .sim2-dir-btn.sel-flat { background:var(--bg3)!important; color:var(--text)!important; box-shadow:inset 0 -2px 0 var(--text3); }
+
+  /* live price + floating P&L in chart topbar */
+  .sim2-chart-live { display:flex; align-items:center; gap:10px; font-variant-numeric:tabular-nums; flex:0 0 auto; }
+  .sim2-live-price { font-size:13px; font-weight:800; color:var(--text); }
+  .sim2-live-pnl   { font-size:12px; font-weight:700; color:var(--text3); min-width:44px; text-align:right; }
+
+  /* lower grid: equity + blotter side by side, equal height */
+  .sim2-lower-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px; align-items:stretch; }
+  @media(max-width:860px) { .sim2-lower-grid { grid-template-columns:1fr; } }
+
   /* equity card */
-  .sim2-equity-card { background:var(--bg3); border:1px solid var(--border); border-radius:var(--radius-lg); overflow:hidden; margin-bottom:14px; }
-  .sim2-equity-topbar { display:flex; align-items:center; justify-content:space-between; padding:8px 14px; border-bottom:1px solid var(--border); font-size:12px; font-weight:700; color:var(--text2); }
-  #sim2-equity-el { width:100%; height:110px; }
+  .sim2-equity-card { background:var(--bg3); border:1px solid var(--border); border-radius:var(--radius-lg); overflow:hidden; display:flex; flex-direction:column; }
+  .sim2-equity-topbar { display:flex; align-items:center; justify-content:space-between; padding:8px 14px; border-bottom:1px solid var(--border); font-size:12px; font-weight:700; color:var(--text2); flex:0 0 auto; }
+  #sim2-equity-el { width:100%; flex:1 1 auto; min-height:188px; }
+
+  /* trade blotter */
+  .sim2-blotter-card { background:var(--bg3); border:1px solid var(--border); border-radius:var(--radius-lg); overflow:hidden; display:flex; flex-direction:column; min-height:230px; }
+  .sim2-blotter-topbar { display:flex; align-items:center; justify-content:space-between; padding:8px 14px; border-bottom:1px solid var(--border); font-size:12px; font-weight:700; color:var(--text2); }
+  .sim2-blotter-meta { font-size:10px; font-weight:600; color:var(--text3); }
+  .sim2-blotter-head, .sim2-blotter-row {
+    display:grid; grid-template-columns:1.6fr .6fr .8fr .7fr .8fr 1fr;
+    gap:6px; align-items:center; padding:5px 14px;
+  }
+  .sim2-blotter-head { font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:.5px; color:var(--text3); border-bottom:1px solid var(--border); }
+  .sim2-blotter-head span:last-child, .sim2-blotter-row .sim2-blot-pnl,
+  .sim2-blotter-head span:nth-child(5), .sim2-blot-rr { text-align:right; }
+  .sim2-blotter-body { flex:1 1 auto; max-height:188px; overflow-y:auto; scrollbar-width:thin; }
+  .sim2-blotter-body::-webkit-scrollbar { width:5px; }
+  .sim2-blotter-body::-webkit-scrollbar-thumb { background:var(--border2); border-radius:3px; }
+  .sim2-blotter-row { font-size:11px; border-bottom:1px solid var(--border); font-variant-numeric:tabular-nums; }
+  .sim2-blotter-row:last-child { border-bottom:none; }
+  .sim2-blot-pat { color:var(--text2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-weight:600; }
+  .sim2-blot-tf  { color:var(--text3); font-size:10px; }
+  .sim2-blot-dir { font-weight:800; font-size:10px; }
+  .sim2-blot-dir.long  { color:var(--teal); }
+  .sim2-blot-dir.short { color:#cc2222; }
+  .sim2-blot-dir.flat  { color:var(--text3); }
+  .sim2-blot-hit { color:var(--text3); font-size:10px; text-transform:uppercase; }
+  .sim2-blot-rr  { color:var(--text3); }
+  .sim2-blot-pnl { font-weight:800; color:var(--text3); }
+  .sim2-blot-pnl.pos { color:var(--teal); }
+  .sim2-blot-pnl.neg { color:#cc2222; }
+  .sim2-blotter-empty { padding:24px 14px; text-align:center; font-size:11px; color:var(--text3); }
 
   /* reset */
   .sim2-reset-row { display:flex; justify-content:flex-end; }
@@ -312,21 +396,17 @@ function _simStyles() {
   .sim2-reset-btn:hover { border-color:#cc2222; color:#cc2222; }
 
   @keyframes sim2FadeIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+  @media(max-width:860px) {
+    .sim2-grid { grid-template-columns:1fr; align-items:stretch; }
+    #sim2-chart-el { min-height:300px; }
+  }
   @media(max-width:600px) {
-    #sim2-chart-el { height:240px; }
-    .sim2-grid { grid-template-columns:1fr; }
+    #sim2-chart-el { min-height:260px; }
   }
+  /* drag hint shown over the chart while an order line is grabbable */
+  .sim2-drag-hint { font-size:10px; color:var(--text3); white-space:nowrap; }
 
-  /* practice button in course chapters */
-  .chapter-practice-btn {
-    display:inline-flex; align-items:center; gap:6px;
-    background:transparent; border:1px solid var(--border2);
-    border-radius:var(--radius); color:var(--text2);
-    font-size:12px; font-weight:600; cursor:pointer;
-    padding:6px 14px; font-family:'Barlow',sans-serif;
-    transition:all .15s; margin-top:14px;
-  }
-  .chapter-practice-btn:hover { border-color:var(--teal); color:var(--teal); background:var(--teal-faint); }
+  /* (.chapter-practice-btn now lives in lt-styles.css so it is always styled) */
   `;
   document.head.appendChild(s);
 }
@@ -376,8 +456,9 @@ function _sim2UpdateStats() {
 }
 
 /* ── LIVE CALC UPDATE (called from input handlers) ────────────────────────── */
-window._sim2Recalc = function() {
+window._sim2Recalc = function(skipLines) {
   const entry = _simEntryPrice;
+  if (_simDirection === 'flat') return;   // flat: no SL/TP/margin to recompute
   if (!entry || !_simDirection) return;
   const sl  = parseFloat(document.getElementById('sim2-sl-input')?.value  || 0);
   const tp  = parseFloat(document.getElementById('sim2-tp-input')?.value  || 0);
@@ -414,8 +495,15 @@ window._sim2Recalc = function() {
     set('sim2-calc-potential', '—');
   }
 
-  // SL/TP marklines on chart
-  _sim2UpdateMarklines(sl, tp);
+  // Draggable SL/TP order lines on chart (skip while actively dragging)
+  if (!skipLines) _sim2DrawOrderLines();
+
+  // Account summary (Balance / Used Margin / Free Margin)
+  const eq = _simStats.equity;
+  const free = Math.max(0, eq - (m.notional > 0 ? m.margin : 0));
+  set('sim2-acct-balance', `$${eq.toFixed(0)}`);
+  set('sim2-acct-margin',  m.notional > 0 ? `$${m.margin.toFixed(0)}` : '$0');
+  set('sim2-acct-free',    `$${free.toFixed(0)}`);
 
   // Lev value label
   const levVal = document.getElementById('sim2-lev-val');
@@ -443,30 +531,30 @@ window._sim2Recalc = function() {
   if (execBtn) execBtn.disabled = !m.valid || (m.margin > _simStats.equity);
 };
 
-/* ── CHART MARKLINES (SL/TP levels) ─────────────────────────────────────── */
-function _sim2UpdateMarklines(sl, tp) {
-  if (!_simChartInst || !_simView) return;
-  const { ohlc, labels, cutIndex, markLines } = _simView;
-  const keyMl = (markLines||[]).map(ml => [{
-    yAxis: ml.yAxis,
-    label:{show:true,formatter:ml.label,color:_bc(),fontSize:10,fontWeight:600,position:'end'},
-    lineStyle:{color:_bc(),type:'dashed',width:1.5,opacity:.75}
-  },{yAxis:ml.yAxis}]);
-  const extraMl = [];
-  if (sl > 0) extraMl.push([{yAxis:sl,label:{show:true,formatter:`SL $${sl.toFixed(0)}`,color:'#cc2222',fontSize:10,fontWeight:700,position:'end'},lineStyle:{color:'#cc2222',type:'dashed',width:1.5,opacity:.9}},{yAxis:sl}]);
-  if (tp > 0) extraMl.push([{yAxis:tp,label:{show:true,formatter:`TP $${tp.toFixed(0)}`,color:_bc(),fontSize:10,fontWeight:700,position:'end'},lineStyle:{color:_bc(),type:'dashed',width:1.5,opacity:.9}},{yAxis:tp}]);
-  if (sl > 0 || tp > 0) {
-    _simChartInst.setOption({series:[{markLine:{symbol:['none','none'],silent:true,data:[...keyMl,...extraMl]}}]},{notMerge:false});
-  }
-}
-
 /* ── DIRECTION SELECT ─────────────────────────────────────────────────────── */
 window._sim2Dir = function(dir) {
   if (_simAnswered) return;
   _simDirection = dir;
-  document.querySelectorAll('.sim2-dir-btn').forEach(b => b.classList.remove('sel-long','sel-short'));
+  document.querySelectorAll('.sim2-dir-btn').forEach(b => b.classList.remove('sel-long','sel-short','sel-flat'));
   const btn = document.getElementById(`sim2-dir-${dir}`);
   if (btn) btn.classList.add(`sel-${dir}`);
+
+  const execBtn  = document.getElementById('sim2-exec-btn');
+  const fieldsEl = document.querySelector('.sim2-fields');
+
+  // Flat = stand aside. No SL/TP needed; reveal shows what you avoided/missed.
+  if (dir === 'flat') {
+    if (fieldsEl) fieldsEl.style.opacity = '.4';
+    document.querySelectorAll('.sim2-price-input').forEach(i => i.disabled = true);
+    if (execBtn) { execBtn.disabled = false; execBtn.textContent = 'Skip — Stay Flat'; }
+    const livePnl = document.getElementById('sim2-live-pnl');
+    if (livePnl) { livePnl.textContent = 'FLAT'; livePnl.style.color = 'var(--text3)'; }
+    _sim2DrawOrderLines();   // drop any SL/TP lines, keep entry line
+    return;
+  }
+  if (fieldsEl) fieldsEl.style.opacity = '1';
+  document.querySelectorAll('.sim2-price-input').forEach(i => i.disabled = false);
+  if (execBtn) execBtn.textContent = 'Execute Trade';
 
   // Reveal field labels based on direction
   const slLbl = document.getElementById('sim2-sl-lbl');
@@ -522,6 +610,31 @@ window._sim2LevInput  = function(v) {
   window._sim2Recalc();
 };
 
+/* ── TIMEFRAME SWITCH (re-buckets the SAME scenario, no new round) ─────────── */
+window._sim2SetTF = function(tf) {
+  if (_simAnswered) return;                 // locked once the trade is live
+  if (!_simMarket || tf === _simTF || !SIM_TIMEFRAMES.includes(tf)) return;
+  _simTF   = tf;
+  _simView = viewMarket(_simMarket, tf);    // same base market, different aggregation
+  _simEntryPrice = _simView.ohlc[_simView.cutIndex - 1]?.[1] || _simEntryPrice;
+
+  // active state on the TF buttons
+  document.querySelectorAll('.sim2-tf-btn').forEach(b => b.classList.toggle('active', b.dataset.tf === tf));
+  // refresh entry readouts
+  const ed = document.getElementById('sim2-entry-display'); if (ed) ed.textContent = '$' + _simEntryPrice.toLocaleString();
+  const lp = document.getElementById('sim2-live-price');    if (lp) lp.textContent = '$' + _simEntryPrice.toLocaleString(undefined,{maximumFractionDigits:0});
+
+  // redraw the chart for the new timeframe
+  _sim2RenderSetup();
+
+  // entry moved with the new aggregation → reset SL/TP to fresh defaults
+  if (_simDirection && _simDirection !== 'flat') {
+    const sl = document.getElementById('sim2-sl-input'); if (sl) sl.value = '';
+    const tp = document.getElementById('sim2-tp-input'); if (tp) tp.value = '';
+    window._sim2Dir(_simDirection);         // re-fills defaults + recalc + redraw lines
+  }
+};
+
 /* ── SETUP CHART ──────────────────────────────────────────────────────────── */
 function _sim2RenderSetup() {
   const el = document.getElementById('sim2-chart-el');
@@ -539,12 +652,17 @@ function _sim2RenderSetup() {
   },{yAxis:ml.yAxis}]);
 
   _simChartInst = echarts.init(el, null, { renderer:'canvas' });
+  var _cs = getComputedStyle(document.documentElement);
+  var _bg3 = (_cs.getPropertyValue('--bg3') || '#0f0f0f').trim();
+  var _bg4 = (_cs.getPropertyValue('--bg4') || '#141414').trim();
+  var _bdr = (_cs.getPropertyValue('--border') || '#1e1e1e').trim();
+  var _txt = (_cs.getPropertyValue('--text') || '#fff').trim();
   _simChartInst.setOption({
-    backgroundColor:'#0f0f0f', animation:true, animationDuration:500,
+    backgroundColor:_bg3, animation:true, animationDuration:500,
     tooltip:{
       trigger:'axis', axisPointer:{type:'cross'},
-      backgroundColor:'#141414', borderColor:'#1e1e1e',
-      textStyle:{color:'#fff',fontSize:11,fontFamily:'Barlow,sans-serif'},
+      backgroundColor:_bg4, borderColor:_bdr,
+      textStyle:{color:_txt,fontSize:11,fontFamily:'Barlow,sans-serif'},
       formatter(params){
         const c=params.find(p=>p.seriesName==='Price'); if(!c||!c.data) return '';
         const d=Array.isArray(c.data)?c.data:c.data.value;
@@ -555,22 +673,135 @@ function _sim2RenderSetup() {
           H:${hi} L:${lo}`;
       }
     },
-    grid:{left:52,right:28,top:24,bottom:36},
-    xAxis:{type:'category',data:setupLabels,axisLine:{lineStyle:{color:'#1e1e1e'}},axisLabel:{color:'#555',fontSize:10,fontFamily:'Barlow,sans-serif'},splitLine:{show:false}},
-    yAxis:{scale:true,splitLine:{lineStyle:{color:'#1e1e1e',type:'dashed'}},axisLine:{lineStyle:{color:'#1e1e1e'}},axisLabel:{color:'#555',fontSize:10,fontFamily:'Barlow,sans-serif'}},
+    grid:{left:SIM_GRID.left,right:SIM_GRID.right,top:SIM_GRID.top,bottom:SIM_GRID.bottom},
+    xAxis:{type:'category',data:setupLabels,axisLine:{lineStyle:{color:_bdr}},axisLabel:{color:'#888',fontSize:10,fontFamily:'Barlow,sans-serif',hideOverlap:true},splitLine:{show:false}},
+    // Always leave 20% headroom above the highest candle and 20% below the
+    // lowest, so price is never flush to an edge. Recomputes every render.
+    yAxis:{
+      scale:true, position:'left',
+      min:(v)=>{ const r=(v.max-v.min)||1; return +(v.min - r*0.2).toFixed(2); },
+      max:(v)=>{ const r=(v.max-v.min)||1; return +(v.max + r*0.2).toFixed(2); },
+      splitLine:{lineStyle:{color:_bdr,type:'dashed'}},axisLine:{lineStyle:{color:_bdr}},
+      axisLabel:{color:'#888',fontSize:10,fontFamily:'Barlow,sans-serif'}
+    },
     series:[{
       name:'Price',type:'candlestick',data:setupOhlc,barMaxWidth:20,
       itemStyle:{color:TEAL,color0:'#cc2222',borderColor:TEAL,borderColor0:'#cc2222',borderWidth:1.5},
       markLine:{symbol:['none','none'],silent:true,data:mlData}
     }]
   });
-  const ro = new ResizeObserver(()=>{ try{_simChartInst&&_simChartInst.resize();}catch(_){} });
+  // Draw the entry / SL / TP order lines on top once layout is ready.
+  _sim2DrawOrderLines();
+  const ro = new ResizeObserver(()=>{ try{ if(_simChartInst){ _simChartInst.resize(); if(!_simAnswered) _sim2DrawOrderLines(); } }catch(_){} });
   ro.observe(el);
+}
+
+/* ── DRAGGABLE ORDER LINES (entry / SL / TP) ──────────────────────────────── */
+function _sim2ClearOrderLines() {
+  if (!_simChartInst) return;
+  try { _simChartInst.setOption({ graphic: [] }, { replaceMerge: ['graphic'] }); } catch(_) {}
+}
+
+function _sim2DrawOrderLines() {
+  if (!_simChartInst || !_simView) return;
+  if (_simAnswered) return;                 // after execution the reveal owns the chart
+  const chart = _simChartInst;
+  const W = chart.getWidth();
+  const x1 = SIM_GRID.left;
+  const tagW = 92, tagH = 18, pad = 6;
+  const tagX = W - SIM_GRID.right - tagW;   // tag sits at the right edge of the plot
+  const lineX2 = tagX - 4;
+
+  const toY = (price) => { try { return chart.convertToPixel({ yAxisIndex: 0 }, price); } catch(_) { return null; } };
+  const fromY = (yPix) => { try { return chart.convertFromPixel({ yAxisIndex: 0 }, yPix); } catch(_) { return null; } };
+
+  const fmt = (p) => Math.round(p).toLocaleString();
+  const TEAL = _bc();
+  const graphics = [];
+
+  // helper to build one horizontal line (optionally draggable)
+  const buildLine = (id, price, color, prefix, draggable, onMove) => {
+    const y = toY(price);
+    if (y == null || isNaN(y)) return null;
+    return {
+      type: 'group', id, z: 100,
+      draggable: draggable ? 'vertical' : false,
+      cursor: draggable ? 'ns-resize' : 'default',
+      x: 0, y,
+      ondrag: draggable ? function () {
+        this.x = 0;
+        const p = fromY(this.y);
+        if (p == null || isNaN(p) || p <= 0) return;
+        if (typeof onMove === 'function') onMove(p);
+        const t = this.childOfName ? this.childOfName('tag-txt') : null;
+        if (t) t.setStyle({ text: `${prefix} ${fmt(p)}` });
+      } : undefined,
+      ondragend: draggable ? function () { this.x = 0; const p = fromY(this.y); if (p != null && !isNaN(p) && p > 0 && typeof onMove === 'function') onMove(p, true); } : undefined,
+      children: [
+        // wide invisible hit-area so the whole line is grabbable (not just the tag)
+        { type: 'line', silent: !draggable, shape: { x1, y1: 0, x2: lineX2, y2: 0 }, style: { stroke: 'transparent', lineWidth: draggable ? 16 : 1 }, cursor: draggable ? 'ns-resize' : 'default' },
+        { type: 'line', silent: true, shape: { x1, y1: 0, x2: lineX2, y2: 0 }, style: { stroke: color, lineWidth: 1.5, lineDash: [5, 4] } },
+        { type: 'rect', silent: !draggable, shape: { x: tagX, y: -tagH / 2, width: tagW, height: tagH, r: 3 }, style: { fill: color }, cursor: draggable ? 'ns-resize' : 'default' },
+        { type: 'text', name: 'tag-txt', silent: true, style: { text: `${prefix} ${fmt(price)}`, x: tagX + pad, y: -6, fill: '#0b0b0b', font: '700 11px Barlow, sans-serif' } }
+      ]
+    };
+  };
+
+  // Entry (static)
+  const entryG = buildLine('sim2-entry-line', _simEntryPrice, '#8a8f98', 'Entry', false, null);
+  if (entryG) graphics.push(entryG);
+
+  if (_simDirection && _simDirection !== 'flat') {
+    const sl = parseFloat(document.getElementById('sim2-sl-input')?.value || 0);
+    const tp = parseFloat(document.getElementById('sim2-tp-input')?.value || 0);
+    if (sl > 0) {
+      const g = buildLine('sim2-sl-line', sl, '#cc2222', 'SL', true, (p, ended) => {
+        const inp = document.getElementById('sim2-sl-input'); if (inp) inp.value = String(Math.round(p));
+        window._sim2Recalc(true);
+        if (ended) _sim2DrawOrderLines();   // snap to exact price on release
+      });
+      if (g) graphics.push(g);
+    }
+    if (tp > 0) {
+      const g = buildLine('sim2-tp-line', tp, TEAL, 'TP', true, (p, ended) => {
+        const inp = document.getElementById('sim2-tp-input'); if (inp) inp.value = String(Math.round(p));
+        window._sim2Recalc(true);
+        if (ended) _sim2DrawOrderLines();
+      });
+      if (g) graphics.push(g);
+    }
+    // Liquidation line (static, gold) — only when leverage brings it on-chart.
+    const lev = parseFloat(document.getElementById('sim2-lev-slider')?.value || 1);
+    if (lev > 1) {
+      const off = (1 - 0.005) / lev;
+      const liq = _simDirection === 'long' ? _simEntryPrice * (1 - off) : _simEntryPrice * (1 + off);
+      const ly = toY(liq);
+      const H = chart.getHeight();
+      if (ly != null && !isNaN(ly) && ly > SIM_GRID.top + 2 && ly < H - SIM_GRID.bottom - 2) {
+        const g = buildLine('sim2-liq-line', liq, '#c8960c', 'LIQ', false, null);
+        if (g) graphics.push(g);
+      }
+    }
+  }
+
+  try { chart.setOption({ graphic: graphics }, { replaceMerge: ['graphic'] }); } catch(_) {}
 }
 
 /* ── EXECUTE TRADE ────────────────────────────────────────────────────────── */
 window._sim2Execute = function() {
   if (_simAnswered) return;
+  if (!_simDirection) return;
+  const lockUI = () => document.querySelectorAll('.sim2-dir-btn,.sim2-exec-btn,.sim2-price-input,.sim2-slider,.sim2-preset-btn').forEach(e=>e.disabled=true);
+
+  // Flat: no position — just reveal the outcome to judge the skip.
+  if (_simDirection === 'flat') {
+    _simAnswered = true;
+    lockUI();
+    _sim2ClearOrderLines();
+    _sim2Reveal(0, 0, 0, 0, 0, 1);
+    return;
+  }
+
   const sl  = parseFloat(document.getElementById('sim2-sl-input')?.value  || 0);
   const tp  = parseFloat(document.getElementById('sim2-tp-input')?.value  || 0);
   const rp  = parseFloat(document.getElementById('sim2-risk-slider')?.value || 1);
@@ -578,12 +809,13 @@ window._sim2Execute = function() {
   const m   = _calcMetrics(_simDirection, _simEntryPrice, sl, tp, rp, lev, _simStats.equity);
   if (!m.valid) return;
   _simAnswered = true;
-  document.querySelectorAll('.sim2-dir-btn,.sim2-exec-btn,.sim2-price-input,.sim2-slider,.sim2-preset-btn').forEach(e=>e.disabled=true);
-  _sim2Reveal(sl, tp, m.riskUSD, m.notional, rp, lev);
+  lockUI();
+  _sim2ClearOrderLines();
+  _sim2Reveal(sl, tp, m.riskUSD, m.notional, rp, lev, m.liqPrice);
 };
 
 /* ── REVEAL ───────────────────────────────────────────────────────────────── */
-function _sim2Reveal(sl, tp, riskUSD, notional, riskPct, leverage) {
+function _sim2Reveal(sl, tp, riskUSD, notional, riskPct, leverage, liqPrice) {
   if (_simRevealTimer) { clearInterval(_simRevealTimer); _simRevealTimer = null; }
   const { ohlc, labels, cutIndex } = _simView;
   const setupOhlc    = ohlc.slice(0, cutIndex);
@@ -600,14 +832,22 @@ function _sim2Reveal(sl, tp, riskUSD, notional, riskPct, leverage) {
   let count = 0, hitType = null;
   const total = revealOhlc.length;
 
+  // Keep the whole reveal to a roughly constant ~2.2s regardless of how many
+  // candles the timeframe produced (a 4h round can have 60+ reveal candles —
+  // one-at-a-time at 220ms felt frozen). Reveal several candles per tick.
+  const TARGET_MS = 2200, TICK_MS = 110;
+  const perTick = Math.max(1, Math.ceil(total / (TARGET_MS / TICK_MS)));
+
   _simRevealTimer = setInterval(() => {
-    if (hitType) { clearInterval(_simRevealTimer); _simRevealTimer = null; return; }
-    count++;
+    count = Math.min(total, count + perTick);
     const thisBatch = revealOhlc.slice(0, count);
     for (const candle of thisBatch) {
-      if (!hitType) hitType = _checkHit(_simDirection, sl, tp, candle);
+      if (!hitType) hitType = _checkHit(_simDirection, sl, tp, candle, liqPrice);
     }
     if (hitType) count = total; // snap to end on hit
+
+    // Live floating P&L on the position as candles print
+    _sim2UpdateLivePnL(revealOhlc[count - 1], entry, sl, tp, notional, hitType);
 
     const visLabels = [...setupLabels, ...revealLabels.slice(0, count)];
     const wireframe = thisBatch.map(c => {
@@ -637,82 +877,186 @@ function _sim2Reveal(sl, tp, riskUSD, notional, riskPct, leverage) {
       const finalHit   = hitType || 'open';
       _sim2Score(sl, tp, riskUSD, notional, riskPct, leverage, entry, exitPrice, finalHit);
     }
-  }, 220);
+  }, TICK_MS);
+}
+
+/* ── LIVE FLOATING P&L (updates during reveal) ───────────────────────────── */
+function _sim2UpdateLivePnL(candle, entry, sl, tp, notional, hitType) {
+  if (!candle) return;
+  const priceEl = document.getElementById('sim2-live-price');
+  const pnlEl   = document.getElementById('sim2-live-pnl');
+  // For a flat (skip) position there is no exposure — just track price.
+  let mark = candle[1];
+  if (hitType === 'sl') mark = sl;
+  else if (hitType === 'tp') mark = tp;
+  else if (hitType === 'liq') mark = candle[2] !== undefined && _simDirection === 'long' ? candle[2] : candle[3];
+  if (priceEl) {
+    priceEl.textContent = '$' + mark.toLocaleString(undefined,{maximumFractionDigits:0});
+    priceEl.style.color = mark >= entry ? _bc() : '#cc2222';
+  }
+  if (pnlEl) {
+    if (!_simDirection || _simDirection === 'flat' || !notional) {
+      pnlEl.textContent = 'FLAT';
+      pnlEl.style.color = 'var(--text3)';
+    } else {
+      const dirMult = _simDirection === 'long' ? 1 : -1;
+      const float = dirMult * ((mark - entry) / entry) * notional;
+      pnlEl.textContent = (float >= 0 ? '+' : '') + '$' + float.toFixed(2);
+      pnlEl.style.color = float >= 0 ? _bc() : '#cc2222';
+    }
+  }
 }
 
 /* ── SCORE ROUND ──────────────────────────────────────────────────────────── */
 function _sim2Score(sl, tp, riskUSD, notional, riskPct, leverage, entry, exitPrice, hitType) {
+  const concept = SIM_CONCEPTS[_simPattern] || { name:_simPattern, bias:'neutral' };
+  const isFlat  = _simDirection === 'flat';
+
+  // What the market actually did (for judging a flat decision)
+  const moveAfter = (exitPrice - entry) / entry; // +ve = rose
+
   let dollarPnL = 0;
-  if (hitType === 'sl') {
-    dollarPnL = -riskUSD;                              // exactly what was risked
-  } else if (hitType === 'tp') {
-    const tpDist = Math.abs(tp - entry) / entry;
-    const slDist = Math.abs(entry - sl) / entry;
-    dollarPnL = slDist > 0 ? (tpDist / slDist) * riskUSD : 0;
-  } else {
-    const pricePct = (exitPrice - entry) / entry;
-    const dirMult  = _simDirection === 'long' ? 1 : -1;
-    dollarPnL      = dirMult * pricePct * notional;
+  if (!isFlat) {
+    if (hitType === 'liq') {
+      // Liquidation: the posted margin is wiped out (worse than the planned risk).
+      dollarPnL = -(leverage > 0 ? notional / leverage : notional);
+    } else if (hitType === 'sl') {
+      dollarPnL = -riskUSD;                              // exactly what was risked
+    } else if (hitType === 'tp') {
+      const tpDist = Math.abs(tp - entry) / entry;
+      const slDist = Math.abs(entry - sl) / entry;
+      dollarPnL = slDist > 0 ? (tpDist / slDist) * riskUSD : 0;
+    } else {
+      const dirMult  = _simDirection === 'long' ? 1 : -1;
+      dollarPnL      = dirMult * moveAfter * notional;
+    }
   }
 
-  const newEquity = Math.max(0, _simStats.equity + dollarPnL);
-  const won = dollarPnL > 0;
-  _simStats.trades++;
-  if (won) { _simStats.wins++; _simStats.streak++; }
-  else     { _simStats.streak = 0; }
-  if (_simStats.streak > _simStats.bestStreak) _simStats.bestStreak = _simStats.streak;
-  _simStats.equity = +newEquity.toFixed(2);
-  _simStats.history.push(_simStats.equity);
-  if (_simStats.history.length > 60) _simStats.history.shift();
-  simSaveStats(_simStats);
-
-  // Glow
-  const slDist = entry > 0 ? Math.abs(entry - sl) / entry : 0;
+  const slDist = entry > 0 && sl > 0 ? Math.abs(entry - sl) / entry : 0;
   const rr = slDist > 0 ? Math.abs(tp - entry) / entry / slDist : 0;
-  _sim2ShowVerdict(dollarPnL, hitType, rr, riskPct, leverage, entry, sl, tp, exitPrice);
+
+  if (isFlat) {
+    _simStats.skips = (_simStats.skips || 0) + 1;       // skips don't touch equity/win-rate
+  } else {
+    const won = dollarPnL > 0;
+    _simStats.trades++;
+    if (won) { _simStats.wins++; _simStats.streak++; }
+    else     { _simStats.streak = 0; }
+    if (_simStats.streak > _simStats.bestStreak) _simStats.bestStreak = _simStats.streak;
+    _simStats.equity = +Math.max(0, _simStats.equity + dollarPnL).toFixed(2);
+    _simStats.history.push(_simStats.equity);
+    if (_simStats.history.length > 60) _simStats.history.shift();
+  }
+
+  // Blotter entry (most-recent-first)
+  _simStats.log = _simStats.log || [];
+  _simStats.log.unshift({
+    pattern: concept.name.split('—')[0].trim(),
+    dir: _simDirection,
+    pnl: +dollarPnL.toFixed(2),
+    rr: +rr.toFixed(2),
+    hit: isFlat ? 'flat' : hitType,
+    tf: _simTF
+  });
+  if (_simStats.log.length > 25) _simStats.log.pop();
+
+  simSaveStats(_simStats);
+  _sim2ShowVerdict(dollarPnL, hitType, rr, riskPct, leverage, entry, sl, tp, exitPrice, isFlat, moveAfter);
 }
 
 /* ── VERDICT CARD ─────────────────────────────────────────────────────────── */
-function _sim2ShowVerdict(dollarPnL, hitType, rr, riskPct, leverage, entry, sl, tp, exitPrice) {
+function _sim2ShowVerdict(dollarPnL, hitType, rr, riskPct, leverage, entry, sl, tp, exitPrice, isFlat, moveAfter) {
   const concept = SIM_CONCEPTS[_simPattern] || { name:_simPattern, bias:'neutral', blurb:'' };
-  const won     = dollarPnL > 0;
-  const cls     = won ? 'win' : 'loss';
-  const emoji   = hitType==='tp' ? '🎯' : hitType==='sl' ? '🛑' : won ? '✅' : '❌';
-  const hitLabel = hitType==='tp' ? 'Take Profit Hit' : hitType==='sl' ? 'Stop Loss Hit' : 'Position Closed at Market';
-  const hitCls   = hitType==='tp' ? 'tp' : hitType==='sl' ? 'sl' : 'open';
-  const resultStr = `${dollarPnL>=0?'+':''}$${dollarPnL.toFixed(2)}`;
-  const resultColor = dollarPnL >= 0 ? _bc() : '#cc2222';
-  const biasMatch   = concept.bias === _simDirection || concept.bias === 'neutral';
-
   const existing = document.getElementById('sim2-verdict-wrap');
   if (existing) existing.remove();
 
   const wrap = document.createElement('div');
   wrap.id = 'sim2-verdict-wrap';
+
+  let topHtml;
+  if (isFlat) {
+    // No money changed hands — judge the decision instead.
+    const movePct  = (moveAfter * 100);
+    const dirWord  = movePct >= 0 ? 'rose' : 'fell';
+    const cls      = 'flat';
+    topHtml = `
+      <div class="sim2-verdict ${cls}">
+        <div class="sim2-verdict-top">
+          <span class="sim2-verdict-result" style="color:var(--text2)">● Stayed Flat</span>
+          <span class="sim2-verdict-detail">No risk taken · capital preserved</span>
+        </div>
+        <span class="sim2-verdict-hit open">
+          <i data-lucide="minus-circle" style="width:11px;height:11px;"></i>
+          Market ${dirWord} ${Math.abs(movePct).toFixed(1)}% after the decision (exit $${exitPrice.toFixed(0)})
+        </span>
+        <div class="sim2-verdict-pattern">${concept.name}</div>
+        <div class="sim2-verdict-blurb">${concept.blurb}</div>
+        <div class="sim2-verdict-bias" style="color:var(--text3)">
+          Sitting out is a position too. This setup's textbook bias was <strong style="color:${_bc()}">${concept.bias.toUpperCase()}</strong>.
+        </div>
+        ${_sim2StatsRowHtml()}
+      </div>
+      <button class="sim2-next-btn" onclick="window._sim2Next()">Next Round →</button>`;
+    wrap.innerHTML = topHtml;
+    _sim2MountVerdict(wrap);
+    return;
+  }
+
+  const won     = dollarPnL > 0;
+  const isLiq   = hitType === 'liq';
+  const cls     = won ? 'win' : 'loss';
+  const emoji   = isLiq ? '💥' : hitType==='tp' ? '🎯' : hitType==='sl' ? '🛑' : won ? '✅' : '❌';
+  const hitLabel = isLiq ? 'LIQUIDATED' : hitType==='tp' ? 'Take Profit Hit' : hitType==='sl' ? 'Stop Loss Hit' : 'Position Closed at Market';
+  const hitCls   = hitType==='tp' ? 'tp' : 'sl';
+  const resultStr = `${dollarPnL>=0?'+':''}$${dollarPnL.toFixed(2)}`;
+  const resultColor = dollarPnL >= 0 ? _bc() : '#cc2222';
+  const biasMatch   = concept.bias === _simDirection || concept.bias === 'neutral';
+  const hitDetail = isLiq ? '— margin wiped out before your stop'
+    : hitType === 'open' ? `(exit $${exitPrice.toFixed(0)})`
+    : `@ $${hitType==='sl'?sl.toFixed(0):tp.toFixed(0)}`;
+
   wrap.innerHTML = `
     <div class="sim2-verdict ${cls}">
       <div class="sim2-verdict-top">
         <span class="sim2-verdict-result" style="color:${resultColor}">${emoji} ${resultStr}</span>
         <span class="sim2-verdict-detail">Risk ${riskPct}% · ${leverage}× lev · R:R 1:${rr.toFixed(2)}</span>
       </div>
-      <span class="sim2-verdict-hit ${hitCls}">
-        <i data-lucide="${hitType==='tp'?'check-circle':hitType==='sl'?'shield-off':'clock'}" style="width:11px;height:11px;"></i>
-        ${hitLabel} ${hitType!=='open'?`@ $${hitType==='sl'?sl.toFixed(0):tp.toFixed(0)}`:`(exit $${exitPrice.toFixed(0)})`}
+      <span class="sim2-verdict-hit ${hitType==='open'?'open':hitCls}">
+        <i data-lucide="${isLiq?'zap':hitType==='tp'?'check-circle':hitType==='sl'?'shield-off':'clock'}" style="width:11px;height:11px;"></i>
+        ${hitLabel} ${hitDetail}
       </span>
+      ${isLiq ? `<div class="sim2-verdict-bias" style="color:#cc2222">⚠ ${leverage}× leverage put your liquidation price closer than your stop. Lower leverage keeps the stop in control.</div>` : ''}
       <div class="sim2-verdict-pattern">${concept.name}</div>
       <div class="sim2-verdict-blurb">${concept.blurb}</div>
       <div class="sim2-verdict-bias" style="color:${biasMatch?_bc():'#cc2222'}">
         ${biasMatch ? '✓ Bias aligned with pattern — ' + _simDirection.toUpperCase() : '✗ Against the pattern — bias was ' + concept.bias.toUpperCase()}
       </div>
+      ${_sim2StatsRowHtml()}
+    </div>
+    ${_simStats.equity < 1
+      ? '<button class="sim2-next-btn" onclick="window._sim2ResetContinue()">💀 Account blown — Reset & keep practicing</button>'
+      : '<button class="sim2-next-btn" onclick="window._sim2Next()">Next Round →</button>'}
+  `;
+  _sim2MountVerdict(wrap);
+}
+
+window._sim2ResetContinue = function() {
+  _simStats = { equity:1000, trades:0, wins:0, streak:0, bestStreak:0, skips:0, history:[1000], log:[] };
+  simSaveStats(_simStats);
+  renderSimulator('content-area', _simOpts);
+};
+
+function _sim2StatsRowHtml() {
+  return `
       <div class="sim2-verdict-stats">
         <div class="sim2-verdict-stat">Equity <strong>$${_simStats.equity.toFixed(0)}</strong></div>
         <div class="sim2-verdict-stat">Win rate <strong>${_simStats.trades>0?Math.round(_simStats.wins/_simStats.trades*100):0}%</strong></div>
         <div class="sim2-verdict-stat">Streak <strong>${_simStats.streak}</strong></div>
         <div class="sim2-verdict-stat">Best <strong>${_simStats.bestStreak}</strong></div>
-      </div>
-    </div>
-    <button class="sim2-next-btn" onclick="window._sim2Next()">Next Round →</button>
-  `;
+      </div>`;
+}
+
+function _sim2MountVerdict(wrap) {
 
   const grid = document.querySelector('.sim2-grid');
   if (grid) grid.after(wrap);
@@ -720,6 +1064,34 @@ function _sim2ShowVerdict(dollarPnL, hitType, rr, riskPct, leverage, entry, sl, 
 
   if (typeof lucide !== 'undefined') lucide.createIcons();
   _sim2UpdateStats();
+  _sim2RenderBlotter();
+}
+
+/* ── TRADE BLOTTER ────────────────────────────────────────────────────────── */
+function _sim2RenderBlotter() {
+  const body = document.getElementById('sim2-blotter-body');
+  if (!body) return;
+  const log = _simStats.log || [];
+  if (!log.length) {
+    body.innerHTML = `<div class="sim2-blotter-empty">No trades yet — your fills will appear here.</div>`;
+    return;
+  }
+  body.innerHTML = log.map(t => {
+    const isFlat = t.dir === 'flat';
+    const dirCls = isFlat ? 'flat' : (t.dir === 'long' ? 'long' : 'short');
+    const dirTxt = isFlat ? 'FLAT' : t.dir.toUpperCase();
+    const pnlCls = isFlat ? '' : (t.pnl >= 0 ? 'pos' : 'neg');
+    const pnlTxt = isFlat ? '—' : `${t.pnl>=0?'+':''}$${t.pnl.toFixed(2)}`;
+    const hitTxt = t.hit==='tp'?'TP':t.hit==='sl'?'SL':t.hit==='liq'?'LIQ':t.hit==='flat'?'skip':'mkt';
+    return `<div class="sim2-blotter-row">
+      <span class="sim2-blot-pat">${t.pattern}</span>
+      <span class="sim2-blot-tf">${(t.tf||'').toUpperCase()}</span>
+      <span class="sim2-blot-dir ${dirCls}">${dirTxt}</span>
+      <span class="sim2-blot-hit">${hitTxt}</span>
+      <span class="sim2-blot-rr">${t.rr?('1:'+t.rr.toFixed(1)):'—'}</span>
+      <span class="sim2-blot-pnl ${pnlCls}">${pnlTxt}</span>
+    </div>`;
+  }).join('');
 }
 
 /* ── NEXT ROUND ───────────────────────────────────────────────────────────── */
@@ -730,17 +1102,17 @@ window._sim2Next = function() {
 
 /* ── PATTERN LOCK ─────────────────────────────────────────────────────────── */
 window._sim2LockPattern = function(key) {
-  _simLockedPattern = key === 'random' ? null : key;
-  document.querySelectorAll('.sim2-pat-btn').forEach(b => {
-    b.classList.toggle('active', b.dataset.key === (key));
-  });
+  // _simOpts.pattern is the single source of truth (renderSimulator derives the
+  // lock from it). Manually choosing a pattern drops the course label.
+  _simOpts.pattern = (key === 'random') ? null : key;
+  _simOpts.label = '';
   renderSimulator('content-area', _simOpts);
 };
 
 /* ── RESET ────────────────────────────────────────────────────────────────── */
 window._sim2Reset = function() {
   if (!confirm('Reset all simulator stats?')) return;
-  _simStats = { equity:1000, trades:0, wins:0, streak:0, bestStreak:0, history:[1000] };
+  _simStats = { equity:1000, trades:0, wins:0, streak:0, bestStreak:0, skips:0, history:[1000], log:[] };
   simSaveStats(_simStats);
   renderSimulator('content-area', _simOpts);
 };
@@ -760,10 +1132,9 @@ function renderSimulator(containerId, opts) {
   if (_simEquityChart) { try { _simEquityChart.dispose(); } catch(_) {} _simEquityChart = null; }
   if (_simChartInst)   { try { _simChartInst.dispose();   } catch(_) {} _simChartInst   = null; }
 
-  // Course mode locks pattern
-  if (_simOpts.pattern && _simLockedPattern !== _simOpts.pattern) {
-    _simLockedPattern = _simOpts.pattern;
-  }
+  // Pattern lock is driven entirely by _simOpts.pattern: a value locks to that
+  // pattern (course "Practice This Pattern" or a chosen pill); empty = random.
+  _simLockedPattern = _simOpts.pattern || null;
 
   _simStats = simLoadStats();
   if (!_simStats.history || !_simStats.history.length) _simStats.history = [1000];
@@ -806,7 +1177,7 @@ function renderSimulator(containerId, opts) {
     <div class="sim2-wrap">
 
       <div class="sim2-back-row">
-        <button class="sim2-back-btn" onclick="typeof init==='function'&&init()">
+        <button class="sim2-back-btn" onclick="typeof init==='function'&&init(false)">
           <i data-lucide="arrow-left" style="width:15px;height:15px;"></i> Back to Course
         </button>
         <div>
@@ -835,8 +1206,17 @@ function renderSimulator(containerId, opts) {
         <!-- Chart -->
         <div class="sim2-chart-card">
           <div class="sim2-chart-topbar">
-            <span class="sim2-chart-sym">BTC/USD · ${_simTF.toUpperCase()} · Synthetic</span>
-            <span class="sim2-chart-badge">Decision Point</span>
+            <div class="sim2-chart-topL">
+              <span class="sim2-chart-sym">BTC/USD · Synthetic</span>
+              <div class="sim2-tf-group" id="sim2-tf-group">
+                ${SIM_TIMEFRAMES.map(tf=>`<button class="sim2-tf-btn ${tf===_simTF?'active':''}" data-tf="${tf}" onclick="_sim2SetTF('${tf}')">${tf.toUpperCase()}</button>`).join('')}
+              </div>
+            </div>
+            <div class="sim2-chart-live">
+              <span class="sim2-live-price" id="sim2-live-price">$${_simEntryPrice.toLocaleString(undefined,{maximumFractionDigits:0})}</span>
+              <span class="sim2-live-pnl" id="sim2-live-pnl">FLAT</span>
+              <span class="sim2-chart-badge">Decision Point</span>
+            </div>
           </div>
           <div id="sim2-chart-el"></div>
         </div>
@@ -847,13 +1227,21 @@ function renderSimulator(containerId, opts) {
             <span class="sim2-term-title">Order Terminal</span>
             <div style="text-align:right;">
               <div class="sim2-acct-lbl">Account Equity</div>
-              <div class="sim2-acct-equity">$${_simStats.equity.toFixed(2)}</div>
+              <div class="sim2-acct-equity" id="sim2-acct-equity">$${_simStats.equity.toFixed(2)}</div>
             </div>
+          </div>
+
+          <!-- Account summary -->
+          <div class="sim2-acct-row">
+            <div class="sim2-acct-cell"><span class="sim2-acct-cell-lbl">Balance</span><span class="sim2-acct-cell-val" id="sim2-acct-balance">$${_simStats.equity.toFixed(0)}</span></div>
+            <div class="sim2-acct-cell"><span class="sim2-acct-cell-lbl">Used Margin</span><span class="sim2-acct-cell-val" id="sim2-acct-margin">$0</span></div>
+            <div class="sim2-acct-cell"><span class="sim2-acct-cell-lbl">Free Margin</span><span class="sim2-acct-cell-val" id="sim2-acct-free">$${_simStats.equity.toFixed(0)}</span></div>
           </div>
 
           <!-- Direction -->
           <div class="sim2-dir-row">
             <button class="sim2-dir-btn sim2-dir-long"  id="sim2-dir-long"  onclick="_sim2Dir('long')">▲ Long</button>
+            <button class="sim2-dir-btn sim2-dir-flat"  id="sim2-dir-flat"  onclick="_sim2Dir('flat')">● Flat</button>
             <button class="sim2-dir-btn sim2-dir-short" id="sim2-dir-short" onclick="_sim2Dir('short')">▼ Short</button>
           </div>
 
@@ -862,7 +1250,7 @@ function renderSimulator(containerId, opts) {
             <div class="sim2-field">
               <div class="sim2-field-header">
                 <span class="sim2-field-lbl">Entry Price (last close)</span>
-                <span class="sim2-field-pct" style="color:var(--teal);">$${_simEntryPrice.toLocaleString()}</span>
+                <span class="sim2-field-pct" id="sim2-entry-display" style="color:var(--teal);">$${_simEntryPrice.toLocaleString()}</span>
               </div>
             </div>
 
@@ -941,13 +1329,28 @@ function renderSimulator(containerId, opts) {
 
       </div><!-- /.sim2-grid -->
 
-      <!-- Equity curve -->
-      <div class="sim2-equity-card">
-        <div class="sim2-equity-topbar">
-          <span>Equity Curve</span>
-          <span id="sim2-equity-pnl" style="font-size:12px;font-weight:700;color:${pnl>=0?TEAL:'#cc2222'};">${pnl>=0?'+':''}$${pnl.toFixed(0)} all-time</span>
+      <!-- Lower grid: equity curve + trade blotter -->
+      <div class="sim2-lower-grid">
+        <!-- Equity curve -->
+        <div class="sim2-equity-card">
+          <div class="sim2-equity-topbar">
+            <span>Equity Curve</span>
+            <span id="sim2-equity-pnl" style="font-size:12px;font-weight:700;color:${pnl>=0?TEAL:'#cc2222'};">${pnl>=0?'+':''}$${pnl.toFixed(0)} all-time</span>
+          </div>
+          <div id="sim2-equity-el"></div>
         </div>
-        <div id="sim2-equity-el"></div>
+
+        <!-- Trade blotter -->
+        <div class="sim2-blotter-card">
+          <div class="sim2-blotter-topbar">
+            <span>Trade History</span>
+            <span class="sim2-blotter-meta">${_simStats.skips||0} skips</span>
+          </div>
+          <div class="sim2-blotter-head">
+            <span>Setup</span><span>TF</span><span>Side</span><span>Exit</span><span>R:R</span><span>P&amp;L</span>
+          </div>
+          <div class="sim2-blotter-body" id="sim2-blotter-body"></div>
+        </div>
       </div>
 
       <div class="sim2-reset-row">
@@ -961,6 +1364,7 @@ function renderSimulator(containerId, opts) {
   setTimeout(() => {
     _sim2RenderSetup();
     _sim2RenderEquityChart();
+    _sim2RenderBlotter();
   }, 60);
 }
 
