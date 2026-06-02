@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Liquidity Theory</title>
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;600;700;800&family=Barlow:wght@300;400;500;600&display=swap" rel="stylesheet" />
+
+  <!-- Styles -->
+  <link rel="stylesheet" href="lt-styles.css?v=1.1.0" />
+
+  <!-- ECharts (chart rendering) -->
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+
+  <!-- Lucide icons -->
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+
+  <!-- Data files MUST load before lt-engine.js (engine reads LT_CHAPTERS at parse time) -->
+  <script src="lt-data.js?v=1.1.0"></script>
+  <script src="lt-data-course2.js?v=1.1.0"></script>
+  <script src="lt-data-course3.js?v=1.1.0"></script>
+  <script src="lt-data-course4.js?v=1.1.0"></script>
+
+  <!-- Real historical pattern definitions -->
+  <script src="lt-patterns.js?v=1.1.0"></script>
+
+  <!-- Synthetic market generator -->
+  <script src="lt-simulator.js?v=1.1.0"></script>
+
+  <!-- UI modules (loaded before engine so engine can call them) -->
+  <script src="lt-gallery.js?v=1.1.0"></script>
+  <script src="lt-settings.js?v=1.1.0"></script>
+  <script src="lt-sim-ui.js?v=1.1.0"></script>
+
+  <!-- Main engine — boots on DOMContentLoaded -->
+  <script src="lt-engine.js?v=1.1.0" defer></script>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     APP SHELL
+     ═══════════════════════════════════════════════════════════════ -->
+<div class="app-layout">
+
+  <!-- ── SIDEBAR ─────────────────────────────────────────────────── -->
+  <aside class="sidebar" id="sidebar">
+
+    <div class="sidebar-header">
+      <div class="logo">
+        <span class="logo-icon">⚡</span>
+        <span class="logo-text">Liquidity Theory</span>
+      </div>
+      <button class="sidebar-close-btn icon-btn" id="sidebar-close" aria-label="Close sidebar">
+        <i data-lucide="x" style="width:16px;height:16px;"></i>
+      </button>
+    </div>
+
+    <!-- Legacy course-select (hidden — engine hides it, but the element must exist) -->
+    <select id="course-select" class="course-select" style="display:none;"></select>
+
+    <!-- Per-course progress bar -->
+    <div class="sidebar-progress-wrap">
+      <div class="sidebar-progress-track">
+        <div class="sidebar-progress-fill" id="sidebar-progress-bar" style="width:0%"></div>
+      </div>
+      <div class="sidebar-progress-text" id="sidebar-progress-text">0 / 0 completed</div>
+    </div>
+
+    <!-- Chapter list (engine builds this via buildSidebar()) -->
+    <nav class="chapter-list" id="chapter-list"></nav>
+
+    <!-- Sidebar footer: exam + simulator buttons -->
+    <div class="sidebar-footer">
+
+      <button class="btn-exam" id="start-exam-btn" disabled>
+        <i data-lucide="lock" id="exam-lock-icon" style="width:14px;height:14px;" class="exam-lock"></i>
+        <i data-lucide="file-text" style="width:14px;height:14px;"></i>
+        Final Exam
+      </button>
+
+      <button class="btn-exam" id="sim-sidebar-btn" style="margin-top:8px;"
+              onclick="typeof showSimulator === 'function' && showSimulator()">
+        <i data-lucide="activity" style="width:14px;height:14px;"></i>
+        Practice Simulator
+      </button>
+
+    </div>
+  </aside>
+
+  <!-- ── MAIN CONTENT WRAP ───────────────────────────────────────── -->
+  <div class="main-wrap">
+
+    <!-- Top header bar -->
+    <header class="top-header">
+      <button class="icon-btn menu-btn" id="sidebar-toggle" aria-label="Open sidebar" aria-expanded="false">
+        <i data-lucide="menu" style="width:18px;height:18px;"></i>
+      </button>
+
+      <div class="header-info">
+        <span class="header-tag" id="header-tag">Module 1 · Session 1</span>
+        <div class="header-title" id="header-title">Loading…</div>
+      </div>
+
+      <div class="header-right">
+        <div class="step-pills" id="step-pills"></div>
+        <div class="step-dots" id="step-dots"></div>
+        <span class="chapter-counter" id="chapter-counter">1 / 13</span>
+        <button class="icon-btn" aria-label="Settings" onclick="typeof showSettings === 'function' && showSettings()">
+          <i data-lucide="settings" style="width:16px;height:16px;"></i>
+        </button>
+      </div>
+    </header>
+
+    <!-- Global progress bar (3px strip beneath header) -->
+    <div class="global-progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+      <div class="global-progress-fill" id="global-progress-fill" style="width:0%"></div>
+    </div>
+
+    <!-- Scrollable content area — engine writes HTML here -->
+    <main class="content-area" id="content-area"></main>
+
+    <!-- Bottom nav bar -->
+    <footer class="nav-footer">
+      <button class="nav-btn nav-prev" id="btn-prev" disabled>
+        <span class="nav-arrow">←</span>
+        <span class="nav-label">Back</span>
+      </button>
+      <button class="nav-btn nav-next" id="btn-next">
+        <span class="nav-label">Next</span>
+        <span class="nav-arrow">→</span>
+      </button>
+    </footer>
+
+  </div><!-- /.main-wrap -->
+
+</div><!-- /.app-layout -->
+
+<!-- Sidebar overlay (mobile tap-to-close) -->
+<div class="sidebar-overlay hidden" id="sidebar-overlay"></div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     WELCOME BACK MODAL
+     ═══════════════════════════════════════════════════════════════ -->
+<div class="modal-overlay hidden" id="welcome-modal">
+  <div class="modal-box">
+    <div class="modal-icon">👋</div>
+    <h2>Welcome back</h2>
+    <p class="modal-sub">You have saved progress. Pick up where you left off?</p>
+    <div class="modal-progress-info" id="modal-progress-info"></div>
+    <div class="modal-actions">
+      <button class="btn-primary" id="modal-continue">Continue</button>
+      <button class="btn-ghost" id="modal-restart">Start Over</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     FINAL EXAM SCREEN
+     ═══════════════════════════════════════════════════════════════ -->
+<div class="exam-screen hidden" id="exam-screen">
+  <div class="exam-inner">
+
+    <div class="exam-header">
+      <div class="exam-logo">LIQUIDITY THEORY</div>
+      <h1 class="exam-title">Final Exam</h1>
+      <p class="exam-subtitle">Answer all questions to receive your certificate</p>
+      <div class="exam-progress-wrap">
+        <div class="exam-progress-track">
+          <div class="exam-progress-fill" id="exam-progress-fill" style="width:0%"></div>
+        </div>
+        <div class="exam-q-counter" id="exam-q-counter">Question 1</div>
+      </div>
+    </div>
+
+    <!-- Engine writes question cards here -->
+    <div class="exam-body" id="exam-body"></div>
+
+    <!-- Engine writes result here -->
+    <div class="exam-result hidden" id="exam-result"></div>
+
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     CERTIFICATE SCREEN
+     ═══════════════════════════════════════════════════════════════ -->
+<div class="cert-screen hidden" id="cert-screen">
+  <div class="cert-inner">
+    <div class="cert-watermark">🏆</div>
+    <div class="cert-top-rule"></div>
+
+    <div class="cert-badge">🏆</div>
+    <div class="cert-presents">Liquidity Theory presents</div>
+    <div class="cert-recipient">Certificate of Completion</div>
+    <div class="cert-has-completed">has successfully completed</div>
+    <div class="cert-course-name">Liquidity Theory</div>
+    <div class="cert-course-sub">Full Course Curriculum</div>
+
+    <div class="cert-divider"></div>
+
+    <div class="cert-score-display" id="cert-score-display"></div>
+    <div class="cert-date-display" id="cert-date-display"></div>
+
+    <div class="cert-bottom-rule"></div>
+
+    <div class="cert-actions">
+      <button class="btn-primary" id="cert-review-btn">Back to Course</button>
+      <button class="btn-ghost" id="cert-print-btn">
+        <i data-lucide="printer" style="width:14px;height:14px;"></i>
+        Print
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     TOAST NOTIFICATION
+     ═══════════════════════════════════════════════════════════════ -->
+<div class="toast hidden" id="toast"></div>
+
+</body>
+</html>

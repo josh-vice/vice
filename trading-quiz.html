@@ -1,0 +1,1014 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>📈 Trading Pattern Quiz</title>
+<script src="https://cdn.jsdelivr.net/npm/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0d1117;--surface:#161b22;--surface2:#1c2128;
+  --border:#30363d;--text:#e6edf3;--muted:#8b949e;
+  --green:#3fb950;--red:#f85149;--yellow:#e3b341;
+  --blue:#58a6ff;--blue-dim:rgba(88,166,255,.12);
+  --green-dim:rgba(63,185,80,.15);--red-dim:rgba(248,81,73,.15);
+}
+html,body{min-height:100%;background:var(--bg);color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:15px}
+
+/* ── HEADER ─────────────────────────── */
+.hdr{display:flex;align-items:center;justify-content:space-between;
+  padding:10px 20px;background:var(--surface);border-bottom:1px solid var(--border);
+  position:sticky;top:0;z-index:50}
+.logo{font-size:17px;font-weight:700;color:var(--blue);display:flex;align-items:center;gap:6px}
+.logo span{font-size:20px}
+.stats{display:flex;gap:10px}
+.stat{background:var(--surface2);border:1px solid var(--border);border-radius:8px;
+  padding:4px 14px;text-align:center;min-width:60px}
+.stat-v{font-size:19px;font-weight:800;line-height:1.15}
+.stat-v.g{color:var(--green)}.stat-v.y{color:var(--yellow)}.stat-v.b{color:var(--blue)}
+.stat-l{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+
+/* ── MAIN ────────────────────────────── */
+.main{max-width:940px;margin:0 auto;padding:18px 14px 50px}
+
+/* ── PROGRESS ────────────────────────── */
+.prog-row{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+.prog-track{flex:1;height:4px;background:#21262d;border-radius:2px;overflow:hidden}
+.prog-fill{height:100%;background:linear-gradient(90deg,var(--blue),#388bfd);
+  border-radius:2px;transition:width .5s ease}
+.prog-lbl{font-size:12px;color:var(--muted);white-space:nowrap}
+
+/* ── SCENARIO META ───────────────────── */
+.meta-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.pair-row{display:flex;align-items:center;gap:8px}
+.pair{font-size:16px;font-weight:700}
+.tf-badge{background:#21262d;color:var(--muted);padding:2px 8px;border-radius:4px;font-size:12px;font-weight:600}
+.pattern-tag{display:none;background:var(--blue-dim);border:1px solid rgba(88,166,255,.3);
+  color:var(--blue);padding:3px 10px;border-radius:12px;font-size:12px;font-weight:600}
+
+/* ── CHART ───────────────────────────── */
+.chart-card{background:var(--surface);border:1px solid var(--border);
+  border-radius:12px;overflow:hidden;margin-bottom:16px}
+#chartWrap{width:100%;height:370px}
+
+/* ── QUESTION ────────────────────────── */
+.q-section{text-align:center;margin-bottom:14px}
+.q-title{font-size:20px;font-weight:700;margin-bottom:5px}
+.q-sub{color:var(--muted);font-size:13px;line-height:1.55;max-width:620px;margin:0 auto 16px}
+
+/* ── ACTION BUTTONS ──────────────────── */
+.action-row{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-bottom:14px}
+.abtn{padding:13px 38px;border-radius:10px;border:none;cursor:pointer;
+  font-size:15px;font-weight:700;letter-spacing:.3px;
+  transition:transform .15s,box-shadow .15s,opacity .2s}
+.abtn:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 6px 22px rgba(0,0,0,.45)}
+.abtn:active:not(:disabled){transform:none}
+.abtn:disabled{opacity:.4;cursor:not-allowed}
+.btn-buy{background:linear-gradient(135deg,#1a7f37,#2ea043);color:#fff}
+.btn-hold{background:linear-gradient(135deg,#9e6a03,#d29922);color:#fff}
+.btn-sell{background:linear-gradient(135deg,#a40e26,#cf222e);color:#fff}
+.btn-next{background:linear-gradient(135deg,#1c48a8,#2563eb);color:#fff;
+  display:none;margin:0 auto;padding:13px 44px}
+.btn-restart{background:linear-gradient(135deg,#5b21b6,#7c3aed);color:#fff;
+  display:block;margin:0 auto;padding:13px 44px;border-radius:10px;border:none;
+  cursor:pointer;font-size:15px;font-weight:700;letter-spacing:.3px;
+  transition:transform .15s,box-shadow .15s}
+.btn-restart:hover{transform:translateY(-2px);box-shadow:0 6px 22px rgba(0,0,0,.45)}
+
+/* ── RESULT PANEL ────────────────────── */
+.result{display:none;background:var(--surface);border:1px solid var(--border);
+  border-radius:12px;padding:18px 20px;margin-bottom:14px;
+  animation:fadeUp .3s ease}
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.result-hdr{display:flex;align-items:flex-start;gap:14px;margin-bottom:12px}
+.result-ico{font-size:34px;flex-shrink:0;margin-top:2px}
+.result-title{font-size:19px;font-weight:700}
+.correct-title{color:var(--green)}.incorrect-title{color:var(--red)}.partial-title{color:var(--yellow)}
+.result-body{color:#c9d1d9;font-size:13.5px;line-height:1.7}
+.result-body strong{color:var(--text)}
+.concepts{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
+.concept{display:inline-flex;align-items:center;gap:4px;
+  background:var(--blue-dim);border:1px solid rgba(88,166,255,.22);
+  color:var(--blue);padding:3px 10px;border-radius:6px;font-size:12px;font-weight:600}
+.outcome-strip{background:var(--surface2);border-radius:8px;padding:10px 14px;
+  margin-top:12px;font-size:13px;color:var(--muted)}
+.outcome-strip b{color:var(--text)}
+
+/* ── FINAL SCREEN ────────────────────── */
+#finalScreen{display:none;text-align:center;padding:40px 20px}
+.final-ring{width:150px;height:150px;border-radius:50%;
+  background:linear-gradient(145deg,var(--surface),var(--surface2));
+  border:4px solid var(--blue);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  margin:0 auto 22px}
+.final-num{font-size:46px;font-weight:800;color:var(--blue);line-height:1}
+.final-denom{font-size:14px;color:var(--muted)}
+.final-grade{font-size:26px;font-weight:700;margin-bottom:8px}
+.final-sub{color:var(--muted);font-size:14px;max-width:400px;margin:0 auto 24px}
+.breakdown{display:flex;justify-content:center;gap:16px;flex-wrap:wrap;margin-bottom:28px}
+.bk-item{background:var(--surface);border:1px solid var(--border);border-radius:10px;
+  padding:10px 18px;text-align:center;min-width:90px}
+.bk-num{font-size:22px;font-weight:700}
+.bk-lbl{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+
+/* ── MISC ────────────────────────────── */
+.badge-correct{display:inline-block;background:var(--green-dim);border:1px solid rgba(63,185,80,.3);
+  color:var(--green);padding:2px 8px;border-radius:5px;font-size:12px;font-weight:600}
+.badge-wrong{display:inline-block;background:var(--red-dim);border:1px solid rgba(248,81,73,.3);
+  color:var(--red);padding:2px 8px;border-radius:5px;font-size:12px;font-weight:600}
+.sep{border:none;border-top:1px solid var(--border);margin:14px 0}
+@media(max-width:560px){
+  .abtn{padding:12px 22px;font-size:14px}
+  #chartWrap{height:290px}
+  .stats{gap:6px}.stat{padding:4px 10px;min-width:50px}
+}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="hdr">
+  <div class="logo"><span>📈</span> Trading Pattern Quiz</div>
+  <div class="stats">
+    <div class="stat">
+      <div class="stat-v g" id="scoreDisp">0</div>
+      <div class="stat-l">Score</div>
+    </div>
+    <div class="stat">
+      <div class="stat-v y" id="streakDisp">0</div>
+      <div class="stat-l">Streak 🔥</div>
+    </div>
+    <div class="stat">
+      <div class="stat-v b" id="qDisp">1/8</div>
+      <div class="stat-l">Round</div>
+    </div>
+  </div>
+</header>
+
+<!-- QUIZ SCREEN -->
+<div id="quizScreen">
+<main class="main">
+
+  <!-- Progress -->
+  <div class="prog-row">
+    <div class="prog-track"><div class="prog-fill" id="progFill" style="width:0%"></div></div>
+    <div class="prog-lbl" id="progLbl">Scenario 1 of 8</div>
+  </div>
+
+  <!-- Meta -->
+  <div class="meta-row">
+    <div class="pair-row">
+      <span class="pair" id="pairDisp">BTC / USD</span>
+      <span class="tf-badge" id="tfDisp">4H</span>
+    </div>
+    <span class="pattern-tag" id="patternTag">Bull Flag</span>
+  </div>
+
+  <!-- Chart -->
+  <div class="chart-card">
+    <div id="chartWrap"></div>
+  </div>
+
+  <!-- Question -->
+  <div class="q-section">
+    <h2 class="q-title">What would you do here?</h2>
+    <p class="q-sub" id="qContext">Loading scenario…</p>
+    <div class="action-row">
+      <button class="abtn btn-buy"  onclick="answer('buy')" id="btnBuy">🟢 BUY</button>
+      <button class="abtn btn-hold" onclick="answer('hold')" id="btnHold">🟡 HOLD</button>
+      <button class="abtn btn-sell" onclick="answer('sell')" id="btnSell">🔴 SELL</button>
+    </div>
+  </div>
+
+  <!-- Result (revealed after answer) -->
+  <div class="result" id="resultPanel">
+    <div class="result-hdr">
+      <div class="result-ico" id="resIco">🎯</div>
+      <div>
+        <div class="result-title" id="resTitle">Correct!</div>
+        <div style="margin-top:4px" id="resPatternLabel"></div>
+      </div>
+    </div>
+    <hr class="sep">
+    <div class="result-body" id="resBody"></div>
+    <div class="outcome-strip" id="resOutcome"></div>
+    <div class="concepts" id="resConcepts"></div>
+  </div>
+
+  <!-- Next button -->
+  <button class="abtn btn-next" id="btnNext" onclick="nextScenario()">Next Scenario →</button>
+
+</main>
+</div>
+
+<!-- FINAL SCREEN -->
+<div id="finalScreen">
+<main class="main">
+  <div style="max-width:520px;margin:0 auto">
+    <h1 style="font-size:28px;font-weight:800;margin-bottom:6px">Quiz Complete! 🏁</h1>
+    <p style="color:var(--muted);margin-bottom:24px">Here's how you performed across all 8 scenarios</p>
+    <div class="final-ring">
+      <div class="final-num" id="finalScore">0</div>
+      <div class="final-denom" id="finalDenom">/ 8</div>
+    </div>
+    <div class="final-grade" id="finalGrade">Loading…</div>
+    <p class="final-sub" id="finalSub"></p>
+    <div class="breakdown">
+      <div class="bk-item">
+        <div class="bk-num g" id="bkCorrect" style="color:var(--green)">0</div>
+        <div class="bk-lbl">Correct</div>
+      </div>
+      <div class="bk-item">
+        <div class="bk-num" id="bkWrong" style="color:var(--red)">0</div>
+        <div class="bk-lbl">Wrong</div>
+      </div>
+      <div class="bk-item">
+        <div class="bk-num" id="bkStreak" style="color:var(--yellow)">0</div>
+        <div class="bk-lbl">Best Streak</div>
+      </div>
+    </div>
+    <button class="btn-restart" onclick="restartQuiz()">🔄 Play Again</button>
+  </div>
+</main>
+</div>
+
+<script>
+// ════════════════════════════════════════════════════════════
+//  SCENARIO DATA
+//  Each candle: [open, high, low, close, volume]
+// ════════════════════════════════════════════════════════════
+
+const SCENARIOS = [
+
+// ────────────────────────────────────────────────────────────
+// 1. BULL FLAG → BUY
+// ────────────────────────────────────────────────────────────
+{
+  pair:'BTC / USD', tf:'4H', patternName:'Bull Flag', correct:'buy',
+  baseDate:'2024-01-02',
+  context:'BTC surged strongly from $38K forming a clear impulse pole, then drifted into a tight descending channel on declining volume. Price is at the bottom of the channel. What\'s your move?',
+  levels:[
+    {price:44500,color:'rgba(239,83,80,.75)',title:'Resistance'},
+    {price:40800,color:'rgba(38,166,65,.75)',title:'Support'},
+  ],
+  setup:[
+    [38000,38900,37400,38700,5200],[38700,39700,38300,39500,5500],
+    [39500,40600,39100,40300,5800],[40300,41300,39900,41100,6100],
+    [41100,42200,40700,42000,6400],[42000,43000,41600,42900,6600],
+    [42900,44000,42500,43800,7200],[43800,44900,43400,44700,8100],
+    [44700,45300,44200,44500,6000],[44500,44900,44100,44300,4500],
+    [44300,44700,43900,44100,3800],[44100,44500,43700,44000,3200],
+    // flag
+    [44000,44300,43500,43700,2800],[43700,44000,43200,43400,2500],
+    [43400,43700,42900,43100,2300],[43100,43400,42600,42800,2100],
+    [42800,43100,42300,42500,2000],[42500,42800,42000,42200,1900],
+    [42200,42600,41800,42000,1800],[42000,42300,41600,41900,1700],
+    [41900,42200,41400,41700,1600],[41700,42100,41300,41500,1500],
+    [41500,41900,41100,41300,1400],[41300,41700,41000,41200,1400],
+    [41200,41600,40800,41000,1300],
+  ],
+  reveal:[
+    [41000,43500,40800,43200,9800],[43200,44700,42900,44500,8500],
+    [44500,45900,44200,45700,7800],[45700,46900,45400,46700,7200],
+    [46700,47900,46400,47700,6800],[47700,48800,47400,48600,6400],
+    [48600,49500,48200,49000,6000],[49000,49600,48600,49300,5600],
+    [49300,49800,48900,49100,5200],[49100,49600,48700,49400,4900],
+    [49400,50000,49100,49700,4700],[49700,50400,49400,50100,4500],
+  ],
+  explanation:`This is a classic <strong>Bull Flag</strong> — one of the highest-probability continuation setups in the course.
+
+<br><br>📌 <strong>The Pole:</strong> A strong impulsive move up from $38K with rising volume confirmed bullish market structure (Higher Highs + Higher Lows). Aggressive buyer demand.
+
+<br><br>🚩 <strong>The Flag:</strong> Price consolidated in a descending channel. Critically, <strong>volume declined during the flag</strong> — sellers weren't stepping in aggressively. It's a pause, not a reversal.
+
+<br><br>✅ <strong>LTE Methodology:</strong>
+• <em>Level</em> — Upper trendline of the flag channel (~$44,500)
+• <em>Trigger</em> — Breakout candle with volume spike
+• <em>Entry</em> — On breakout close or retest of the channel
+
+<br><br>📐 <strong>Measured Move:</strong> Pole height (~$6,500) added to the breakout → Target ~$49,500.
+
+<br><br>⚠️ <strong>Invalidation:</strong> Close below the flag's lowest wick.`,
+  outcomeText:'Price broke out of the flag with a massive volume spike and reached the pole-measured target near <b>$50,000</b>. A clean 3:1+ R trade.',
+  concepts:['Bull Flag','Volume Confirmation','LTE Methodology','Measured Move','Higher Highs + Higher Lows'],
+},
+
+// ────────────────────────────────────────────────────────────
+// 2. BEARISH ENGULFING AT RESISTANCE → SELL
+// ────────────────────────────────────────────────────────────
+{
+  pair:'ETH / USD', tf:'1H', patternName:'Bearish Engulfing', correct:'sell',
+  baseDate:'2024-02-01',
+  context:'ETH has been rallying strongly from $2,200 and has pushed into a key historical resistance zone near $2,950. A very large candle just closed. What do you do?',
+  levels:[
+    {price:2870,color:'rgba(239,83,80,.75)',title:'Resistance Zone'},
+    {price:2400,color:'rgba(38,166,65,.75)',title:'Support'},
+  ],
+  setup:[
+    [2200,2280,2170,2260,16000],[2260,2340,2230,2320,16500],
+    [2320,2410,2290,2390,17200],[2390,2480,2360,2460,17800],
+    [2460,2550,2430,2530,18400],[2530,2620,2500,2600,19000],
+    [2600,2680,2570,2660,19500],[2660,2750,2630,2730,20000],
+    [2730,2810,2700,2790,19000],[2790,2860,2760,2840,16000],
+    [2840,2900,2810,2870,13500],[2870,2920,2840,2900,11500],
+    [2900,2940,2870,2910,10500],[2910,2950,2880,2930,10000],
+    [2930,2960,2900,2940,9800],[2940,2970,2910,2950,9500],
+    [2950,2980,2920,2960,9200],[2960,2990,2930,2970,9000],
+    // final push into resistance
+    [2970,3000,2940,2985,9500],
+    // Big bull candle — then engulf
+    [2985,3010,2960,3000,10000],
+    // BEARISH ENGULFING: opens above prev close, closes well below prev open
+    [3005,3025,2690,2715,36000],
+  ],
+  reveal:[
+    [2715,2760,2570,2590,28000],[2590,2630,2470,2490,24000],
+    [2490,2530,2380,2400,21000],[2400,2440,2310,2330,18500],
+    [2330,2380,2250,2270,16500],[2270,2320,2200,2220,14500],
+    [2220,2270,2180,2200,13000],[2200,2250,2160,2180,11500],
+    [2180,2230,2150,2170,10500],[2170,2220,2140,2160,9800],
+    [2160,2210,2130,2150,9200],[2150,2200,2120,2185,8800],
+  ],
+  explanation:`A textbook <strong>Bearish Engulfing</strong> at a key resistance zone — a high-conviction reversal trigger.
+
+<br><br>🔴 <strong>The Setup:</strong> ETH rallied into a major resistance zone where sellers had historically stepped in. Notice how volume was <strong>declining</strong> on the approach — buyers losing momentum.
+
+<br><br>🕯️ <strong>The Formation:</strong> The engulfing candle opened <em>above</em> the previous bullish candle's close ($3,005 > $3,000), then reversed violently to close well <em>below</em> the previous candle's open ($2,715 < $2,985). The entire previous body is engulfed — sellers completely overwhelmed buyers.
+
+<br><br>📊 <strong>Volume:</strong> The engulfing candle printed at <b>3.6× normal volume</b>. The course rule: formation + volume spike = high-confidence signal.
+
+<br><br>✅ <strong>LTE:</strong>
+• <em>Level</em> — Known resistance zone ~$2,870–$2,950
+• <em>Trigger</em> — Bearish engulfing candle (the course says this is a valid simultaneous trigger + entry)
+• <em>Entry</em> — Short on close of the engulfing candle
+
+<br><br>⚠️ <strong>Invalidation:</strong> Close above the high of the engulfing candle (~$3,025).`,
+  outcomeText:'Price reversed hard from the resistance zone and dropped to the ~$2,150 support area — a move of over <b>28%</b>. Clean bearish structure the whole way down.',
+  concepts:['Bearish Engulfing','Volume Confirmation','Resistance Zone','LTE Methodology','Supply & Demand'],
+},
+
+// ────────────────────────────────────────────────────────────
+// 3. HAMMER AT SUPPORT → BUY
+// ────────────────────────────────────────────────────────────
+{
+  pair:'BTC / USD', tf:'Daily', patternName:'Hammer at Support', correct:'buy',
+  baseDate:'2024-03-01',
+  context:'BTC has been in a steady downtrend, dropping from $46K. Price has now reached a major historical support zone. The last candle has a very distinctive shape. What do you do?',
+  levels:[
+    {price:38600,color:'rgba(38,166,65,.75)',title:'Support Zone'},
+    {price:43000,color:'rgba(239,83,80,.75)',title:'Resistance'},
+  ],
+  setup:[
+    [46000,46600,45300,45600,7200],[45600,46100,44800,45100,7500],
+    [45100,45600,44300,44700,7800],[44700,45200,43900,44300,8100],
+    [44300,44800,43600,43900,8400],[43900,44400,43200,43500,8700],
+    [43500,44000,42800,43100,9000],[43100,43600,42400,42700,9300],
+    [42700,43200,42000,42300,9000],[42300,42800,41600,41900,8700],
+    [41900,42300,41200,41500,8400],[41500,41900,40800,41100,8100],
+    [41100,41500,40400,40700,7900],[40700,41100,40100,40400,7700],
+    [40400,40700,39700,40000,7500],[40000,40300,39400,39700,7300],
+    [39700,40100,39100,39400,7100],[39400,39800,38900,39100,6900],
+    // at support, consolidation
+    [39100,39600,38700,39200,6400],[39200,39500,38900,39000,5800],
+    [39000,39400,38600,38800,5400],
+    // HAMMER: long lower wick, small body near top
+    [38800,39100,37100,38950,9800],
+  ],
+  reveal:[
+    [38950,40300,38800,40100,12500],[40100,41500,39900,41300,11800],
+    [41300,42700,41100,42500,11000],[42500,43800,42300,43600,10400],
+    [43600,44900,43400,44700,9800],[44700,46000,44500,45800,9300],
+    [45800,47000,45600,46800,8900],[46800,48000,46600,47800,8500],
+    [47800,48900,47600,48700,8100],[48700,49700,48500,49500,7800],
+    [49500,50400,49300,50200,7500],[50200,51000,50000,50800,7200],
+  ],
+  explanation:`A classic <strong>Hammer</strong> candlestick at a major support/demand zone — the market is signalling seller exhaustion loud and clear.
+
+<br><br>🔨 <strong>Reading the Candle:</strong> The long lower wick (~$1,850 pts — nearly 12× the body) tells the full story. Sellers pushed price hard to $37,100 during the session, but <strong>buyers stepped in aggressively</strong> and pushed it almost all the way back to the open by close. Sellers ran out of ammunition.
+
+<br><br>📌 <strong>Context is Everything:</strong> The course teaches that a Hammer is bullish <em>only</em> at the bottom of a trend (at support). The same candle at the top of a trend becomes a <em>Hanging Man</em> — a bearish signal. Context is non-negotiable.
+
+<br><br>📊 <strong>Volume:</strong> The hammer formed on notably elevated volume — confirming genuine buyer interest, not just low-liquidity noise.
+
+<br><br>✅ <strong>LTE:</strong>
+• <em>Level</em> — Major support / demand zone ~$38,600
+• <em>Trigger</em> — The Hammer candle itself (long lower wick = buyer confirmation)
+• <em>Entry</em> — On the open of the next candle or on confirmation close above the hammer's body
+
+<br><br>⚠️ <strong>Invalidation:</strong> Daily close below the hammer's wick low (~$37,100).`,
+  outcomeText:'Buyers defended support perfectly. Price reversed and pushed to <b>$50,800</b> — a $12K move from the entry. The hammer was the turning point.',
+  concepts:['Hammer','Single Candle Patterns','Support Zone','Demand Zone','Seller Exhaustion'],
+},
+
+// ────────────────────────────────────────────────────────────
+// 4. HEAD & SHOULDERS → SELL
+// ────────────────────────────────────────────────────────────
+{
+  pair:'ETH / USD', tf:'4H', patternName:'Head & Shoulders', correct:'sell',
+  baseDate:'2024-04-01',
+  context:'ETH formed a series of three peaks after a strong uptrend. The third peak is lower than the middle, and volume has been declining. Price just closed below the neckline. What\'s your move?',
+  levels:[
+    {price:2720,color:'rgba(255,200,60,.75)',title:'Neckline'},
+    {price:3140,color:'rgba(239,83,80,.75)',title:'Head Peak'},
+  ],
+  setup:[
+    // Left shoulder
+    [2700,2770,2680,2750,12000],[2750,2870,2730,2850,14000],
+    [2850,2980,2830,2960,16000],[2960,3020,2940,2990,14500],
+    [2990,3010,2870,2880,12000],[2880,2910,2770,2780,10500],
+    [2780,2810,2700,2720,9500],
+    // Head
+    [2720,2760,2700,2750,10000],[2750,2900,2730,2880,13500],
+    [2880,3050,2860,3030,16500],[3030,3160,3010,3140,19000],
+    [3140,3170,3000,3010,14000],[3010,3030,2840,2850,11500],
+    [2850,2870,2700,2720,10500],
+    // Right shoulder — note lower volume (weakness!)
+    [2720,2760,2710,2750,8000],[2750,2870,2730,2850,7500],
+    [2850,2980,2830,2960,7000],[2960,3010,2940,2980,6500],
+    [2980,3000,2860,2870,7500],[2870,2890,2760,2770,9000],
+    // Neckline break
+    [2770,2800,2640,2660,13500],
+  ],
+  reveal:[
+    [2660,2700,2510,2530,18000],[2530,2570,2400,2420,16000],
+    [2420,2460,2300,2320,14500],[2320,2370,2210,2230,13500],
+    [2230,2280,2170,2190,12500],[2190,2240,2150,2170,11500],
+    [2170,2230,2140,2200,10800],[2200,2260,2160,2180,10200],
+    [2180,2240,2140,2220,9700],[2220,2280,2180,2200,9200],
+    [2200,2260,2160,2220,8800],[2220,2270,2180,2250,8500],
+  ],
+  explanation:`A textbook <strong>Head & Shoulders</strong> reversal pattern — the most studied bearish reversal in technical analysis.
+
+<br><br>📐 <strong>The Structure:</strong>
+• <em>Left Shoulder</em> — Rally to ~$2,990, pulls back to neckline ~$2,720
+• <em>Head</em> — New high at $3,140 (higher than left shoulder ✓), pulls back to neckline
+• <em>Right Shoulder</em> — Rally only to ~$2,980 (<b>lower than the head</b> ✓) — buyers failing to make new highs
+• <em>Neckline</em> — Support line connecting the two troughs at ~$2,720
+
+<br><br>⚠️ <strong>The Key Tell:</strong> Volume on the right shoulder was significantly <em>lower</em> than on the head and left shoulder. Buyers are losing conviction — the market is running out of fuel.
+
+<br><br>📉 <strong>Neckline Break:</strong> Price closed below $2,720 — the confirmation signal. This is the <em>entry trigger</em> in LTE terms.
+
+<br><br>📏 <strong>Measured Move Target:</strong> Distance from head peak ($3,140) to neckline ($2,720) = $420 → Target = $2,720 − $420 = <b>$2,300</b>.
+
+<br><br>⚠️ <strong>Invalidation:</strong> Close back above the right shoulder's high (~$2,980).`,
+  outcomeText:'Price broke the neckline and reached the measured move target near <b>$2,200</b>. The right shoulder\'s lower volume was the warning sign the whole time.',
+  concepts:['Head & Shoulders','Classical Chart Patterns','Neckline','Measured Move','Volume Divergence'],
+},
+
+// ────────────────────────────────────────────────────────────
+// 5. S/R FLIP (RESISTANCE → SUPPORT) → BUY
+// ────────────────────────────────────────────────────────────
+{
+  pair:'BTC / USD', tf:'1H', patternName:'S/R Flip — Buy the Retest', correct:'buy',
+  baseDate:'2024-05-01',
+  context:'BTC tested $44,500 resistance multiple times before breaking through with strong volume. Price consolidated above, then pulled back to the exact breakout level. A bullish candle just formed there. What do you do?',
+  levels:[
+    {price:44500,color:'rgba(88,166,255,.85)',title:'S/R Flip Zone'},
+    {price:45600,color:'rgba(239,83,80,.55)',title:'Prior High'},
+  ],
+  setup:[
+    // testing resistance
+    [43800,44200,43600,44000,4800],[44000,44500,43800,44200,5200],
+    [44200,44600,44000,44300,5500],[44300,44700,44100,44500,5800],
+    [44500,44700,44100,44200,5200],[44200,44600,43900,44100,4800],
+    [44100,44600,43900,44400,5400],[44400,44800,44200,44600,6800],
+    // BREAKOUT
+    [44600,45500,44500,45300,11000],[45300,45800,45000,45600,9500],
+    // consolidation above
+    [45600,45900,45300,45400,6800],[45400,45700,45100,45300,6000],
+    [45300,45600,44900,45100,5400],[45100,45400,44700,44900,5000],
+    // pullback to S/R flip
+    [44900,45200,44600,44800,4700],[44800,45000,44400,44600,4300],
+    [44600,44900,44200,44400,4000],[44400,44700,44100,44300,3800],
+    [44300,44600,44000,44200,3900],[44200,44500,43900,44100,4000],
+    [44100,44500,43800,44000,4200],
+    // BULLISH REACTION at S/R flip level — buyers step in
+    [44000,44400,43800,44600,7500],
+  ],
+  reveal:[
+    [44600,45600,44400,45400,9800],[45400,46300,45200,46100,9200],
+    [46100,47000,45900,46800,8700],[46800,47700,46600,47500,8200],
+    [47500,48400,47300,48200,7800],[48200,49000,48000,48800,7400],
+    [48800,49600,48600,49400,7100],[49400,50200,49200,50000,6800],
+    [50000,50800,49800,50600,6500],[50600,51400,50400,51200,6200],
+    [51200,52000,51000,51800,6000],[51800,52600,51600,52400,5800],
+  ],
+  explanation:`This is an <strong>S/R Flip</strong> (Support/Resistance Flip) — arguably the highest-probability setup in the entire course.
+
+<br><br>🔄 <strong>The Concept:</strong> When a resistance level is decisively broken with volume, it <em>flips</em> to become support. The zone where sellers once defended becomes the zone where buyers now step in. Price has memory.
+
+<br><br>📋 <strong>What Happened Step by Step:</strong>
+1. BTC tested $44,500 resistance multiple times (each test weakened it — Rule of Fives)
+2. Buyers built momentum and broke through with a volume spike
+3. Price consolidated above the broken resistance
+4. Price pulled back to <em>retest</em> the old resistance as new support
+5. Buyers stepped in at that exact level → bullish confirmation candle
+
+<br><br>✅ <strong>LTE:</strong>
+• <em>Level</em> — S/R flip zone at ~$44,500
+• <em>Trigger</em> — Bullish candle at the flip level (buyers defending)
+• <em>Entry</em> — On close of the bullish candle or next candle open
+• <em>Stop</em> — Below the flip zone (~$43,800)
+
+<br><br>📊 This is your <b>highest-confidence entry type</b> — confirmed broken resistance + volume + bullish trigger + clear invalidation.`,
+  outcomeText:'Price launched from the S/R flip zone and pushed to <b>$52,400</b> — a $7,900 / ~18% move with a very tight stop-loss.',
+  concepts:['S/R Flip','Support & Resistance','LTE Methodology','Breakout Confirmation','Market Structure'],
+},
+
+// ────────────────────────────────────────────────────────────
+// 6. BEAR FLAG → SELL
+// ────────────────────────────────────────────────────────────
+{
+  pair:'ETH / USD', tf:'4H', patternName:'Bear Flag', correct:'sell',
+  baseDate:'2024-06-01',
+  context:'ETH dropped sharply from $2,800 forming a strong down-move. It then drifted upward in a gentle channel with falling volume — a relief bounce. Price is at the top of that channel. What do you do?',
+  levels:[
+    {price:2460,color:'rgba(239,83,80,.75)',title:'Flag Resistance'},
+    {price:2150,color:'rgba(38,166,65,.55)',title:'Pole Base'},
+  ],
+  setup:[
+    // pole (strong downtrend)
+    [2800,2860,2720,2740,7500],[2740,2780,2660,2680,7800],
+    [2680,2720,2600,2620,8100],[2620,2660,2540,2560,8400],
+    [2560,2600,2480,2500,8700],[2500,2540,2420,2440,9000],
+    [2440,2480,2360,2380,9300],[2380,2420,2300,2320,9600],
+    [2320,2360,2240,2260,9300],[2260,2300,2200,2220,9000],
+    [2220,2260,2170,2200,8700],[2200,2250,2150,2180,8400],
+    // bear flag (ascending channel, DECLINING VOLUME)
+    [2180,2230,2160,2220,3500],[2220,2260,2200,2250,3200],
+    [2250,2290,2230,2280,3000],[2280,2320,2260,2305,2800],
+    [2305,2340,2285,2325,2600],[2325,2360,2305,2345,2500],
+    [2345,2380,2325,2365,2400],[2365,2400,2345,2385,2300],
+    [2385,2420,2365,2405,2200],[2405,2440,2385,2425,2100],
+    [2425,2460,2405,2445,2000],[2445,2480,2425,2455,1900],
+    [2455,2490,2435,2460,1900],
+  ],
+  reveal:[
+    // BREAKDOWN with volume spike
+    [2460,2470,2280,2300,9500],[2300,2340,2160,2180,8800],
+    [2180,2220,2060,2080,8200],[2080,2120,1980,2000,7800],
+    [2000,2040,1910,1930,7400],[1930,1960,1850,1870,7100],
+    [1870,1900,1810,1830,6800],[1830,1870,1790,1810,6500],
+    [1810,1850,1770,1800,6200],[1800,1840,1770,1790,5900],
+    [1790,1830,1760,1780,5700],[1780,1820,1750,1840,5500],
+  ],
+  explanation:`This is a <strong>Bear Flag</strong> — the bearish mirror of the bull flag, and a high-probability continuation setup in a downtrend.
+
+<br><br>📌 <strong>The Pole:</strong> ETH made a strong impulsive move down with high volume, creating new Lower Lows — confirmed bearish market structure (LH + LL).
+
+<br><br>🚩 <strong>The Flag:</strong> Price bounced in a gentle ascending channel. This looks bullish to the untrained eye, but notice: <strong>volume collapsed during the bounce</strong>. There's no real buying conviction — it's just a weak corrective move before the downtrend resumes. A "dead cat bounce."
+
+<br><br>🔑 <strong>The Rule:</strong> Only look for bear flags in confirmed downtrends. "The trend is your friend" — trading against it is swimming upstream.
+
+<br><br>✅ <strong>LTE:</strong>
+• <em>Level</em> — Upper trendline of the flag channel (~$2,460)
+• <em>Trigger</em> — Bearish candle breaking below the flag with volume
+• <em>Entry</em> — Short on the breakdown or retest of broken channel
+
+<br><br>📐 <strong>Measured Move:</strong> Pole height (~$620) from breakdown → Target ~$1,840.
+
+<br><br>⚠️ <strong>Invalidation:</strong> Close above the flag's highest wick.`,
+  outcomeText:'Price broke down from the flag with a sharp volume spike and hit the measured move target near <b>$1,840</b>. Declining flag volume was the key warning.',
+  concepts:['Bear Flag','Trend Continuation','Volume Confirmation','Measured Move','Bearish Market Structure'],
+},
+
+// ────────────────────────────────────────────────────────────
+// 7. MORNING STAR AT BOTTOM → BUY
+// ────────────────────────────────────────────────────────────
+{
+  pair:'BTC / USD', tf:'Daily', patternName:'Morning Star', correct:'buy',
+  baseDate:'2024-07-01',
+  context:'BTC has been in a sustained downtrend. At a key support zone, three very specific candles just formed. Look closely at their shape and size. What does this tell you?',
+  levels:[
+    {price:37400,color:'rgba(38,166,65,.75)',title:'Support Zone'},
+    {price:41500,color:'rgba(239,83,80,.55)',title:'Prior Resistance'},
+  ],
+  setup:[
+    [46000,46600,45200,45500,6500],[45500,46000,44700,45000,6800],
+    [45000,45500,44200,44600,7100],[44600,45100,43800,44200,7400],
+    [44200,44600,43400,43800,7700],[43800,44200,43000,43400,8000],
+    [43400,43800,42600,43000,8300],[43000,43400,42200,42600,8600],
+    [42600,43000,41800,42200,8900],[42200,42600,41400,41800,8600],
+    [41800,42200,41000,41400,8300],[41400,41800,40600,41000,8000],
+    [41000,41400,40200,40600,7800],[40600,41000,39800,40200,7600],
+    [40200,40600,39400,39800,7400],[39800,40200,39000,39400,7200],
+    [39400,39800,38700,39000,7000],[39000,39400,38400,38700,6800],
+    [38700,39100,38100,38400,6600],
+    // MORNING STAR:
+    // Candle 1: large bearish
+    [38400,38700,37600,37800,8500],
+    // Candle 2: doji (indecision) — neither side wins
+    [37800,38100,37400,37600,5200],
+    // Candle 3: strong bullish — closes above midpoint of candle 1 (38100)
+    [37600,39100,37500,38700,11500],
+  ],
+  reveal:[
+    [38700,40100,38500,39900,13500],[39900,41300,39700,41100,12800],
+    [41100,42500,40900,42300,12000],[42300,43600,42100,43400,11300],
+    [43400,44700,43200,44500,10700],[44500,45800,44300,45600,10200],
+    [45600,46800,45400,46600,9700],[46600,47800,46400,47600,9200],
+    [47600,48700,47400,48500,8800],[48500,49600,48300,49400,8400],
+    [49400,50400,49200,50200,8100],[50200,51100,50000,51000,7800],
+  ],
+  explanation:`A <strong>Morning Star</strong> — a powerful 3-candle bullish reversal pattern that signals seller exhaustion and a shift in control to buyers.
+
+<br><br>🌟 <strong>The Three Candles (the course defines this precisely):</strong>
+
+<br>① <strong>Large Bearish Candle</strong> — strong selling pressure, sellers look fully in control
+<br>② <strong>Indecision Candle (Doji / Spinning Top)</strong> — small body, neither side dominant. The course says: "small body = indecision." Sellers are losing momentum.
+<br>③ <strong>Large Bullish Candle</strong> — buyers take decisive control, closing <em>above the midpoint of Candle 1</em>. (Midpoint of C1 = ($38,400+$37,800)/2 = $38,100. C3 closed at $38,700 ✓)
+
+<br><br>📌 <strong>Context is Essential:</strong> The course emphasises this pattern is only valid at the <em>bottom</em> of a trend, at a key support/demand zone. Without that context, it's noise.
+
+<br><br>📊 The third candle had elevated volume — confirming the reversal, not just a random bounce.
+
+<br><br>✅ <strong>LTE:</strong>
+• <em>Level</em> — Major support zone ~$37,400
+• <em>Trigger</em> — The 3rd Morning Star candle (course rule: <b>wait for candle close before acting</b>)
+• <em>Entry</em> — On close of 3rd candle or next candle open
+
+<br><br>⚠️ <strong>Invalidation:</strong> Close below the pattern's lowest wick ($37,400).`,
+  outcomeText:'Price reversed cleanly from the Morning Star and pushed all the way to <b>$51,000</b>. The three-candle formation at support was the turning point.',
+  concepts:['Morning Star','3-Candle Formation','Support Zone','Seller Exhaustion','Candle Close Confirmation'],
+},
+
+// ────────────────────────────────────────────────────────────
+// 8. RANGE HIGH REJECTION → SELL
+// ────────────────────────────────────────────────────────────
+{
+  pair:'ETH / USD', tf:'4H', patternName:'Range Resistance Rejection', correct:'sell',
+  baseDate:'2024-08-01',
+  context:'ETH has been bouncing between $2,400 (support) and $2,800 (resistance) for weeks. Price has once again pushed up to the range high and a strong rejection candle just formed. What do you do?',
+  levels:[
+    {price:2800,color:'rgba(239,83,80,.75)',title:'Range Resistance'},
+    {price:2400,color:'rgba(38,166,65,.75)',title:'Range Support'},
+  ],
+  setup:[
+    // bounce 1: from support to resistance
+    [2420,2460,2390,2450,13000],[2450,2540,2430,2520,14000],
+    [2520,2640,2500,2620,14500],[2620,2730,2600,2710,15000],
+    [2710,2800,2690,2780,13500],[2780,2830,2750,2800,11000],
+    // rejection at resistance
+    [2800,2840,2720,2740,14000],[2740,2770,2650,2670,12500],
+    [2670,2700,2570,2590,11000],[2590,2630,2430,2450,10000],
+    // bounce 2: from support to resistance
+    [2450,2490,2410,2470,12500],[2470,2570,2450,2550,13500],
+    [2550,2660,2530,2640,14000],[2640,2740,2620,2720,14500],
+    [2720,2810,2700,2790,13000],[2790,2840,2760,2820,10500],
+    // rejection begins again (lower volume on this push = weakness)
+    [2820,2860,2740,2750,9500],[2750,2790,2700,2720,10500],
+    [2720,2760,2690,2740,11000],[2740,2800,2720,2780,10500],
+    // pushing into resistance zone
+    [2780,2840,2760,2820,10000],[2820,2870,2790,2840,10500],
+    // SHOOTING STAR / REJECTION: opens high, sells off, long upper wick
+    [2840,2890,2700,2720,16500],
+  ],
+  reveal:[
+    [2720,2750,2610,2630,15000],[2630,2660,2530,2550,13500],
+    [2550,2580,2460,2480,12000],[2480,2520,2400,2420,11000],
+    [2420,2460,2390,2410,9500],[2410,2450,2380,2430,9200],
+    [2430,2470,2400,2450,9800],[2450,2490,2420,2470,10500],
+    [2470,2510,2440,2490,10000],[2490,2530,2460,2510,9500],
+    [2510,2550,2480,2530,9200],[2530,2570,2500,2550,9000],
+  ],
+  explanation:`Price is at the top of a well-defined <strong>Range-Bound Market</strong> — and the rejection pattern at resistance is a high-probability sell setup.
+
+<br><br>📊 <strong>Range Analysis:</strong>
+• ETH has been bouncing between clear support (~$2,400) and resistance (~$2,800) repeatedly
+• Multiple tests of both levels confirmed the range is solid
+• The <b>"Rule of Fives"</b> from the course: each test weakens the level slightly, but the first few tests are the most tradeable
+
+<br><br>🔴 <strong>At Resistance:</strong> Price hit the range high and formed a strong rejection candle — opened at $2,840, pushed to $2,890, then sellers crushed it back to $2,720. <b>Long upper wick = buyers exhausted / sellers stepping in aggressively at supply.</b>
+
+<br><br>✅ <strong>LTE:</strong>
+• <em>Level</em> — Range resistance / supply zone ~$2,800
+• <em>Trigger</em> — Rejection candle (shooting star pattern, long upper wick = seller confirmation)
+• <em>Entry</em> — Short at resistance, or on close of rejection candle
+• <em>Target</em> — Range support ~$2,400
+
+<br><br>📏 <strong>Risk:Reward:</strong> Entry ~$2,800, Stop above high ~$2,900, Target ~$2,400 → ~4:1 R ratio!
+
+<br><br>⚠️ <strong>When to flip to BUY instead:</strong> If you see a clean breakout <em>above</em> the range with high volume, that invalidates the range entirely and becomes a breakout trade.`,
+  outcomeText:'Sellers defended the resistance zone and price dropped back to range support at <b>$2,400</b> — a $400 move with a tight $100 stop. Classic range play.',
+  concepts:['Range-Bound Market','Resistance Zone','Supply & Demand','Rule of Fives','Risk:Reward Ratio'],
+},
+
+]; // end SCENARIOS
+
+// ════════════════════════════════════════════════════════════
+//  QUIZ STATE
+// ════════════════════════════════════════════════════════════
+
+let order = [];
+let idx = 0;
+let score = 0;
+let streak = 0;
+let bestStreak = 0;
+let wrong = 0;
+let answered = false;
+let chartInstance = null;
+let candleSeries = null;
+let volSeries = null;
+let revealTimer = null;
+
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function addDays(base, n) {
+  const d = new Date(base);
+  d.setDate(d.getDate() + n);
+  return d.toISOString().split('T')[0];
+}
+
+function buildChartData(raw, base, offset = 0) {
+  const candles = [], vols = [];
+  raw.forEach(([o, h, l, c, v], i) => {
+    const t = addDays(base, offset + i);
+    candles.push({ time: t, open: o, high: h, low: l, close: c });
+    vols.push({ time: t, value: v, color: c >= o ? 'rgba(38,166,65,.55)' : 'rgba(248,81,73,.55)' });
+  });
+  return { candles, vols };
+}
+
+// ════════════════════════════════════════════════════════════
+//  CHART INIT
+// ════════════════════════════════════════════════════════════
+
+function initChart(sc) {
+  const wrap = document.getElementById('chartWrap');
+  wrap.innerHTML = '';
+
+  chartInstance = LightweightCharts.createChart(wrap, {
+    width: wrap.clientWidth,
+    height: wrap.clientHeight || 370,
+    layout: {
+      background: { type: 'solid', color: '#161b22' },
+      textColor: '#8b949e',
+    },
+    grid: {
+      vertLines: { color: '#1e242c' },
+      horzLines: { color: '#1e242c' },
+    },
+    crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
+    rightPriceScale: { borderColor: '#30363d', scaleMargins: { top: 0.05, bottom: 0.22 } },
+    timeScale: { borderColor: '#30363d', timeVisible: true, fixLeftEdge: true, fixRightEdge: true },
+    handleScroll: false,
+    handleScale: false,
+  });
+
+  candleSeries = chartInstance.addCandlestickSeries({
+    upColor: '#26a641', downColor: '#f85149',
+    borderUpColor: '#2ea043', borderDownColor: '#f85149',
+    wickUpColor: '#26a641', wickDownColor: '#f85149',
+  });
+
+  volSeries = chartInstance.addHistogramSeries({
+    priceFormat: { type: 'volume' },
+    priceScaleId: 'vol',
+    lastValueVisible: false,
+    priceLineVisible: false,
+  });
+  chartInstance.priceScale('vol').applyOptions({
+    scaleMargins: { top: 0.82, bottom: 0 },
+  });
+
+  const { candles, vols } = buildChartData(sc.setup, sc.baseDate);
+  candleSeries.setData(candles);
+  volSeries.setData(vols);
+
+  // Add key levels
+  sc.levels.forEach(lv => {
+    candleSeries.createPriceLine({
+      price: lv.price, color: lv.color, lineWidth: 1,
+      lineStyle: LightweightCharts.LineStyle.Dashed,
+      axisLabelVisible: true, title: lv.title,
+    });
+  });
+
+  // "You Are Here" marker on last candle
+  const lastTime = candles[candles.length - 1].time;
+  candleSeries.setMarkers([{
+    time: lastTime, position: 'aboveBar',
+    color: '#e3b341', shape: 'arrowDown', text: '← You Are Here',
+  }]);
+
+  chartInstance.timeScale().fitContent();
+
+  window._resizeChart = () => {
+    if (chartInstance) chartInstance.resize(wrap.clientWidth, wrap.clientHeight || 370);
+  };
+  window.addEventListener('resize', window._resizeChart);
+}
+
+// ════════════════════════════════════════════════════════════
+//  REVEAL CANDLES
+// ════════════════════════════════════════════════════════════
+
+function animateReveal(sc) {
+  candleSeries.setMarkers([]); // remove "you are here"
+  const offset = sc.setup.length;
+  let i = 0;
+
+  function step() {
+    if (i >= sc.reveal.length) return;
+    const [o, h, l, c, v] = sc.reveal[i];
+    const t = addDays(sc.baseDate, offset + i);
+    candleSeries.update({ time: t, open: o, high: h, low: l, close: c });
+    volSeries.update({ time: t, value: v, color: c >= o ? 'rgba(38,166,65,.55)' : 'rgba(248,81,73,.55)' });
+    i++;
+    revealTimer = setTimeout(step, 140);
+  }
+  step();
+}
+
+// ════════════════════════════════════════════════════════════
+//  LOAD SCENARIO
+// ════════════════════════════════════════════════════════════
+
+function loadScenario() {
+  if (revealTimer) clearTimeout(revealTimer);
+  answered = false;
+
+  const sc = SCENARIOS[order[idx]];
+  const total = SCENARIOS.length;
+
+  // Progress
+  const pct = (idx / total) * 100;
+  document.getElementById('progFill').style.width = pct + '%';
+  document.getElementById('progLbl').textContent = `Scenario ${idx + 1} of ${total}`;
+
+  // Meta
+  document.getElementById('pairDisp').textContent = sc.pair;
+  document.getElementById('tfDisp').textContent = sc.tf;
+  document.getElementById('patternTag').style.display = 'none';
+
+  // Question
+  document.getElementById('qContext').textContent = sc.context;
+
+  // Buttons
+  ['btnBuy', 'btnHold', 'btnSell'].forEach(id => {
+    const b = document.getElementById(id);
+    b.disabled = false;
+    b.style.opacity = '';
+    b.style.boxShadow = '';
+  });
+
+  // Hide result + next
+  document.getElementById('resultPanel').style.display = 'none';
+  document.getElementById('btnNext').style.display = 'none';
+
+  // Update header
+  document.getElementById('scoreDisp').textContent = score;
+  document.getElementById('streakDisp').textContent = streak;
+  document.getElementById('qDisp').textContent = `${idx + 1}/${total}`;
+
+  // Chart
+  initChart(sc);
+}
+
+// ════════════════════════════════════════════════════════════
+//  ANSWER HANDLER
+// ════════════════════════════════════════════════════════════
+
+function answer(choice) {
+  if (answered) return;
+  answered = true;
+
+  const sc = SCENARIOS[order[idx]];
+  const isCorrect = choice === sc.correct;
+
+  // Disable buttons, highlight
+  ['buy', 'hold', 'sell'].forEach(c => {
+    const b = document.getElementById('btn' + c.charAt(0).toUpperCase() + c.slice(1));
+    b.disabled = true;
+    if (c === sc.correct) {
+      b.style.opacity = '1';
+      b.style.boxShadow = '0 0 0 3px rgba(63,185,80,.6)';
+    } else if (c === choice && !isCorrect) {
+      b.style.opacity = '1';
+      b.style.boxShadow = '0 0 0 3px rgba(248,81,73,.6)';
+    } else {
+      b.style.opacity = '0.3';
+    }
+  });
+
+  // Score
+  if (isCorrect) {
+    score++;
+    streak++;
+    bestStreak = Math.max(bestStreak, streak);
+  } else {
+    streak = 0;
+    wrong++;
+  }
+
+  document.getElementById('scoreDisp').textContent = score;
+  document.getElementById('streakDisp').textContent = streak;
+
+  // Show pattern tag
+  const tag = document.getElementById('patternTag');
+  tag.textContent = sc.patternName;
+  tag.style.display = 'inline-block';
+
+  // Result panel
+  const panel = document.getElementById('resultPanel');
+  panel.style.display = 'block';
+
+  let ico, titleText, titleClass;
+  if (isCorrect) {
+    ico = '🎯'; titleText = 'Correct!'; titleClass = 'correct-title';
+  } else if (choice === 'hold') {
+    ico = '⚠️'; titleText = 'Close — but the better move was ' + sc.correct.toUpperCase(); titleClass = 'partial-title';
+  } else {
+    ico = '❌'; titleText = `Wrong — the correct move was ${sc.correct.toUpperCase()}`; titleClass = 'incorrect-title';
+  }
+
+  document.getElementById('resIco').textContent = ico;
+  const rt = document.getElementById('resTitle');
+  rt.textContent = titleText;
+  rt.className = 'result-title ' + titleClass;
+
+  document.getElementById('resPatternLabel').innerHTML =
+    `<span class="${isCorrect ? 'badge-correct' : 'badge-wrong'}">Pattern: ${sc.patternName}</span>`;
+
+  document.getElementById('resBody').innerHTML = sc.explanation;
+  document.getElementById('resOutcome').innerHTML = `📊 <b>What happened next:</b> ${sc.outcomeText}`;
+
+  const cDiv = document.getElementById('resConcepts');
+  cDiv.innerHTML = sc.concepts.map(c => `<span class="concept">📚 ${c}</span>`).join('');
+
+  // Show next button
+  document.getElementById('btnNext').style.display = 'block';
+
+  // Animate reveal
+  setTimeout(() => animateReveal(sc), 300);
+}
+
+// ════════════════════════════════════════════════════════════
+//  NEXT / RESTART
+// ════════════════════════════════════════════════════════════
+
+function nextScenario() {
+  if (window._resizeChart) window.removeEventListener('resize', window._resizeChart);
+  idx++;
+  if (idx >= SCENARIOS.length) {
+    showFinal();
+  } else {
+    loadScenario();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+}
+
+function showFinal() {
+  document.getElementById('quizScreen').style.display = 'none';
+  document.getElementById('finalScreen').style.display = 'block';
+
+  const total = SCENARIOS.length;
+  document.getElementById('finalScore').textContent = score;
+  document.getElementById('finalDenom').textContent = '/ ' + total;
+  document.getElementById('bkCorrect').textContent = score;
+  document.getElementById('bkWrong').textContent = wrong;
+  document.getElementById('bkStreak').textContent = bestStreak;
+
+  const pct = score / total;
+  let grade, sub;
+  if (pct === 1)       { grade = '🏆 Expert Trader';       sub = 'Perfect score! You\'ve mastered market structure, patterns, and price action from the course. Chart time is paying off.'; }
+  else if (pct >= .875){ grade = '📈 Senior Trader';        sub = 'Excellent! You\'re reading the market at a high level. Keep refining your edge with journaling and screen time.'; }
+  else if (pct >= .75) { grade = '🎯 Intermediate Trader';  sub = 'Solid foundation. You recognize most patterns — focus on the ones you missed and revisit the LTE methodology.'; }
+  else if (pct >= .5)  { grade = '📚 Learning Trader';      sub = 'Good start. The patterns take time to internalize. Review the course modules on chart patterns and candlestick formations.'; }
+  else                 { grade = '🌱 Apprentice Trader';     sub = 'Keep studying! Review Course 1 (Market Structure) and Course 2 (Chart Patterns). Screen time is the key — put in the reps.'; }
+
+  document.getElementById('finalGrade').textContent = grade;
+  document.getElementById('finalSub').textContent = sub;
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function restartQuiz() {
+  if (revealTimer) clearTimeout(revealTimer);
+  if (chartInstance) { chartInstance.remove(); chartInstance = null; }
+  score = 0; streak = 0; bestStreak = 0; wrong = 0; idx = 0;
+  order = shuffle(SCENARIOS.map((_, i) => i));
+  document.getElementById('quizScreen').style.display = '';
+  document.getElementById('finalScreen').style.display = 'none';
+  loadScenario();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// ════════════════════════════════════════════════════════════
+//  BOOT
+// ════════════════════════════════════════════════════════════
+order = shuffle(SCENARIOS.map((_, i) => i));
+loadScenario();
+
+</script>
+</body>
+</html>
