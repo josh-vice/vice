@@ -55,8 +55,10 @@ const SIM_ALL_PATTERNS = Object.keys(SIM_CONCEPTS);
 const SIM_TIMEFRAMES   = ['4h','6h','12h','1d'];
 const SIM_STORAGE      = 'lt_sim_stats';
 // Chart plot padding — shared by the candlestick render AND the draggable
-// order lines so pixel↔price conversions line up exactly.
-const SIM_GRID = { left:56, right:16, top:22, bottom:34 };
+// order lines so pixel↔price conversions line up exactly. The wide right margin
+// is a dedicated gutter so the Entry/SL/TP price tags sit BESIDE the candles
+// (TradingView-style) instead of overlapping the most recent bars.
+const SIM_GRID = { left:56, right:98, top:22, bottom:34 };
 
 /* ── STATE ────────────────────────────────────────────────────────────────── */
 let _simStats       = null;
@@ -73,9 +75,31 @@ let _simOpts        = {};     // { pattern, label, courseMode }
 let _simLockedPattern = null; // null = random; string = locked to that pattern
 let _simDirection   = null;
 let _simEntryPrice  = 0;
+let _simOutcome     = 'resolve'; // 'resolve' (setup works) | 'fail' (setup fails)
+
+/* ── DIFFICULTY ──────────────────────────────────────────────────────────────
+   Learn = setups always resolve textbook (clean pattern practice).
+   Realistic = ~38% of setups fail, like real markets — read it right and you
+   can still lose, so the stop matters more than being "correct". */
+const SIM_DIFF_KEY = 'lt_sim_difficulty';
+function _simDifficulty() { return localStorage.getItem(SIM_DIFF_KEY) === 'real' ? 'real' : 'learn'; }
+function _simPickOutcome() { return _simDifficulty() === 'real' ? (Math.random() < 0.38 ? 'fail' : 'resolve') : 'resolve'; }
+window._sim2SetDifficulty = function(mode) {
+  localStorage.setItem(SIM_DIFF_KEY, mode === 'real' ? 'real' : 'learn');
+  renderSimulator('content-area', _simOpts); // fresh round under the new mode
+};
 
 /* ── HELPERS ──────────────────────────────────────────────────────────────── */
-function _bc() { return localStorage.getItem('lt_bullish_color') || '#00d4d4'; }
+// Theme-aware candle colours — delegate to the engine so the sim matches the app
+// (light mode: deep-teal up / slate down, instead of cyan/near-white-on-white).
+function _bc() {
+  return (typeof getBullishColor === 'function') ? getBullishColor()
+    : (localStorage.getItem('lt_bullish_color') || '#00d4d4');
+}
+function _bear() {
+  return (typeof getBearishColor === 'function') ? getBearishColor()
+    : (localStorage.getItem('lt_bearish_color') || '#f2f2f2');
+}
 
 function simLoadStats() {
   try {
@@ -104,7 +128,8 @@ function _simNewRound() {
   _simPattern  = _simPickPattern();
   _simTF       = SIM_TIMEFRAMES[Math.floor(Math.random() * SIM_TIMEFRAMES.length)];
   _simSeed     = Math.floor(Math.random() * 99999) + 1;
-  _simMarket   = generateMarket(_simPattern, _simSeed);
+  _simOutcome  = _simPickOutcome();
+  _simMarket   = generateMarket(_simPattern, _simSeed, _simOutcome);
   _simView     = viewMarket(_simMarket, _simTF);
   _simAnswered = false;
   _simDirection = null;
@@ -127,7 +152,10 @@ function _calcMetrics(direction, entry, sl, tp, riskPct, leverage, equity) {
     ? entry * (1 - liqOffset)
     : entry * (1 + liqOffset);
   const liqPct = Math.abs(liqPrice - entry) / entry * 100;
-  const valid = margin <= equity && slDist > 0 && tpDist > 0 &&
+  // A real order needs positive, finite prices on the correct side of entry.
+  // (Guards against SL/TP of 0, negatives, or empty fields coerced to 0.)
+  const pricesOk = entry > 0 && sl > 0 && tp > 0 && isFinite(sl) && isFinite(tp);
+  const valid = pricesOk && margin <= equity && slDist > 0 && tpDist > 0 &&
     (direction === 'long'  ? sl < entry && tp > entry : sl > entry && tp < entry);
   return { slDist, tpDist, rr, riskUSD, notional, margin, marginPct, liqPrice, liqPct, valid };
 }
@@ -158,31 +186,10 @@ function _simStyles() {
   /* ── layout ── */
   .sim2-wrap { width:100%; max-width:1100px; margin:0 auto; padding:0 0 40px; }
   .sim2-back-row { display:flex; align-items:center; justify-content:space-between; padding:14px 0 12px; }
-  .sim2-back-btn { display:inline-flex; align-items:center; gap:6px; background:none; border:none; color:var(--teal); font-family:'Barlow',sans-serif; font-size:13px; font-weight:600; cursor:pointer; padding:0; }
+  .sim2-back-btn { display:inline-flex; align-items:center; gap:6px; background:none; border:none; color:var(--teal); font-family:'JetBrains Mono',monospace; font-size:13px; font-weight:600; cursor:pointer; padding:0; }
   .sim2-back-btn:hover { opacity:.8; }
-  .sim2-heading { font-family:'Barlow Condensed',sans-serif; font-size:26px; font-weight:800; color:var(--text); }
+  .sim2-heading { font-family:'JetBrains Mono',monospace; font-size:21px; letter-spacing:-0.5px; font-weight:800; color:var(--text); }
   .sim2-sub { font-size:12px; color:var(--text3); margin-top:2px; }
-
-  /* ── pattern selector (single scrollable row) ── */
-  .sim2-pattern-bar {
-    display:flex; align-items:center; gap:8px; flex-wrap:nowrap; overflow-x:auto;
-    background:var(--bg3); border:1px solid var(--border); border-radius:var(--radius-lg);
-    padding:9px 14px; margin-bottom:12px; scrollbar-width:thin;
-  }
-  .sim2-pattern-bar::-webkit-scrollbar { height:5px; }
-  .sim2-pattern-bar::-webkit-scrollbar-thumb { background:var(--border2); border-radius:3px; }
-  .sim2-pattern-bar::-webkit-scrollbar-track { background:transparent; }
-  .sim2-pattern-label { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.8px; color:var(--text3); flex-shrink:0; margin-right:2px; position:sticky; left:0; background:var(--bg3); padding-right:6px; z-index:1; }
-  .sim2-pat-btn {
-    padding:4px 10px; border-radius:10px; border:1px solid var(--border2);
-    background:var(--bg4); color:var(--text3); font-size:11px; font-weight:600;
-    cursor:pointer; font-family:'Barlow',sans-serif; white-space:nowrap; transition:all .15s;
-    flex:0 0 auto;
-  }
-  .sim2-pat-btn:hover { border-color:var(--teal); color:var(--teal); }
-  .sim2-pat-btn.active { background:var(--teal-dim); border-color:var(--teal); color:var(--teal); }
-  .sim2-pat-btn.random { color:var(--text2); border-style:dashed; }
-  .sim2-pat-btn.random.active { color:var(--teal); border-style:solid; }
 
   /* ── stats strip ── */
   .sim2-stats { display:flex; gap:10px; margin-bottom:14px; flex-wrap:wrap; }
@@ -192,14 +199,15 @@ function _simStyles() {
   .sim2-stat-val.down { color:#cc2222; }
 
   /* ── main grid (chart + terminal) — equal heights so it snaps together ── */
-  .sim2-grid { display:grid; grid-template-columns:1fr 340px; gap:12px; margin-bottom:12px; align-items:stretch; }
+  .sim2-grid { display:grid; grid-template-columns:1fr 364px; gap:16px; margin-bottom:12px; align-items:stretch; }
   @media(max-width:860px) { .sim2-grid { grid-template-columns:1fr; } }
 
   /* ── chart card (flex column so the chart fills to match the terminal) ── */
   .sim2-chart-card { background:var(--bg3); border:1px solid var(--border); border-radius:var(--radius-lg); overflow:hidden; display:flex; flex-direction:column; min-width:0; }
-  .sim2-chart-topbar { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:7px 12px; border-bottom:1px solid var(--border); flex:0 0 auto; }
-  .sim2-chart-topL { display:flex; align-items:center; gap:12px; min-width:0; }
-  .sim2-chart-sym { font-size:12px; font-weight:700; color:var(--text); white-space:nowrap; }
+  /* wrap + shrink so the narrow chart panel (2-col layout) never overlaps its own topbar */
+  .sim2-chart-topbar { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:6px 10px; padding:7px 12px; border-bottom:1px solid var(--border); flex:0 0 auto; }
+  .sim2-chart-topL { display:flex; align-items:center; gap:10px; min-width:0; flex-shrink:1; }
+  .sim2-chart-sym { font-size:12px; font-weight:700; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:0; flex-shrink:1; }
   .sim2-chart-badge { font-size:10px; font-weight:700; letter-spacing:.8px; text-transform:uppercase; padding:2px 8px; border-radius:10px; background:var(--teal-dim); border:1px solid var(--teal); color:var(--teal); white-space:nowrap; }
   .sim2-chart-badge.revealing { background:rgba(200,150,12,.12); border-color:#c8960c; color:#c8960c; }
   .sim2-chart-badge.revealed  { background:rgba(0,200,120,.10); border-color:#00c878; color:#00c878; }
@@ -207,7 +215,7 @@ function _simStyles() {
 
   /* ── timeframe segmented control ── */
   .sim2-tf-group { display:inline-flex; gap:2px; background:var(--bg4); border:1px solid var(--border2); border-radius:8px; padding:2px; }
-  .sim2-tf-btn { padding:2px 9px; border:none; background:none; color:var(--text3); font-size:11px; font-weight:700; cursor:pointer; font-family:'Barlow',sans-serif; border-radius:6px; transition:all .12s; }
+  .sim2-tf-btn { padding:2px 9px; border:none; background:none; color:var(--text3); font-size:11px; font-weight:700; cursor:pointer; font-family:'JetBrains Mono',monospace; border-radius:6px; transition:all .12s; }
   .sim2-tf-btn:hover { color:var(--text); }
   .sim2-tf-btn.active { background:var(--teal-dim); color:var(--teal); }
   .sim2-tf-btn:disabled { opacity:.4; cursor:not-allowed; }
@@ -216,10 +224,10 @@ function _simStyles() {
   .sim2-terminal {
     background:var(--bg2); border:1px solid var(--border2);
     border-radius:var(--radius-lg); overflow:hidden;
-    font-family:'Barlow',monospace; display:flex; flex-direction:column;
+    font-family:'JetBrains Mono',monospace; display:flex; flex-direction:column;
   }
   .sim2-term-header {
-    padding:10px 14px 8px; border-bottom:1px solid var(--border2);
+    padding:12px 16px 10px; border-bottom:1px solid var(--border2);
     display:flex; align-items:center; justify-content:space-between;
   }
   .sim2-term-title { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:1px; color:var(--teal); }
@@ -230,7 +238,7 @@ function _simStyles() {
   .sim2-dir-row { display:flex; gap:0; }
   .sim2-dir-btn {
     flex:1; padding:10px 8px; border:none; font-size:13px; font-weight:800;
-    cursor:pointer; font-family:'Barlow',sans-serif; transition:all .12s;
+    cursor:pointer; font-family:'JetBrains Mono',monospace; transition:all .12s;
     letter-spacing:.5px; text-transform:uppercase;
   }
   .sim2-dir-btn:disabled { opacity:.35; cursor:not-allowed; }
@@ -240,8 +248,8 @@ function _simStyles() {
   .sim2-dir-btn.sel-short { background:rgba(204,34,34,.25)!important; }
 
   /* entry / sl / tp rows */
-  .sim2-fields { padding:0 12px; }
-  .sim2-field { padding:10px 0; border-bottom:1px solid var(--border); }
+  .sim2-fields { padding:0 16px; }
+  .sim2-field { padding:11px 0; border-bottom:1px solid var(--border); }
   .sim2-field:last-child { border-bottom:none; }
   .sim2-field-header { display:flex; align-items:baseline; justify-content:space-between; margin-bottom:6px; }
   .sim2-field-lbl { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.8px; color:var(--text3); }
@@ -250,7 +258,7 @@ function _simStyles() {
   .sim2-field-pct.ok   { color:var(--teal); }
   .sim2-price-input {
     width:100%; background:var(--bg4); border:1px solid var(--border2);
-    border-radius:var(--radius); color:var(--text); font-family:'Barlow',monospace;
+    border-radius:var(--radius); color:var(--text); font-family:'JetBrains Mono',monospace;
     font-size:16px; font-weight:700; padding:7px 10px; outline:none;
     transition:border-color .15s;
   }
@@ -261,12 +269,12 @@ function _simStyles() {
   .sim2-preset-btn {
     padding:2px 8px; border-radius:8px; border:1px solid var(--border2);
     background:var(--bg4); color:var(--text3); font-size:10px; font-weight:700;
-    cursor:pointer; font-family:'Barlow',sans-serif; transition:all .12s;
+    cursor:pointer; font-family:'JetBrains Mono',monospace; transition:all .12s;
   }
   .sim2-preset-btn:hover { border-color:var(--teal); color:var(--teal); }
 
   /* risk slider */
-  .sim2-risk-row { padding:10px 12px; border-top:1px solid var(--border2); }
+  .sim2-risk-row { padding:11px 16px; border-top:1px solid var(--border2); }
   .sim2-risk-header { display:flex; justify-content:space-between; align-items:baseline; margin-bottom:8px; }
   .sim2-risk-lbl { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.8px; color:var(--text3); }
   .sim2-risk-val { font-size:13px; font-weight:800; color:var(--teal); }
@@ -280,13 +288,13 @@ function _simStyles() {
   }
 
   /* leverage row */
-  .sim2-lev-row { padding:8px 12px 10px; border-top:1px solid var(--border2); }
+  .sim2-lev-row { padding:9px 16px 11px; border-top:1px solid var(--border2); }
   .sim2-lev-header { display:flex; justify-content:space-between; align-items:baseline; margin-bottom:6px; }
   .sim2-lev-lbl { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.8px; color:var(--text3); }
   .sim2-lev-val { font-size:13px; font-weight:800; color:var(--text2); }
 
   /* calculated metrics */
-  .sim2-calc { background:var(--bg); border-top:1px solid var(--border2); padding:10px 12px; }
+  .sim2-calc { background:var(--bg); border-top:1px solid var(--border2); padding:11px 16px; }
   .sim2-calc-title { font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:1px; color:var(--text3); margin-bottom:8px; }
   .sim2-calc-row { display:flex; justify-content:space-between; align-items:baseline; padding:3px 0; }
   .sim2-calc-lbl { font-size:11px; color:var(--text3); }
@@ -298,18 +306,18 @@ function _simStyles() {
 
   /* warning banner */
   .sim2-warn {
-    margin:8px 12px; padding:7px 10px; border-radius:var(--radius);
+    margin:8px 16px; padding:7px 10px; border-radius:var(--radius);
     background:rgba(204,34,34,.08); border:1px solid rgba(204,34,34,.3);
     font-size:11px; color:#ff8888; line-height:1.5; display:none;
   }
   .sim2-warn.show { display:block; }
 
   /* execute button */
-  .sim2-exec-wrap { padding:10px 12px 14px; }
+  .sim2-exec-wrap { padding:12px 16px 14px; }
   .sim2-exec-btn {
     width:100%; padding:13px; background:var(--teal); border:none;
     border-radius:var(--radius); color:#000; font-size:14px; font-weight:900;
-    cursor:pointer; font-family:'Barlow',sans-serif; letter-spacing:.5px;
+    cursor:pointer; font-family:'JetBrains Mono',monospace; letter-spacing:.5px;
     text-transform:uppercase; transition:all .15s;
   }
   .sim2-exec-btn:hover:not(:disabled) { background:var(--teal2); box-shadow:var(--glow-teal); }
@@ -333,7 +341,7 @@ function _simStyles() {
   .sim2-verdict-stats { display:flex; gap:18px; margin-top:10px; flex-wrap:wrap; }
   .sim2-verdict-stat { font-size:12px; color:var(--text3); }
   .sim2-verdict-stat strong { color:var(--text); }
-  .sim2-next-btn { width:100%; padding:13px; background:var(--teal); border:none; border-radius:var(--radius); color:#000; font-size:14px; font-weight:800; cursor:pointer; font-family:'Barlow',sans-serif; transition:all .15s; margin-bottom:14px; }
+  .sim2-next-btn { width:100%; padding:13px; background:var(--teal); border:none; border-radius:var(--radius); color:#000; font-size:14px; font-weight:800; cursor:pointer; font-family:'JetBrains Mono',monospace; transition:all .15s; margin-bottom:14px; }
   .sim2-next-btn:hover { background:var(--teal2); box-shadow:var(--glow-teal); }
 
   /* account summary row */
@@ -392,7 +400,7 @@ function _simStyles() {
 
   /* reset */
   .sim2-reset-row { display:flex; justify-content:flex-end; }
-  .sim2-reset-btn { background:transparent; border:1px solid var(--border2); color:var(--text3); font-size:11px; padding:5px 14px; border-radius:10px; cursor:pointer; font-family:'Barlow',sans-serif; transition:all .15s; }
+  .sim2-reset-btn { background:transparent; border:1px solid var(--border2); color:var(--text3); font-size:11px; padding:5px 14px; border-radius:10px; cursor:pointer; font-family:'JetBrains Mono',monospace; transition:all .15s; }
   .sim2-reset-btn:hover { border-color:#cc2222; color:#cc2222; }
 
   @keyframes sim2FadeIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
@@ -405,6 +413,46 @@ function _simStyles() {
   }
   /* drag hint shown over the chart while an order line is grabbable */
   .sim2-drag-hint { font-size:10px; color:var(--text3); white-space:nowrap; }
+
+  /* ── control row (mode + pattern) — replaces the old 18-pill wall ── */
+  .sim2-controls { display:flex; flex-wrap:wrap; gap:10px 22px; align-items:center; background:var(--bg3); border:1px solid var(--border); border-radius:var(--radius-lg); padding:10px 14px; margin-bottom:12px; }
+  .sim2-ctrl-group { display:flex; align-items:center; gap:8px; min-width:0; flex-wrap:wrap; }
+  .sim2-ctrl-lbl { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.8px; color:var(--text3); }
+  .sim2-ctrl-hint { font-size:10px; color:var(--text3); font-style:italic; }
+  .sim2-seg { display:inline-flex; gap:2px; background:var(--bg4); border:1px solid var(--border2); border-radius:8px; padding:2px; }
+  .sim2-seg-btn { padding:4px 12px; border:none; background:none; color:var(--text3); font-size:11px; font-weight:700; cursor:pointer; font-family:'JetBrains Mono',monospace; border-radius:6px; transition:all .12s; }
+  .sim2-seg-btn:hover { color:var(--text); }
+  .sim2-seg-btn.active { background:var(--teal-dim); color:var(--teal); }
+  .sim2-rand-btn { padding:5px 12px; border-radius:8px; border:1px dashed var(--border2); background:var(--bg4); color:var(--text2); font-size:11px; font-weight:700; cursor:pointer; font-family:'JetBrains Mono',monospace; transition:all .12s; }
+  .sim2-rand-btn:hover { border-color:var(--teal); color:var(--teal); }
+  .sim2-rand-btn.active { border-style:solid; border-color:var(--teal); background:var(--teal-dim); color:var(--teal); }
+  .sim2-pat-select { background:var(--bg4); border:1px solid var(--border2); border-radius:8px; color:var(--text2); font-family:'JetBrains Mono',monospace; font-size:11px; font-weight:600; padding:5px 8px; cursor:pointer; max-width:210px; }
+  .sim2-pat-select:focus { outline:none; border-color:var(--teal); }
+
+  /* beta chip (replaces the loud caution tape) */
+  .sim2-beta { display:inline-block; font-size:10px; font-weight:700; letter-spacing:.5px; text-transform:uppercase; color:var(--text2); background:var(--bg4); border:1px solid var(--border2); border-radius:10px; padding:2px 9px; margin-left:10px; vertical-align:middle; }
+
+  /* execute disabled-reason hint */
+  .sim2-exec-hint { font-size:11px; color:var(--text3); text-align:center; padding:8px 2px 0; line-height:1.5; }
+  .sim2-exec-hint:empty { display:none; }
+  .sim2-exec-hint.warn { color:#e0a030; }
+
+  /* verdict coaching line (outcome-aware) — icon conveys the read assessment */
+  .sim2-verdict-coach { display:flex; align-items:flex-start; gap:7px; font-size:12.5px; color:var(--text2); line-height:1.55; margin-top:10px; padding-top:10px; border-top:1px dashed var(--border2); }
+  .sim2-verdict-coach svg { flex:0 0 auto; margin-top:1px; }
+  .sim2-verdict-coach.good svg { color:var(--teal); }
+  .sim2-verdict-coach.warn svg { color:#e0a030; }
+  .sim2-verdict-coach.bad  svg { color:#e0556a; }
+  .sim2-verdict-coach.neutral svg { color:var(--text3); }
+  .sim2-verdict-coach strong { color:var(--text); }
+
+  @media(max-width:600px) {
+    .sim2-chart-topbar { flex-wrap:wrap; gap:6px 10px; }
+    .sim2-chart-sym { display:none; }              /* reclaim width on narrow phones */
+    .sim2-controls { gap:8px 14px; padding:10px 12px; }
+    .sim2-pat-select { max-width:48vw; }
+    .sim2-stat { flex:1 1 calc(50% - 5px); min-width:0; }   /* even 2×2 grid, not 3+1 */
+  }
 
   /* (.chapter-practice-btn now lives in lt-styles.css so it is always styled) */
   `;
@@ -449,7 +497,7 @@ function _sim2UpdateStats() {
   if (eqEl) { eqEl.textContent=`$${s.equity.toFixed(0)}`; eqEl.className='sim2-stat-val'+(pnl>=0?'':' down'); }
   if (wrEl) { wrEl.textContent=`${wr}%`; wrEl.className='sim2-stat-val'+(wr>=50?'':' down'); }
   if (trEl) trEl.textContent = String(s.trades);
-  if (skEl) skEl.textContent = `${s.streak}🔥`;
+  if (skEl) skEl.textContent = String(s.streak);
   const pnlEl = document.getElementById('sim2-equity-pnl');
   if (pnlEl) { pnlEl.textContent=`${pnl>=0?'+':''}$${pnl.toFixed(0)} all-time`; pnlEl.style.color=_simStats.equity>=1000?_bc():'#cc2222'; }
   _sim2RenderEquityChart();
@@ -513,22 +561,38 @@ window._sim2Recalc = function(skipLines) {
   const warn = document.getElementById('sim2-warn');
   if (warn) {
     if (m.notional > 0 && m.margin > _simStats.equity) {
-      warn.textContent = `⚠ Margin required ($${m.margin.toFixed(0)}) exceeds account equity. Reduce leverage or increase SL distance.`;
+      warn.textContent = `Margin required ($${m.margin.toFixed(0)}) exceeds account equity. Reduce leverage or increase SL distance.`;
       warn.classList.add('show');
     } else if (m.notional > 0 && m.liqPrice > (sl || 0) && _simDirection === 'long') {
-      warn.textContent = `⚠ Liquidation price ($${m.liqPrice.toFixed(0)}) is ABOVE your stop loss. Reduce leverage.`;
+      warn.textContent = `Liquidation price ($${m.liqPrice.toFixed(0)}) is ABOVE your stop loss. Reduce leverage.`;
       warn.classList.add('show');
     } else if (m.notional > 0 && m.liqPrice < (sl || 0) && _simDirection === 'short') {
-      warn.textContent = `⚠ Liquidation price ($${m.liqPrice.toFixed(0)}) is BELOW your stop loss. Reduce leverage.`;
+      warn.textContent = `Liquidation price ($${m.liqPrice.toFixed(0)}) is BELOW your stop loss. Reduce leverage.`;
       warn.classList.add('show');
     } else {
       warn.classList.remove('show');
     }
   }
 
-  // Enable/disable exec button
+  // Enable/disable exec button + explain WHY when it's disabled (no silent grey-out)
   const execBtn = document.getElementById('sim2-exec-btn');
-  if (execBtn) execBtn.disabled = !m.valid || (m.margin > _simStats.equity);
+  const hintEl  = document.getElementById('sim2-exec-hint');
+  const blocked = !m.valid || (m.margin > _simStats.equity);
+  if (execBtn) execBtn.disabled = blocked;
+  if (hintEl) {
+    let reason = '';
+    if (blocked) {
+      if (!(sl > 0))                                    reason = 'Enter a stop-loss price.';
+      else if (!(tp > 0))                               reason = 'Enter a take-profit price.';
+      else if (_simDirection === 'long'  && sl >= entry) reason = 'Stop loss must be below your entry.';
+      else if (_simDirection === 'long'  && tp <= entry) reason = 'Take profit must be above your entry.';
+      else if (_simDirection === 'short' && sl <= entry) reason = 'Stop loss must be above your entry.';
+      else if (_simDirection === 'short' && tp >= entry) reason = 'Take profit must be below your entry.';
+      else if (m.margin > _simStats.equity)              reason = 'Margin exceeds your equity — lower leverage or widen your stop.';
+    }
+    hintEl.textContent = reason;
+    hintEl.className = 'sim2-exec-hint' + (reason ? ' warn' : '');
+  }
 };
 
 /* ── DIRECTION SELECT ─────────────────────────────────────────────────────── */
@@ -547,6 +611,8 @@ window._sim2Dir = function(dir) {
     if (fieldsEl) fieldsEl.style.opacity = '.4';
     document.querySelectorAll('.sim2-price-input').forEach(i => i.disabled = true);
     if (execBtn) { execBtn.disabled = false; execBtn.textContent = 'Skip — Stay Flat'; }
+    const hintEl = document.getElementById('sim2-exec-hint');
+    if (hintEl) { hintEl.textContent = ''; hintEl.className = 'sim2-exec-hint'; }
     const livePnl = document.getElementById('sim2-live-pnl');
     if (livePnl) { livePnl.textContent = 'FLAT'; livePnl.style.color = 'var(--text3)'; }
     _sim2DrawOrderLines();   // drop any SL/TP lines, keep entry line
@@ -645,10 +711,12 @@ function _sim2RenderSetup() {
   const TEAL = _bc();
   const setupOhlc   = ohlc.slice(0, cutIndex);
   const setupLabels = labels.slice(0, cutIndex);
+  // Neutral grey level line — a reference, NOT a teal "signal" (and never the pattern name).
+  const LVL = '#8a8f98';
   const mlData = (markLines||[]).map(ml => [{
     yAxis:ml.yAxis,
-    label:{show:true,formatter:ml.label,color:TEAL,fontSize:10,fontWeight:600,position:'end'},
-    lineStyle:{color:TEAL,type:'dashed',width:1.5,opacity:.75}
+    label:{show:true,formatter:ml.label,color:LVL,fontSize:10,fontWeight:600,position:'insideStartTop'},
+    lineStyle:{color:(ml.color||LVL),type:'dashed',width:1.5,opacity:.7}
   },{yAxis:ml.yAxis}]);
 
   _simChartInst = echarts.init(el, null, { renderer:'canvas' });
@@ -662,7 +730,7 @@ function _sim2RenderSetup() {
     tooltip:{
       trigger:'axis', axisPointer:{type:'cross'},
       backgroundColor:_bg4, borderColor:_bdr,
-      textStyle:{color:_txt,fontSize:11,fontFamily:'Barlow,sans-serif'},
+      textStyle:{color:_txt,fontSize:11,fontFamily:'JetBrains Mono,monospace'},
       formatter(params){
         const c=params.find(p=>p.seriesName==='Price'); if(!c||!c.data) return '';
         const d=Array.isArray(c.data)?c.data:c.data.value;
@@ -674,7 +742,7 @@ function _sim2RenderSetup() {
       }
     },
     grid:{left:SIM_GRID.left,right:SIM_GRID.right,top:SIM_GRID.top,bottom:SIM_GRID.bottom},
-    xAxis:{type:'category',data:setupLabels,axisLine:{lineStyle:{color:_bdr}},axisLabel:{color:'#888',fontSize:10,fontFamily:'Barlow,sans-serif',hideOverlap:true},splitLine:{show:false}},
+    xAxis:{type:'category',data:setupLabels,axisLine:{lineStyle:{color:_bdr}},axisLabel:{color:'#888',fontSize:10,fontFamily:'JetBrains Mono,monospace',hideOverlap:true},splitLine:{show:false}},
     // Always leave 20% headroom above the highest candle and 20% below the
     // lowest, so price is never flush to an edge. Recomputes every render.
     yAxis:{
@@ -682,11 +750,11 @@ function _sim2RenderSetup() {
       min:(v)=>{ const r=(v.max-v.min)||1; return +(v.min - r*0.2).toFixed(2); },
       max:(v)=>{ const r=(v.max-v.min)||1; return +(v.max + r*0.2).toFixed(2); },
       splitLine:{lineStyle:{color:_bdr,type:'dashed'}},axisLine:{lineStyle:{color:_bdr}},
-      axisLabel:{color:'#888',fontSize:10,fontFamily:'Barlow,sans-serif'}
+      axisLabel:{color:'#888',fontSize:10,fontFamily:'JetBrains Mono,monospace'}
     },
     series:[{
       name:'Price',type:'candlestick',data:setupOhlc,barMaxWidth:20,
-      itemStyle:{color:TEAL,color0:'#cc2222',borderColor:TEAL,borderColor0:'#cc2222',borderWidth:1.5},
+      itemStyle:{color:TEAL,color0:_bear(),borderColor:TEAL,borderColor0:_bear(),borderWidth:1.5},
       markLine:{symbol:['none','none'],silent:true,data:mlData}
     }]
   });
@@ -709,20 +777,29 @@ function _sim2DrawOrderLines() {
   const W = chart.getWidth();
   const x1 = SIM_GRID.left;
   const tagW = 92, tagH = 18, pad = 6;
-  const tagX = W - SIM_GRID.right - tagW;   // tag sits at the right edge of the plot
-  const lineX2 = tagX - 4;
+  const tagX = W - tagW - 4;                 // tag pinned to the far right, inside the gutter
+  const lineX2 = W - SIM_GRID.right;         // line spans the candle area and stops at the gutter edge
 
   const toY = (price) => { try { return chart.convertToPixel({ yAxisIndex: 0 }, price); } catch(_) { return null; } };
   const fromY = (yPix) => { try { return chart.convertFromPixel({ yAxisIndex: 0 }, yPix); } catch(_) { return null; } };
 
   const fmt = (p) => Math.round(p).toLocaleString();
   const TEAL = _bc();
+  const isLight = (typeof _ltIsLight === 'function') && _ltIsLight();
   const graphics = [];
 
-  // helper to build one horizontal line (optionally draggable)
-  const buildLine = (id, price, color, prefix, draggable, onMove) => {
+  // helper to build one horizontal line (optionally draggable).
+  // opts.contrastTag → opaque tag bg + coloured border + light/dark text, so a NEUTRAL
+  // line (the Entry) stays legible over the candles. Default tags keep the solid
+  // coloured fill (SL/TP read fine in red/teal).
+  const buildLine = (id, price, color, prefix, draggable, onMove, opts) => {
+    opts = opts || {};
     const y = toY(price);
     if (y == null || isNaN(y)) return null;
+    const contrastTag = !!opts.contrastTag;
+    const tagFill   = contrastTag ? (isLight ? 'rgba(248,250,252,0.95)' : 'rgba(16,16,18,0.95)') : color;
+    const tagStroke = contrastTag ? color : 'transparent';
+    const tagTxt    = contrastTag ? (isLight ? '#0f172a' : '#e8ebf0') : '#0b0b0b';
     return {
       type: 'group', id, z: 100,
       draggable: draggable ? 'vertical' : false,
@@ -741,14 +818,15 @@ function _sim2DrawOrderLines() {
         // wide invisible hit-area so the whole line is grabbable (not just the tag)
         { type: 'line', silent: !draggable, shape: { x1, y1: 0, x2: lineX2, y2: 0 }, style: { stroke: 'transparent', lineWidth: draggable ? 16 : 1 }, cursor: draggable ? 'ns-resize' : 'default' },
         { type: 'line', silent: true, shape: { x1, y1: 0, x2: lineX2, y2: 0 }, style: { stroke: color, lineWidth: 1.5, lineDash: [5, 4] } },
-        { type: 'rect', silent: !draggable, shape: { x: tagX, y: -tagH / 2, width: tagW, height: tagH, r: 3 }, style: { fill: color }, cursor: draggable ? 'ns-resize' : 'default' },
-        { type: 'text', name: 'tag-txt', silent: true, style: { text: `${prefix} ${fmt(price)}`, x: tagX + pad, y: -6, fill: '#0b0b0b', font: '700 11px Barlow, sans-serif' } }
+        { type: 'rect', silent: !draggable, shape: { x: tagX, y: -tagH / 2, width: tagW, height: tagH, r: 3 }, style: { fill: tagFill, stroke: tagStroke, lineWidth: contrastTag ? 1 : 0 }, cursor: draggable ? 'ns-resize' : 'default' },
+        { type: 'text', name: 'tag-txt', silent: true, style: { text: `${prefix} ${fmt(price)}`, x: tagX + pad, y: -6, fill: tagTxt, font: '700 11px "JetBrains Mono", monospace' } }
       ]
     };
   };
 
-  // Entry (static)
-  const entryG = buildLine('sim2-entry-line', _simEntryPrice, '#8a8f98', 'Entry', false, null);
+  // Entry (static) — brighter neutral line + a high-contrast tag so it reads over candles
+  const entryColor = isLight ? '#64748b' : '#aeb4c0';
+  const entryG = buildLine('sim2-entry-line', _simEntryPrice, entryColor, 'Entry', false, null, { contrastTag: true });
   if (entryG) graphics.push(entryG);
 
   if (_simDirection && _simDirection !== 'flat') {
@@ -852,7 +930,7 @@ function _sim2Reveal(sl, tp, riskUSD, notional, riskPct, leverage, liqPrice) {
     const visLabels = [...setupLabels, ...revealLabels.slice(0, count)];
     const wireframe = thisBatch.map(c => {
       const isBull = c[1] >= c[0];
-      return { value:c, itemStyle:{ color:'transparent', borderColor:isBull?TEAL:'#cc2222', borderWidth:1.5, color0:'transparent', borderColor0:'#cc2222' }};
+      return { value:c, itemStyle:{ color:'transparent', borderColor:isBull?TEAL:_bear(), borderWidth:1.5, color0:'transparent', borderColor0:_bear() }};
     });
 
     if (_simChartInst) {
@@ -863,7 +941,7 @@ function _sim2Reveal(sl, tp, riskUSD, notional, riskPct, leverage, liqPrice) {
             [{ xAxis:decIdx, label:{show:true,formatter:'Entry',color:TEAL,fontSize:10,fontWeight:700,position:'insideEndTop'}, lineStyle:{color:TEAL,type:'dashed',width:1.5,opacity:.8}},{ xAxis:decIdx }],
             ...(sl>0?[[{yAxis:sl,label:{show:true,formatter:`SL $${sl.toFixed(0)}`,color:'#cc2222',fontSize:10,fontWeight:700,position:'end'},lineStyle:{color:'#cc2222',type:'dashed',width:1.5,opacity:.9}},{yAxis:sl}]]:[]),
             ...(tp>0?[[{yAxis:tp,label:{show:true,formatter:`TP $${tp.toFixed(0)}`,color:TEAL,fontSize:10,fontWeight:700,position:'end'},lineStyle:{color:TEAL,type:'dashed',width:1.5,opacity:.9}},{yAxis:tp}]]:[]),
-            ...(_simView.markLines||[]).map(ml=>[{yAxis:ml.yAxis,label:{show:true,formatter:ml.label,color:TEAL,fontSize:10,position:'end'},lineStyle:{color:TEAL,type:'dashed',width:1.5,opacity:.5}},{yAxis:ml.yAxis}])
+            ...(_simView.markLines||[]).map(ml=>[{yAxis:ml.yAxis,label:{show:true,formatter:ml.label,color:'#8a8f98',fontSize:10,position:'end'},lineStyle:{color:(ml.color||'#8a8f98'),type:'dashed',width:1.5,opacity:.5}},{yAxis:ml.yAxis}])
           ]}
         }]
       }, { notMerge:false });
@@ -982,17 +1060,18 @@ function _sim2ShowVerdict(dollarPnL, hitType, rr, riskPct, leverage, entry, sl, 
     topHtml = `
       <div class="sim2-verdict ${cls}">
         <div class="sim2-verdict-top">
-          <span class="sim2-verdict-result" style="color:var(--text2)">● Stayed Flat</span>
+          <span class="sim2-verdict-result" style="color:var(--text2)">Stood Aside</span>
           <span class="sim2-verdict-detail">No risk taken · capital preserved</span>
         </div>
         <span class="sim2-verdict-hit open">
           <i data-lucide="minus-circle" style="width:11px;height:11px;"></i>
-          Market ${dirWord} ${Math.abs(movePct).toFixed(1)}% after the decision (exit $${exitPrice.toFixed(0)})
+          Market ${dirWord} ${Math.abs(movePct).toFixed(1)}% after · exit $${exitPrice.toFixed(0)}
         </span>
         <div class="sim2-verdict-pattern">${concept.name}</div>
         <div class="sim2-verdict-blurb">${concept.blurb}</div>
-        <div class="sim2-verdict-bias" style="color:var(--text3)">
-          Sitting out is a position too. This setup's textbook bias was <strong style="color:${_bc()}">${concept.bias.toUpperCase()}</strong>.
+        <div class="sim2-verdict-coach neutral">
+          <i data-lucide="info" style="width:14px;height:14px;"></i>
+          Sitting out is a position. Textbook bias here was <strong>${concept.bias.toUpperCase()}</strong>.
         </div>
         ${_sim2StatsRowHtml()}
       </div>
@@ -1005,36 +1084,55 @@ function _sim2ShowVerdict(dollarPnL, hitType, rr, riskPct, leverage, entry, sl, 
   const won     = dollarPnL > 0;
   const isLiq   = hitType === 'liq';
   const cls     = won ? 'win' : 'loss';
-  const emoji   = isLiq ? '💥' : hitType==='tp' ? '🎯' : hitType==='sl' ? '🛑' : won ? '✅' : '❌';
-  const hitLabel = isLiq ? 'LIQUIDATED' : hitType==='tp' ? 'Take Profit Hit' : hitType==='sl' ? 'Stop Loss Hit' : 'Position Closed at Market';
+  const outcome = (_simView && _simView.outcome) || (_simMarket && _simMarket.outcome) || 'resolve';
+  const dirRight = concept.bias === _simDirection; // read the pattern's direction right
+
+  // One coaching line — the read assessment (✓/✗ via icon colour) and the lesson, merged. Terse, trader voice.
+  let coach;
+  if (concept.bias === 'neutral') {
+    coach = { icon:'minus', cls:'neutral', text:`Neutral setup — direction wasn't the test here.` };
+  } else if (dirRight && won) {
+    coach = outcome === 'fail'
+      ? { icon:'check', cls:'good', text:`Banked it before the reversal. Good exit on a setup that failed.` }
+      : { icon:'check', cls:'good', text:`Textbook. Right read, sized right.` };
+  } else if (dirRight && !won) {
+    coach = outcome === 'fail'
+      ? { icon:'check', cls:'good', text:`Right read. It failed anyway — that's what the stop is for.` }
+      : { icon:'alert-triangle', cls:'warn', text:`Right direction, stopped too early. Tight stops get eaten by noise.` };
+  } else if (!dirRight && won) {
+    coach = { icon:'x', cls:'bad', text:`Won it against the read. That's luck, not edge.` };
+  } else {
+    coach = { icon:'x', cls:'bad', text:`Wrong side. The read here was ${concept.bias.toUpperCase()}. Trade with the pattern.` };
+  }
+
+  const hitIcon  = isLiq ? 'zap' : hitType==='tp' ? 'check-circle' : hitType==='sl' ? 'shield-off' : 'clock';
+  const hitLabel = isLiq ? 'Liquidated' : hitType==='tp' ? 'Take profit hit' : hitType==='sl' ? 'Stop loss hit' : 'Closed at market';
   const hitCls   = hitType==='tp' ? 'tp' : 'sl';
-  const resultStr = `${dollarPnL>=0?'+':''}$${dollarPnL.toFixed(2)}`;
+  const resultStr   = `${dollarPnL>=0?'+':''}$${dollarPnL.toFixed(2)}`;
   const resultColor = dollarPnL >= 0 ? _bc() : '#cc2222';
-  const biasMatch   = concept.bias === _simDirection || concept.bias === 'neutral';
-  const hitDetail = isLiq ? '— margin wiped out before your stop'
-    : hitType === 'open' ? `(exit $${exitPrice.toFixed(0)})`
-    : `@ $${hitType==='sl'?sl.toFixed(0):tp.toFixed(0)}`;
+  const hitDetail = isLiq ? '· margin gone before your stop'
+    : hitType === 'open' ? `· exit $${exitPrice.toFixed(0)}`
+    : `@ $${(hitType==='sl'?sl:tp).toFixed(0)}`;
 
   wrap.innerHTML = `
     <div class="sim2-verdict ${cls}">
       <div class="sim2-verdict-top">
-        <span class="sim2-verdict-result" style="color:${resultColor}">${emoji} ${resultStr}</span>
+        <span class="sim2-verdict-result" style="color:${resultColor}">${resultStr}</span>
         <span class="sim2-verdict-detail">Risk ${riskPct}% · ${leverage}× lev · R:R 1:${rr.toFixed(2)}</span>
       </div>
       <span class="sim2-verdict-hit ${hitType==='open'?'open':hitCls}">
-        <i data-lucide="${isLiq?'zap':hitType==='tp'?'check-circle':hitType==='sl'?'shield-off':'clock'}" style="width:11px;height:11px;"></i>
+        <i data-lucide="${hitIcon}" style="width:11px;height:11px;"></i>
         ${hitLabel} ${hitDetail}
       </span>
-      ${isLiq ? `<div class="sim2-verdict-bias" style="color:#cc2222">⚠ ${leverage}× leverage put your liquidation price closer than your stop. Lower leverage keeps the stop in control.</div>` : ''}
       <div class="sim2-verdict-pattern">${concept.name}</div>
       <div class="sim2-verdict-blurb">${concept.blurb}</div>
-      <div class="sim2-verdict-bias" style="color:${biasMatch?_bc():'#cc2222'}">
-        ${biasMatch ? '✓ Bias aligned with pattern — ' + _simDirection.toUpperCase() : '✗ Against the pattern — bias was ' + concept.bias.toUpperCase()}
-      </div>
+      ${isLiq
+        ? `<div class="sim2-verdict-coach bad"><i data-lucide="alert-triangle" style="width:14px;height:14px;"></i> ${leverage}× leverage put liquidation closer than your stop. Lower leverage keeps the stop in control.</div>`
+        : `<div class="sim2-verdict-coach ${coach.cls}"><i data-lucide="${coach.icon}" style="width:14px;height:14px;"></i> ${coach.text}</div>`}
       ${_sim2StatsRowHtml()}
     </div>
     ${_simStats.equity < 1
-      ? '<button class="sim2-next-btn" onclick="window._sim2ResetContinue()">💀 Account blown — Reset & keep practicing</button>'
+      ? '<button class="sim2-next-btn" onclick="window._sim2ResetContinue()">Account blown — reset &amp; keep practicing</button>'
       : '<button class="sim2-next-btn" onclick="window._sim2Next()">Next Round →</button>'}
   `;
   _sim2MountVerdict(wrap);
@@ -1065,6 +1163,10 @@ function _sim2MountVerdict(wrap) {
   if (typeof lucide !== 'undefined') lucide.createIcons();
   _sim2UpdateStats();
   _sim2RenderBlotter();
+
+  // Bring the result + Next Round button into view (it sits below the tall chart).
+  const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  try { wrap.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'center' }); } catch(_) {}
 }
 
 /* ── TRADE BLOTTER ────────────────────────────────────────────────────────── */
@@ -1151,15 +1253,22 @@ function renderSimulator(containerId, opts) {
   const TEAL  = _bc();
   const concept = SIM_CONCEPTS[_simPattern] || {};
 
-  // Build pattern selector pills
-  const patternPills = [
-    `<button class="sim2-pat-btn random ${!_simLockedPattern?'active':''}" data-key="random" onclick="_sim2LockPattern('random')">🎲 Random</button>`,
-    ...SIM_ALL_PATTERNS.map(k => {
-      const c  = SIM_CONCEPTS[k];
-      const active = _simLockedPattern === k ? 'active' : '';
-      return `<button class="sim2-pat-btn ${active}" data-key="${k}" onclick="_sim2LockPattern('${k}')" title="${c.name}">${c.name.split('—')[0].trim()}</button>`;
-    })
-  ].join('');
+  // Build the compact pattern <select>, grouped by concept area (replaces the
+  // 18-pill wall — and keeps Random the blind default).
+  const byCourse = {};
+  SIM_ALL_PATTERNS.forEach(k => {
+    const c = SIM_CONCEPTS[k];
+    (byCourse[c.course] = byCourse[c.course] || []).push(k);
+  });
+  const patternOptions = Object.keys(byCourse).map(course => {
+    const opts = byCourse[course].map(k => {
+      const nm  = SIM_CONCEPTS[k].name.split('—')[0].trim();
+      const sel = _simLockedPattern === k ? ' selected' : '';
+      return `<option value="${k}"${sel}>${nm}</option>`;
+    }).join('');
+    return `<optgroup label="${course}">${opts}</optgroup>`;
+  }).join('');
+  const diff = _simDifficulty();
 
   // Default SL/TP based on concept hints
   const slDefault = (_simDirection === 'long'
@@ -1181,15 +1290,29 @@ function renderSimulator(containerId, opts) {
           <i data-lucide="arrow-left" style="width:15px;height:15px;"></i> Back to Course
         </button>
         <div>
-          <div class="sim2-heading" style="display:inline;">Practice Simulator</div>${courseTag}
-          <div class="sim2-sub">read the chart · set stops · manage risk</div>
+          <div class="sim2-heading" style="display:inline;">Practice Simulator</div><span class="sim2-beta" title="In active development">Beta</span>${courseTag}
+          <div class="sim2-sub">read the chart · pick a side · set stops · manage risk</div>
         </div>
       </div>
 
-      <!-- Pattern selector -->
-      <div class="sim2-pattern-bar">
-        <span class="sim2-pattern-label">Pattern:</span>
-        ${patternPills}
+      <!-- Mode + pattern controls -->
+      <div class="sim2-controls">
+        <div class="sim2-ctrl-group">
+          <span class="sim2-ctrl-lbl">Mode</span>
+          <div class="sim2-seg" id="sim2-mode-seg" role="group" aria-label="Difficulty">
+            <button class="sim2-seg-btn ${diff==='learn'?'active':''}" onclick="_sim2SetDifficulty('learn')">Learn</button>
+            <button class="sim2-seg-btn ${diff==='real'?'active':''}" onclick="_sim2SetDifficulty('real')">Realistic</button>
+          </div>
+          <span class="sim2-ctrl-hint">${diff==='real'?'setups can fail — like real markets':'setups resolve textbook'}</span>
+        </div>
+        <div class="sim2-ctrl-group">
+          <span class="sim2-ctrl-lbl">Pattern</span>
+          <button class="sim2-rand-btn ${!_simLockedPattern?'active':''}" onclick="_sim2LockPattern('random')"><i data-lucide="dices" style="width:13px;height:13px;vertical-align:-2px;"></i> Random</button>
+          <select class="sim2-pat-select" id="sim2-pat-select" onchange="_sim2LockPattern(this.value)" aria-label="Choose a specific pattern">
+            <option value="random"${!_simLockedPattern?' selected':''}>Specific pattern…</option>
+            ${patternOptions}
+          </select>
+        </div>
       </div>
 
       <!-- Stats -->
@@ -1197,7 +1320,7 @@ function renderSimulator(containerId, opts) {
         <div class="sim2-stat"><div class="sim2-stat-lbl">Equity</div><div class="sim2-stat-val ${pnl>=0?'':'down'}" id="sim2-stat-equity">$${_simStats.equity.toFixed(0)}</div></div>
         <div class="sim2-stat"><div class="sim2-stat-lbl">Win Rate</div><div class="sim2-stat-val ${wr>=50?'':'down'}" id="sim2-stat-wr">${wr}%</div></div>
         <div class="sim2-stat"><div class="sim2-stat-lbl">Trades</div><div class="sim2-stat-val" id="sim2-stat-trades">${_simStats.trades}</div></div>
-        <div class="sim2-stat"><div class="sim2-stat-lbl">Streak</div><div class="sim2-stat-val" id="sim2-stat-streak">${_simStats.streak}🔥</div></div>
+        <div class="sim2-stat"><div class="sim2-stat-lbl">Streak</div><div class="sim2-stat-val" id="sim2-stat-streak">${_simStats.streak}</div></div>
       </div>
 
       <!-- Chart + Terminal grid -->
@@ -1240,9 +1363,9 @@ function renderSimulator(containerId, opts) {
 
           <!-- Direction -->
           <div class="sim2-dir-row">
-            <button class="sim2-dir-btn sim2-dir-long"  id="sim2-dir-long"  onclick="_sim2Dir('long')">▲ Long</button>
-            <button class="sim2-dir-btn sim2-dir-flat"  id="sim2-dir-flat"  onclick="_sim2Dir('flat')">● Flat</button>
-            <button class="sim2-dir-btn sim2-dir-short" id="sim2-dir-short" onclick="_sim2Dir('short')">▼ Short</button>
+            <button class="sim2-dir-btn sim2-dir-long"  id="sim2-dir-long"  onclick="_sim2Dir('long')"><i data-lucide="trending-up" style="width:14px;height:14px;vertical-align:-2px;"></i> Long</button>
+            <button class="sim2-dir-btn sim2-dir-flat"  id="sim2-dir-flat"  onclick="_sim2Dir('flat')"><i data-lucide="minus" style="width:14px;height:14px;vertical-align:-2px;"></i> Flat</button>
+            <button class="sim2-dir-btn sim2-dir-short" id="sim2-dir-short" onclick="_sim2Dir('short')"><i data-lucide="trending-down" style="width:14px;height:14px;vertical-align:-2px;"></i> Short</button>
           </div>
 
           <!-- Entry price (read-only) -->
@@ -1324,6 +1447,7 @@ function renderSimulator(containerId, opts) {
             <button class="sim2-exec-btn" id="sim2-exec-btn" onclick="_sim2Execute()" disabled>
               Execute Trade
             </button>
+            <div class="sim2-exec-hint" id="sim2-exec-hint"></div>
           </div>
         </div>
 

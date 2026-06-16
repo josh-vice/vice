@@ -190,6 +190,14 @@ const LT_PATTERNS = [
    patternLabel:"Funding Squeeze",
    explanation:"Dec 21 2022: BTC was trading near $16.5K with funding rates at extreme negative readings across major exchanges — shorts were paying heavily every 8 hours to maintain positions. This was the textbook extreme negative funding at support scenario: shorts off-sides, paying unsustainably, at a key DBS zone. Over the following weeks, the short squeeze drove BTC from $16.5K to $25K by late January 2023, validating the Liquidity Theory + Funding Rate 1-2 punch setup."},
 
+ { id:"c4-fund-2",
+   concept:"Funding Rate",
+   pattern:"Extreme Positive Funding at the April 2021 Top — Long Squeeze",
+   symbol:"BTCUSDT", interval:"1d", decisionTime:1618358400000,
+   lookback:25, reveal:12, correctAnswer:"sell", keyLevel:64000,
+   patternLabel:"Funding Squeeze (Long)",
+   explanation:"Apr 14 2021: BTC printed a $64.8K all-time high on Coinbase's IPO day with perpetual funding rates at extreme positive readings — longs were euphoric and heavily over-leveraged, paying every 8 hours to stay long at resistance. This is the textbook extreme positive funding at resistance scenario: crowded longs off-sides at a key level. The squeeze that followed cascaded long liquidations and drove BTC sharply lower over the following weeks, kicking off a roughly 50% correction into the May 2021 capitulation."},
+
  { id:"c4-oi-1",
    concept:"Open Interest",
    pattern:"Price Falling + OI Rising During FTX Collapse — Strongest Bearish OI Signal",
@@ -204,6 +212,98 @@ const LT_PATTERNS = [
    symbol:"BTCUSDT", interval:"1d", decisionTime:1680912000000,
    lookback:25, reveal:10, correctAnswer:"buy", keyLevel:27500,
    patternLabel:"Kijun Bounce",
-   explanation:"Apr 8 2023: BTC had been in a confirmed uptrend since January, forming consistent Higher Highs and Higher Lows. After the impulse move to $31K, price pulled back to the daily Kijun-sen at approximately $27.5K — the dynamic 50% Fibonacci of the current trend leg. The Kijun acted as support exactly as the Kijun Bounce strategy predicts: price bounced from the Kijun and continued to new highs above $31K. Setting bids at the Kijun during this pullback was the optimal entry — 2+ R to the prior swing high with a clean stop below the recent swing low."}
+   explanation:"Apr 8 2023: BTC had been in a confirmed uptrend since January, forming consistent Higher Highs and Higher Lows. After the impulse move to $31K, price pulled back to the daily Kijun-sen at approximately $27.5K — the dynamic 50% Fibonacci of the current trend leg. The Kijun acted as support exactly as the Kijun Bounce strategy predicts: price bounced from the Kijun and continued to new highs above $31K. Setting bids at the Kijun during this pullback was the optimal entry — 2+ R to the prior swing high with a clean stop below the recent swing low."},
+
+ /* ── Backfilled direction-matches: each chapter teaches both a bullish and a bearish
+    case, so each needs a real example for BOTH directions or the opposite-direction
+    simulation has no matching historical chart to show. ────────────────────────────── */
+
+ { id:"bf-htf-bear",
+   concept:"Timeframes",
+   pattern:"HTF Weekly Resistance Rejection — April 2022 Lower High",
+   symbol:"BTCUSDT", interval:"1w", decisionTime:1649030400000,
+   lookback:20, reveal:8, correctAnswer:"sell", keyLevel:47000,
+   patternLabel:"Weekly Resistance",
+   explanation:"Early April 2022: after months of decline BTC rallied back to ~$47K — straight into major weekly resistance and the underside of its broken range. On the high timeframe this was a clear Lower High beneath the November 2021 top. The weekly rejection confirmed the macro downtrend: over the following weeks BTC rolled over toward $17.6K by June. Anyone trading a 15-minute or 4H long here was fighting the dominant weekly bias — the reason you always check the HTF first."},
+
+ { id:"bf-ltf-bear",
+   concept:"LTF Entry Scenario",
+   pattern:"4H Entry at a Lower High — September 2022 Continuation",
+   symbol:"BTCUSDT", interval:"4h", decisionTime:1663027200000,
+   lookback:30, reveal:12, correctAnswer:"sell", keyLevel:22000,
+   patternLabel:"LTF Short Entry",
+   explanation:"Mid-September 2022: inside the established daily downtrend, BTC bounced on the 4H chart to a Lower High near $22K — into prior support that had flipped to resistance. The LTF entry was to short the retest of that flipped level with a stop above the swing high. The hotter-than-expected CPI print accelerated the move and price broke toward $18.5K — a clean 4H short executed in alignment with the higher-timeframe bearish structure."},
+
+ { id:"bf-vol-bull",
+   concept:"Volume Analysis",
+   pattern:"Capitulation Volume Bottom — June 2022",
+   symbol:"BTCUSDT", interval:"1d", decisionTime:1655510400000,
+   lookback:20, reveal:10, correctAnswer:"buy", keyLevel:17600,
+   patternLabel:"Volume Capitulation",
+   explanation:"June 18 2022: BTC flushed to ~$17.6K on a massive spike in daily volume — forced selling from the Three Arrows and Celsius deleveraging. A volume climax of that scale at a key level marks seller exhaustion, not continuation: the participants who had to sell, sold. Price bounced hard off the high-volume bottom and recovered toward $24K over the following two weeks. The volume spike at support was the tell that the panic was ending."},
+
+ { id:"bf-cp-bear",
+   concept:"Classical Chart Patterns",
+   pattern:"Head & Shoulders Breakdown — January 2022",
+   symbol:"BTCUSDT", interval:"1d", decisionTime:1642723200000,
+   lookback:25, reveal:10, correctAnswer:"sell", keyLevel:42000,
+   patternLabel:"H&S Neckline",
+   explanation:"January 2022: BTC completed a large head-and-shoulders top — left shoulder in September, the $69K head in November, a lower right shoulder in December — with a neckline near $42K. When price closed decisively below the $42K neckline on January 21 the pattern triggered: momentum carried BTC to ~$33K within days. Selling the neckline break with a stop above the right shoulder was the textbook bearish entry."},
+
+ { id:"bf-fib-bear",
+   concept:"Fibonacci",
+   pattern:"0.618 Fib Rejection in the 2022 Downtrend",
+   symbol:"BTCUSDT", interval:"1d", decisionTime:1660521600000,
+   lookback:25, reveal:10, correctAnswer:"sell", keyLevel:25000,
+   patternLabel:"0.618 Fib",
+   explanation:"Mid-August 2022: BTC's summer relief rally pushed to ~$25K, retracing almost exactly to the 0.618 Fibonacci of the prior $31K→$17.6K decline. In a downtrend the 0.618 is where counter-trend bounces typically die. Price rejected the level and resumed the bear trend, sliding back below $20K into September. Shorting the 0.618 retracement with a stop above the 0.786 was the higher-probability play in a confirmed downtrend."},
+
+ { id:"bf-ord-bear",
+   concept:"Order Types",
+   pattern:"Limit Sell at the March 2024 ATH Rejection",
+   symbol:"BTCUSDT", interval:"1d", decisionTime:1710374400000,
+   lookback:25, reveal:10, correctAnswer:"sell", keyLevel:73000,
+   patternLabel:"Limit Sell @ Resistance",
+   explanation:"March 14 2024: BTC printed a new all-time high near $73.7K then stalled. Resting limit sell orders into the $73K area — placed in advance at the level rather than chasing — filled at premium prices as price rejected. A limit order guarantees your price and adds liquidity; here it captured the local top. Price corrected toward $60K over the following weeks, rewarding the planned limit entry at resistance over a reactive market order."},
+
+ { id:"bf-ssr-bear",
+   concept:"Identifying Access Points — Understanding Consolidation",
+   pattern:"SSR Zone Breakdown — August 2023",
+   symbol:"BTCUSDT", interval:"1d", decisionTime:1692144000000,
+   lookback:25, reveal:10, correctAnswer:"sell", keyLevel:29000,
+   patternLabel:"SSR Breakdown",
+   explanation:"August 2023: BTC consolidated for weeks just under $30K, repeatedly capped at the ~$29K supply zone (SSR). The consolidation was distribution beneath resistance, not accumulation. On August 17 the access point resolved the other way: a sharp breakdown out of the range drove price from ~$29K to ~$26K in a single session. Trading the breakdown of the SSR zone — short on the loss of range support — was the correct read when the consolidation broke lower."},
+
+ { id:"bf-trng-bull",
+   concept:"Trading Ranges",
+   pattern:"Range-Low Bounce — 2023 Accumulation",
+   symbol:"BTCUSDT", interval:"1d", decisionTime:1694390400000,
+   lookback:25, reveal:10, correctAnswer:"buy", keyLevel:25500,
+   patternLabel:"Range Low",
+   explanation:"September 2023: BTC was range-bound between roughly $25K support and $31K resistance for months. Price dipped to the lower boundary near $25.5K and printed a clean reaction — a long lower wick and a defended test of range support. Buying the range low with a stop just below it and targeting the range high is the core range-trading play; price recovered back toward $27K-$28K, paying the range-low long."},
+
+ { id:"bf-rngsc-bear",
+   concept:"Range Market Scenario — Live Walkthrough",
+   pattern:"Range-High Rejection — July 2023",
+   symbol:"BTCUSDT", interval:"4h", decisionTime:1689206400000,
+   lookback:30, reveal:12, correctAnswer:"sell", keyLevel:31000,
+   patternLabel:"Range High",
+   explanation:"Mid-July 2023: BTC spiked to ~$31.8K on the back of the XRP ruling, tagging the top of its multi-month range. Range highs are where you sell, not chase — and the rally stalled immediately at resistance with upper wicks. Price rejected the range high and faded back toward $29K over the following sessions. Shorting the range high with a tight stop above it and targeting the range mid/low was the disciplined range play."},
+
+ { id:"bf-oi-bull",
+   concept:"Open Interest",
+   pattern:"Price Rising + OI Rising — October 2023 ETF Rally",
+   symbol:"BTCUSDT", interval:"1d", decisionTime:1697414400000,
+   lookback:20, reveal:10, correctAnswer:"buy", keyLevel:28000,
+   patternLabel:"OI Expansion Bull",
+   explanation:"Mid-October 2023: as spot-ETF anticipation built, BTC broke out of the high-$20Ks with open interest rising alongside price — new long positions entering with conviction, not a short-covering blip. Price Rising + OI Rising is the textbook bullish-continuation OI signal: real money backing the move. BTC ran from ~$28K toward $35K into late October. Respecting the OI trend and staying with the move was the correct read."},
+
+ { id:"bf-kijun-bear",
+   concept:"Kijun-sen Bounces and Rejections",
+   pattern:"Daily Kijun Rejection in the 2022 Downtrend",
+   symbol:"BTCUSDT", interval:"1d", decisionTime:1660867200000,
+   lookback:30, reveal:12, correctAnswer:"sell", keyLevel:24000,
+   patternLabel:"Kijun Rejection",
+   explanation:"Late August 2022: BTC's summer bounce carried price into the daily Kijun-sen near $24K. In a confirmed downtrend the Kijun acts as dynamic resistance, not support — the mirror image of the bullish Kijun bounce. Price tagged the Kijun, rejected, and resumed lower toward $18.5K through September. Shorting the rejection at the Kijun with a stop above it was the trend-aligned counterpart to the bounce: 2+ R back toward the prior swing low."}
 
 ];

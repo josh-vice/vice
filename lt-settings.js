@@ -7,57 +7,60 @@
  */
 
 /* ── Constants ────────────────────────────────────────────────────────────── */
+/* Both themes carry the FULL set of colour vars so toggling either way fully
+   resets the palette (no stale overrides). Light mode is a purpose-built,
+   industry-standard scheme — not an inversion. */
+/* Miami Vice × synthwave — dark is the hero. Cyan stays primary; hot-pink is the
+   signature secondary, with sunset-coral + neon-purple as supporting accents over a
+   deep indigo "Miami night" backdrop (not flat black). */
 var LT_DARK_THEME = {
-  '--bg':         '#000000',
-  '--bg2':        '#080808',
-  '--bg3':        '#0f0f0f',
-  '--bg4':        '#141414',
-  '--bg5':        '#1a1a1a',
-  '--text':       '#ffffff',
-  '--text2':      '#888888',
-  '--text3':      '#555555',
-  '--border':     '#1e1e1e',
-  '--border2':    '#2a2a2a',
-  '--teal-dim':   'rgba(0,212,212,0.10)',
-  '--teal-faint': 'rgba(0,212,212,0.05)',
+  '--bg':'#08070f','--bg2':'#0d0b18','--bg3':'#14121f','--bg4':'#1d1a30','--bg5':'#272240',
+  '--border':'#272235','--border2':'#363049','--border3':'#4b4566',
+  '--teal':'#00d4d4','--teal2':'#00b8b8','--teal3':'#009696',
+  '--teal-dim':'rgba(0,212,212,0.10)','--teal-glow':'rgba(0,212,212,0.22)','--teal-faint':'rgba(0,212,212,0.05)',
+  '--pink':'#ff2e88','--pink2':'#ff5fa3','--pink-dim':'rgba(255,46,136,0.12)','--pink-glow':'rgba(255,46,136,0.24)','--pink-faint':'rgba(255,46,136,0.06)',
+  '--purple':'#a855f7','--purple-dim':'rgba(168,85,247,0.14)','--purple-faint':'rgba(168,85,247,0.06)',
+  '--coral':'#ff7a4d','--coral-dim':'rgba(255,122,77,0.14)',
+  '--red':'#f23d5c','--red2':'#cc2f49','--red-dim':'rgba(242,61,92,0.14)','--red-faint':'rgba(242,61,92,0.07)',
+  '--gold':'#e7b53a','--gold-dim':'rgba(231,181,58,0.13)',
+  '--green':'#21d196','--green-dim':'rgba(33,209,150,0.12)',
+  '--text':'#f6f5fb','--text2':'#a8a3bb','--text3':'#716c88','--text4':'#3a3a58',
+  '--shadow':'0 16px 44px -16px rgba(0,0,0,0.72)','--shadow-sm':'0 2px 10px rgba(0,0,0,0.42)','--glow-teal':'0 0 20px rgba(0,212,212,0.28)','--glow-pink':'0 0 20px rgba(255,46,136,0.28)',
+  '--discord-color':'#ffffff',
 };
 
+/* Daytime Miami — a sunlit pastel-deco variant. Legibility first (white cards,
+   slate text) with a faint lavender canvas and the same pink/coral/purple accents
+   in deeper, white-safe shades so light mode reads as the same brand, not an inversion. */
 var LT_LIGHT_THEME = {
-  '--bg':        '#f0f2f5',
-  '--bg2':       '#e5e8ed',
-  '--bg3':       '#d8dce3',
-  '--bg4':       '#cbd0d9',
-  '--bg5':       '#bec4cf',
-  '--text':      '#0a0a0f',
-  '--text2':     '#2a2a3a',
-  '--text3':     '#4a4a5a',
-  '--border':    '#c0c5ce',
-  '--border2':   '#aab0bb',
-  '--teal-dim':  'rgba(0,212,212,0.15)',
-  '--teal-faint':'rgba(0,212,212,0.08)',
+  '--bg':'#f6f4fb','--bg2':'#ffffff','--bg3':'#ffffff','--bg4':'#f1edf8','--bg5':'#e8e1f3',
+  '--border':'#eae4f2','--border2':'#dcd3ea','--border3':'#c7bce0',
+  '--teal':'#0d9488','--teal2':'#0f766e','--teal3':'#115e59',          /* deep teal: legible on white, premium */
+  '--teal-dim':'rgba(13,148,136,0.10)','--teal-glow':'rgba(13,148,136,0.14)','--teal-faint':'rgba(13,148,136,0.06)',
+  '--pink':'#db2777','--pink2':'#e84d97','--pink-dim':'rgba(219,39,119,0.10)','--pink-glow':'rgba(219,39,119,0.16)','--pink-faint':'rgba(219,39,119,0.05)',
+  '--purple':'#7c3aed','--purple-dim':'rgba(124,58,237,0.10)','--purple-faint':'rgba(124,58,237,0.05)',
+  '--coral':'#ea580c','--coral-dim':'rgba(234,88,12,0.10)',
+  '--red':'#dc2626','--red2':'#b91c1c','--red-dim':'rgba(220,38,38,0.10)','--red-faint':'rgba(220,38,38,0.05)',
+  '--gold':'#b45309','--gold-dim':'rgba(180,83,9,0.12)',
+  '--green':'#16a34a','--green-dim':'rgba(22,163,74,0.10)',
+  '--text':'#0f172a','--text2':'#475569','--text3':'#64748b','--text4':'#94a3b8',
+  '--shadow':'0 6px 20px rgba(48,18,76,0.10)','--shadow-sm':'0 1px 3px rgba(48,18,76,0.08)','--glow-teal':'0 0 0 3px rgba(13,148,136,0.18)','--glow-pink':'0 0 0 3px rgba(219,39,119,0.18)',
+  '--discord-color':'#5865F2',
 };
 
 /* ── Apply saved settings on load ────────────────────────────────────────── */
 function ltApplySavedSettings() {
-  var color = localStorage.getItem('lt_bullish_color');
-  if (color) {
-    document.documentElement.style.setProperty('--teal', color);
-  }
+  var theme = localStorage.getItem('lt_theme') === 'light' ? 'light' : 'dark';
+  var vars  = theme === 'light' ? LT_LIGHT_THEME : LT_DARK_THEME;
+  Object.keys(vars).forEach(function(k) {
+    document.documentElement.style.setProperty(k, vars[k]);
+  });
+  document.documentElement.classList.toggle('theme-light', theme === 'light');
 
-  var theme = localStorage.getItem('lt_theme');
-  if (theme === 'light') {
-    var vars = LT_LIGHT_THEME;
-    Object.keys(vars).forEach(function(k) {
-      document.documentElement.style.setProperty(k, vars[k]);
-    });
-    document.documentElement.style.setProperty('--bg-card', '#ffffff');
-    document.documentElement.style.setProperty('--shadow', '0 4px 24px rgba(0,0,0,0.12)');
-  } else {
-    var vars = LT_DARK_THEME;
-    Object.keys(vars).forEach(function(k) {
-      document.documentElement.style.setProperty(k, vars[k]);
-    });
-  }
+  // Dark mode lets a chosen bullish candle colour also tint the UI accent.
+  // Light mode keeps the legible deep-teal accent for contrast.
+  var color = localStorage.getItem('lt_bullish_color');
+  if (color && theme === 'dark') document.documentElement.style.setProperty('--teal', color);
 
   ltApplyFont(localStorage.getItem('lt_font') || 'default');
 }
@@ -65,8 +68,7 @@ function ltApplySavedSettings() {
 function ltApplyFont(f) {
   var html = document.documentElement;
   html.classList.remove('font-pixelify', 'font-inter');
-  if (f === 'pixelify') html.classList.add('font-pixelify');
-  else if (f === 'inter') html.classList.add('font-inter');
+  if (f === 'inter') html.classList.add('font-inter');
 }
 
 /* ── EXPORT / IMPORT PROGRESS (no account needed) ─────────────────────────── */
@@ -87,7 +89,7 @@ function ltExportProgress() {
   a.click();
   a.remove();
   setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
-  if (typeof showToast === 'function') showToast('✓ Progress backup downloaded');
+  if (typeof showToast === 'function') showToast('Progress backup downloaded', 3000, 'download');
 }
 
 function ltImportProgress(file) {
@@ -97,7 +99,7 @@ function ltImportProgress(file) {
     try { obj = JSON.parse(reader.result); } catch (e) { obj = null; }
     var data = obj && (obj.data || (obj.app ? null : obj));
     if (!data || typeof data !== 'object') {
-      if (typeof showToast === 'function') showToast('⚠ That file isn\'t a valid Liquidity Theory backup.');
+      if (typeof showToast === 'function') showToast('That file isn\'t a valid Liquidity Theory backup.', 3000, 'alert-triangle');
       else alert('That file isn\'t a valid Liquidity Theory backup.');
       return;
     }
@@ -108,6 +110,122 @@ function ltImportProgress(file) {
     location.reload();
   };
   reader.readAsText(file);
+}
+
+/* ── SYNC TO ANOTHER DEVICE — QR + compact link, no account, nothing uploaded ──
+   The whole progress blob is LZ-compressed into the link's #fragment (fragments
+   are never sent to a server). Opening/scanning it on another device triggers
+   _ltCheckSyncImport() in lt-engine.js, which confirms + restores it. */
+function _ltGatherProgress() {
+  var data = {};
+  for (var i = 0; i < localStorage.length; i++) {
+    var k = localStorage.key(i);
+    if (k && k.indexOf('lt_') === 0) data[k] = localStorage.getItem(k);
+  }
+  return data;
+}
+function ltBuildSyncLink() {
+  if (typeof LZString === 'undefined') return null;
+  var packed = LZString.compressToEncodedURIComponent(JSON.stringify(_ltGatherProgress()));
+  return location.origin + location.pathname + '#sync=' + packed;
+}
+function ltOpenSyncModal() {
+  var link = ltBuildSyncLink();
+  if (!link) { if (typeof showToast === 'function') showToast('Sync isn\'t ready — refresh and try again.', 3000, 'alert-triangle'); return; }
+  var ov = document.createElement('div');
+  ov.className = 'modal-overlay';
+  ov.innerHTML =
+    '<div class="modal-box" style="max-width:380px;">' +
+      '<h2 style="font-size:21px;margin-bottom:6px;">Sync to another device</h2>' +
+      '<p class="modal-sub" style="margin-bottom:18px;">Scan the code or open the link on your other device to copy your progress over. Everything is inside the link itself — nothing is uploaded.</p>' +
+      '<div id="lt-sync-qr" style="display:flex;justify-content:center;align-items:center;background:#fff;padding:12px;border-radius:10px;margin:0 auto 16px;min-height:176px;"></div>' +
+      '<input id="lt-sync-link" readonly style="width:100%;background:var(--bg4);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text2);font-family:\'JetBrains Mono\',monospace;font-size:11px;padding:9px 11px;margin-bottom:14px;" />' +
+      '<div class="modal-actions">' +
+        '<button class="btn-primary" id="lt-sync-copy">Copy link</button>' +
+        '<button class="btn-ghost" id="lt-sync-close">Done</button>' +
+      '</div>' +
+    '</div>';
+  document.body.appendChild(ov);
+  var inp = ov.querySelector('#lt-sync-link'); if (inp) inp.value = link;
+  var qrWrap = ov.querySelector('#lt-sync-qr');
+  if (typeof QRCode !== 'undefined' && qrWrap) {
+    try {
+      // davidshimjs/qrcodejs renders a <canvas> (+ fallback <img>) into the container.
+      new QRCode(qrWrap, { text: link, width: 200, height: 200, colorDark: '#000000', colorLight: '#ffffff', correctLevel: QRCode.CorrectLevel.L });
+    } catch (e) {
+      qrWrap.innerHTML = '<div style="color:#444;font-size:12px;padding:24px 12px;text-align:center;line-height:1.5;">Your progress is a bit large for a QR code — use the link below to transfer it instead.</div>';
+    }
+  } else if (qrWrap) { qrWrap.style.display = 'none'; }
+  function close() { ov.remove(); }
+  var copyBtn = ov.querySelector('#lt-sync-copy');
+  var closeBtn = ov.querySelector('#lt-sync-close');
+  if (copyBtn) copyBtn.addEventListener('click', function () {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(link).then(function () { if (typeof showToast === 'function') showToast('Sync link copied', 3000, 'check'); });
+    } else if (inp) { inp.select(); try { document.execCommand('copy'); } catch (e) {} if (typeof showToast === 'function') showToast('Sync link copied', 3000, 'check'); }
+  });
+  if (closeBtn) closeBtn.addEventListener('click', close);
+  ov.addEventListener('click', function (e) { if (e.target === ov) close(); });
+  document.addEventListener('keydown', function esc(e) { if (e.key === 'Escape') { close(); document.removeEventListener('keydown', esc); } });
+}
+window.ltOpenSyncModal = ltOpenSyncModal;
+
+/* ── Per-course progress helpers ──────────────────────────────────────────── */
+var LT_COURSE_NAMES = ['Laying the Foundation', 'Building Your Toolbox', 'Sharpening Your Edge', 'Liquidity Theory'];
+
+function _ltCourseChapters(n) {
+  if (n === 1) return typeof LT_CHAPTERS   !== 'undefined' ? LT_CHAPTERS   : [];
+  if (n === 2) return typeof LT_CHAPTERS_2 !== 'undefined' ? LT_CHAPTERS_2 : [];
+  if (n === 3) return typeof LT_CHAPTERS_3 !== 'undefined' ? LT_CHAPTERS_3 : [];
+  if (n === 4) return typeof LT_CHAPTERS_4 !== 'undefined' ? LT_CHAPTERS_4 : [];
+  return [];
+}
+
+/* Build a fully-completed progress map for a course's chapters (quiz marked
+   correct using each chapter's actual correct answer). */
+function _ltBuildCompleteProgress(chapters) {
+  var p = {};
+  chapters.forEach(function(chapter, i) {
+    var correctAnswer = chapter.quiz && chapter.quiz.answers
+      ? chapter.quiz.answers.find(function(a) { return a.correct === true; })
+      : null;
+    var answerId = correctAnswer ? correctAnswer.id : null;
+    p[i] = { completed: true, quizAnswered: true, quizCorrect: true, quizAnswer: answerId, selectedAnswerId: answerId };
+  });
+  return p;
+}
+
+function ltMarkCourseComplete(n) {
+  var ch = _ltCourseChapters(n);
+  if (!ch.length) return false;
+  localStorage.setItem('lt_course' + n + '_state', JSON.stringify({
+    chapter: ch.length - 1, step: 2, progress: _ltBuildCompleteProgress(ch)
+  }));
+  return true;
+}
+
+function ltResetCourse(n) {
+  localStorage.removeItem('lt_course' + n + '_state');
+}
+
+/* Reusable confirm dialog matching the settings .lt-confirm-* styles. */
+function _ltConfirmDialog(title, msg, okLabel, tealOk, onOk) {
+  var overlay = document.createElement('div');
+  overlay.className = 'lt-confirm-overlay';
+  overlay.innerHTML =
+    '<div class="lt-confirm-box">' +
+      '<div class="lt-confirm-title">' + title + '</div>' +
+      '<div class="lt-confirm-msg">' + msg + '</div>' +
+      '<div class="lt-confirm-actions">' +
+        '<button class="lt-confirm-cancel">Cancel</button>' +
+        '<button class="lt-confirm-ok' + (tealOk ? ' lt-confirm-ok--teal' : '') + '">' + okLabel + '</button>' +
+      '</div>' +
+    '</div>';
+  document.body.appendChild(overlay);
+  function close() { if (overlay.parentNode) document.body.removeChild(overlay); }
+  overlay.querySelector('.lt-confirm-cancel').addEventListener('click', close);
+  overlay.querySelector('.lt-confirm-ok').addEventListener('click', function() { close(); onOk(); });
+  overlay.addEventListener('click', function(e) { if (e.target === overlay) close(); });
 }
 
 ltApplySavedSettings();
@@ -126,9 +244,9 @@ function renderSettingsPage(containerId) {
       '  width: 100%;',
       '  max-width: 720px;',
       '  margin: 0 auto;',
-      '  padding: 32px 24px 48px;',
+      '  padding: 28px 24px 48px;',
       '  box-sizing: border-box;',
-      '  font-family: "Barlow", system-ui, -apple-system, sans-serif;',
+      '  font-family: "JetBrains Mono", ui-monospace, monospace;',
       '}',
 
       /* header */
@@ -140,7 +258,7 @@ function renderSettingsPage(containerId) {
       '}',
 
       '.lt-settings-title {',
-      '  font-family: "Barlow Condensed", sans-serif;',
+      '  font-family: "JetBrains Mono", monospace;',
       '  font-size: 32px;',
       '  font-weight: 700;',
       '  color: var(--text);',
@@ -151,7 +269,7 @@ function renderSettingsPage(containerId) {
       '.lt-settings-subtitle {',
       '  font-size: 13px;',
       '  color: var(--text2);',
-      '  margin: 0 0 32px 0;',
+      '  margin: 0 0 22px 0;',
       '  padding-left: 2px;',
       '}',
 
@@ -159,21 +277,27 @@ function renderSettingsPage(containerId) {
       '.lt-settings-section {',
       '  background: var(--bg3);',
       '  border: 1px solid var(--border);',
-      '  border-radius: 8px;',
-      '  margin-bottom: 20px;',
+      '  border-radius: var(--radius-lg);',
+      '  margin-bottom: 14px;',
       '  overflow: hidden;',
       '}',
 
       '.lt-settings-section-label {',
-      '  font-family: "Barlow Condensed", sans-serif;',
-      '  font-size: 10px;',
+      '  font-family: "JetBrains Mono", monospace;',
+      '  font-size: 12px;',
       '  font-weight: 700;',
-      '  letter-spacing: 0.12em;',
+      '  letter-spacing: 0.1em;',
       '  text-transform: uppercase;',
-      '  color: var(--teal);',
-      '  padding: 14px 20px 10px;',
+      '  color: var(--text2);',
+      '  padding: 12px 18px 11px;',
       '  border-bottom: 1px solid var(--border);',
-      '  background: var(--bg4);',
+      '}',
+
+      /* short note line under a section label (replaces verbose intro paragraphs) */
+      '.lt-settings-note {',
+      '  font-size: 11.5px;',
+      '  color: var(--text3);',
+      '  padding: 12px 18px 2px;',
       '}',
 
       /* row */
@@ -181,8 +305,8 @@ function renderSettingsPage(containerId) {
       '  display: flex;',
       '  align-items: center;',
       '  justify-content: space-between;',
-      '  padding: 18px 20px;',
-      '  gap: 24px;',
+      '  padding: 13px 18px;',
+      '  gap: 20px;',
       '}',
 
       '.lt-settings-row + .lt-settings-row {',
@@ -224,12 +348,12 @@ function renderSettingsPage(containerId) {
       '  padding: 7px 14px 7px 10px;',
       '  background: var(--bg4);',
       '  border: 1.5px solid var(--border2);',
-      '  border-radius: 6px;',
+      '  border-radius: var(--radius);',
       '  cursor: pointer;',
       '  font-size: 12px;',
       '  font-weight: 600;',
       '  color: var(--text2);',
-      '  font-family: "Barlow", sans-serif;',
+      '  font-family: "JetBrains Mono", monospace;',
       '  transition: border-color 0.15s, color 0.15s, background 0.15s;',
       '}',
 
@@ -302,32 +426,31 @@ function renderSettingsPage(containerId) {
 
       /* reset button */
       '.lt-btn-danger {',
-      '  padding: 8px 18px;',
+      '  padding: 7px 15px;',
       '  background: transparent;',
-      '  border: 1.5px solid #cc2222;',
-      '  border-radius: 6px;',
-      '  color: #ff6666;',
-      '  font-size: 13px;',
+      '  border: 1.5px solid var(--red);',
+      '  border-radius: var(--radius);',
+      '  color: var(--red);',
+      '  font-size: 12.5px;',
       '  font-weight: 600;',
-      '  font-family: "Barlow", sans-serif;',
+      '  font-family: "JetBrains Mono", monospace;',
       '  cursor: pointer;',
       '  transition: background 0.15s, color 0.15s;',
       '}',
 
       '.lt-btn-danger:hover {',
-      '  background: rgba(204,34,34,0.12);',
-      '  color: #ff8888;',
+      '  background: var(--red-dim);',
       '}',
 
       '.lt-btn-secondary {',
-      '  padding: 8px 18px;',
+      '  padding: 7px 15px;',
       '  background: transparent;',
-      '  border: 1.5px solid var(--border3);',
-      '  border-radius: 6px;',
+      '  border: 1.5px solid var(--border2);',
+      '  border-radius: var(--radius);',
       '  color: var(--text2);',
-      '  font-size: 13px;',
+      '  font-size: 12.5px;',
       '  font-weight: 600;',
-      '  font-family: "Barlow", sans-serif;',
+      '  font-family: "JetBrains Mono", monospace;',
       '  cursor: pointer;',
       '  transition: all 0.15s;',
       '}',
@@ -350,16 +473,16 @@ function renderSettingsPage(containerId) {
       '.lt-confirm-box {',
       '  background: var(--bg3);',
       '  border: 1px solid var(--border2);',
-      '  border-radius: 10px;',
+      '  border-radius: var(--radius-lg);',
       '  padding: 28px 28px 22px;',
       '  max-width: 360px;',
       '  width: 90%;',
       '  box-sizing: border-box;',
-      '  font-family: "Barlow", sans-serif;',
+      '  font-family: "JetBrains Mono", monospace;',
       '}',
 
       '.lt-confirm-title {',
-      '  font-family: "Barlow Condensed", sans-serif;',
+      '  font-family: "JetBrains Mono", monospace;',
       '  font-size: 20px;',
       '  font-weight: 700;',
       '  color: var(--text);',
@@ -383,10 +506,10 @@ function renderSettingsPage(containerId) {
       '  padding: 8px 18px;',
       '  background: var(--bg4);',
       '  border: 1px solid var(--border2);',
-      '  border-radius: 6px;',
+      '  border-radius: var(--radius);',
       '  color: var(--text2);',
       '  font-size: 13px;',
-      '  font-family: "Barlow", sans-serif;',
+      '  font-family: "JetBrains Mono", monospace;',
       '  cursor: pointer;',
       '  transition: color 0.15s, border-color 0.15s;',
       '}',
@@ -398,31 +521,31 @@ function renderSettingsPage(containerId) {
 
       '.lt-confirm-ok {',
       '  padding: 8px 18px;',
-      '  background: #cc2222;',
-      '  border: 1px solid #cc2222;',
-      '  border-radius: 6px;',
+      '  background: var(--red);',
+      '  border: 1px solid var(--red);',
+      '  border-radius: var(--radius);',
       '  color: #fff;',
       '  font-size: 13px;',
       '  font-weight: 600;',
-      '  font-family: "Barlow", sans-serif;',
+      '  font-family: "JetBrains Mono", monospace;',
       '  cursor: pointer;',
       '  transition: background 0.15s;',
       '}',
 
       '.lt-confirm-ok:hover {',
-      '  background: #aa1c1c;',
+      '  background: var(--red2);',
       '}',
 
       /* teal outlined button */
       '.lt-btn-teal {',
-      '  padding: 8px 18px;',
+      '  padding: 7px 15px;',
       '  background: transparent;',
       '  border: 1.5px solid var(--teal);',
-      '  border-radius: 6px;',
+      '  border-radius: var(--radius);',
       '  color: var(--teal);',
-      '  font-size: 13px;',
+      '  font-size: 12.5px;',
       '  font-weight: 600;',
-      '  font-family: "Barlow", sans-serif;',
+      '  font-family: "JetBrains Mono", monospace;',
       '  cursor: pointer;',
       '  transition: background 0.15s;',
       '}',
@@ -441,6 +564,38 @@ function renderSettingsPage(containerId) {
       '  background: rgba(0,212,212,0.85);',
       '}',
 
+      /* per-course action buttons */
+      '.lt-course-actions {',
+      '  display: flex;',
+      '  gap: 8px;',
+      '}',
+
+      '.lt-btn-sm {',
+      '  padding: 7px 13px;',
+      '  font-size: 12px;',
+      '}',
+
+      '/* parent-brand line at the foot of settings */',
+      '.lt-settings-brand {',
+      '  display: flex; align-items: center; justify-content: center; gap: 8px; flex-wrap: wrap;',
+      '  margin-top: 22px; padding: 18px 10px 6px;',
+      '  border-top: 1px solid var(--border);',
+      '  font-size: 11.5px; color: var(--text3); text-align: center;',
+      '}',
+      '.lt-settings-brand strong { color: var(--text2); font-weight: 700; }',
+      '.lt-settings-brand .vt-pink { color: var(--pink); }',
+      '.lt-settings-brand .vt-flamingo { width: 16px; height: 16px; }',
+
+      '/* Mobile: stack each row so labels never crush against their controls. */',
+      '@media (max-width: 768px) {',
+      '  .lt-settings-row { flex-direction: column; align-items: stretch; gap: 12px; }',
+      '  .lt-settings-row-control { width: 100%; }',
+      '  .lt-course-actions { width: 100%; }',
+      '  .lt-course-actions > * { flex: 1 1 0; }',
+      '  .lt-font-opts, .lt-color-toggle { width: 100%; }',
+      '  .lt-font-opts > *, .lt-color-toggle > * { flex: 1 1 0; }',
+      '}',
+
     ].join('\n');
     document.head.appendChild(style);
   }
@@ -455,6 +610,7 @@ function renderSettingsPage(containerId) {
 
   /* ── read saved prefs ─────────────────────────────────────────────────── */
   var savedColor = localStorage.getItem('lt_bullish_color') || '#00d4d4';
+  var savedBear  = localStorage.getItem('lt_bearish_color') || '#f2f2f2';
   var savedTheme = localStorage.getItem('lt_theme') || 'dark';
   var savedFont  = localStorage.getItem('lt_font') || 'default';
 
@@ -473,10 +629,30 @@ function renderSettingsPage(containerId) {
   var wrap = document.createElement('div');
   wrap.className = 'lt-settings-wrap';
 
+  /* ── per-course progress rows (only courses that have chapters loaded) ──── */
+  var courseRowsHtml = '';
+  [1, 2, 3, 4].forEach(function(n) {
+    if (!_ltCourseChapters(n).length) return;
+    var name = LT_COURSE_NAMES[n - 1] || ('Course ' + n);
+    var accent = (typeof ltCourseAccent === 'function')
+      ? ltCourseAccent(n)
+      : ({ 1: '#00d4d4', 2: '#e0b020', 3: '#a855f7', 4: '#f87171' }[n] || 'inherit');
+    courseRowsHtml +=
+      '<div class="lt-settings-row">' +
+        '<div class="lt-settings-row-info">' +
+          '<div class="lt-settings-row-label"><span style="color:' + accent + '">Course ' + n + '</span> · ' + name + '</div>' +
+        '</div>' +
+        '<div class="lt-settings-row-control lt-course-actions">' +
+          '<button class="lt-btn-teal lt-btn-sm" data-course="' + n + '" data-action="complete">Mark Complete</button>' +
+          '<button class="lt-btn-danger lt-btn-sm" data-course="' + n + '" data-action="reset">Reset</button>' +
+        '</div>' +
+      '</div>';
+  });
+
   wrap.innerHTML =
 
     /* ── back button ── */
-    '<button onclick="typeof init===\'function\' ? init() : history.back()" style="display:inline-flex;align-items:center;gap:6px;background:transparent;border:none;color:var(--teal);font-family:\'Barlow\',sans-serif;font-size:13px;font-weight:600;cursor:pointer;padding:0 0 18px 0;">' +
+    '<button onclick="typeof init===\'function\' ? init() : history.back()" style="display:inline-flex;align-items:center;gap:6px;background:transparent;border:none;color:var(--teal);font-family:\'JetBrains Mono\',sans-serif;font-size:13px;font-weight:600;cursor:pointer;padding:0 0 18px 0;">' +
       '<i data-lucide="arrow-left" style="width:16px;height:16px;"></i>' +
       'Back to Course' +
     '</button>' +
@@ -488,38 +664,14 @@ function renderSettingsPage(containerId) {
     '</div>' +
     '<p class="lt-settings-subtitle">Customize your learning experience</p>' +
 
-    /* ══ SECTION 1 — CHART APPEARANCE ══ */
+    /* ══ APPEARANCE — theme, font, candle colours ══ */
     '<div class="lt-settings-section" id="lt-s-appearance">' +
-      '<div class="lt-settings-section-label">Chart Appearance</div>' +
-
-      '<div class="lt-settings-row">' +
-        '<div class="lt-settings-row-info">' +
-          '<div class="lt-settings-row-label">Bullish Candle Color</div>' +
-          '<div class="lt-settings-row-desc">Choose how bullish candles appear on all charts</div>' +
-        '</div>' +
-        '<div class="lt-settings-row-control">' +
-          '<div class="lt-color-toggle" id="lt-color-toggle">' +
-            '<button class="lt-color-btn' + (savedColor === '#00d4d4' ? ' active' : '') + '" data-color="#00d4d4" id="lt-color-cyan">' +
-              candleSvg('#00d4d4') +
-              'Cyan' +
-            '</button>' +
-            '<button class="lt-color-btn' + (savedColor === '#00c878' ? ' active' : '') + '" data-color="#00c878" id="lt-color-green">' +
-              candleSvg('#00c878') +
-              'Green' +
-            '</button>' +
-          '</div>' +
-        '</div>' +
-      '</div>' +
-    '</div>' +
-
-    /* ══ SECTION 2 — DISPLAY ══ */
-    '<div class="lt-settings-section" id="lt-s-display">' +
-      '<div class="lt-settings-section-label">Display</div>' +
+      '<div class="lt-settings-section-label">Appearance</div>' +
 
       '<div class="lt-settings-row">' +
         '<div class="lt-settings-row-info">' +
           '<div class="lt-settings-row-label">Theme</div>' +
-          '<div class="lt-settings-row-desc">Switch between dark and light mode</div>' +
+          '<div class="lt-settings-row-desc">Dark or light mode</div>' +
         '</div>' +
         '<div class="lt-settings-row-control">' +
           '<div class="lt-toggle-wrap">' +
@@ -536,83 +688,123 @@ function renderSettingsPage(containerId) {
       '<div class="lt-settings-row">' +
         '<div class="lt-settings-row-info">' +
           '<div class="lt-settings-row-label">Font</div>' +
-          '<div class="lt-settings-row-desc">Choose the site-wide typeface</div>' +
+          '<div class="lt-settings-row-desc">Site-wide typeface</div>' +
         '</div>' +
         '<div class="lt-settings-row-control">' +
           '<div class="lt-font-opts">' +
-            '<button class="lt-font-btn' + (savedFont === 'default'  ? ' active' : '') + '" data-font="default">Default</button>' +
-            '<button class="lt-font-btn' + (savedFont === 'pixelify' ? ' active' : '') + '" data-font="pixelify" style="font-family:\'Pixelify Sans\',sans-serif;">Pixelify</button>' +
+            '<button class="lt-font-btn' + (savedFont === 'default'  ? ' active' : '') + '" data-font="default" style="font-family:\'JetBrains Mono\',monospace;">Terminal</button>' +
             '<button class="lt-font-btn' + (savedFont === 'inter'    ? ' active' : '') + '" data-font="inter" style="font-family:\'Inter\',sans-serif;">Inter</button>' +
+          '</div>' +
+        '</div>' +
+      '</div>' +
+
+      '<div class="lt-settings-row">' +
+        '<div class="lt-settings-row-info">' +
+          '<div class="lt-settings-row-label">Bullish Candle Color</div>' +
+          '<div class="lt-settings-row-desc">Up candles on every chart</div>' +
+        '</div>' +
+        '<div class="lt-settings-row-control">' +
+          '<div class="lt-color-toggle" id="lt-color-toggle">' +
+            '<button class="lt-color-btn' + (savedColor === '#00d4d4' ? ' active' : '') + '" data-color="#00d4d4" id="lt-color-cyan">' + candleSvg('#00d4d4') + 'Cyan</button>' +
+            '<button class="lt-color-btn' + (savedColor === '#00c878' ? ' active' : '') + '" data-color="#00c878" id="lt-color-green">' + candleSvg('#00c878') + 'Green</button>' +
+          '</div>' +
+        '</div>' +
+      '</div>' +
+
+      '<div class="lt-settings-row">' +
+        '<div class="lt-settings-row-info">' +
+          '<div class="lt-settings-row-label">Bearish Candle Color</div>' +
+          '<div class="lt-settings-row-desc">Down candles on every chart</div>' +
+        '</div>' +
+        '<div class="lt-settings-row-control">' +
+          '<div class="lt-color-toggle" id="lt-bear-toggle">' +
+            '<button class="lt-color-btn' + (savedBear === '#f2f2f2' ? ' active' : '') + '" data-color="#f2f2f2" id="lt-bear-white">' + candleSvg('#f2f2f2') + 'White</button>' +
+            '<button class="lt-color-btn' + (savedBear === '#cc2222' ? ' active' : '') + '" data-color="#cc2222" id="lt-bear-red">' + candleSvg('#cc2222') + 'Red</button>' +
           '</div>' +
         '</div>' +
       '</div>' +
     '</div>' +
 
-    /* ══ SECTION 3 — PROGRESS ══ */
+    /* ══ PROGRESS — per-course + all (browser-local) ══ */
     '<div class="lt-settings-section" id="lt-s-progress">' +
       '<div class="lt-settings-section-label">Progress</div>' +
-
+      '<div class="lt-settings-note">Saved in this browser only.</div>' +
+      courseRowsHtml +
       '<div class="lt-settings-row">' +
         '<div class="lt-settings-row-info">' +
-          '<div class="lt-settings-row-label">Reset Course Progress</div>' +
-          '<div class="lt-settings-row-desc">Clear all saved progress and start Course 1 from the beginning</div>' +
+          '<div class="lt-settings-row-label">All Courses</div>' +
         '</div>' +
-        '<div class="lt-settings-row-control">' +
-          '<button class="lt-btn-danger" id="lt-reset-btn">Reset Progress</button>' +
+        '<div class="lt-settings-row-control lt-course-actions">' +
+          '<button class="lt-btn-teal lt-btn-sm" id="lt-markall-btn">Mark All Complete</button>' +
+          '<button class="lt-btn-danger lt-btn-sm" id="lt-resetall-btn">Reset All</button>' +
         '</div>' +
       '</div>' +
     '</div>' +
 
-    /* ══ SECTION 3b — BACKUP & RESTORE ══ */
-    '<div class="lt-settings-section" id="lt-s-backup">' +
-      '<div class="lt-settings-section-label">Backup &amp; Restore</div>' +
-      '<div class="lt-settings-row-desc" style="padding:16px 20px 2px;">Your progress is already saved automatically in this browser — no account needed. Export a backup file if you want to keep a copy or move it to another device or browser.</div>' +
+    /* ══ STUDY TOOLS — review aids ══ */
+    '<div class="lt-settings-section" id="lt-s-study">' +
+      '<div class="lt-settings-section-label">Study Tools</div>' +
+      '<div class="lt-settings-row">' +
+        '<div class="lt-settings-row-info">' +
+          '<div class="lt-settings-row-label">Exam Answer Key</div>' +
+          '<div class="lt-settings-row-desc">Review every final-exam question and its correct answer across all four courses</div>' +
+        '</div>' +
+        '<div class="lt-settings-row-control">' +
+          '<button class="lt-btn-secondary" onclick="typeof showExamAnswerKey===\'function\' && showExamAnswerKey()">View Answer Key</button>' +
+        '</div>' +
+      '</div>' +
+    '</div>' +
+
+    /* ══ SYNC & BACKUP — move / keep / share your progress ══ */
+    '<div class="lt-settings-section" id="lt-s-data">' +
+      '<div class="lt-settings-section-label">Sync &amp; Backup</div>' +
+      '<div class="lt-settings-note">Progress saves automatically in this browser — nothing is uploaded.</div>' +
 
       '<div class="lt-settings-row">' +
         '<div class="lt-settings-row-info">' +
-          '<div class="lt-settings-row-label">Export Progress</div>' +
-          '<div class="lt-settings-row-desc">Download a backup file of your courses, simulator stats and settings</div>' +
+          '<div class="lt-settings-row-label">Sync to Another Device</div>' +
+          '<div class="lt-settings-row-desc">QR code &amp; link to copy your progress to your phone or another browser</div>' +
         '</div>' +
         '<div class="lt-settings-row-control">' +
-          '<button class="lt-btn-secondary" id="lt-export-btn">Export Backup</button>' +
+          '<button class="lt-btn-secondary" id="lt-sync-btn">Create Sync Link</button>' +
         '</div>' +
       '</div>' +
 
       '<div class="lt-settings-row">' +
         '<div class="lt-settings-row-info">' +
-          '<div class="lt-settings-row-label">Import Progress</div>' +
-          '<div class="lt-settings-row-desc">Restore from a backup file (replaces your current progress)</div>' +
+          '<div class="lt-settings-row-label">Export Backup</div>' +
+          '<div class="lt-settings-row-desc">Download a backup file of your progress and settings</div>' +
         '</div>' +
         '<div class="lt-settings-row-control">' +
-          '<button class="lt-btn-secondary" id="lt-import-btn">Import Backup</button>' +
+          '<button class="lt-btn-secondary" id="lt-export-btn">Export</button>' +
+        '</div>' +
+      '</div>' +
+
+      '<div class="lt-settings-row">' +
+        '<div class="lt-settings-row-info">' +
+          '<div class="lt-settings-row-label">Import Backup</div>' +
+          '<div class="lt-settings-row-desc">Restore from a backup file (replaces current progress)</div>' +
+        '</div>' +
+        '<div class="lt-settings-row-control">' +
+          '<button class="lt-btn-secondary" id="lt-import-btn">Import</button>' +
           '<input type="file" id="lt-import-file" accept="application/json,.json" style="display:none;">' +
         '</div>' +
       '</div>' +
+
+      '<div class="lt-settings-row">' +
+        '<div class="lt-settings-row-info">' +
+          '<div class="lt-settings-row-label">Share Liquidity Theory</div>' +
+          '<div class="lt-settings-row-desc">Copy a link to the site. Per-lesson / per-course share lives on the lesson header &amp; course cards.</div>' +
+        '</div>' +
+        '<div class="lt-settings-row-control">' +
+          '<button class="lt-btn-secondary" id="lt-share-site-btn">Copy Link</button>' +
+        '</div>' +
+      '</div>' +
     '</div>' +
 
-    /* ══ SECTION 4 — DEVELOPER TOOLS ══ */
-    '<div class="lt-settings-section" id="lt-s-devtools">' +
-      '<div class="lt-settings-section-label">Developer Tools</div>' +
-
-      '<div class="lt-settings-row">' +
-        '<div class="lt-settings-row-info">' +
-          '<div class="lt-settings-row-label">Mark All Chapters Complete</div>' +
-          '<div class="lt-settings-row-desc">Override completion status for all chapters across all courses</div>' +
-        '</div>' +
-        '<div class="lt-settings-row-control">' +
-          '<button class="lt-btn-teal" id="lt-markall-btn">Mark All Complete</button>' +
-        '</div>' +
-      '</div>' +
-
-      '<div class="lt-settings-row">' +
-        '<div class="lt-settings-row-info">' +
-          '<div class="lt-settings-row-label">Reset All Progress</div>' +
-          '<div class="lt-settings-row-desc">Clear all progress across all courses</div>' +
-        '</div>' +
-        '<div class="lt-settings-row-control">' +
-          '<button class="lt-btn-danger" id="lt-resetall-btn">Reset All</button>' +
-        '</div>' +
-      '</div>' +
+    '<div class="lt-settings-brand">' +
+      '<span class="vt-flamingo" role="img" aria-label="Vice Terminal"></span>' +
+      '<span>A <strong class="vt-pink">Vice Terminal</strong> product</span>' +
     '</div>';
 
   container.appendChild(wrap);
@@ -621,7 +813,7 @@ function renderSettingsPage(containerId) {
   if (typeof lucide !== 'undefined') lucide.createIcons();
 
   /* ── CONTROL: bullish color toggle ───────────────────────────────────── */
-  var colorBtns = wrap.querySelectorAll('.lt-color-btn');
+  var colorBtns = wrap.querySelector('#lt-color-toggle').querySelectorAll('.lt-color-btn');
   colorBtns.forEach(function(btn) {
     btn.addEventListener('click', function() {
       var color = btn.getAttribute('data-color');
@@ -647,31 +839,46 @@ function renderSettingsPage(containerId) {
     });
   });
 
+  /* ── CONTROL: bearish color toggle ───────────────────────────────────── */
+  var bearBtns = wrap.querySelector('#lt-bear-toggle').querySelectorAll('.lt-color-btn');
+  bearBtns.forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var color = btn.getAttribute('data-color');
+
+      /* update active state (scoped to the bearish toggle) */
+      bearBtns.forEach(function(b) { b.classList.remove('active'); });
+      btn.classList.add('active');
+
+      /* persist + sync engine BEAR + re-render charts */
+      localStorage.setItem('lt_bearish_color', color);
+      if (typeof window.BEAR !== 'undefined') window.BEAR = color;
+      if (typeof window.ltRefreshCharts === 'function') window.ltRefreshCharts();
+
+      /* re-render gallery if visible */
+      if (typeof renderCandlestickGallery === 'function' && document.getElementById('lt-gallery-root')) {
+        renderCandlestickGallery('lt-gallery-root');
+      }
+
+      if (typeof lucide !== 'undefined') lucide.createIcons();
+    });
+  });
+
   /* ── CONTROL: theme toggle ────────────────────────────────────────────── */
   var themeToggle = wrap.querySelector('#lt-theme-toggle');
   var themeLabel  = wrap.querySelector('#lt-theme-label');
 
   themeToggle.addEventListener('change', function() {
     var isLight = themeToggle.checked;
-    var vars    = isLight ? LT_LIGHT_THEME : LT_DARK_THEME;
-
-    Object.keys(vars).forEach(function(k) {
-      document.documentElement.style.setProperty(k, vars[k]);
-    });
-
-    if (isLight) {
-      document.documentElement.style.setProperty('--bg-card', '#ffffff');
-      document.documentElement.style.setProperty('--shadow', '0 4px 24px rgba(0,0,0,0.12)');
-    } else {
-      document.documentElement.style.removeProperty('--bg-card');
-      document.documentElement.style.removeProperty('--shadow');
-    }
-
+    localStorage.setItem('lt_theme', isLight ? 'light' : 'dark');  // write first so theme-aware getters read it
+    ltApplySavedSettings();                                        // full palette + accent + font
     themeLabel.textContent = isLight ? 'Light' : 'Dark';
-    localStorage.setItem('lt_theme', isLight ? 'light' : 'dark');
+    // Re-render the surfaces that bake accent/candle colours at render time.
+    if (typeof applyCourseAccent === 'function') applyCourseAccent();
+    if (typeof buildSidebar === 'function') buildSidebar();
+    if (typeof ltRefreshCharts === 'function') ltRefreshCharts();
   });
 
-  /* ── CONTROL: font selector (Default · Pixelify · VT323) ──────────────── */
+  /* ── CONTROL: font selector (Terminal · Inter) ───────────────────────── */
   var fontBtns = wrap.querySelectorAll('.lt-font-btn');
   fontBtns.forEach(function(btn) {
     btn.addEventListener('click', function() {
@@ -682,6 +889,16 @@ function renderSettingsPage(containerId) {
       localStorage.setItem('lt_font', f);
     });
   });
+
+  /* ── CONTROL: share whole site ────────────────────────────────────────── */
+  var shareSiteBtn = wrap.querySelector('#lt-share-site-btn');
+  if (shareSiteBtn) shareSiteBtn.addEventListener('click', function() {
+    if (typeof window.ltShareSite === 'function') window.ltShareSite();
+  });
+
+  /* ── CONTROL: sync to another device (QR + link) ──────────────────────── */
+  var syncBtn = wrap.querySelector('#lt-sync-btn');
+  if (syncBtn) syncBtn.addEventListener('click', ltOpenSyncModal);
 
   /* ── CONTROL: export / import progress ────────────────────────────────── */
   var exportBtn = wrap.querySelector('#lt-export-btn');
@@ -697,141 +914,55 @@ function renderSettingsPage(containerId) {
     });
   }
 
-  /* ── CONTROL: reset button + confirmation ─────────────────────────────── */
-  var resetBtn = wrap.querySelector('#lt-reset-btn');
-
-  resetBtn.addEventListener('click', function() {
-    /* build confirm overlay */
-    var overlay = document.createElement('div');
-    overlay.className = 'lt-confirm-overlay';
-    overlay.innerHTML =
-      '<div class="lt-confirm-box">' +
-        '<div class="lt-confirm-title">Reset Progress</div>' +
-        '<div class="lt-confirm-msg">Are you sure? This cannot be undone. All quiz answers, chapter completions, and exam results will be cleared.</div>' +
-        '<div class="lt-confirm-actions">' +
-          '<button class="lt-confirm-cancel" id="lt-confirm-cancel">Cancel</button>' +
-          '<button class="lt-confirm-ok" id="lt-confirm-ok">Yes, Reset</button>' +
-        '</div>' +
-      '</div>';
-
-    document.body.appendChild(overlay);
-
-    overlay.querySelector('#lt-confirm-cancel').addEventListener('click', function() {
-      document.body.removeChild(overlay);
-    });
-
-    overlay.querySelector('#lt-confirm-ok').addEventListener('click', function() {
-      localStorage.removeItem('lt_course1_state');
-      location.reload();
-    });
-
-    /* click outside to dismiss */
-    overlay.addEventListener('click', function(e) {
-      if (e.target === overlay) document.body.removeChild(overlay);
+  /* ── CONTROL: per-course mark-complete / reset ────────────────────────── */
+  wrap.querySelectorAll('[data-course][data-action]').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var n    = parseInt(btn.getAttribute('data-course'), 10);
+      var name = LT_COURSE_NAMES[n - 1] || ('Course ' + n);
+      if (btn.getAttribute('data-action') === 'complete') {
+        _ltConfirmDialog('Mark Course ' + n + ' Complete',
+          'Mark every session in Course ' + n + ' (' + name + ') as complete?',
+          'Yes, Mark Complete', true, function() {
+            ltMarkCourseComplete(n);
+            if (typeof showToast === 'function') showToast('Course ' + n + ' marked complete', 3000, 'check-circle');
+            setTimeout(function() { location.reload(); }, 700);
+          });
+      } else {
+        _ltConfirmDialog('Reset Course ' + n,
+          'Clear all saved progress for Course ' + n + ' (' + name + ')? This cannot be undone.',
+          'Yes, Reset', false, function() {
+            ltResetCourse(n);
+            if (typeof showToast === 'function') showToast('Course ' + n + ' progress reset', 3000, 'rotate-ccw');
+            setTimeout(function() { location.reload(); }, 700);
+          });
+      }
     });
   });
 
-  /* ── CONTROL: mark all chapters complete ───────────────────────────────────── */
+  /* ── CONTROL: mark ALL courses complete ───────────────────────────────── */
   var markAllBtn = wrap.querySelector('#lt-markall-btn');
-  markAllBtn.addEventListener('click', function() {
-    var overlay = document.createElement('div');
-    overlay.className = 'lt-confirm-overlay';
-    overlay.innerHTML =
-      '<div class="lt-confirm-box">' +
-        '<div class="lt-confirm-title">Mark All Complete</div>' +
-        '<div class="lt-confirm-msg">Mark all chapters in all courses as complete?</div>' +
-        '<div class="lt-confirm-actions">' +
-          '<button class="lt-confirm-cancel" id="lt-markall-cancel">Cancel</button>' +
-          '<button class="lt-confirm-ok lt-confirm-ok--teal" id="lt-markall-ok">Yes, Mark All</button>' +
-        '</div>' +
-      '</div>';
-    document.body.appendChild(overlay);
-
-    overlay.querySelector('#lt-markall-cancel').addEventListener('click', function() {
-      document.body.removeChild(overlay);
-    });
-
-    overlay.querySelector('#lt-markall-ok').addEventListener('click', function() {
-      function buildProgress(chapters) {
-        var p = {};
-        chapters.forEach(function(chapter, i) {
-          var correctAnswer = chapter.quiz && chapter.quiz.answers
-            ? chapter.quiz.answers.find(function(a) { return a.correct === true; })
-            : null;
-          var answerId = correctAnswer ? correctAnswer.id : null;
-          p[i] = {
-            completed:        true,
-            quizAnswered:     true,
-            quizCorrect:      true,
-            quizAnswer:       answerId,
-            selectedAnswerId: answerId
-          };
-        });
-        return p;
-      }
-      var c1 = typeof LT_CHAPTERS   !== 'undefined' ? LT_CHAPTERS   : [];
-      var c2 = typeof LT_CHAPTERS_2 !== 'undefined' ? LT_CHAPTERS_2 : [];
-      if (c1.length) {
-        localStorage.setItem('lt_course1_state', JSON.stringify({
-          chapter: c1.length - 1, step: 2, progress: buildProgress(c1)
-        }));
-      }
-      if (c2.length) {
-        localStorage.setItem('lt_course2_state', JSON.stringify({
-          chapter: c2.length - 1, step: 2, progress: buildProgress(c2)
-        }));
-      }
-      var c3 = typeof LT_CHAPTERS_3 !== 'undefined' ? LT_CHAPTERS_3 : [];
-      var c4 = typeof LT_CHAPTERS_4 !== 'undefined' ? LT_CHAPTERS_4 : [];
-      if (c3.length) {
-        localStorage.setItem('lt_course3_state', JSON.stringify({
-          chapter: c3.length - 1, step: 2, progress: buildProgress(c3)
-        }));
-      }
-      if (c4.length) {
-        localStorage.setItem('lt_course4_state', JSON.stringify({
-          chapter: c4.length - 1, step: 2, progress: buildProgress(c4)
-        }));
-      }
-      if (typeof showToast === 'function') showToast('✅ All chapters marked complete');
-      setTimeout(function() { location.reload(); }, 800);
-    });
-
-    overlay.addEventListener('click', function(e) {
-      if (e.target === overlay) document.body.removeChild(overlay);
-    });
+  if (markAllBtn) markAllBtn.addEventListener('click', function() {
+    _ltConfirmDialog('Mark All Complete',
+      'Mark all chapters in all four courses as complete?',
+      'Yes, Mark All', true, function() {
+        [1, 2, 3, 4].forEach(function(n) { ltMarkCourseComplete(n); });
+        if (typeof showToast === 'function') showToast('All chapters marked complete', 3000, 'check-circle');
+        setTimeout(function() { location.reload(); }, 800);
+      });
   });
 
-  /* ── CONTROL: reset all progress ───────────────────────────────────────── */
+  /* ── CONTROL: reset ALL progress (keeps appearance/display preferences) ── */
   var resetAllBtn = wrap.querySelector('#lt-resetall-btn');
-  resetAllBtn.addEventListener('click', function() {
-    var overlay = document.createElement('div');
-    overlay.className = 'lt-confirm-overlay';
-    overlay.innerHTML =
-      '<div class="lt-confirm-box">' +
-        '<div class="lt-confirm-title">Reset All Progress</div>' +
-        '<div class="lt-confirm-msg">Clear all progress across all courses? This cannot be undone.</div>' +
-        '<div class="lt-confirm-actions">' +
-          '<button class="lt-confirm-cancel" id="lt-resetall-cancel">Cancel</button>' +
-          '<button class="lt-confirm-ok" id="lt-resetall-ok">Yes, Reset All</button>' +
-        '</div>' +
-      '</div>';
-    document.body.appendChild(overlay);
-
-    overlay.querySelector('#lt-resetall-cancel').addEventListener('click', function() {
-      document.body.removeChild(overlay);
-    });
-
-    overlay.querySelector('#lt-resetall-ok').addEventListener('click', function() {
-      Object.keys(localStorage)
-        .filter(function(k) { return k.indexOf('lt_') === 0; })
-        .forEach(function(k) { localStorage.removeItem(k); });
-      if (typeof showToast === 'function') showToast('🗑️ Progress reset');
-      setTimeout(function() { location.reload(); }, 800);
-    });
-
-    overlay.addEventListener('click', function(e) {
-      if (e.target === overlay) document.body.removeChild(overlay);
-    });
+  if (resetAllBtn) resetAllBtn.addEventListener('click', function() {
+    _ltConfirmDialog('Reset All Progress',
+      'Clear all progress across all courses? This cannot be undone.',
+      'Yes, Reset All', false, function() {
+        var keep = ['lt_theme', 'lt_font', 'lt_bullish_color', 'lt_bearish_color', 'lt_sidebar_collapsed'];
+        Object.keys(localStorage)
+          .filter(function(k) { return k.indexOf('lt_') === 0 && keep.indexOf(k) === -1; })
+          .forEach(function(k) { localStorage.removeItem(k); });
+        if (typeof showToast === 'function') showToast('Progress reset', 3000, 'rotate-ccw');
+        setTimeout(function() { location.reload(); }, 800);
+      });
   });
 }

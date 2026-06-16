@@ -56,23 +56,16 @@ const LT_CHAPTERS_3 = [
       ]
     },
 
-    introChart: {
-      title: "The Trader's Journey — Theory to Live Execution",
-      type: "candlestick",
-      labels: ["M1","M2","M3","M4","M5","M6","M7","M8","M9","M10","M11","M12","M13","M14","M15","M16","M17","M18"],
-      ohlc: [
-        [80,82,79,83],  [82,84,81,85],  [84,87,83,88],  [87,86,85,89],
-        [86,89,85,90],  [89,92,88,93],  [92,90,89,94],  [90,94,89,95],
-        [94,97,93,98],  [97,96,95,99],  [96,100,95,101],[100,103,99,104],
-        [103,101,100,105],[101,105,100,106],[105,108,104,109],[108,107,106,110],
-        [107,111,106,112],[111,116,110,117]
-      ],
-      markPoints: [
-        { dataIndex:  0, label: "Module 1: Derivatives", position: "bottom" },
-        { dataIndex:  3, label: "Module 2: Leverage",    position: "bottom" },
-        { dataIndex:  7, label: "Module 3: Basics",      position: "bottom" },
-        { dataIndex: 11, label: "Module 4: System",      position: "top"    },
-        { dataIndex: 17, label: "Module 5: Mindset",     position: "top"    }
+    roadmap: {
+      title: "Five Modules — Theory to Live Execution",
+      sub: "The arc of Course 3",
+      icon: "route",
+      stops: [
+        { label: "Getting started with derivatives", desc: "Order types, the order book, funding, open interest" },
+        { label: "Understanding leverage", desc: "Cross vs. isolated margin, liquidations, sizing" },
+        { label: "Applying the basics", desc: "DBS/SSR zones, access points, range trading" },
+        { label: "Crafting your system", desc: "Your trading plan, rules, and journal from scratch" },
+        { label: "Unlocking your potential", desc: "Mindset, routines, the realities of full-time trading" }
       ]
     },
 
@@ -80,12 +73,11 @@ const LT_CHAPTERS_3 = [
       title: "From Learner to Consistent Trader — The Course 3 Arc",
       type: "candlestick",
       labels: ["W1","W2","W3","W4","W5","W6","W7","W8","W9","W10","W11","W12","W13","W14","W15","W16"],
-      ohlc: [
-        [78,76,75,80],  [76,74,73,77],  [74,72,71,75],  [72,75,71,76],
-        [75,73,72,77],  [73,77,72,78],  [77,80,76,81],  [80,84,79,85],
-        [84,82,81,86],  [82,87,81,88],  [87,91,86,92],  [91,89,88,93],
-        [89,94,88,95],  [94,98,93,99],  [98,103,97,104],[103,108,102,109]
-      ],
+      ohlc: ltCandles(78, [
+        { to: 86,  bars: 7 },
+        { to: 96,  bars: 4 },
+        { to: 108, bars: 5 }
+      ], { seed: 135, wick: 0.35 }),
       markPoints: [
         { dataIndex:  0, label: "Start — Learning Phase",  position: "bottom" },
         { dataIndex:  6, label: "Derivatives + Leverage",  position: "bottom" },
@@ -95,25 +87,21 @@ const LT_CHAPTERS_3 = [
     },
 
     quiz: {
-      question: "What are the five modules of Course 3: Sharpening Your Edge?",
-      hint: "Think about what bridges theory to live trading: the instruments, the tool, the strategy, the process, and the mindset.",
+      hideChart: true,   // conceptual quiz — no chart
+      question: "Course 3 shifts your focus from understanding how markets move to actually trading them. What does it say ultimately makes a trader consistently profitable?",
+      hint: "It isn't a single magic setup or maxing out leverage — think about what creates consistency and sustains it over the long term.",
       style: "choice",
       answers: [
-        { id: "a", text: "Getting Started with Derivatives, Understanding Leverage, Applying the Basics, Crafting Your System, Unlocking Your Potential", correct: true,  type: "bullish" },
-        { id: "b", text: "Market Structure, Wyckoff Theory, Elliott Wave, Ichimoku Cloud, Risk Management",                                                correct: false, type: "bearish" },
-        { id: "c", text: "Order Types, Candlestick Patterns, Volume Analysis, Fibonacci Retracements, Trading Psychology",                               correct: false, type: "neutral" }
+        { id: "a", text: "A repeatable system plus the discipline and mindset to follow it — built up module by module", correct: true,  type: "bullish" },
+        { id: "b", text: "Finding one perfect indicator that signals a winning trade every time",                        correct: false, type: "bearish" },
+        { id: "c", text: "Using the highest leverage available to compound gains as quickly as possible",               correct: false, type: "neutral" }
       ],
       chart: {
         title: "Course 3 — Five Module Progression",
         type: "candlestick",
         cutIndex: 10,
-        labels: ["D1","D2","D3","D4","D5","D6","D7","D8","D9","D10","D11","D12","D13","D14","D15"],
-        ohlc: [
-          [80,83,79,84],[83,86,82,87],[86,84,83,88],[84,88,83,89],
-          [88,91,87,92],[91,89,88,93],[89,93,88,94],[93,96,92,97],
-          [96,94,93,98],[94,98,93,99],[98,101,97,102],
-          [101,105,100,106],[105,103,102,107],[103,107,102,108],[107,112,106,113]
-        ]
+        labels: ltLabels(15),
+        ohlc: ltCandles(80, [{ to: 113, bars: 15 }], { seed: 136, wick: 0.35 })
       },
       revealMarkPoints: [
         { dataIndex:  2, label: "Module 1", position: "bottom", color: "#00d4d4" },
@@ -122,8 +110,8 @@ const LT_CHAPTERS_3 = [
         { dataIndex: 11, label: "Module 4", position: "top",    color: "#00d4d4" },
         { dataIndex: 14, label: "Module 5", position: "top",    color: "#00d4d4" }
       ],
-      explanation: "Course 3's five modules are: <strong>Module 1 — Getting Started with Derivatives</strong> (order types, exchange interface, funding, open interest); <strong>Module 2 — Understanding Leverage</strong> (correct use, cross vs. isolated, liquidations); <strong>Module 3 — Applying the Basics</strong> (DBS/SSR zones, access points, range trading); <strong>Module 4 — Crafting Your System</strong> (trading system, plan, journal); <strong>Module 5 — Unlocking Your Potential</strong> (mindset, routines, meditation, full-time trading).",
-      rule: "📌 Course 3 = five modules from derivatives execution to mindset mastery. Each module builds on the previous — all five are required for a complete edge."
+      explanation: "There's no magic indicator and no shortcut through leverage. Course 3 builds a complete edge in layers — derivatives and leverage give you the instruments and tools, applying the basics turns theory into executable setups, your <strong>system and plan create consistency</strong>, and your <strong>mindset sustains it</strong> over the long term. Consistent profitability comes from a repeatable process you actually follow — not from any single setup, and definitely not from maxing out leverage (which accelerates losses just as fast as gains).",
+      rule: "Edge = a repeatable system + the discipline to follow it. No single indicator wins every time, and more leverage ≠ more edge."
     }
   },
 
@@ -168,13 +156,11 @@ const LT_CHAPTERS_3 = [
     introChart: {
       title: "Limit Buy — Resting Below Market, Waiting for Price",
       type: "candlestick",
-      labels: ["D1","D2","D3","D4","D5","D6","D7","D8","D9","D10","D11","D12","D13","D14","D15","D16"],
-      ohlc: [
-        [100,104,99,105],[104,102,101,106],[102,99,98,103],[99,97,96,100],
-        [97,95,94,98],   [95,93,92,96],   [93,91,90,94],  [91,89,88,92],
-        [89,90,87,91],   [90,87,86,91],   [87,88,85,89],  [88,85,84,89],
-        [85,88,84,89],   [88,92,87,93],   [92,96,91,97],  [96,101,95,102]
-      ],
+      labels: ltLabels(16),
+      ohlc: ltCandles(100, [
+        { to: 85, bars: 12 },
+        { to: 102, bars: 4 }
+      ], { seed: 137, wick: 0.4 }),
       markLines: [
         { yAxis: 85, label: "Limit Buy Order", color: "#00d4d4" }
       ],
@@ -191,13 +177,12 @@ const LT_CHAPTERS_3 = [
     lessonChart: {
       title: "Stop Loss with Close on Trigger — Position Protection",
       type: "candlestick",
-      labels: ["D1","D2","D3","D4","D5","D6","D7","D8","D9","D10","D11","D12","D13","D14","D15","D16"],
-      ohlc: [
-        [85,89,84,90],[89,93,88,94],[93,96,92,97],[96,94,93,98],
-        [94,98,93,99],[98,101,97,102],[101,105,100,106],[105,103,102,107],
-        [103,107,102,108],[107,105,104,109],[105,102,101,106],[102,99,98,103],
-        [99,96,95,100],[96,93,92,97],[93,90,89,94],[90,84,83,91]
-      ],
+      labels: ltLabels(16),
+      ohlc: ltCandles(85, [
+        { to: 107, bars: 7 },
+        { to: 99,  bars: 4 },
+        { to: 80,  bars: 5 }
+      ], { seed: 138, wick: 0.4 }),
       markLines: [
         { yAxis: 85, label: "Entry",            color: "#00d4d4" },
         { yAxis: 80, label: "Stop Loss (SL)",   color: "#cc2222" }
@@ -211,6 +196,7 @@ const LT_CHAPTERS_3 = [
     },
 
     quiz: {
+      hideChart: true,   // conceptual quiz — no chart
       question: "A trader wants to build a swing long position at a key support level below the current market price. They want the lowest possible fee and a guaranteed fill price. Which order type should they use?",
       hint: "Which order type adds liquidity to the order book, sits as a resting order at a specific price, and charges the lower maker fee?",
       style: "choice",
@@ -223,14 +209,11 @@ const LT_CHAPTERS_3 = [
         title: "Which Order Type for a Planned Swing Entry at Support?",
         type: "candlestick",
         cutIndex: 8,
-        labels: ["D1","D2","D3","D4","D5","D6","D7","D8","D9","D10","D11","D12","D13","D14"],
-        ohlc: [
-          [98,101,97,102],[101,99,98,103],[99,97,96,100],[97,95,94,98],
-          [95,93,92,96],  [93,91,90,94],  [91,89,88,92], [89,87,86,90],
-          [87,86,84,88],
-          [86,89,84,90],  [89,93,88,94],  [93,97,92,98],
-          [97,101,96,102],[101,106,100,107]
-        ],
+        labels: ltLabels(14),
+        ohlc: ltCandles(98, [
+          { to: 86, bars: 9 },
+          { to: 107, bars: 5 }
+        ], { seed: 139, wick: 0.4 }),
         markLines: [
           { yAxis: 86, label: "Planned Entry Level", color: "#00d4d4" }
         ],
@@ -244,7 +227,7 @@ const LT_CHAPTERS_3 = [
         { dataIndex: 13, label: "Trade Running",    position: "top",    color: "#00d4d4" }
       ],
       explanation: "A <strong>Limit Buy</strong> is the correct order for a planned swing entry at a known support level. It sits as a resting order in the order book at your chosen price — guaranteeing that exact fill if reached. It also adds liquidity to the order book, earning the lower <strong>maker fee</strong> rather than the higher taker fee on market orders. A market buy would execute immediately at the current (higher) price, and a stop buy triggers above market — both wrong for this use case.",
-      rule: "📌 Planned entries at key levels = Limit Order. Lowest fee (maker), price guaranteed, adds liquidity. Set it before price arrives, then leave it alone."
+      rule: "Planned entries at key levels = Limit Order. Lowest fee (maker), price guaranteed, adds liquidity. Set it before price arrives, then leave it alone."
     }
   },
 
@@ -290,12 +273,11 @@ const LT_CHAPTERS_3 = [
       title: "Exchange Wallet Balance — Deposits and Realized P&L Growth",
       type: "candlestick",
       labels: ["W1","W2","W3","W4","W5","W6","W7","W8","W9","W10","W11","W12","W13","W14","W15","W16"],
-      ohlc: [
-        [100,103,99,104],[103,101,100,105],[101,105,100,106],[105,108,104,109],
-        [108,106,105,110],[106,110,105,111],[110,113,109,114],[113,111,110,115],
-        [111,115,110,116],[115,118,114,119],[118,116,115,120],[116,121,115,122],
-        [121,119,118,123],[119,123,118,124],[123,127,122,128],[127,131,126,132]
-      ],
+      ohlc: ltCandles(100, [
+        { to: 106, bars: 6 },
+        { to: 122, bars: 6 },
+        { to: 131, bars: 4 }
+      ], { seed: 140, wick: 0.35 }),
       markPoints: [
         { dataIndex:  0, label: "Initial Deposit",  position: "bottom" },
         { dataIndex:  5, label: "P&L Adding Up",    position: "top"    },
@@ -307,13 +289,12 @@ const LT_CHAPTERS_3 = [
     lessonChart: {
       title: "Testnet Practice — Same Interface, Zero Real Risk",
       type: "candlestick",
-      labels: ["D1","D2","D3","D4","D5","D6","D7","D8","D9","D10","D11","D12","D13","D14","D15","D16"],
-      ohlc: [
-        [90,88,87,92],[88,91,87,92],[91,94,90,95],[94,92,91,96],
-        [92,95,91,96],[95,93,92,97],[93,97,92,98],[97,100,96,101],
-        [100,98,97,102],[98,101,97,102],[101,104,100,105],[104,102,101,106],
-        [102,106,101,107],[106,104,103,108],[104,108,103,109],[108,112,107,113]
-      ],
+      labels: ltLabels(16),
+      ohlc: ltCandles(90, [
+        { to: 101, bars: 7 },
+        { to: 109, bars: 5 },
+        { to: 113, bars: 4 }
+      ], { seed: 141, wick: 0.35 }),
       markPoints: [
         { dataIndex:  0, label: "Testnet Practice",        position: "bottom" },
         { dataIndex:  6, label: "Learn Interface Here",    position: "top"    },
@@ -323,6 +304,7 @@ const LT_CHAPTERS_3 = [
     },
 
     quiz: {
+      hideChart: true,   // conceptual quiz — no chart
       question: "Before trading on a live derivatives exchange with real capital, what is the most important first step a new trader should take?",
       hint: "There is a free, risk-free environment that replicates the live exchange exactly. What is it called and why does it matter so much?",
       style: "choice",
@@ -335,14 +317,11 @@ const LT_CHAPTERS_3 = [
         title: "Testnet First — Build Confidence Before Capital Is at Risk",
         type: "candlestick",
         cutIndex: 8,
-        labels: ["D1","D2","D3","D4","D5","D6","D7","D8","D9","D10","D11","D12","D13","D14"],
-        ohlc: [
-          [100,98,97,102],[98,96,95,100],[96,94,93,98],[94,97,93,98],
-          [97,95,94,99],  [95,98,94,99], [98,101,97,102],[101,99,98,103],
-          [99,100,97,101],
-          [100,104,99,105],[104,108,103,109],[108,106,105,110],
-          [106,110,105,111],[110,114,109,115]
-        ]
+        labels: ltLabels(14),
+        ohlc: ltCandles(100, [
+          { to: 101, bars: 8 },
+          { to: 115, bars: 6 }
+        ], { seed: 142, wick: 0.4 })
       },
       revealMarkPoints: [
         { dataIndex:  3, label: "Testnet — Learn Here First", position: "top",    color: "#ffcc00" },
@@ -350,7 +329,7 @@ const LT_CHAPTERS_3 = [
         { dataIndex: 13, label: "Confident Execution",       position: "top",    color: "#00d4d4" }
       ],
       explanation: "Testnet provides an identical trading environment to the live exchange — same interface, same order types, same position management — with imaginary money. Practising here allows you to make every mistake possible (wrong order type, forgotten stop loss, missed cutoff time) without it costing real capital. Interface errors on a live account can be extremely costly. Testnet eliminates that risk entirely before capital is at stake.",
-      rule: "📌 Testnet first. Always. Master the interface, order execution, and stop loss setup with imaginary money before any real capital goes on the exchange."
+      rule: "Testnet first. Always. Master the interface, order execution, and stop loss setup with imaginary money before any real capital goes on the exchange."
     }
   },
 
@@ -395,14 +374,15 @@ const LT_CHAPTERS_3 = [
     introChart: {
       title: "Order Book — Buyers Below Market, Sellers Above Market",
       type: "candlestick",
-      labels: ["D1","D2","D3","D4","D5","D6","D7","D8","D9","D10","D11","D12","D13","D14","D15","D16","D17","D18"],
-      ohlc: [
-        [88,91,87,92],[91,89,88,93],[89,86,85,90],[86,84,83,87],
-        [84,87,83,88],[87,91,86,92],[91,89,88,93],[89,87,86,91],
-        [87,84,83,88],[84,87,83,88],[87,91,86,92],[91,89,88,93],
-        [89,86,85,90],[86,84,83,87],[84,87,83,88],[87,91,86,92],
-        [91,89,88,93],[89,87,86,91]
-      ],
+      labels: ltLabels(18),
+      ohlc: ltCandles(93, [
+        { to: 84, bars: 3 },
+        { to: 93, bars: 3 },
+        { to: 84, bars: 3 },
+        { to: 93, bars: 2 },
+        { to: 84, bars: 3 },
+        { to: 93, bars: 4 }
+      ], { seed: 143, wick: 0.4 }),
       markAreas: [
         { y0: 82, y1: 87, label: "Bid Zone (Green — Buyers)",  color: "rgba(0,212,212,0.07)"  },
         { y0: 91, y1: 96, label: "Ask Zone (Red — Sellers)",   color: "rgba(204,34,34,0.07)"  }
@@ -418,13 +398,11 @@ const LT_CHAPTERS_3 = [
     lessonChart: {
       title: "Perpetual Swap — Tracks Spot Price, No Expiry Date",
       type: "candlestick",
-      labels: ["D1","D2","D3","D4","D5","D6","D7","D8","D9","D10","D11","D12","D13","D14","D15","D16"],
-      ohlc: [
-        [90,94,89,95],  [94,97,93,98],  [97,95,94,99],  [95,99,94,100],
-        [99,102,98,103],[102,100,99,104],[100,104,99,105],[104,107,103,108],
-        [107,105,104,109],[105,109,104,110],[109,107,106,111],[107,111,106,112],
-        [111,114,110,115],[114,112,111,116],[112,116,111,117],[116,120,115,121]
-      ],
+      labels: ltLabels(16),
+      ohlc: ltCandles(90, [
+        { to: 103, bars: 8 },
+        { to: 120, bars: 8 }
+      ], { seed: 144, wick: 0.35 }),
       markPoints: [
         { dataIndex:  0, label: "Perp Swap Open",          position: "bottom" },
         { dataIndex:  7, label: "No Expiry — Stays Open",  position: "top"    },
@@ -433,6 +411,7 @@ const LT_CHAPTERS_3 = [
     },
 
     quiz: {
+      hideChart: true,   // conceptual quiz — no chart
       question: "In a derivatives exchange order book, what do the red orders represent?",
       hint: "Think about where red orders sit relative to the current market price. Are they above or below? Are they buyers or sellers?",
       style: "choice",
@@ -445,13 +424,14 @@ const LT_CHAPTERS_3 = [
         title: "Order Book Structure — What Are the Red Orders?",
         type: "candlestick",
         cutIndex: 9,
-        labels: ["D1","D2","D3","D4","D5","D6","D7","D8","D9","D10","D11","D12","D13","D14"],
-        ohlc: [
-          [87,90,86,91],[90,88,87,92],[88,85,84,89],[85,88,84,89],
-          [88,91,87,92],[91,89,88,93],[89,87,86,91],[87,85,84,88],
-          [85,84,82,86],[84,85,82,86],
-          [85,89,84,90],[89,93,88,94],[93,91,90,95],[91,88,87,93]
-        ],
+        labels: ltLabels(14),
+        ohlc: ltCandles(92, [
+          { to: 84, bars: 3 },
+          { to: 92, bars: 3 },
+          { to: 84, bars: 3 },
+          { to: 92, bars: 2 },
+          { to: 84, bars: 3 }
+        ], { seed: 145, wick: 0.4 }),
         markAreas: [
           { y0: 81, y1: 86, label: "Bid Zone (Buyers)",         color: "rgba(0,212,212,0.07)"  },
           { y0: 91, y1: 97, label: "Ask Zone (Sellers — Red)",  color: "rgba(204,34,34,0.07)"  }
@@ -463,7 +443,7 @@ const LT_CHAPTERS_3 = [
         { dataIndex: 10, label: "Order Book Working",    position: "top",    color: "#00d4d4" }
       ],
       explanation: "Red orders in a derivatives order book are <strong>sell orders (asks)</strong> — they sit above current market price, representing sellers willing to sell at those levels. Green orders are buy orders (bids) sitting below current price. When a market buy fires, it eats through the red asks. When a market sell fires, it eats through the green bids. Understanding this structure is fundamental to reading supply and demand in real time.",
-      rule: "📌 Red = asks (sellers above market). Green = bids (buyers below market). The order book is the live supply and demand map for the asset."
+      rule: "Red = asks (sellers above market). Green = bids (buyers below market). The order book is the live supply and demand map for the asset."
     }
   },
 
@@ -508,13 +488,11 @@ const LT_CHAPTERS_3 = [
     introChart: {
       title: "Open Position — Unrealized P&L Building as Price Rises",
       type: "candlestick",
-      labels: ["D1","D2","D3","D4","D5","D6","D7","D8","D9","D10","D11","D12","D13","D14","D15","D16"],
-      ohlc: [
-        [85,89,84,90],  [89,87,86,91],  [87,91,86,92],  [91,95,90,96],
-        [95,93,92,97],  [93,97,92,98],  [97,100,96,101],[100,103,99,104],
-        [103,101,100,105],[101,105,100,106],[105,108,104,109],[108,106,105,110],
-        [106,110,105,111],[110,113,109,114],[113,116,112,117],[116,120,115,121]
-      ],
+      labels: ltLabels(16),
+      ohlc: ltCandles(85, [
+        { to: 103, bars: 8 },
+        { to: 120, bars: 8 }
+      ], { seed: 146, wick: 0.4 }),
       markLines: [
         { yAxis: 85, label: "Entry Price",  color: "#00d4d4" },
         { yAxis: 80, label: "Stop Loss",    color: "#cc2222" }
@@ -529,13 +507,12 @@ const LT_CHAPTERS_3 = [
     lessonChart: {
       title: "Stops Tab — SL and TP Visible Before Trade Opens",
       type: "candlestick",
-      labels: ["D1","D2","D3","D4","D5","D6","D7","D8","D9","D10","D11","D12","D13","D14","D15","D16"],
-      ohlc: [
-        [82,86,81,87],[86,89,85,90],[89,92,88,93],[92,95,91,96],
-        [95,93,92,97],[93,97,92,98],[97,100,96,101],[100,104,99,105],
-        [104,102,101,106],[102,106,101,107],[106,109,105,110],[109,112,108,113],
-        [112,110,109,114],[110,114,109,115],[114,117,113,118],[117,121,116,122]
-      ],
+      labels: ltLabels(16),
+      ohlc: ltCandles(82, [
+        { to: 100, bars: 8 },
+        { to: 114, bars: 7 },
+        { to: 122, bars: 1 }
+      ], { seed: 147, wick: 0.4 }),
       markLines: [
         { yAxis: 82,  label: "Entry",       color: "#00d4d4" },
         { yAxis: 77,  label: "Stop Loss",   color: "#cc2222" },
@@ -549,6 +526,7 @@ const LT_CHAPTERS_3 = [
     },
 
     quiz: {
+      hideChart: true,   // conceptual quiz — no chart
       question: "A trader enters a long position and sees +$850 in their Positions tab. They have not closed the trade. What does this number represent?",
       hint: "Has the position been closed yet? What is the difference between profit that is locked in versus profit that exists only while the position is open?",
       style: "choice",
@@ -561,13 +539,11 @@ const LT_CHAPTERS_3 = [
         title: "Open Position — Unrealized vs Realized P&L",
         type: "candlestick",
         cutIndex: 10,
-        labels: ["D1","D2","D3","D4","D5","D6","D7","D8","D9","D10","D11","D12","D13","D14","D15"],
-        ohlc: [
-          [85,89,84,90],[89,87,86,91],[87,91,86,92],[91,95,90,96],
-          [95,93,92,97],[93,97,92,98],[97,100,96,101],[100,103,99,104],
-          [103,101,100,105],[101,105,100,106],[105,108,104,109],
-          [108,106,105,110],[106,110,105,111],[110,108,107,112],[108,105,104,109]
-        ],
+        labels: ltLabels(15),
+        ohlc: ltCandles(85, [
+          { to: 108, bars: 11 },
+          { to: 104, bars: 4 }
+        ], { seed: 148, wick: 0.4 }),
         markLines: [
           { yAxis: 85, label: "Entry", color: "#00d4d4" }
         ]
@@ -578,7 +554,7 @@ const LT_CHAPTERS_3 = [
         { dataIndex: 14, label: "Still Open — Not Realized", position: "top",    color: "#ffcc00" }
       ],
       explanation: "The +$850 is <strong>Unrealized P&L</strong> — a paper profit that exists only because the position is still open. If price reversed and the trade closed at a loss, that $850 would disappear. Unrealized P&L becomes <strong>Realized P&L</strong> only when the position closes, at which point the amount is added to (or subtracted from) the wallet balance. Never count unrealized profits as money you have.",
-      rule: "📌 Unrealized P&L = paper profit only. It is not in your wallet. It becomes real only when you close the position. Always have a predefined exit plan."
+      rule: "Unrealized P&L = paper profit only. It is not in your wallet. It becomes real only when you close the position. Always have a predefined exit plan."
     }
   },
 
@@ -623,13 +599,11 @@ const LT_CHAPTERS_3 = [
     introChart: {
       title: "Limit Order Execution — Price Descends to Level, Fills, Bounces",
       type: "candlestick",
-      labels: ["D1","D2","D3","D4","D5","D6","D7","D8","D9","D10","D11","D12","D13","D14","D15","D16"],
-      ohlc: [
-        [100,97,96,101],[97,95,94,98],[95,93,92,96],[93,91,90,94],
-        [91,89,88,92],[89,87,86,90],[87,85,84,88],[85,83,82,86],
-        [83,84,81,85],[84,83,81,85],[83,86,81,87],[86,89,85,90],
-        [89,93,88,94],[93,97,92,98],[97,101,96,102],[101,106,100,107]
-      ],
+      labels: ltLabels(16),
+      ohlc: ltCandles(100, [
+        { to: 83, bars: 10 },
+        { to: 107, bars: 6 }
+      ], { seed: 149, wick: 0.4 }),
       markLines: [
         { yAxis: 83, label: "Limit Buy Level", color: "#00d4d4" }
       ],
@@ -646,13 +620,11 @@ const LT_CHAPTERS_3 = [
     lessonChart: {
       title: "Stop Loss — Close on Trigger Must Be Checked",
       type: "candlestick",
-      labels: ["D1","D2","D3","D4","D5","D6","D7","D8","D9","D10","D11","D12","D13","D14","D15","D16"],
-      ohlc: [
-        [88,92,87,93],[92,95,91,96],[95,97,94,98],[97,100,96,101],
-        [100,98,97,102],[98,102,97,103],[102,105,101,106],[105,103,102,107],
-        [103,100,99,104],[100,97,96,101],[97,94,93,98],[94,91,90,95],
-        [91,89,88,92],[89,87,86,90],[87,86,84,88],[86,83,82,87]
-      ],
+      labels: ltLabels(16),
+      ohlc: ltCandles(88, [
+        { to: 105, bars: 7 },
+        { to: 83,  bars: 9 }
+      ], { seed: 150, wick: 0.4 }),
       markLines: [
         { yAxis: 88, label: "Entry",          color: "#00d4d4" },
         { yAxis: 83, label: "Stop Loss (SL)", color: "#cc2222" }
@@ -665,6 +637,7 @@ const LT_CHAPTERS_3 = [
     },
 
     quiz: {
+      hideChart: true,   // conceptual quiz — no chart
       question: "A trader places a stop sell order to protect their long position. They forget to enable Close on Trigger. What is the risk?",
       hint: "Without Close on Trigger, what does the stop sell do when it fires? Does it close the existing long position, or does it open a new position?",
       style: "choice",
@@ -677,13 +650,13 @@ const LT_CHAPTERS_3 = [
         title: "Stop Without Close on Trigger — What Happens?",
         type: "candlestick",
         cutIndex: 9,
-        labels: ["D1","D2","D3","D4","D5","D6","D7","D8","D9","D10","D11","D12","D13","D14"],
-        ohlc: [
-          [88,92,87,93],[92,95,91,96],[95,98,94,99],[98,101,97,102],
-          [101,99,98,103],[99,96,95,100],[96,93,92,97],[93,91,90,94],
-          [91,89,88,92],[89,87,85,90],
-          [87,85,83,88],[85,82,81,86],[82,80,78,83],[80,77,76,81]
-        ],
+        labels: ltLabels(14),
+        ohlc: ltCandles(88, [
+          { to: 101, bars: 5 },
+          { to: 95,  bars: 4 },
+          { to: 89,  bars: 1 },
+          { to: 77,  bars: 4 }
+        ], { seed: 151, wick: 0.4 }),
         markLines: [
           { yAxis: 88, label: "Entry",        color: "#00d4d4" },
           { yAxis: 89, label: "Stop Trigger", color: "#cc2222" }
@@ -695,7 +668,7 @@ const LT_CHAPTERS_3 = [
         { dataIndex: 13, label: "Doubled Loss!",             position: "bottom", color: "#cc2222" }
       ],
       explanation: "Without Close on Trigger enabled, a stop sell order on a derivatives exchange does not close the existing long position — it opens a <strong>new short position</strong> alongside the long. If price continues falling, both positions lose simultaneously, doubling the damage. This is one of the most dangerous and common mistakes on derivatives platforms. Always enable Close on Trigger for every stop loss, then verify it appears correctly in the Stops tab.",
-      rule: "📌 ALWAYS enable Close on Trigger on every stop loss order. Without it, the stop opens an opposite position instead of closing yours. Verify in Stops tab before the trade is live."
+      rule: "ALWAYS enable Close on Trigger on every stop loss order. Without it, the stop opens an opposite position instead of closing yours. Verify in Stops tab before the trade is live."
     }
   },
 
@@ -740,13 +713,8 @@ const LT_CHAPTERS_3 = [
     introChart: {
       title: "Positive Funding — Longs Pay Shorts, Cost Accumulates",
       type: "candlestick",
-      labels: ["D1","D2","D3","D4","D5","D6","D7","D8","D9","D10","D11","D12","D13","D14","D15","D16"],
-      ohlc: [
-        [90,94,89,95],[94,97,93,98],[97,95,94,99],[95,99,94,100],
-        [99,102,98,103],[102,105,101,106],[105,108,104,109],[108,106,105,110],
-        [106,110,105,111],[110,113,109,114],[113,111,110,115],[111,115,110,116],
-        [115,118,114,119],[118,116,115,120],[116,120,115,121],[120,124,119,125]
-      ],
+      labels: ltLabels(16),
+      ohlc: ltCandles(90, [{ to: 124, bars: 16 }], { seed: 152, wick: 0.4 }),
       markPoints: [
         { dataIndex:  0, label: "8H Funding — Pay",      position: "top"    },
         { dataIndex:  3, label: "8H Funding — Pay",      position: "top"    },
@@ -759,13 +727,8 @@ const LT_CHAPTERS_3 = [
     lessonChart: {
       title: "Open Interest Rising with Price — Trend Confirmation",
       type: "candlestick",
-      labels: ["D1","D2","D3","D4","D5","D6","D7","D8","D9","D10","D11","D12","D13","D14","D15","D16"],
-      ohlc: [
-        [82,86,81,87],[86,84,83,88],[84,89,83,90],[89,93,88,94],
-        [93,91,90,95],[91,96,90,97],[96,94,93,98],[94,99,93,100],
-        [99,103,98,104],[103,101,100,105],[101,106,100,107],[106,110,105,111],
-        [110,108,107,112],[108,113,107,114],[113,117,112,118],[117,122,116,123]
-      ],
+      labels: ltLabels(16),
+      ohlc: ltCandles(82, [{ to: 122, bars: 16 }], { seed: 153, wick: 0.35 }),
       markPoints: [
         { dataIndex:  2, label: "OI Rising — Participation",  position: "top"    },
         { dataIndex:  6, label: "OI Confirms Trend",          position: "top"    },
@@ -775,6 +738,7 @@ const LT_CHAPTERS_3 = [
     },
 
     quiz: {
+      hideChart: true,   // conceptual quiz — no chart
       question: "The funding rate on a perpetual swap is currently +0.05% per 8-hour period and the market has been bullish for several weeks. What does this mean for a long position held for 5 days?",
       hint: "There are 3 funding periods per day (every 8 hours). Over 5 days, how many payments are made? Which direction does positive funding flow between longs and shorts?",
       style: "choice",
@@ -787,13 +751,8 @@ const LT_CHAPTERS_3 = [
         title: "Positive Funding Rate — 5-Day Cost for Longs",
         type: "candlestick",
         cutIndex: 10,
-        labels: ["D1","D2","D3","D4","D5","D6","D7","D8","D9","D10","D11","D12","D13","D14","D15"],
-        ohlc: [
-          [90,94,89,95],[94,92,91,96],[92,96,91,97],[96,99,95,100],
-          [99,97,96,101],[97,101,96,102],[101,104,100,105],[104,102,101,106],
-          [102,106,101,107],[106,104,103,108],[104,107,103,108],
-          [107,110,106,111],[110,108,107,112],[108,111,107,112],[111,114,110,115]
-        ],
+        labels: ltLabels(15),
+        ohlc: ltCandles(90, [{ to: 115, bars: 15 }], { seed: 154, wick: 0.35 }),
         markLines: [
           { yAxis: 90, label: "Entry", color: "#00d4d4" }
         ]
@@ -804,7 +763,7 @@ const LT_CHAPTERS_3 = [
         { dataIndex: 10, label: "Fund Pay 15 — Adds Up!", position: "top", color: "#cc2222" }
       ],
       explanation: "Positive funding = <strong>longs pay shorts</strong>. With 3 funding periods per day (every 8 hours), a 5-day hold incurs 15 funding payments. At 0.05% per period that is 0.75% of position notional value paid to short holders — significant on a leveraged position. In extreme bull markets, funding can exceed 0.1% per period. Always calculate total expected funding cost before planning any multi-day leveraged position.",
-      rule: "📌 Positive funding = longs pay shorts every 8H. Periods held x rate = total cost. Always calculate this before holding leveraged positions multiple days."
+      rule: "Positive funding = longs pay shorts every 8H. Periods held x rate = total cost. Always calculate this before holding leveraged positions multiple days."
     }
   },
 
@@ -849,13 +808,12 @@ const LT_CHAPTERS_3 = [
     introChart: {
       title: "Isolated Margin — Each Position Ringfenced, Others Safe",
       type: "candlestick",
-      labels: ["D1","D2","D3","D4","D5","D6","D7","D8","D9","D10","D11","D12","D13","D14","D15","D16"],
-      ohlc: [
-        [88,92,87,93],[92,90,89,94],[90,94,89,95],[94,97,93,98],
-        [97,95,94,99],[95,99,94,100],[99,102,98,103],[102,100,99,104],
-        [100,97,96,101],[97,94,93,98],[94,91,90,95],[91,89,88,92],
-        [89,87,86,90],[87,85,84,88],[85,82,81,86],[82,80,78,83]
-      ],
+      labels: ltLabels(16),
+      ohlc: ltCandles(88, [
+        { to: 107, bars: 8 },
+        { to: 84,  bars: 7 },
+        { to: 84,  bars: 1 }
+      ], { seed: 155, wick: 0.4 }),
       markLines: [
         { yAxis: 88, label: "Position Entry",          color: "#00d4d4" },
         { yAxis: 84, label: "Stop Loss",               color: "#cc2222" },
@@ -871,13 +829,8 @@ const LT_CHAPTERS_3 = [
     lessonChart: {
       title: "Liquidation Without Stop Loss — Never Let This Happen",
       type: "candlestick",
-      labels: ["D1","D2","D3","D4","D5","D6","D7","D8","D9","D10","D11","D12","D13","D14","D15","D16"],
-      ohlc: [
-        [90,88,87,92],[88,86,85,89],[86,84,83,87],[84,82,81,85],
-        [82,80,79,83],[80,78,77,81],[78,76,75,79],[76,74,73,77],
-        [74,72,71,75],[72,70,69,73],[70,68,67,71],[68,66,65,69],
-        [66,64,63,67],[64,62,61,65],[62,60,59,63],[60,58,57,61]
-      ],
+      labels: ltLabels(16),
+      ohlc: ltCandles(90, [{ to: 58, bars: 16 }], { seed: 156, wick: 0.4 }),
       markLines: [
         { yAxis: 90, label: "Entry",                  color: "#00d4d4" },
         { yAxis: 85, label: "Stop Should Be Here",    color: "#ffcc00" },
@@ -891,6 +844,7 @@ const LT_CHAPTERS_3 = [
     },
 
     quiz: {
+      hideChart: true,   // conceptual quiz — no chart
       question: "A day trader wants to trade multiple crypto assets simultaneously while ensuring that if one position is liquidated, it does not affect the capital reserved for other open trades. Which margin type should they use?",
       hint: "One margin mode pools the full balance across all positions. The other isolates a fixed amount per position. Which one protects other positions from one position's liquidation?",
       style: "choice",
@@ -903,14 +857,12 @@ const LT_CHAPTERS_3 = [
         title: "Cross vs Isolated — Which Protects Other Positions?",
         type: "candlestick",
         cutIndex: 8,
-        labels: ["D1","D2","D3","D4","D5","D6","D7","D8","D9","D10","D11","D12","D13","D14"],
-        ohlc: [
-          [88,86,85,90],[86,84,83,87],[84,82,81,85],[82,80,79,83],
-          [80,78,77,81],[78,76,75,79],[76,74,73,77],[74,72,71,75],
-          [72,71,69,73],
-          [71,75,70,76],[75,79,74,80],[79,83,78,84],
-          [83,87,82,88],[87,91,86,92]
-        ],
+        labels: ltLabels(14),
+        ohlc: ltCandles(88, [
+          { to: 73, bars: 8 },
+          { to: 72, bars: 1 },
+          { to: 92, bars: 5 }
+        ], { seed: 157, wick: 0.4 }),
         markLines: [
           { yAxis: 88, label: "Entry",           color: "#00d4d4" },
           { yAxis: 83, label: "Stop Loss",       color: "#cc2222" },
@@ -923,7 +875,7 @@ const LT_CHAPTERS_3 = [
         { dataIndex: 13, label: "Rest of Account Intact",position: "top",    color: "#00d4d4" }
       ],
       explanation: "<strong>Isolated Margin</strong> allocates a fixed amount of capital per position. If that position liquidates, only its isolated margin is lost — the rest of the account is completely unaffected. Cross Margin uses the entire account balance as a shared buffer, meaning one catastrophically bad position could drain capital meant for all other trades. For a day trader running multiple concurrent positions, isolated margin is the only correct choice.",
-      rule: "📌 Isolated Margin = ringfenced risk per position. Multiple concurrent positions = always isolated. Cross Margin is for single swing/position trades needing maximum liquidation buffer."
+      rule: "Isolated Margin = ringfenced risk per position. Multiple concurrent positions = always isolated. Cross Margin is for single swing/position trades needing maximum liquidation buffer."
     }
   },
 
@@ -968,13 +920,13 @@ const LT_CHAPTERS_3 = [
     introChart: {
       title: "ETH Swing Long — Entry, Stop, and Target (Scaled to Chart)",
       type: "candlestick",
-      labels: ["D1","D2","D3","D4","D5","D6","D7","D8","D9","D10","D11","D12","D13","D14","D15","D16"],
-      ohlc: [
-        [82,86,81,87],[86,89,85,90],[89,92,88,93],[92,90,89,94],
-        [90,87,86,91],[87,85,83,88],[85,88,83,89],[88,86,85,90],
-        [86,84,83,87],[84,88,83,89],[88,92,87,93],[92,96,91,97],
-        [96,100,95,101],[100,105,99,106],[105,110,104,111],[110,116,109,117]
-      ],
+      labels: ltLabels(16),
+      ohlc: ltCandles(86, [
+        { to: 84, bars: 5 },
+        { to: 83, bars: 4 },
+        { to: 84, bars: 1 },
+        { to: 116, bars: 6 }
+      ], { seed: 158, wick: 0.4 }),
       markLines: [
         { yAxis: 84, label: "Entry ($134 scaled)", color: "#00d4d4" },
         { yAxis: 80, label: "Stop Loss ($125)",    color: "#cc2222" },
@@ -990,13 +942,12 @@ const LT_CHAPTERS_3 = [
     lessonChart: {
       title: "Liquidation Price Below Stop Loss — Correct Leverage Use",
       type: "candlestick",
-      labels: ["D1","D2","D3","D4","D5","D6","D7","D8","D9","D10","D11","D12","D13","D14","D15","D16"],
-      ohlc: [
-        [90,94,89,95],[94,97,93,98],[97,95,94,99],[95,99,94,100],
-        [99,97,96,101],[97,94,93,98],[94,91,90,95],[91,89,88,92],
-        [89,87,85,90],[87,84,83,88],[84,82,80,85],[82,80,78,83],
-        [80,79,77,81],[79,77,75,80],[77,75,73,78],[75,73,71,76]
-      ],
+      labels: ltLabels(16),
+      ohlc: ltCandles(90, [
+        { to: 84, bars: 10 },
+        { to: 80, bars: 5 },
+        { to: 80, bars: 1 }
+      ], { seed: 159, wick: 0.4 }),
       markLines: [
         { yAxis: 90, label: "Entry",             color: "#00d4d4" },
         { yAxis: 84, label: "Stop Loss",         color: "#cc2222" },
@@ -1022,13 +973,13 @@ const LT_CHAPTERS_3 = [
         title: "Long $85 — Stop $80 — Liq $77. Leverage Correct?",
         type: "candlestick",
         cutIndex: 10,
-        labels: ["D1","D2","D3","D4","D5","D6","D7","D8","D9","D10","D11","D12","D13","D14"],
-        ohlc: [
-          [85,83,82,86],[83,81,80,84],[81,79,78,82],[79,77,76,80],
-          [77,75,74,78],[75,73,72,76],[73,71,70,74],[71,70,68,72],
-          [70,68,67,71],[68,67,65,69],[67,66,64,68],
-          [66,69,65,70],[69,73,68,74],[73,77,72,78]
-        ],
+        labels: ltLabels(14),
+        ohlc: ltCandles(85, [
+          { to: 80, bars: 3 },
+          { to: 79, bars: 7 },
+          { to: 77, bars: 1 },
+          { to: 82, bars: 3 }
+        ], { seed: 160, wick: 0.4 }),
         markLines: [
           { yAxis: 85, label: "Entry",         color: "#00d4d4" },
           { yAxis: 80, label: "Stop Loss",     color: "#cc2222" },
@@ -1041,7 +992,7 @@ const LT_CHAPTERS_3 = [
         { dataIndex: 13, label: "Leverage Used Correctly",position: "top",    color: "#00d4d4" }
       ],
       explanation: "The setup is using leverage correctly. The liquidation price ($77) is <strong>below the stop loss ($80)</strong>, meaning the stop fires first at $80 — closing the position — long before the exchange-forced liquidation at $77. This is the fundamental test for correct leverage usage: the stop loss is the first line of defense, not the liquidation. Leverage here only reduces margin posted on the exchange, not the actual risk per trade.",
-      rule: "📌 Safe leverage rule for longs: Liquidation Price MUST be below Stop Loss. For shorts: Liquidation MUST be above Stop Loss. If liq fires before stop — reduce leverage immediately."
+      rule: "Safe leverage rule for longs: Liquidation Price MUST be below Stop Loss. For shorts: Liquidation MUST be above Stop Loss. If liq fires before stop — reduce leverage immediately."
     }
   },
 
@@ -1086,14 +1037,11 @@ const LT_CHAPTERS_3 = [
     introChart: {
       title: "Leveraged Long — Liquidation Level Rising as Funding Accumulates",
       type: "candlestick",
-      labels: ["D1","D2","D3","D4","D5","D6","D7","D8","D9","D10","D11","D12","D13","D14","D15","D16","D17","D18"],
-      ohlc: [
-        [84,88,83,89],[88,91,87,92],[91,89,88,93],[89,93,88,94],
-        [93,96,92,97],[96,99,95,100],[99,102,98,103],[102,105,101,106],
-        [105,108,104,109],[108,106,105,110],[106,110,105,111],[110,113,109,114],
-        [113,111,110,115],[111,115,110,116],[115,118,114,119],[118,116,115,120],
-        [116,113,112,117],[113,111,110,114]
-      ],
+      labels: ltLabels(18),
+      ohlc: ltCandles(84, [
+        { to: 109, bars: 15 },
+        { to: 114, bars: 3 }
+      ], { seed: 161, wick: 0.4 }),
       markLines: [
         { yAxis: 84,  label: "Entry",                       color: "#00d4d4" },
         { yAxis: 80,  label: "Original Stop",               color: "#cc2222" },
@@ -1111,14 +1059,11 @@ const LT_CHAPTERS_3 = [
     lessonChart: {
       title: "ETH Swing Trade — Target Near-Miss at $282, Exit $268",
       type: "candlestick",
-      labels: ["D1","D2","D3","D4","D5","D6","D7","D8","D9","D10","D11","D12","D13","D14","D15","D16","D17","D18"],
-      ohlc: [
-        [80,84,79,85],[84,87,83,88],[87,90,86,91],[90,93,89,94],
-        [93,96,92,97],[96,99,95,100],[99,102,98,103],[102,105,101,106],
-        [105,108,104,109],[108,111,107,112],[111,109,108,113],[109,113,108,114],
-        [113,116,112,117],[116,119,115,120],[119,117,116,121],[117,121,116,122],
-        [121,119,118,122],[119,115,114,120]
-      ],
+      labels: ltLabels(18),
+      ohlc: ltCandles(80, [
+        { to: 119, bars: 17 },
+        { to: 115, bars: 1 }
+      ], { seed: 162, wick: 0.4 }),
       markLines: [
         { yAxis: 80,  label: "Entry ($134 scaled)",       color: "#00d4d4" },
         { yAxis: 76,  label: "Stop ($125)",               color: "#cc2222" },
@@ -1133,6 +1078,7 @@ const LT_CHAPTERS_3 = [
     },
 
     quiz: {
+      hideChart: true,   // conceptual quiz — no chart
       question: "A trader holds a leveraged long position on a perpetual swap for 3 weeks. The position is profitable but they notice the liquidation price has been slowly creeping closer to their stop loss each day. What is causing this?",
       hint: "What cost occurs every 8 hours on a perpetual swap long position when the funding rate is positive? How does that affect the margin that was posted?",
       style: "choice",
@@ -1145,13 +1091,8 @@ const LT_CHAPTERS_3 = [
         title: "3-Week Long — Why Is the Liquidation Price Rising?",
         type: "candlestick",
         cutIndex: 10,
-        labels: ["D1","D2","D3","D4","D5","D6","D7","D8","D9","D10","D11","D12","D13","D14","D15"],
-        ohlc: [
-          [84,87,83,88],[87,90,86,91],[90,93,89,94],[93,91,90,95],
-          [91,95,90,96],[95,98,94,99],[98,101,97,102],[101,104,100,105],
-          [104,102,101,106],[102,106,101,107],[106,104,103,108],
-          [104,107,103,108],[107,110,106,111],[110,113,109,114],[113,111,110,115]
-        ],
+        labels: ltLabels(15),
+        ohlc: ltCandles(84, [{ to: 115, bars: 15 }], { seed: 163, wick: 0.4 }),
         markLines: [
           { yAxis: 84, label: "Entry",                    color: "#00d4d4" },
           { yAxis: 80, label: "Stop Loss",                color: "#cc2222" },
@@ -1165,7 +1106,7 @@ const LT_CHAPTERS_3 = [
         { dataIndex: 10, label: "Liq Creeping Up!",       position: "bottom", color: "#cc2222" }
       ],
       explanation: "Every 8-hour funding period costs the long position a percentage of its notional value. Over 3 weeks (63 funding periods), this compounds — draining the margin posted. As margin decreases, the exchange's liquidation calculation rises toward the entry (and eventually toward the stop loss). This is a well-known risk of holding leveraged positions on perpetual swaps for extended periods. Solutions: add margin, reduce size, or switch to a dated futures contract with no funding cost.",
-      rule: "📌 Funding erodes margin over time. 3 weeks = 63 funding periods. Calculate total cost before holding long-duration leveraged positions. If liq approaches stop — act immediately."
+      rule: "Funding erodes margin over time. 3 weeks = 63 funding periods. Calculate total cost before holding long-duration leveraged positions. If liq approaches stop — act immediately."
     }
   },
 
@@ -1210,15 +1151,14 @@ const LT_CHAPTERS_3 = [
     introChart: {
       title: "DBS Zone — Explosive Breakout Defines Maximum Strength",
       type: "candlestick",
-      labels: ["D1","D2","D3","D4","D5","D6","D7","D8","D9","D10","D11","D12","D13","D14","D15","D16","D17","D18"],
-      ohlc: [
-        [108,104,103,109],[104,100,99,105],[100,96,95,101],[96,92,91,97],
-        [92,89,88,93],    [89,86,85,90],   [86,83,82,87],  [83,81,79,84],
-        [81,80,78,82],    [80,79,77,81],   [79,80,77,81],
-        [80,89,79,90],
-        [89,93,88,94],    [93,97,92,98],   [97,101,96,102],[101,106,100,107],
-        [106,110,105,111],[110,115,109,116]
-      ],
+      labels: ltLabels(18),
+      ohlc: ltCandles(108, [
+        { to: 80,  bars: 10 },
+        { to: 91,  bars: 1  },
+        { to: 116, bars: 1  },
+        { to: 116, bars: 5  },
+        { to: 120, bars: 1  }
+      ], { seed: 164, wick: 0.4 }),
       markAreas: [
         { y0: 77, y1: 82, label: "DBS Zone", color: "rgba(0,212,212,0.08)" }
       ],
@@ -1232,15 +1172,13 @@ const LT_CHAPTERS_3 = [
     lessonChart: {
       title: "SSR Zone — Single Candle Maximum Strength, Explosive Rejection",
       type: "candlestick",
-      labels: ["D1","D2","D3","D4","D5","D6","D7","D8","D9","D10","D11","D12","D13","D14","D15","D16","D17","D18"],
-      ohlc: [
-        [80,84,79,85],[84,87,83,88],[87,90,86,91],[90,93,89,94],
-        [93,96,92,97],[96,98,95,99],[98,100,97,101],[100,101,99,102],
-        [101,102,100,103],[102,101,100,104],
-        [101,111,100,112],
-        [111,104,103,112],[104,100,99,105],[100,96,95,101],[96,92,91,97],
-        [92,88,87,93],[88,84,83,89],[84,80,79,85]
-      ],
+      labels: ltLabels(18),
+      ohlc: ltCandles(80, [
+        { to: 100, bars: 10 },
+        { to: 111, bars: 1  },
+        { to: 96,  bars: 1  },
+        { to: 78,  bars: 6  }
+      ], { seed: 165, wick: 0.4 }),
       markAreas: [
         { y0: 100, y1: 105, label: "SSR Zone", color: "rgba(204,34,34,0.08)" }
       ],
@@ -1264,13 +1202,12 @@ const LT_CHAPTERS_3 = [
         title: "Single Candle + Explosive Move — What Zone Formed?",
         type: "candlestick",
         cutIndex: 9,
-        labels: ["D1","D2","D3","D4","D5","D6","D7","D8","D9","D10","D11","D12","D13","D14"],
-        ohlc: [
-          [100,96,95,101],[96,92,91,97],[92,88,87,93],[88,84,83,89],
-          [84,80,79,85],  [80,77,76,81],[77,74,73,78],[74,72,70,75],
-          [72,71,69,73],  [71,80,69,81],
-          [80,84,79,85],  [84,89,83,90],[89,94,88,95],[94,99,93,100]
-        ],
+        labels: ltLabels(14),
+        ohlc: ltCandles(100, [
+          { to: 72, bars: 9  },
+          { to: 82, bars: 1  },
+          { to: 100, bars: 4 }
+        ], { seed: 166, wick: 0.4 }),
         markAreas: [
           { y0: 69, y1: 74, label: "Zone Formed Here", color: "rgba(0,212,212,0.07)" }
         ]
@@ -1281,7 +1218,7 @@ const LT_CHAPTERS_3 = [
         { dataIndex: 13, label: "HH Confirmed = Strength",   position: "top",    color: "#00d4d4" }
       ],
       explanation: "A <strong>DBS Zone</strong> has formed. The single down candle at the bottom represents the area where buyers completely overwhelmed sellers and launched an explosive move to a new Higher High. A single-candle zone has <strong>maximum strength</strong> because one party dominated in a single session with no ambiguity. The first retest of this zone will be the highest probability entry — the depletion factor is at maximum because all the orders that created the original breakout are still present.",
-      rule: "📌 Single candle + explosive breakout = maximum strength DBS (or SSR) zone. First test = highest probability. Zone weakens with each subsequent retest."
+      rule: "Single candle + explosive breakout = maximum strength DBS (or SSR) zone. First test = highest probability. Zone weakens with each subsequent retest."
     }
   },
 
@@ -1326,14 +1263,12 @@ const LT_CHAPTERS_3 = [
     introChart: {
       title: "Aggressive DBS Entry — Bids at Upper Limit, Stop Below Zone",
       type: "candlestick",
-      labels: ["D1","D2","D3","D4","D5","D6","D7","D8","D9","D10","D11","D12","D13","D14","D15","D16"],
-      ohlc: [
-        [106,102,101,107],[102,98,97,103],[98,95,94,99],[95,92,91,96],
-        [92,89,88,93],    [89,87,85,90],  [87,85,83,88],[85,83,81,86],
-        [83,84,81,85],    [84,83,81,85],  [83,86,81,87],
-        [86,90,85,91],    [90,94,89,95],  [94,98,93,99],
-        [98,103,97,104],  [103,108,102,109]
-      ],
+      labels: ltLabels(16),
+      ohlc: ltCandles(106, [
+        { to: 85, bars: 9  },
+        { to: 83, bars: 2  },
+        { to: 109, bars: 5 }
+      ], { seed: 167, wick: 0.4 }),
       markAreas: [
         { y0: 81, y1: 86, label: "DBS Zone", color: "rgba(0,212,212,0.08)" }
       ],
@@ -1351,14 +1286,14 @@ const LT_CHAPTERS_3 = [
     lessonChart: {
       title: "S/R Flip Long — Buy Broken Resistance on First Retest",
       type: "candlestick",
-      labels: ["D1","D2","D3","D4","D5","D6","D7","D8","D9","D10","D11","D12","D13","D14","D15","D16","D17","D18"],
-      ohlc: [
-        [82,86,81,87],[86,84,83,88],[84,88,83,89],[88,91,87,92],
-        [91,89,88,93],[89,93,88,94],[93,97,92,98],[97,95,94,99],
-        [95,99,94,100],[99,103,98,104],[103,101,100,105],[101,105,100,106],
-        [105,103,102,107],[103,101,100,105],[101,103,100,104],[103,107,102,108],
-        [107,112,106,113],[112,117,111,118]
-      ],
+      labels: ltLabels(18),
+      ohlc: ltCandles(82, [
+        { to: 100, bars: 9  },
+        { to: 106, bars: 3  },
+        { to: 101, bars: 2  },
+        { to: 103, bars: 1  },
+        { to: 118, bars: 3  }
+      ], { seed: 168, wick: 0.4 }),
       markLines: [
         { yAxis: 100, label: "SSR Flip Level — Now DBS", color: "#00d4d4" }
       ],
@@ -1387,13 +1322,14 @@ const LT_CHAPTERS_3 = [
         title: "SSR Broken — Retest from Above. What Is the Trade?",
         type: "candlestick",
         cutIndex: 11,
-        labels: ["D1","D2","D3","D4","D5","D6","D7","D8","D9","D10","D11","D12","D13","D14","D15"],
-        ohlc: [
-          [88,91,87,92],[91,94,90,95],[94,92,91,96],[92,95,91,96],
-          [95,93,92,97],[93,96,92,97],[96,99,95,100],[99,97,96,101],
-          [97,100,96,101],[100,103,99,104],[103,106,102,107],[106,104,103,108],
-          [104,103,102,106],[103,107,102,108],[107,112,106,113]
-        ],
+        labels: ltLabels(15),
+        ohlc: ltCandles(88, [
+          { to: 100, bars: 7  },
+          { to: 106, bars: 3  },
+          { to: 100, bars: 2  },
+          { to: 102, bars: 1  },
+          { to: 113, bars: 2  }
+        ], { seed: 169, wick: 0.4 }),
         markLines: [
           { yAxis: 100, label: "SSR Flip Level", color: "#00d4d4" }
         ],
@@ -1408,7 +1344,7 @@ const LT_CHAPTERS_3 = [
         { dataIndex: 14, label: "Trade Running",            position: "top",    color: "#00d4d4" }
       ],
       explanation: "When an SSR zone is convincingly broken to the upside, it undergoes a <strong>polarity flip</strong> — it becomes a DBS zone. The first retest from above is the highest probability long entry: the depletion factor is at maximum (all original breakout orders still present), the invalidation level is clear (below the zone), and the prior breakout confirmed buyers are in control. Shorting the retest fights the trend; waiting for a second test wastes the highest probability moment.",
-      rule: "📌 SSR broken → becomes DBS. DBS broken → becomes SSR. First test of the flipped zone = highest probability entry. Depletion factor is freshest here — never wait for a second test."
+      rule: "SSR broken → becomes DBS. DBS broken → becomes SSR. First test of the flipped zone = highest probability entry. Depletion factor is freshest here — never wait for a second test."
     }
   },
 
@@ -1453,14 +1389,15 @@ const LT_CHAPTERS_3 = [
     introChart: {
       title: "Trading Range — Low, High, Midpoint, Touch Numbers",
       type: "candlestick",
-      labels: ["D1","D2","D3","D4","D5","D6","D7","D8","D9","D10","D11","D12","D13","D14","D15","D16","D17","D18","D19","D20"],
-      ohlc: [
-        [90,93,89,94],[93,96,92,97],[96,93,92,98],[93,89,88,94],
-        [89,86,85,90],[86,85,83,87],[85,88,83,89],[88,92,87,93],
-        [92,95,91,96],[95,93,92,97],[93,89,88,94],[89,86,85,90],
-        [86,85,83,87],[85,88,83,89],[88,92,87,93],[92,95,91,96],
-        [95,93,92,97],[93,89,88,94],[89,86,85,90],[86,84,83,87]
-      ],
+      labels: ltLabels(20),
+      ohlc: ltCandles(93, [
+        { to: 84, bars: 4 },
+        { to: 93, bars: 4 },
+        { to: 84, bars: 3 },
+        { to: 93, bars: 4 },
+        { to: 84, bars: 4 },
+        { to: 87, bars: 1 }
+      ], { seed: 170, wick: 0.4 }),
       markAreas: [
         { y0: 83, y1: 88, label: "Range Low",  color: "rgba(0,212,212,0.07)" },
         { y0: 93, y1: 98, label: "Range High", color: "rgba(204,34,34,0.07)" }
@@ -1480,15 +1417,18 @@ const LT_CHAPTERS_3 = [
     lessonChart: {
       title: "Rule of Fives — 5th Touch Breaks Out Instead of Bouncing",
       type: "candlestick",
-      labels: ["D1","D2","D3","D4","D5","D6","D7","D8","D9","D10","D11","D12","D13","D14","D15","D16","D17","D18","D19","D20","D21","D22"],
-      ohlc: [
-        [88,92,87,93],[92,95,91,96],[95,92,91,97],[92,88,87,93],
-        [88,86,85,89],[86,90,85,91],[90,93,89,94],[93,95,92,96],
-        [95,92,91,97],[92,88,87,93],[88,86,85,89],[86,90,85,91],
-        [90,93,89,94],[93,95,92,96],[95,92,91,97],[92,88,87,93],
-        [88,86,85,89],[86,90,85,91],[90,94,89,95],[94,96,93,97],
-        [96,101,95,102],[101,106,100,107]
-      ],
+      labels: ltLabels(22),
+      ohlc: ltCandles(88, [
+        { to: 95, bars: 2 },
+        { to: 86, bars: 3 },
+        { to: 95, bars: 3 },
+        { to: 86, bars: 3 },
+        { to: 95, bars: 3 },
+        { to: 86, bars: 3 },
+        { to: 95, bars: 3 },
+        { to: 103, bars: 1 },
+        { to: 107, bars: 1 }
+      ], { seed: 171, wick: 0.4 }),
       markAreas: [
         { y0: 84, y1: 89, label: "Range Low",  color: "rgba(0,212,212,0.07)" },
         { y0: 93, y1: 98, label: "Range High", color: "rgba(204,34,34,0.07)" }
@@ -1516,15 +1456,18 @@ const LT_CHAPTERS_3 = [
         title: "Range High — Five Touches. What Does the Rule of Fives Say?",
         type: "candlestick",
         cutIndex: 18,
-        labels: ["D1","D2","D3","D4","D5","D6","D7","D8","D9","D10","D11","D12","D13","D14","D15","D16","D17","D18","D19","D20","D21"],
-        ohlc: [
-          [88,92,87,93],[92,95,91,96],[95,92,91,97],[92,88,87,93],
-          [88,86,85,89],[86,90,85,91],[90,93,89,94],[93,95,92,96],
-          [95,92,91,97],[92,88,87,93],[88,86,85,89],[86,90,85,91],
-          [90,93,89,94],[93,95,92,96],[95,92,91,97],[92,88,87,93],
-          [88,86,85,89],[86,90,85,91],[90,94,89,95],[94,96,93,97],
-          [96,102,95,103]
-        ],
+        labels: ltLabels(21),
+        ohlc: ltCandles(88, [
+          { to: 95, bars: 2 },
+          { to: 86, bars: 3 },
+          { to: 95, bars: 3 },
+          { to: 86, bars: 3 },
+          { to: 95, bars: 3 },
+          { to: 86, bars: 4 },
+          { to: 95, bars: 1 },
+          { to: 97, bars: 1 },
+          { to: 103, bars: 1 }
+        ], { seed: 172, wick: 0.4 }),
         markAreas: [
           { y0: 84, y1: 89, label: "Range Low",  color: "rgba(0,212,212,0.07)" },
           { y0: 93, y1: 98, label: "Range High", color: "rgba(204,34,34,0.07)" }
@@ -1538,7 +1481,7 @@ const LT_CHAPTERS_3 = [
         { dataIndex: 20, label: "Touch 5 = Breakout! Buy, Don't Short!", position: "top", color: "#cc2222" }
       ],
       explanation: "The Rule of Fives: by the 5th touch of a Range High, the zone has been depleted of most of its resting sell orders. The sellers who were defending that level have gradually been absorbed across four previous tests. The 5th approach is the point of maximum exhaustion — the most likely outcome is a breakout above Range High rather than another rejection. <strong>Do not short the 5th touch. Look to buy the breakout instead.</strong>",
-      rule: "📌 Rule of Fives: 5th touch of Range High or Range Low = likely exhaustion. Do not short Range High touch 5. Do not long Range Low touch 5. Wait for and buy/sell the breakout."
+      rule: "Rule of Fives: 5th touch of Range High or Range Low = likely exhaustion. Do not short Range High touch 5. Do not long Range Low touch 5. Wait for and buy/sell the breakout."
     }
   },
 
@@ -1584,14 +1527,14 @@ const LT_CHAPTERS_3 = [
     introChart: {
       title: "Live Range — Midpoint as Progress Gauge",
       type: "candlestick",
-      labels: ["D1","D2","D3","D4","D5","D6","D7","D8","D9","D10","D11","D12","D13","D14","D15","D16","D17","D18"],
-      ohlc: [
-        [90,93,89,94],[93,96,92,97],[96,92,91,98],[92,88,87,93],
-        [88,86,84,89],[86,87,83,88],[87,91,86,92],[91,89,88,93],
-        [89,91,88,92],[91,88,87,93],[88,86,84,89],[86,87,83,88],
-        [87,91,86,92],[91,93,90,94],[93,96,92,97],[96,94,93,98],
-        [94,95,93,97],[95,96,94,98]
-      ],
+      labels: ltLabels(18),
+      ohlc: ltCandles(94, [
+        { to: 85, bars: 5 },
+        { to: 94, bars: 4 },
+        { to: 87, bars: 3 },
+        { to: 95, bars: 4 },
+        { to: 92, bars: 2 }
+      ], { seed: 173, wick: 0.4 }),
       markAreas: [
         { y0: 83, y1: 88, label: "Range Low",  color: "rgba(0,212,212,0.07)" },
         { y0: 93, y1: 98, label: "Range High", color: "rgba(204,34,34,0.07)" }
@@ -1609,13 +1552,12 @@ const LT_CHAPTERS_3 = [
     lessonChart: {
       title: "Fake-out at Range High — Stop Buffer Saves the Short",
       type: "candlestick",
-      labels: ["D1","D2","D3","D4","D5","D6","D7","D8","D9","D10","D11","D12","D13","D14","D15","D16"],
-      ohlc: [
-        [88,91,87,92],[91,89,88,93],[89,92,88,93],[92,95,91,96],
-        [95,93,92,97],[93,95,92,96],[95,96,94,98],[96,97,94,99],
-        [97,99,95,101],[99,96,95,100],[96,93,92,97],[93,91,90,94],
-        [91,88,87,92],[88,86,85,89],[86,84,83,87],[84,83,82,85]
-      ],
+      labels: ltLabels(16),
+      ohlc: ltCandles(88, [
+        { to: 95, bars: 7 },
+        { to: 99, bars: 2, reject: 4 },
+        { to: 84, bars: 7 }
+      ], { seed: 174, wick: 0.4 }),
       markAreas: [
         { y0: 85, y1: 89, label: "Range Low",  color: "rgba(0,212,212,0.07)" },
         { y0: 94, y1: 98, label: "Range High", color: "rgba(204,34,34,0.07)" }
@@ -1644,13 +1586,12 @@ const LT_CHAPTERS_3 = [
         title: "Short at Range High — Stop Hit by Spike. What Went Wrong?",
         type: "candlestick",
         cutIndex: 9,
-        labels: ["D1","D2","D3","D4","D5","D6","D7","D8","D9","D10","D11","D12","D13","D14","D15"],
-        ohlc: [
-          [88,91,87,92],[91,89,88,93],[89,92,88,93],[92,95,91,96],
-          [95,93,92,97],[93,95,92,96],[95,96,94,97],[96,97,94,98],
-          [97,99,95,102],[99,96,95,100],
-          [96,93,92,97],[93,91,90,94],[91,88,87,92],[88,86,85,89],[86,84,83,87]
-        ],
+        labels: ltLabels(15),
+        ohlc: ltCandles(88, [
+          { to: 96, bars: 8 },
+          { to: 100, bars: 1, reject: 3 },
+          { to: 84,  bars: 6 }
+        ], { seed: 175, wick: 0.4 }),
         markAreas: [
           { y0: 85, y1: 89, label: "Range Low",  color: "rgba(0,212,212,0.07)" },
           { y0: 94, y1: 98, label: "Range High", color: "rgba(204,34,34,0.07)" }
@@ -1666,7 +1607,7 @@ const LT_CHAPTERS_3 = [
         { dataIndex: 14, label: "Would Have Hit Target!",     position: "bottom", color: "#00d4d4" }
       ],
       explanation: "Fake-outs — brief spikes beyond Range High or Range Low before reversing — are <strong>normal price behavior</strong> and not signals that the range has broken. The mistake was placing the stop too tightly at the Range High with no buffer. A correctly placed stop should sit above the typical wick extreme, giving enough room to survive these routine probes. With a proper buffer, the short would have remained active and hit the Range Low target.",
-      rule: "📌 Always add a buffer above the swing high for short stops (and below swing low for long stops). Fake-out wicks are normal. A buffer-less stop at the zone edge will be hit routinely."
+      rule: "Always add a buffer above the swing high for short stops (and below swing low for long stops). Fake-out wicks are normal. A buffer-less stop at the zone edge will be hit routinely."
     }
   },
 
@@ -1711,14 +1652,12 @@ const LT_CHAPTERS_3 = [
     introChart: {
       title: "System Trading vs Gut-Feel — Equity Curves Over Time",
       type: "candlestick",
-      labels: ["D1","D2","D3","D4","D5","D6","D7","D8","D9","D10","D11","D12","D13","D14","D15","D16","D17","D18"],
-      ohlc: [
-        [100,103,99,104],[103,106,102,107],[106,104,103,108],[104,108,103,109],
-        [108,106,105,110],[106,110,105,111],[110,113,109,114],[113,116,112,117],
-        [116,114,113,118],[114,118,113,119],[118,121,117,122],[121,119,118,123],
-        [119,123,118,124],[123,126,122,127],[126,124,123,128],[124,128,123,129],
-        [128,131,127,132],[131,135,130,136]
-      ],
+      labels: ltLabels(18),
+      ohlc: ltCandles(100, [
+        { to: 113, bars: 7 },
+        { to: 110, bars: 5 },
+        { to: 135, bars: 6 }
+      ], { seed: 176, wick: 0.35 }),
       markPoints: [
         { dataIndex:  0, label: "System: Consistent",  position: "top"    },
         { dataIndex:  6, label: "System: Drawdown OK", position: "bottom" },
@@ -1730,13 +1669,12 @@ const LT_CHAPTERS_3 = [
     lessonChart: {
       title: "Seven System Components in Action on a Single Trade",
       type: "candlestick",
-      labels: ["D1","D2","D3","D4","D5","D6","D7","D8","D9","D10","D11","D12","D13","D14","D15","D16"],
-      ohlc: [
-        [102,98,97,103],[98,95,94,99],[95,92,91,96],[92,89,88,93],
-        [89,86,85,90],[86,84,82,87],[84,85,82,86],[85,84,82,86],
-        [84,88,83,89],[88,92,87,93],[92,96,91,97],[96,94,93,98],
-        [94,98,93,99],[98,103,97,104],[103,108,102,109],[108,114,107,115]
-      ],
+      labels: ltLabels(16),
+      ohlc: ltCandles(102, [
+        { to: 84, bars: 8 },
+        { to: 84, bars: 1 },
+        { to: 115, bars: 7 }
+      ], { seed: 177, wick: 0.4 }),
       markAreas: [
         { y0: 82, y1: 87, label: "Level (DBS Zone)", color: "rgba(0,212,212,0.07)" }
       ],
@@ -1753,6 +1691,7 @@ const LT_CHAPTERS_3 = [
     },
 
     quiz: {
+      hideChart: true,   // conceptual quiz — no chart
       question: "A trader has been profitable for 3 months but then suffers 6 consecutive losses. They abandon their system and start trading based on feel. According to Course 3, what is the correct response to a losing streak?",
       hint: "Are losing streaks expected within a valid trading system? What is the only threshold that triggers a system review?",
       style: "choice",
@@ -1765,14 +1704,12 @@ const LT_CHAPTERS_3 = [
         title: "Losing Streak — Abandon System or Trust It?",
         type: "candlestick",
         cutIndex: 8,
-        labels: ["D1","D2","D3","D4","D5","D6","D7","D8","D9","D10","D11","D12","D13","D14","D15","D16"],
-        ohlc: [
-          [100,97,96,101],[97,94,93,98],[94,91,90,95],[91,89,88,92],
-          [89,87,86,90],[87,85,84,88],[85,83,82,86],[83,82,80,84],
-          [82,83,80,84],
-          [83,87,82,88],[87,91,86,92],[91,95,90,96],[95,99,94,100],
-          [99,103,98,104],[103,107,102,108],[107,112,106,113]
-        ]
+        labels: ltLabels(16),
+        ohlc: ltCandles(100, [
+          { to: 82, bars: 8 },
+          { to: 83, bars: 1 },
+          { to: 113, bars: 7 }
+        ], { seed: 178, wick: 0.4 })
       },
       revealMarkPoints: [
         { dataIndex:  0, label: "Loss 1",                position: "bottom", color: "#cc2222" },
@@ -1782,7 +1719,7 @@ const LT_CHAPTERS_3 = [
         { dataIndex: 15, label: "Drawdown Was Normal",   position: "top",    color: "#00d4d4" }
       ],
       explanation: "Losing streaks are a <strong>mathematical inevitability</strong> for every trading system, even highly profitable ones. Six consecutive losses does not mean the system is broken — it means the system is experiencing normal variance. Abandoning the system during a drawdown and switching to gut-feel trading is consistently the most destructive decision a trader can make. The only trigger for a genuine system review is if the drawdown has exceeded the predefined maximum acceptable level built into the system.",
-      rule: "📌 Trust your system during losing streaks. Only revamp when the drawdown exceeds your predefined maximum. Abandoning the system mid-drawdown destroys the edge."
+      rule: "Trust your system during losing streaks. Only revamp when the drawdown exceeds your predefined maximum. Abandoning the system mid-drawdown destroys the edge."
     }
   },
 
@@ -1827,13 +1764,12 @@ const LT_CHAPTERS_3 = [
     introChart: {
       title: "Directional Bias Aligned — Price at HTF Support, Bullish Plan",
       type: "candlestick",
-      labels: ["D1","D2","D3","D4","D5","D6","D7","D8","D9","D10","D11","D12","D13","D14","D15","D16"],
-      ohlc: [
-        [108,104,103,109],[104,100,99,105],[100,97,96,101],[97,94,93,98],
-        [94,91,90,95],[91,89,87,92],[89,87,85,90],[87,86,84,88],
-        [86,87,84,88],[87,86,84,88],[86,90,85,91],[90,94,89,95],
-        [94,98,93,99],[98,102,97,103],[102,106,101,107],[106,111,105,112]
-      ],
+      labels: ltLabels(16),
+      ohlc: ltCandles(108, [
+        { to: 87, bars: 8 },
+        { to: 87, bars: 2 },
+        { to: 111, bars: 6 }
+      ], { seed: 179, wick: 0.4 }),
       markAreas: [
         { y0: 84, y1: 89, label: "HTF Support Level", color: "rgba(0,212,212,0.07)" }
       ],
@@ -1850,13 +1786,11 @@ const LT_CHAPTERS_3 = [
     lessonChart: {
       title: "Out of Sync — Bias Formed on Emotion, Not Price",
       type: "candlestick",
-      labels: ["D1","D2","D3","D4","D5","D6","D7","D8","D9","D10","D11","D12","D13","D14","D15","D16"],
-      ohlc: [
-        [90,94,89,95],[94,97,93,98],[97,100,96,101],[100,103,99,104],
-        [103,101,100,105],[101,98,97,102],[98,96,95,99],[96,99,95,100],
-        [99,102,98,103],[102,99,98,104],[99,96,95,100],[96,93,92,97],
-        [93,90,89,94],[90,87,86,91],[87,85,84,88],[85,83,82,86]
-      ],
+      labels: ltLabels(16),
+      ohlc: ltCandles(90, [
+        { to: 103, bars: 6 },
+        { to: 83,  bars: 10 }
+      ], { seed: 180, wick: 0.4 }),
       markPoints: [
         { dataIndex:  3, label: "Emotion Bias: Goes Long",   position: "top"    },
         { dataIndex:  5, label: "Price Rejects — No HTF",   position: "top"    },
@@ -1865,6 +1799,7 @@ const LT_CHAPTERS_3 = [
     },
 
     quiz: {
+      hideChart: true,   // conceptual quiz — no chart
       question: "Before a trading session, a trader decides to go long BTC because it feels like it wants to go up. They open a position without checking HTF levels. According to Course 3, what is wrong with this approach?",
       hint: "A valid directional bias requires a specific articulable reason. Is feeling a valid technical reason for a bias?",
       style: "choice",
@@ -1877,13 +1812,11 @@ const LT_CHAPTERS_3 = [
         title: "Emotion Bias vs HTF Level Bias — Which Holds Up?",
         type: "candlestick",
         cutIndex: 6,
-        labels: ["D1","D2","D3","D4","D5","D6","D7","D8","D9","D10","D11","D12","D13","D14","D15"],
-        ohlc: [
-          [90,94,89,95],[94,97,93,98],[97,100,96,101],[100,103,99,104],
-          [103,101,100,105],[101,98,97,102],[98,96,95,99],
-          [96,93,92,97],[93,90,89,94],[90,87,86,91],
-          [87,85,84,88],[85,83,82,86],[83,80,79,84],[80,78,77,81],[78,76,75,79]
-        ]
+        labels: ltLabels(15),
+        ohlc: ltCandles(90, [
+          { to: 104, bars: 7 },
+          { to: 76,  bars: 8 }
+        ], { seed: 181, wick: 0.4 })
       },
       revealMarkPoints: [
         { dataIndex:  4, label: "Emotion Bias Long Here",     position: "top",    color: "#cc2222" },
@@ -1891,7 +1824,7 @@ const LT_CHAPTERS_3 = [
         { dataIndex: 11, label: "Price Drops — Bias Wrong",   position: "bottom", color: "#cc2222" }
       ],
       explanation: "A trading bias formed on feeling rather than technical analysis is not a bias — it is a guess. A valid directional bias must be articulable in one sentence citing a specific technical or fundamental reason: 'I am bullish because price is at the weekly DBS zone' or 'I am bearish because the daily market structure broke lower.' If you cannot clearly state a specific reason for your bias, it has no foundation and should not drive a trade decision.",
-      rule: "📌 Directional bias must have a specific articulable reason: price at HTF level, structure break, or macro catalyst. If you cannot explain it in one sentence, it is not a valid bias."
+      rule: "Directional bias must have a specific articulable reason: price at HTF level, structure break, or macro catalyst. If you cannot explain it in one sentence, it is not a valid bias."
     }
   },
 
@@ -1936,13 +1869,17 @@ const LT_CHAPTERS_3 = [
     introChart: {
       title: "Trade Journal — Identifying Loss Pattern Across Multiple Trades",
       type: "candlestick",
-      labels: ["D1","D2","D3","D4","D5","D6","D7","D8","D9","D10","D11","D12","D13","D14","D15","D16"],
-      ohlc: [
-        [90,94,89,95],[94,91,90,96],[91,87,86,92],[87,84,83,88],
-        [84,88,83,89],[88,92,87,93],[92,90,89,94],[90,87,86,91],
-        [87,83,82,88],[83,80,79,84],[80,84,79,85],[84,88,83,89],
-        [88,86,85,90],[86,83,82,87],[83,80,79,84],[80,84,79,85]
-      ],
+      labels: ltLabels(16),
+      ohlc: ltCandles(90, [
+        { to: 84, bars: 3 },
+        { to: 90, bars: 4 },
+        { to: 84, bars: 1 },
+        { to: 90, bars: 2 },
+        { to: 84, bars: 1 },
+        { to: 90, bars: 2 },
+        { to: 84, bars: 1 },
+        { to: 85, bars: 2 }
+      ], { seed: 182, wick: 0.4 }),
       markPoints: [
         { dataIndex:  2, label: "Loss — 3h Sleep",     position: "bottom" },
         { dataIndex:  7, label: "Loss — 3h Sleep",     position: "bottom" },
@@ -1955,13 +1892,11 @@ const LT_CHAPTERS_3 = [
     lessonChart: {
       title: "BTC Losing Trade — Stop Moved Down, Slippage on Exit",
       type: "candlestick",
-      labels: ["D1","D2","D3","D4","D5","D6","D7","D8","D9","D10","D11","D12","D13","D14","D15","D16"],
-      ohlc: [
-        [105,109,104,110],[109,113,108,114],[113,111,110,115],[111,108,107,112],
-        [108,105,104,109],[105,102,101,106],[102,99,98,103],[99,97,96,100],
-        [97,94,93,98],[94,92,90,95],[92,89,88,93],[89,87,85,90],
-        [87,84,83,88],[84,82,80,85],[82,79,77,83],[79,76,75,80]
-      ],
+      labels: ltLabels(16),
+      ohlc: ltCandles(105, [
+        { to: 113, bars: 3 },
+        { to: 76,  bars: 13 }
+      ], { seed: 183, wick: 0.4 }),
       markLines: [
         { yAxis: 105, label: "Entry",              color: "#00d4d4" },
         { yAxis: 96,  label: "Original Stop",      color: "#cc2222" },
@@ -1976,6 +1911,7 @@ const LT_CHAPTERS_3 = [
     },
 
     quiz: {
+      hideChart: true,   // conceptual quiz — no chart
       question: "A trader's journal shows that 7 of their last 8 losing trades occurred on days when they slept less than 5 hours. They had no idea until they started tracking sleep. What does this reveal about journaling?",
       hint: "How would this pattern be discovered without tracking sleep alongside trade outcomes? What is the core value of recording non-trade variables in the journal?",
       style: "choice",
@@ -1988,13 +1924,11 @@ const LT_CHAPTERS_3 = [
         title: "Journal Data Reveals — Losses Cluster Around Sleep Deprivation",
         type: "candlestick",
         cutIndex: 9,
-        labels: ["D1","D2","D3","D4","D5","D6","D7","D8","D9","D10","D11","D12","D13","D14","D15"],
-        ohlc: [
-          [100,103,99,104],[103,107,102,108],[107,105,104,109],[105,109,104,110],
-          [109,106,105,111],[106,103,102,107],[103,100,99,104],[100,97,96,101],
-          [97,94,93,98],[94,91,90,95],
-          [91,95,90,96],[95,99,94,100],[99,103,98,104],[103,107,102,108],[107,111,106,112]
-        ]
+        labels: ltLabels(15),
+        ohlc: ltCandles(100, [
+          { to: 93, bars: 10 },
+          { to: 112, bars: 5 }
+        ], { seed: 184, wick: 0.4 })
       },
       revealMarkPoints: [
         { dataIndex:  5, label: "Loss — 3h sleep",       position: "bottom", color: "#cc2222" },
@@ -2004,7 +1938,7 @@ const LT_CHAPTERS_3 = [
         { dataIndex: 14, label: "Win — 8h sleep",        position: "top",    color: "#00d4d4" }
       ],
       explanation: "This is exactly the kind of insight that a detailed journal produces. Without tracking sleep alongside trade outcomes, this pattern — 7 of 8 losses on under 5 hours of sleep — would be completely invisible. The trader would continue making the same mistakes in the same conditions, believing their losses were caused by market conditions or bad luck. The journal <strong>makes the invisible visible</strong>. Personal habit variables (sleep, hunger, exercise, meditation) directly affect decision quality and must be tracked.",
-      rule: "📌 Journal EVERY trade. Track personal habit variables (sleep, hunger, exercise, emotion) alongside trade data. The journal reveals the patterns that cause losses — without it, they repeat forever."
+      rule: "Journal EVERY trade. Track personal habit variables (sleep, hunger, exercise, emotion) alongside trade data. The journal reveals the patterns that cause losses — without it, they repeat forever."
     }
   },
 
@@ -2050,13 +1984,11 @@ const LT_CHAPTERS_3 = [
       title: "Screen Time vs Performance — Edge Builds Over Time",
       type: "candlestick",
       labels: ["M1","M2","M3","M4","M5","M6","M7","M8","M9","M10","M11","M12","M13","M14","M15","M16","M17","M18"],
-      ohlc: [
-        [70,68,67,72],[68,66,65,69],[66,68,65,69],[68,71,67,72],
-        [71,69,68,73],[69,72,68,73],[72,75,71,76],[75,73,72,77],
-        [73,77,72,78],[77,80,76,81],[80,84,79,85],[84,82,81,86],
-        [82,87,81,88],[87,91,86,92],[91,89,88,93],[89,94,88,95],
-        [94,99,93,100],[99,105,98,106]
-      ],
+      ohlc: ltCandles(70, [
+        { to: 74,  bars: 7 },
+        { to: 84,  bars: 5 },
+        { to: 105, bars: 6 }
+      ], { seed: 185, wick: 0.35 }),
       markPoints: [
         { dataIndex:  0, label: "Early — Losing Phase",   position: "bottom" },
         { dataIndex:  6, label: "Break Even Phase",       position: "bottom" },
@@ -2068,14 +2000,14 @@ const LT_CHAPTERS_3 = [
     lessonChart: {
       title: "Five Losses — Walk Away — Return Fresh",
       type: "candlestick",
-      labels: ["D1","D2","D3","D4","D5","D6","D7","D8","D9","D10","D11","D12","D13","D14","D15","D16"],
-      ohlc: [
-        [100,97,96,101],[97,94,93,98],[94,91,90,95],[91,89,88,92],
-        [89,87,86,90],[87,85,84,88],[85,84,83,86],[84,83,82,85],
-        [83,84,82,85],[84,84,82,85],
-        [84,88,83,89],[88,92,87,93],[92,96,91,97],[96,100,95,101],
-        [100,104,99,105],[104,108,103,109]
-      ],
+      labels: ltLabels(16),
+      ohlc: ltCandles(100, [
+        { to: 87, bars: 5 },
+        { to: 84, bars: 3 },
+        { to: 84, bars: 1 },
+        { to: 94, bars: 2 },
+        { to: 108, bars: 5 }
+      ], { seed: 186, wick: 0.4 }),
       markPoints: [
         { dataIndex:  0, label: "Loss 1",                   position: "bottom" },
         { dataIndex:  2, label: "Loss 3",                   position: "bottom" },
@@ -2087,6 +2019,7 @@ const LT_CHAPTERS_3 = [
     },
 
     quiz: {
+      hideChart: true,   // conceptual quiz — no chart
       question: "A trader has just suffered their 5th consecutive losing trade in a session. They feel frustrated and certain the next trade will recover the losses. According to Course 3, what is the correct action?",
       hint: "What does the course explicitly prescribe when a trader experiences 5 consecutive losses? What does frustration do to decision quality?",
       style: "choice",
@@ -2099,13 +2032,13 @@ const LT_CHAPTERS_3 = [
         title: "5 Losses — What Is the Correct Action?",
         type: "candlestick",
         cutIndex: 5,
-        labels: ["D1","D2","D3","D4","D5","D6","D7","D8","D9","D10","D11","D12","D13","D14","D15"],
-        ohlc: [
-          [100,97,96,101],[97,94,93,98],[94,91,90,95],[91,89,88,92],
-          [89,87,86,90],[87,85,84,88],
-          [85,84,83,86],[84,83,82,85],[83,84,82,85],[84,84,82,85],
-          [84,88,83,89],[88,92,87,93],[92,96,91,97],[96,100,95,101],[100,104,99,105]
-        ]
+        labels: ltLabels(15),
+        ohlc: ltCandles(100, [
+          { to: 87, bars: 5 },
+          { to: 84, bars: 3 },
+          { to: 95, bars: 3 },
+          { to: 104, bars: 4 }
+        ], { seed: 187, wick: 0.4 })
       },
       revealMarkPoints: [
         { dataIndex:  4, label: "5th Loss — STOP NOW!",     position: "bottom", color: "#cc2222" },
@@ -2114,7 +2047,7 @@ const LT_CHAPTERS_3 = [
         { dataIndex: 14, label: "Performance Recovers",     position: "top",    color: "#00d4d4" }
       ],
       explanation: "After 5 consecutive losses, a frustrated trader is in the worst possible mental state to make objective, system-based decisions. Frustration leads to revenge trading — increasing size, widening stops, or chasing entries that do not meet system criteria. The course is explicit: <strong>5 losses = walk away</strong>. Engage an outlet, completely disconnect from the charts, and return the next session with a fresh perspective. Forcing more trades in a frustrated state consistently multiplies losses.",
-      rule: "📌 5 consecutive losses = walk away immediately. De-stress. Come back fresh the next session. Never trade frustrated. Never revenge trade."
+      rule: "5 consecutive losses = walk away immediately. De-stress. Come back fresh the next session. Never trade frustrated. Never revenge trade."
     }
   },
 
@@ -2156,34 +2089,44 @@ const LT_CHAPTERS_3 = [
       ]
     },
 
+    // Objectivity isn't a price you can plot — so instead of inventing fake OHLC
+    // "candles" for an abstract skill, the intro shows the actual mechanism: the
+    // focus → wander → notice → return loop that trains it. (Adaptive template.)
     introChart: {
-      title: "Decision Objectivity — Before vs After Daily Meditation Practice",
-      type: "candlestick",
-      labels: ["W1","W2","W3","W4","W5","W6","W7","W8","W9","W10","W11","W12","W13","W14","W15","W16"],
-      ohlc: [
-        [70,73,69,74],[73,71,70,75],[71,74,70,75],[74,77,73,78],
-        [77,75,74,79],[75,79,74,80],[79,82,78,83],[82,80,79,84],
-        [80,84,79,85],[84,87,83,88],[87,85,84,89],[85,90,84,91],
-        [90,93,89,94],[93,91,90,95],[91,96,90,97],[96,101,95,102]
+      format: "concept",
+      title: "The Meditation Loop — How Objectivity Is Trained",
+      cycle: true,
+      cycleLabel: "Each return to the breath is one rep — repeat for 5–10 minutes",
+      steps: [
+        { label: "Focus on the breath", icon: "wind",
+          desc: "Sit upright, eyes closed. Follow each breath from start to finish — observe it, don't control it." },
+        { label: "The mind wanders", icon: "shuffle",
+          desc: "Thoughts drift to an open trade, a recent loss, the day ahead. This is normal and expected — not a failure." },
+        { label: "Notice the wandering", icon: "eye",
+          desc: "At some point you catch it: \"I've stopped watching the breath.\" That moment of noticing IS the skill." },
+        { label: "Gently return", icon: "corner-down-left",
+          desc: "Without judgement, bring attention back to the breath. This single move is the entire exercise." }
       ],
-      markPoints: [
-        { dataIndex:  0, label: "Before Meditation — Biased", position: "bottom" },
-        { dataIndex:  6, label: "Day 30 — Objectivity Growing",position: "top"   },
-        { dataIndex: 11, label: "Day 60 — Clearer Decisions",  position: "top"   },
-        { dataIndex: 15, label: "Day 90 — Transformed Edge",   position: "top"   }
-      ]
+      checklist: [
+        "Builds objectivity — read price action without emotional bias",
+        "Strengthens trigger discipline — execute planned entries without hesitation",
+        "Supports cutting losers and managing winners calmly",
+        "5–10 minutes daily; measurable impact within 30 days of consistent practice"
+      ],
+      note: "There is no \"right\" way to meditate — consistency is the only requirement. A guided app like Headspace is an easy way to start."
     },
 
     lessonChart: {
       title: "Calm and Objective — Range-Bound Market Read Clearly",
       type: "candlestick",
-      labels: ["D1","D2","D3","D4","D5","D6","D7","D8","D9","D10","D11","D12","D13","D14","D15","D16"],
-      ohlc: [
-        [90,93,89,94],[93,91,90,95],[91,88,87,92],[88,91,87,92],
-        [91,89,88,93],[89,92,88,93],[92,95,91,96],[95,92,91,97],
-        [92,89,88,93],[89,92,88,93],[92,95,91,96],[95,93,92,97],
-        [93,90,89,94],[90,93,89,94],[93,96,92,97],[96,94,93,98]
-      ],
+      labels: ltLabels(16),
+      ohlc: ltCandles(84, [
+        { to: 95, bars: 3 },
+        { to: 84, bars: 4 },
+        { to: 95, bars: 5 },
+        { to: 84, bars: 1 },
+        { to: 90, bars: 3 }
+      ], { seed: 189, wick: 0.4 }),
       markAreas: [
         { y0: 86, y1: 91, label: "Range Low — Objective Read",  color: "rgba(0,212,212,0.07)" },
         { y0: 93, y1: 98, label: "Range High — Objective Read", color: "rgba(204,34,34,0.07)" }
@@ -2197,6 +2140,7 @@ const LT_CHAPTERS_3 = [
     },
 
     quiz: {
+      hideChart: true,   // conceptual quiz — no chart
       question: "During a basic meditation session, a trader's mind starts wandering to thoughts about an open trade. According to Course 3's meditation framework, what is the correct response?",
       hint: "What is the core exercise of meditation? Is mind-wandering a failure or a normal and expected part of the practice?",
       style: "choice",
@@ -2209,13 +2153,15 @@ const LT_CHAPTERS_3 = [
         title: "Meditation — Focus, Wander, Refocus Is the Practice",
         type: "candlestick",
         cutIndex: 8,
-        labels: ["D1","D2","D3","D4","D5","D6","D7","D8","D9","D10","D11","D12","D13","D14"],
-        ohlc: [
-          [90,93,89,94],[93,91,90,95],[91,93,90,94],[93,91,90,95],
-          [91,93,90,94],[93,91,90,95],[91,93,90,94],[93,91,90,95],
-          [91,93,90,94],
-          [93,91,90,95],[91,93,90,94],[93,91,90,95],[91,93,90,94],[93,91,90,95]
-        ]
+        labels: ltLabels(14),
+        ohlc: ltCandles(90, [
+          { to: 93, bars: 2 },
+          { to: 90, bars: 2 },
+          { to: 93, bars: 2 },
+          { to: 90, bars: 2 },
+          { to: 90, bars: 1 },
+          { to: 93, bars: 5 }
+        ], { seed: 190, wick: 0.35 })
       },
       revealMarkPoints: [
         { dataIndex:  2, label: "Mind Wanders (Normal)",      position: "top",    color: "#ffcc00" },
@@ -2224,7 +2170,7 @@ const LT_CHAPTERS_3 = [
         { dataIndex:  8, label: "Refocus = The Exercise",     position: "bottom", color: "#00d4d4" }
       ],
       explanation: "Mind-wandering during meditation is not a failure — it is expected and entirely normal. The <strong>core exercise of meditation</strong> is the moment of noticing that the mind has wandered and gently bringing attention back to the breath. This is the mental equivalent of a muscle rep: each refocus builds objectivity, focus, and emotional regulation. Stopping the session because the mind wandered misunderstands the practice entirely. 5-10 minutes daily, consistently practiced, produces measurable results within 30 days.",
-      rule: "📌 Mind wandering during meditation is normal. The refocus back to breath IS the exercise. 5-10 minutes daily, consistent practice, transformative results within 30 days."
+      rule: "Mind wandering during meditation is normal. The refocus back to breath IS the exercise. 5-10 minutes daily, consistent practice, transformative results within 30 days."
     }
   },
 
@@ -2270,13 +2216,12 @@ const LT_CHAPTERS_3 = [
       title: "Trader Evolution — From Big Losses to Consistent Profitability",
       type: "candlestick",
       labels: ["M1","M2","M3","M4","M5","M6","M7","M8","M9","M10","M11","M12","M13","M14","M15","M16","M17","M18"],
-      ohlc: [
-        [100,94,93,101],[94,88,87,95],[88,82,81,89],[82,79,78,83],
-        [79,77,76,80],[77,75,74,78],[75,77,74,78],[77,76,75,79],
-        [76,78,75,79],[78,80,77,81],[80,83,79,84],[83,86,82,87],
-        [86,90,85,91],[90,94,89,95],[94,98,93,99],[98,103,97,104],
-        [103,108,102,109],[108,114,107,115]
-      ],
+      ohlc: ltCandles(100, [
+        { to: 77, bars: 5 },
+        { to: 78, bars: 4 },
+        { to: 98, bars: 5 },
+        { to: 114, bars: 4 }
+      ], { seed: 191, wick: 0.4 }),
       markPoints: [
         { dataIndex:  0, label: "Big Losses Phase",   position: "bottom" },
         { dataIndex:  4, label: "Small Losses Phase", position: "bottom" },
@@ -2289,13 +2234,13 @@ const LT_CHAPTERS_3 = [
     lessonChart: {
       title: "Execution Failure — Level Identified, Entry Frozen, Chase Too Late",
       type: "candlestick",
-      labels: ["D1","D2","D3","D4","D5","D6","D7","D8","D9","D10","D11","D12","D13","D14","D15","D16"],
-      ohlc: [
-        [102,98,97,103],[98,95,94,99],[95,92,91,96],[92,89,88,93],
-        [89,87,85,90],[87,86,84,88],[86,87,84,88],[87,86,84,88],
-        [86,91,85,92],[91,95,90,96],[95,99,94,100],[99,103,98,104],
-        [103,108,102,109],[108,106,105,110],[106,110,105,111],[110,115,109,116]
-      ],
+      labels: ltLabels(16),
+      ohlc: ltCandles(102, [
+        { to: 87, bars: 7 },
+        { to: 87, bars: 1 },
+        { to: 99, bars: 4 },
+        { to: 116, bars: 4 }
+      ], { seed: 192, wick: 0.4 }),
       markAreas: [
         { y0: 84, y1: 89, label: "DBS Zone — Entry Should Be Here", color: "rgba(0,212,212,0.07)" }
       ],
@@ -2308,6 +2253,7 @@ const LT_CHAPTERS_3 = [
     },
 
     quiz: {
+      hideChart: true,   // conceptual quiz — no chart
       question: "A trader has excellent market analysis — they correctly identify key levels and price targets with high accuracy. However, their account continues to lose money. According to Course 3, what is the most likely cause?",
       hint: "The course specifically distinguishes being a good analyst from being a profitable trader. What is the gap between the two?",
       style: "choice",
@@ -2320,14 +2266,11 @@ const LT_CHAPTERS_3 = [
         title: "Good Analysis, Poor Execution — The Profitable Trader Gap",
         type: "candlestick",
         cutIndex: 8,
-        labels: ["D1","D2","D3","D4","D5","D6","D7","D8","D9","D10","D11","D12","D13","D14","D15"],
-        ohlc: [
-          [100,96,95,101],[96,93,92,97],[93,90,89,94],[90,88,86,91],
-          [88,87,85,89],[87,88,85,89],[88,87,85,89],[87,88,85,89],
-          [88,89,86,90],
-          [89,93,88,94],[93,97,92,98],[97,101,96,102],[101,105,100,106],
-          [105,109,104,110],[109,114,108,115]
-        ],
+        labels: ltLabels(15),
+        ohlc: ltCandles(100, [
+          { to: 89, bars: 9 },
+          { to: 115, bars: 6 }
+        ], { seed: 193, wick: 0.4 }),
         markAreas: [
           { y0: 85, y1: 90, label: "DBS Zone — Correct Level Identified", color: "rgba(0,212,212,0.07)" }
         ]
@@ -2338,7 +2281,7 @@ const LT_CHAPTERS_3 = [
         { dataIndex: 12, label: "Target Hit — But Missed",  position: "top",    color: "#ffcc00" }
       ],
       explanation: "The course explicitly states: <strong>strong analyst + poor execution = poor results</strong>. Execution is a constant process of iteration that is never fully mastered. Common execution failures include: freezing on the entry at the right level, moving the stop further away to avoid a loss, micromanaging a trade that was set up correctly, and chasing an entry after missing the zone. Analytical skill and execution discipline are separate skills — both are required for consistent profitability.",
-      rule: "📌 Strong analysis alone is not enough. Execution — entering at the right price, holding the stop, and walking away from the screen — is a separate skill that must be developed deliberately."
+      rule: "Strong analysis alone is not enough. Execution — entering at the right price, holding the stop, and walking away from the screen — is a separate skill that must be developed deliberately."
     }
   },
 
@@ -2389,43 +2332,29 @@ const LT_CHAPTERS_3 = [
       ]
     },
 
-    introChart: {
-      title: "Course 3 Mastery — Five Modules, One Complete Framework",
-      type: "candlestick",
-      labels: ["D1","D2","D3","D4","D5","D6","D7","D8","D9","D10","D11","D12","D13","D14","D15","D16","D17","D18"],
-      ohlc: [
-        [86,84,83,88],[84,82,81,85],[82,81,79,83],[81,82,79,83],
-        [82,81,79,83],[81,85,79,86],[85,89,84,90],[89,88,87,91],
-        [88,92,87,93],[92,91,90,94],[91,95,90,96],[95,99,94,100],
-        [99,103,98,104],[103,101,100,105],[101,106,100,107],[106,110,105,111],
-        [110,114,109,115],[114,119,113,120]
-      ],
-      markAreas: [
-        { y0: 79, y1: 84, label: "DBS Zone (Module 3)", color: "rgba(0,212,212,0.07)" }
-      ],
-      markLines: [
-        { yAxis: 83,  label: "M2: Entry with Isolated Margin 10x",  color: "#00d4d4" },
-        { yAxis: 78,  label: "M2: SL — Liq Below SL",              color: "#cc2222" },
-        { yAxis: 117, label: "M4: System Target",                   color: "#ffcc00" }
-      ],
-      markPoints: [
-        { dataIndex:  4, label: "M3: DBS Zone — First Test",   position: "bottom" },
-        { dataIndex:  5, label: "M2: Enter — Leverage Correct",position: "bottom" },
-        { dataIndex: 10, label: "M1: Perp Swap Running",       position: "top"    },
-        { dataIndex: 17, label: "M4: System TP Hit. Journal!", position: "top"    }
+    roadmap: {
+      title: "What You Mastered in Course 3",
+      sub: "From exchange mechanics to a complete system",
+      icon: "flag",
+      stops: [
+        { label: "Derivatives & the order book", desc: "The instruments professionals actually trade" },
+        { label: "Leverage, used correctly", desc: "A risk tool — never a way to bet bigger" },
+        { label: "DBS/SSR zones & ranges", desc: "Turning theory into executable access points" },
+        { label: "Your system & plan", desc: "Predefined rules that remove gut-feel decisions" },
+        { label: "The trader's mindset", desc: "Screen time, discipline, and sustainability" }
       ]
     },
 
     lessonChart: {
       title: "All Five Modules in One Trade — From Perpetual Swap to Journal",
       type: "candlestick",
-      labels: ["D1","D2","D3","D4","D5","D6","D7","D8","D9","D10","D11","D12","D13","D14","D15","D16"],
-      ohlc: [
-        [100,96,95,101],[96,93,92,97],[93,90,89,94],[90,88,86,91],
-        [88,87,85,89],[87,87,84,89],[87,88,84,89],[88,87,84,89],
-        [87,92,86,93],[92,96,91,97],[96,100,95,101],[100,104,99,105],
-        [104,109,103,110],[109,113,108,114],[113,117,112,118],[117,122,116,123]
-      ],
+      labels: ltLabels(16),
+      ohlc: ltCandles(100, [
+        { to: 87, bars: 7 },
+        { to: 87, bars: 1 },
+        { to: 117, bars: 7 },
+        { to: 122, bars: 1 }
+      ], { seed: 194, wick: 0.4 }),
       markAreas: [
         { y0: 84, y1: 89, label: "M3: DBS Zone (Access Point)", color: "rgba(0,212,212,0.07)" }
       ],
@@ -2443,6 +2372,7 @@ const LT_CHAPTERS_3 = [
     },
 
     quiz: {
+      hideChart: true,   // conceptual quiz — no chart
       question: "A trader uses a 10x leveraged isolated margin long on a perpetual swap. They enter at a fresh first-test DBS zone using an LTE trigger. They have a stop loss below the zone with liquidation price below the stop. They journal every trade and meditate each morning. Which Course 3 modules does this single trade incorporate?",
       hint: "Map each element of the trade to the module that taught it: the instrument, the margin type, the entry zone, the journaling habit, and the morning meditation practice.",
       style: "choice",
@@ -2455,13 +2385,12 @@ const LT_CHAPTERS_3 = [
         title: "One Trade — Five Modules. Which Modules Apply?",
         type: "candlestick",
         cutIndex: 9,
-        labels: ["D1","D2","D3","D4","D5","D6","D7","D8","D9","D10","D11","D12","D13","D14","D15"],
-        ohlc: [
-          [100,97,96,101],[97,94,93,98],[94,91,90,95],[91,89,87,92],
-          [89,88,86,90],[88,88,85,90],[88,89,85,90],[89,88,85,90],
-          [88,89,86,90],[89,93,88,94],
-          [93,97,92,98],[97,101,96,102],[101,106,100,107],[106,110,105,111],[110,115,109,116]
-        ],
+        labels: ltLabels(15),
+        ohlc: ltCandles(100, [
+          { to: 89, bars: 8 },
+          { to: 89, bars: 1 },
+          { to: 115, bars: 6 }
+        ], { seed: 195, wick: 0.4 }),
         markAreas: [
           { y0: 85, y1: 90, label: "DBS Zone — M3", color: "rgba(0,212,212,0.07)" }
         ],
@@ -2477,7 +2406,7 @@ const LT_CHAPTERS_3 = [
         { dataIndex: 14, label: "M4: Journal. M5: Meditate",position: "top",    color: "#00d4d4" }
       ],
       explanation: "This single trade incorporates all five Course 3 modules: <strong>Module 1</strong> — the perpetual swap is the instrument; <strong>Module 2</strong> — isolated margin with 10x leverage and liquidation price correctly below the stop; <strong>Module 3</strong> — the DBS zone on first test is the access point and LTE trigger; <strong>Module 4</strong> — journaling the trade is the post-session action; <strong>Module 5</strong> — the daily morning meditation supports the objectivity needed to execute the plan without hesitation. The full framework working together.",
-      rule: "📌 All five Course 3 modules apply to every trade. The instrument, the leverage structure, the entry zone, the system journal, and the mindset practice — all five work together or none work at their best."
+      rule: "All five Course 3 modules apply to every trade. The instrument, the leverage structure, the entry zone, the system journal, and the mindset practice — all five work together or none work at their best."
     }
   }
 
@@ -2489,9 +2418,197 @@ const COURSE3_META = {
   chapterCount: 21
 };
 
-const LT_EXAM_QUESTIONS_3 = LT_CHAPTERS_3.map((ch, i) => ({
-  chapterIndex: i,
-  chapterTitle: ch.title,
-  question:     ch.quiz.question,
-  answers:      ch.quiz.answers.map(a => ({ id: a.id, text: a.text, correct: a.correct }))
-}));
+/* Final-exam question POOL — authored separately from chapter quizzes.
+   Engine samples EXAM_LENGTH at random per attempt and shuffles options. */
+const LT_EXAM_QUESTIONS_3 = [
+  { chapterTitle: 'Order Types', question: 'You want to enter only if price pulls back to a specific support level. The right tool is a:',
+    answers: [
+      { id:'a', text:'Limit order resting at that level', correct:true },
+      { id:'b', text:'Market order placed right now', correct:false },
+      { id:'c', text:'Stop-market order above the current price', correct:false },
+      { id:'d', text:'No order — just watch and react manually', correct:false } ] },
+  { chapterTitle: 'Stop Losses', question: 'When placing a stop loss on a derivatives exchange, the critical box to verify is:',
+    answers: [
+      { id:'a', text:'"Close on trigger" — so the stop actually closes the position', correct:true },
+      { id:'b', text:'"Post only" — so the stop earns a rebate', correct:false },
+      { id:'c', text:'"Reduce leverage" — so the stop lowers your leverage', correct:false },
+      { id:'d', text:'There is nothing to check', correct:false } ] },
+  { chapterTitle: 'Perpetual Swaps', question: 'A perpetual swap differs from a traditional futures contract because it:',
+    answers: [
+      { id:'a', text:'Has no expiry date and tracks spot via the funding mechanism', correct:true },
+      { id:'b', text:'Settles to zero every day', correct:false },
+      { id:'c', text:'Cannot be shorted', correct:false },
+      { id:'d', text:'Always trades far above spot price', correct:false } ] },
+  { chapterTitle: 'Funding Rate', question: 'When the funding rate is positive on a perpetual swap:',
+    answers: [
+      { id:'a', text:'Longs pay shorts — a cost that accumulates for those holding longs', correct:true },
+      { id:'b', text:'Shorts pay longs', correct:false },
+      { id:'c', text:'The exchange pays everyone', correct:false },
+      { id:'d', text:'No payments occur — funding is cosmetic', correct:false } ] },
+  { chapterTitle: 'Open Interest', question: 'Price is rising and open interest is rising with it. This most often indicates:',
+    answers: [
+      { id:'a', text:'New money entering — trend confirmation', correct:true },
+      { id:'b', text:'Traders closing out — the trend is ending', correct:false },
+      { id:'c', text:'Nothing — OI is unrelated to trend', correct:false },
+      { id:'d', text:'A guaranteed reversal', correct:false } ] },
+  { chapterTitle: 'Margin Modes', question: 'The main advantage of ISOLATED margin over CROSS margin is that:',
+    answers: [
+      { id:'a', text:'A liquidation is ring-fenced to that one position; the rest of your balance is safe', correct:true },
+      { id:'b', text:'It guarantees you can never be liquidated', correct:false },
+      { id:'c', text:'It always uses higher leverage', correct:false },
+      { id:'d', text:'It removes funding costs', correct:false } ] },
+  { chapterTitle: 'Leverage Done Right', question: 'When sizing a leveraged position correctly, you want your liquidation price to sit:',
+    answers: [
+      { id:'a', text:'Beyond your stop loss, so the stop triggers first', correct:true },
+      { id:'b', text:'Exactly at your stop loss', correct:false },
+      { id:'c', text:'Closer to entry than your stop loss', correct:false },
+      { id:'d', text:'Anywhere — it doesn’t matter if you’re confident', correct:false } ] },
+  { chapterTitle: 'Liquidation', question: 'Being liquidated (rather than stopped out) is dangerous mainly because:',
+    answers: [
+      { id:'a', text:'You lose the position’s margin and lose control of the exit', correct:true },
+      { id:'b', text:'It’s identical to hitting a normal stop loss', correct:false },
+      { id:'c', text:'It locks in a guaranteed profit', correct:false },
+      { id:'d', text:'It only costs a small fee', correct:false } ] },
+  { chapterTitle: 'Practice First', question: 'Before risking real capital on a new exchange/interface, the safest first step is to:',
+    answers: [
+      { id:'a', text:'Practice on a testnet — same interface, zero real risk', correct:true },
+      { id:'b', text:'Deposit your full account to "feel the pressure"', correct:false },
+      { id:'c', text:'Use maximum leverage to learn faster', correct:false },
+      { id:'d', text:'Skip practice — real money is the only teacher', correct:false } ] },
+  { chapterTitle: 'S/R Zone Strength', question: 'A demand zone formed by a single candle that drove an explosive breakout is generally:',
+    answers: [
+      { id:'a', text:'A high-strength zone — strong reaction likely on a retest', correct:true },
+      { id:'b', text:'A weak zone that should be ignored', correct:false },
+      { id:'c', text:'Irrelevant unless it’s on the 1-minute chart', correct:false },
+      { id:'d', text:'A sign the level will never be retested', correct:false } ] },
+  { chapterTitle: 'Range Trading', question: 'Inside a clear range, the textbook approach is to:',
+    answers: [
+      { id:'a', text:'Buy near range support and sell/short near range resistance, with confirmation', correct:true },
+      { id:'b', text:'Buy breakouts in the middle of the range', correct:false },
+      { id:'c', text:'Add to losers at the midpoint', correct:false },
+      { id:'d', text:'Trade every small wiggle with max size', correct:false } ] },
+  { chapterTitle: 'Trading Systems', question: 'A complete trading system defines, among other things:',
+    answers: [
+      { id:'a', text:'Markets, timeframes, risk, entry triggers, exit triggers and management', correct:true },
+      { id:'b', text:'Only which coin to buy', correct:false },
+      { id:'c', text:'Only the entry — exits should be improvised', correct:false },
+      { id:'d', text:'Nothing specific — a system is just a feeling', correct:false } ] },
+
+  /* ── Chart-reading questions (engine guarantees a quota of these per attempt) ── */
+  { chapterTitle: 'Trading Ranges',
+    question: 'Price has reversed repeatedly between the highlighted boundaries and just tagged the lower one. The textbook range play is to:',
+    chart: { type:'candlestick', labels: ltLabels(18),
+      ohlc: ltCandles(95, [{ to:84, bars:3, reject:0.6 }, { to:96, bars:4, reject:0.6 }, { to:84, bars:4, reject:0.6 }, { to:96, bars:4, reject:0.6 }, { to:85, bars:3 }], { seed: 341, wick: 0.4 }),
+      markAreas: [
+        { y0: 94, y1: 98, label: 'Range High', color: 'rgba(204,34,34,0.06)' },
+        { y0: 82, y1: 86, label: 'Range Low',  color: 'rgba(0,212,212,0.06)' } ] },
+    answers: [
+      { id:'a', text:'Buy support, targeting the range high, with confirmation', correct:true },
+      { id:'b', text:'Short support, expecting an immediate breakdown', correct:false },
+      { id:'c', text:'Buy in the middle of the range', correct:false },
+      { id:'d', text:'Add size on every small wiggle', correct:false } ] },
+
+  { chapterTitle: 'Identifying Access Points',
+    question: 'After a strong uptrend, price coils into a tight consolidation just under resistance (marked). This access point most often resolves as:',
+    chart: { type:'candlestick', labels: ltLabels(14),
+      ohlc: ltCandles(80, [{ to:100, bars:6 }, { to:99, bars:2 }, { to:100, bars:2 }, { to:99, bars:2 }, { to:100, bars:2 }], { seed: 342, wick: 0.25 }),
+      markLines: [{ yAxis: 100.5, label: 'Resistance', color: '#cc2222' }] },
+    answers: [
+      { id:'a', text:'A continuation — a breakout in the trend direction (up)', correct:true },
+      { id:'b', text:'A full reversal back to the lows', correct:false },
+      { id:'c', text:'A random, untradeable move', correct:false },
+      { id:'d', text:'It can never break out of consolidation', correct:false } ] },
+
+  { chapterTitle: 'Trading S/R — DBS/SSR',
+    question: 'Price exploded higher off the highlighted demand zone, then pulled back into it. The bias on this retest is:',
+    chart: { type:'candlestick', labels: ltLabels(11),
+      ohlc: ltCandles(95, [{ to:90, bars:2 }, { to:90, bars:2 }, { to:112, bars:3 }, { to:92, bars:4 }], { seed: 343, wick: 0.4 }),
+      markAreas: [{ y0: 88, y1: 93, label: 'Demand Zone', color: 'rgba(0,212,212,0.07)' }] },
+    answers: [
+      { id:'a', text:'Long — buyers defended this zone; expect a reaction up', correct:true },
+      { id:'b', text:'Short — the zone is certain to fail', correct:false },
+      { id:'c', text:'Neutral — zones never react twice', correct:false },
+      { id:'d', text:'Wait for a lower low before doing anything', correct:false } ] },
+
+  { chapterTitle: 'Leverage Done Right',
+    question: 'Entry, stop and liquidation price are marked for a leveraged long. Correct position sizing means:',
+    chart: { type:'candlestick', labels: ltLabels(11),
+      ohlc: ltCandles(90, [{ to:100, bars:11 }], { seed: 344, wick: 0.35 }),
+      markLines: [
+        { yAxis: 100, label: 'Entry 100',       color: '#00d4d4' },
+        { yAxis: 96,  label: 'Stop 96',         color: '#cc2222' },
+        { yAxis: 92,  label: 'Liquidation 92',  color: '#cc2222' } ] },
+    answers: [
+      { id:'a', text:'The stop triggers first — it sits above the liquidation price', correct:true },
+      { id:'b', text:'Liquidation should be reached before the stop', correct:false },
+      { id:'c', text:'Stop and liquidation should be at the same price', correct:false },
+      { id:'d', text:'Liquidation should sit above the entry', correct:false } ] },
+
+  { chapterTitle: 'Trading S/R — DBS/SSR',
+    question: 'Price collapsed from the highlighted supply zone, then rallied back into it. The bias on this retest is:',
+    chart: { type:'candlestick', labels: ltLabels(11),
+      ohlc: ltCandles(95, [{ to:100, bars:2 }, { to:100, bars:2 }, { to:82, bars:3 }, { to:98, bars:4 }], { seed: 345, wick: 0.4 }),
+      markAreas: [{ y0: 97, y1: 102, label: 'Supply Zone', color: 'rgba(204,34,34,0.07)' }] },
+    answers: [
+      { id:'a', text:'Short — sellers defended this zone; expect a reaction down', correct:true },
+      { id:'b', text:'Long — the zone is certain to break', correct:false },
+      { id:'c', text:'Neutral — supply zones never react twice', correct:false },
+      { id:'d', text:'Wait for a higher high before doing anything', correct:false } ] },
+
+  /* ── Additional concept questions (broaden the pool beyond the original 12) ── */
+  { chapterTitle: 'Order Types',
+    question: 'A market order differs from a limit order in that it:',
+    answers: [
+      { id:'a', text:'Executes immediately at the best available price, paying the spread', correct:true },
+      { id:'b', text:'Only ever fills at a price you specify', correct:false },
+      { id:'c', text:'Always earns a maker rebate', correct:false },
+      { id:'d', text:'Cannot be used to enter a position', correct:false } ] },
+
+  { chapterTitle: 'Executing Orders',
+    question: 'A "maker" order is one that:',
+    answers: [
+      { id:'a', text:'Adds liquidity to the order book and typically pays a lower fee', correct:true },
+      { id:'b', text:'Removes liquidity and always pays the highest fee', correct:false },
+      { id:'c', text:'Is the same thing as a stop loss', correct:false },
+      { id:'d', text:'Can only be a market order', correct:false } ] },
+
+  { chapterTitle: 'Understanding Leverage',
+    question: 'Used correctly, leverage by itself changes:',
+    answers: [
+      { id:'a', text:'How much margin a position locks up — not your risk, if stop distance and size are fixed', correct:true },
+      { id:'b', text:'Your risk per trade, automatically and unavoidably', correct:false },
+      { id:'c', text:'The direction the trade must go', correct:false },
+      { id:'d', text:'The funding rate you are charged', correct:false } ] },
+
+  { chapterTitle: 'The Trading Journal',
+    question: 'The main purpose of a trading journal is to:',
+    answers: [
+      { id:'a', text:'Turn results into feedback — surface your edge and your leaks over many trades', correct:true },
+      { id:'b', text:'Keep a record to brag about wins', correct:false },
+      { id:'c', text:'Satisfy an exchange requirement', correct:false },
+      { id:'d', text:'Replace the need for a trading plan', correct:false } ] },
+
+  { chapterTitle: 'Developing a Trader’s Mindset',
+    question: 'A process-oriented trader judges a single trade by:',
+    answers: [
+      { id:'a', text:'Whether it followed the plan — not simply whether it won', correct:true },
+      { id:'b', text:'Only the dollar outcome', correct:false },
+      { id:'c', text:'How exciting it felt', correct:false },
+      { id:'d', text:'Whether other traders agreed', correct:false } ] },
+
+  { chapterTitle: 'Trading Full-Time',
+    question: 'A realistic expectation about trading for a living is that:',
+    answers: [
+      { id:'a', text:'Income is irregular and drawdowns are normal; it needs capital and discipline', correct:true },
+      { id:'b', text:'It is a steady, guaranteed paycheck', correct:false },
+      { id:'c', text:'It is effortless passive income', correct:false },
+      { id:'d', text:'Returns compound with no risk', correct:false } ] },
+
+  { chapterTitle: 'The Art of Meditation',
+    question: 'In the framework taught in this course, meditation helps a trader mainly by:',
+    answers: [
+      { id:'a', text:'Building objectivity — acting on the plan without emotional bias', correct:true },
+      { id:'b', text:'Predicting where price will go next', correct:false },
+      { id:'c', text:'Increasing tolerance for higher leverage', correct:false },
+      { id:'d', text:'Removing the need for a stop loss', correct:false } ] }
+];

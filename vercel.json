@@ -1,5 +1,7 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
+  "buildCommand": "node tools/gen-seo.js",
+  "outputDirectory": ".",
   "cleanUrls": false,
   "trailingSlash": false,
   "headers": [

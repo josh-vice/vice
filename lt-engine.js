@@ -22,17 +22,45 @@
    CONSTANTS
    ══════════════════════════════════════════════════════════════════════════ */
 const STORAGE_KEY  = 'lt_course1_state';
-const STEP_LABELS  = ['Introduction', 'Lesson', 'Quiz'];
-const TOTAL_STEPS  = LT_CHAPTERS.length * 3; // 39 (Course 1 default)
+const STEP_LABELS        = ['Introduction', 'Lesson', 'Quiz'];            // 3-step (non-reconstruction)
+const STEP_LABELS_RECON  = ['Introduction', 'Visual', 'Lesson', 'Quiz']; // 4-step (reconstruction)
+const TOTAL_STEPS  = LT_CHAPTERS.length * 3; // legacy constant (unused by progress; kept for compat)
 let   CHAPTERS     = LT_CHAPTERS;
 
+/* ── Per-chapter STEP MODEL ──────────────────────────────────────────────────
+   Reconstruction chapters (those with a native player recipe) gain a 4th step,
+   "Visual": candles show first, and you must switch to the Video/Lesson view to
+   unlock the rest. Every other chapter keeps the classic 3 steps. All step math
+   (dispatch, nav bounds, quiz detection, progress, pills, routing) flows through
+   these helpers so the count can vary per chapter. */
+function chapterStepKeys(chapter)   { return (chapter && hasRecon(chapter)) ? ['intro', 'visual', 'lesson', 'quiz'] : ['intro', 'lesson', 'quiz']; }
+function chapterStepLabels(chapter) { return (chapter && hasRecon(chapter)) ? STEP_LABELS_RECON : STEP_LABELS; }
+function stepCount(chapter)         { return chapterStepKeys(chapter).length; }
+function lastStepIdx(chapter)       { return stepCount(chapter) - 1; }
+function stepKindAt(chapter, step)  { const k = chapterStepKeys(chapter); return k[Math.max(0, Math.min(step | 0, k.length - 1))]; }
+function currentChapter()           { return CHAPTERS[state.chapter]; }
+
+function _ltIsLight() { return localStorage.getItem('lt_theme') === 'light'; }
 function getBullishColor() {
-  return localStorage.getItem('lt_bullish_color') || '#00d4d4';
+  // Default up-candle: bright cyan on dark, a deeper legible teal on white.
+  return localStorage.getItem('lt_bullish_color') || (_ltIsLight() ? '#0d9488' : '#00d4d4');
+}
+function getBearishColor() {
+  // The neutral down-candle is near-white on dark; that's invisible on a white
+  // chart, so in light mode it becomes a legible dark slate (and a chosen "white"
+  // is remapped too). The red option stays red in both themes.
+  var c = localStorage.getItem('lt_bearish_color');
+  if (c) {
+    if (_ltIsLight() && /^#(f2f2f2|fff|ffffff)$/i.test(c)) return '#334155';
+    return c;
+  }
+  return _ltIsLight() ? '#334155' : '#f2f2f2';
 }
 
 let TEAL  = getBullishColor();
+let BEAR  = getBearishColor();
 const TEAL2 = '#00b8b8';
-const RED   = '#cc2222';
+const RED   = '#cc2222';   // fixed bearish red — used only for chart annotations, never candle bodies
 const GOLD  = '#c8960c';
 function cssVar(name, fallback) {
   const v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
@@ -248,6 +276,7 @@ function disposeChart(id) {
 
 function disposeAllCharts() {
   Object.keys(charts).forEach(disposeChart);
+  if (typeof disposeReconPlayer === 'function') disposeReconPlayer();
 }
 
 /* Lesson example toggle state — lets a lesson chart flip between the textbook
@@ -322,8 +351,16 @@ function allChaptersComplete() {
 }
 
 function globalProgress() {
-  const globalStep = state.chapter * 3 + state.step;
-  return Math.round((globalStep / (CHAPTERS.length * 3)) * 100);
+  // Step counts can vary per chapter (reconstruction chapters have a 4th "Visual"
+  // step), so sum cumulatively instead of assuming a uniform 3.
+  let total = 0, done = 0;
+  for (let i = 0; i < CHAPTERS.length; i++) {
+    const sc = stepCount(CHAPTERS[i]);
+    total += sc;
+    if (i < state.chapter) done += sc;
+    else if (i === state.chapter) done += Math.min(state.step, sc);
+  }
+  return Math.round((done / Math.max(1, total)) * 100);
 }
 
 function markChapterStarted(idx) {
@@ -436,9 +473,17 @@ function _applyIndicatorOverlay(opt, def) {
    ═══════════════════════════════════════════════════════════════════════ */
 function buildCandlestickOption(def, revealMode) {
   const C = chartColors();
+  // Compact everything (fonts, margins, marker pills, zone labels) on phones so the
+  // candles get more room and the annotations stop colliding.
+  const sm = (typeof window !== 'undefined' && window.innerWidth <= 768);
   const cutIndex    = def.cutIndex  != null ? def.cutIndex  : def.ohlc.length;
   const labels      = revealMode   ? def.labels : def.labels.slice(0, cutIndex);
   const ohlc        = revealMode   ? def.ohlc   : def.ohlc.slice(0, cutIndex);
+  // Optional per-candle colours (e.g. Course 4 "Crayons" paints trend state into
+  // each candle). Sliced in lock-step with the OHLC so reveal mode stays aligned.
+  const candleCols  = def.candleColors
+    ? (revealMode ? def.candleColors : def.candleColors.slice(0, cutIndex))
+    : null;
   const markLines   = (def.markLines  || []);
   const markAreas   = (def.markAreas  || []);
   const markPoints  = revealMode ? (def.revealMarkPoints || def.markPoints || [])
@@ -457,19 +502,20 @@ function buildCandlestickOption(def, revealMode) {
       label: {
         show:       true,
         formatter:  '{b}',
-        color:      mp.color || TEAL,
-        fontSize:   10,
+        color:      mp.color || '#cbd5e1',
+        fontSize:   sm ? 8.5 : 10,
+        lineHeight: sm ? 11 : 14,
         fontWeight: 700,
-        fontFamily: 'Barlow, sans-serif',
+        fontFamily: 'JetBrains Mono, monospace',
         position:   mp.position === 'bottom' ? 'bottom' : 'top',
-        distance:   8,
-        backgroundColor: 'rgba(10,10,12,0.55)',
-        padding:    [2, 5],
+        distance:   sm ? 8 : 14,
+        backgroundColor: 'rgba(10,10,12,0.7)',
+        padding:    sm ? [2, 4] : [3, 6],
         borderRadius: 4
       },
-      itemStyle: { color: mp.color || TEAL },
+      itemStyle: { color: mp.color || '#94a3b8' },
       symbol:    mp.position === 'bottom' ? 'triangle' : 'pin',
-      symbolSize: mp.position === 'bottom' ? [14,14] : [16,18],
+      symbolSize: mp.position === 'bottom' ? (sm ? [9,9] : [12,12]) : (sm ? [11,13] : [14,16]),
       symbolRotate: mp.position === 'bottom' ? 180 : 0
     };
   }).filter(Boolean);
@@ -482,33 +528,75 @@ function buildCandlestickOption(def, revealMode) {
       show:      true,
       formatter: ml.label,
       color:     '#0b0b0e',
-      fontSize:  10,
+      fontSize:  sm ? 8.5 : 10,
       fontWeight: 700,
-      fontFamily: 'Barlow, sans-serif',
+      fontFamily: 'JetBrains Mono, monospace',
       position:  'end',
       backgroundColor: ml.color || TEAL,
-      padding:   [2, 6],
+      padding:   sm ? [1, 4] : [2, 6],
       borderRadius: 4
     },
     lineStyle: { color: ml.color || TEAL, type: 'dashed', width: 1.5, opacity: 0.8 }
   }, { yAxis: ml.yAxis }]);
 
+  // Decision divider + revealed-region shade. A cut chart has two states:
+  //   • pre-answer  — frame the decision on-chart with a faint dashed line at the
+  //                   right edge ("decide here; what's next is hidden").
+  //   • revealed    — promote that line to a solid teal "Decision" divider and
+  //                   softly shade everything to its right so "what happened next"
+  //                   reads at a glance. The label sits horizontal (rotate:0) so it
+  //                   stays legible instead of running vertically up the line.
+  const _hasCut    = def.cutIndex != null && def.cutIndex < def.ohlc.length;
+  const _dividerX  = (def.cutIndex || 0) - 0.5;
+  const revealDivider = [];
+  let   futureArea    = null;
+  if (_hasCut && revealMode) {
+    revealDivider.push([
+      { xAxis: _dividerX,
+        label: { show: true, formatter: 'Decision', rotate: 0, position: 'insideEndTop',
+                 color: '#0b0b0e', fontSize: sm ? 8 : 9, fontWeight: 700, fontFamily: 'JetBrains Mono, monospace',
+                 backgroundColor: TEAL, padding: sm ? [1, 4] : [2, 6], borderRadius: 4 },
+        lineStyle: { color: TEAL, type: 'dashed', width: 1.5, opacity: 0.9 } },
+      { xAxis: _dividerX }
+    ]);
+    // Soft shade over everything right of the decision so "what happened next" reads
+    // at a glance. Anchored from the divider (data x) to the grid's top/right/bottom
+    // edges (percent coords) so it fully fills the corner — not just the data bounds.
+    futureArea = [
+      { xAxis: _dividerX, y: '0%', itemStyle: { color: 'rgba(148,163,184,0.06)' },
+        label: { show: !sm, formatter: 'Revealed', position: 'insideTopRight', distance: 8,
+                 color: 'rgba(203,213,225,0.5)', fontSize: 9, fontWeight: 700, fontFamily: 'JetBrains Mono, monospace' } },
+      { x: '100%', y: '100%' }
+    ];
+  }
+
   // Build ECharts markArea data — soft zone with a small pill label
   const maData = markAreas.map(ma => [{
     yAxis:     ma.y0,
     label:     {
-      show:      true,
+      show:      !sm,                 // hide the zone text on phones — the shaded band already reads as a zone
       formatter: ma.label,
-      color:     C.TEXT2,
+      color:     '#cbd5e1',           // light text — the pill is always dark, so fixed (not themed) for contrast
       fontSize:  9.5,
       position:  'insideTopLeft',
       fontWeight: 700,
-      backgroundColor: 'rgba(10,10,12,0.45)',
+      backgroundColor: 'rgba(10,10,12,0.55)',
       padding:   [2, 6],
       borderRadius: 4
     },
     itemStyle: { color: ma.color || 'rgba(0,212,212,0.06)', borderWidth: 0 }
   }, { yAxis: ma.y1 }]);
+
+  // When per-candle colours are present, emit object data items so each candle's
+  // body AND border take its colour (shows regardless of bullish/bearish).
+  const seriesData = candleCols
+    ? ohlc.map((row, i) => {
+        const col = candleCols[i];
+        return col
+          ? { value: row, itemStyle: { color: col, color0: col, borderColor: col, borderColor0: col } }
+          : row;
+      })
+    : ohlc;
 
   const _opt = {
     backgroundColor: C.BG3,
@@ -517,69 +605,103 @@ function buildCandlestickOption(def, revealMode) {
     animationEasing: 'cubicOut',
     tooltip: {
       trigger: 'axis',
-      axisPointer: { type: 'cross' },
+      axisPointer: {
+        type: 'cross',
+        lineStyle:  { color: 'rgba(148,163,184,0.35)', width: 1, type: 'dashed' },
+        crossStyle: { color: 'rgba(148,163,184,0.35)', width: 1, type: 'dashed' },
+        // Match the theme instead of ECharts' default white axis boxes.
+        label: {
+          backgroundColor: C.BG4,
+          color:       C.TOOLTIP_TEXT,
+          borderColor: C.BORDER,
+          borderWidth: 1,
+          fontFamily:  'JetBrains Mono, monospace',
+          fontSize:    10,
+          shadowBlur:  0
+        }
+      },
       backgroundColor: C.BG4,
       borderColor: C.BORDER,
-      textStyle: { color: C.TOOLTIP_TEXT, fontSize: 11, fontFamily: 'Barlow, sans-serif' },
+      textStyle: { color: C.TOOLTIP_TEXT, fontSize: 11, fontFamily: 'JetBrains Mono, monospace' },
       formatter(params) {
         const c = params.find(p => p.seriesName === 'Price');
-        if (!c || !c.data) return '';
-        const [o, cl, lo, hi] = c.data;
-        const chg  = cl - o;
-        const pct  = ((chg / o) * 100).toFixed(2);
-        const sign = chg >= 0 ? '+' : '';
-        const col  = chg >= 0 ? TEAL : RED;
-        return `<div style="min-width:130px">
+        if (!c) return '';
+        // Data item is normally a plain [o,c,l,h] array (ECharts prepends the axis
+        // index → length 5), or an object { value:[o,c,l,h], itemStyle } when
+        // per-candle colours are set. Handle both.
+        const arr = Array.isArray(c.data) ? c.data
+                  : (Array.isArray(c.value) ? c.value
+                  : (c.data && c.data.value) || []);
+        if (!arr.length) return '';
+        const off = arr.length >= 5 ? 1 : 0;
+        const o = arr[off], cl = arr[off + 1], lo = arr[off + 2], hi = arr[off + 3];
+        const col = cl >= o ? TEAL : BEAR;
+        return `<div style="min-width:120px">
           <b style="color:${C.TOOLTIP_TEXT}">${labels[c.dataIndex] || c.dataIndex}</b><br/>
           O: ${o} &nbsp; C: <span style="color:${col};font-weight:700">${cl}</span><br/>
-          H: ${hi} &nbsp; L: ${lo}<br/>
-          <span style="color:${col}">${sign}${pct}%</span>
+          H: ${hi} &nbsp; L: ${lo}
         </div>`;
       }
     },
-    grid: { left: 52, right: 46, top: 26, bottom: 36 },
+    grid: {
+      left:   sm ? 42 : 52,
+      right:  sm ? 38 : 46,
+      top:    markPoints.some(mp => mp.position !== 'bottom')  ? (sm ? 50 : 62) : (sm ? 18 : 26),
+      bottom: markPoints.some(mp => mp.position === 'bottom') ? (sm ? 48 : 62) : (sm ? 26 : 36)
+    },
     xAxis: {
       type: 'category',
       data: labels,
       boundaryGap: true,
       axisLine:  { lineStyle: { color: C.BORDER } },
       axisTick:  { show: false },
-      axisLabel: { color: C.TEXT3, fontSize: 10, fontFamily: 'Barlow, sans-serif', hideOverlap: true },
+      axisLabel: { color: C.TEXT3, fontSize: sm ? 9 : 10, fontFamily: 'JetBrains Mono, monospace', hideOverlap: true },
       splitLine: { show: false }
     },
     yAxis: {
       scale:     true,
+      splitNumber: sm ? 4 : 5,
       splitLine: { lineStyle: { color: C.BORDER, type: 'dashed', opacity: 0.45 } },
       axisLine:  { show: false },
       axisTick:  { show: false },
-      axisLabel: { color: C.TEXT3, fontSize: 10, fontFamily: 'Barlow, sans-serif' }
+      // Price axis is the key reference — keep it legible (brighter than the time axis)
+      axisLabel: { color: C.TEXT2, fontSize: sm ? 9 : 10, fontFamily: 'JetBrains Mono, monospace' }
     },
     series: [{
       name:  'Price',
       type:  'candlestick',
-      data:  ohlc,
+      data:  seriesData,
       barMaxWidth: 20,
+      // Hollow-up / filled-down — the universal pro convention. A bullish candle
+      // (close ≥ open) uses color+borderColor → transparent body, teal outline;
+      // a bearish candle uses color0+borderColor0 → solid fill. Keeps the down
+      // moves from overpowering the up moves (a solid near-white body on black
+      // was the loudest thing on the chart). Per-candle candleColors objects
+      // (Course-4 indicators) override this and stay solid.
       itemStyle: {
-        color:        TEAL,
-        color0:       RED,
+        color:        'transparent',
+        color0:       BEAR,
         borderColor:  TEAL,
-        borderColor0: RED,
+        borderColor0: BEAR,
         borderWidth:  1.5
       },
+      // Candles "print" left-to-right like a live tape instead of all growing
+      // from the baseline at once.
+      animationDelay: idx => idx * 16,
       markPoint: {
         symbol: 'pin',
         symbolSize: 16,
-        label: { fontFamily: 'Barlow, sans-serif' },
+        label: { fontFamily: 'JetBrains Mono, monospace' },
         data: mpData
       },
       markLine: {
         symbol: ['none','none'],
         silent: true,
-        data:   mlData
+        data:   mlData.concat(revealDivider)
       },
       markArea: {
         silent: true,
-        data:   maData
+        data:   futureArea ? maData.concat([futureArea]) : maData
       }
     }]
   };
@@ -589,6 +711,7 @@ function buildCandlestickOption(def, revealMode) {
 
 function buildLineOption(def) {
   const C = chartColors();
+  const _smLine = (typeof window !== 'undefined' && window.innerWidth <= 768);
   const { labels, values, series2Label, series2Values, markLines } = def;
 
   const mlData = (markLines || []).map(ml => [{
@@ -636,28 +759,29 @@ function buildLineOption(def) {
     animationDuration: 700,
     legend: hasLegend ? {
       data: ['Equity', series2Label],
-      textStyle: { color: C.TEXT2, fontSize: 11, fontFamily: 'Barlow, sans-serif' },
+      textStyle: { color: C.TEXT2, fontSize: 11, fontFamily: 'JetBrains Mono, monospace' },
       top: 4
     } : undefined,
     tooltip: {
       trigger: 'axis',
       backgroundColor: C.BG4,
       borderColor: C.BORDER,
-      textStyle: { color: C.TOOLTIP_TEXT, fontSize: 11, fontFamily: 'Barlow, sans-serif' }
+      textStyle: { color: C.TOOLTIP_TEXT, fontSize: 11, fontFamily: 'JetBrains Mono, monospace' }
     },
-    grid: { left: 58, right: 28, top: hasLegend ? 36 : 24, bottom: 36 },
+    grid: { left: _smLine ? 46 : 58, right: _smLine ? 18 : 28, top: hasLegend ? 36 : 24, bottom: 36 },
     xAxis: {
       type: 'category',
       data: labels,
       axisLine:  { lineStyle: { color: C.BORDER } },
-      axisLabel: { color: C.TEXT3, fontSize: 10, fontFamily: 'Barlow, sans-serif' },
+      axisLabel: { color: C.TEXT3, fontSize: _smLine ? 9 : 10, fontFamily: 'JetBrains Mono, monospace', hideOverlap: true },
       splitLine: { show: false }
     },
     yAxis: {
       scale:     true,
+      splitNumber: _smLine ? 4 : 5,
       splitLine: { lineStyle: { color: C.BORDER, type: 'dashed' } },
       axisLine:  { lineStyle: { color: C.BORDER } },
-      axisLabel: { color: C.TEXT3, fontSize: 10, fontFamily: 'Barlow, sans-serif' }
+      axisLabel: { color: C.TEXT2, fontSize: _smLine ? 9 : 10, fontFamily: 'JetBrains Mono, monospace' }
     },
     series
   };
@@ -720,7 +844,7 @@ function renderTeachingChart(elId, def) {
   // Pre-build horizontal markLine data from def
   const mlData = (def.markLines || []).map(ml => [{
     yAxis:     ml.yAxis,
-    label:     { show: true, formatter: ml.label, color: '#0b0b0e', fontSize: 10, fontWeight: 700, fontFamily: 'Barlow, sans-serif', position: 'end', backgroundColor: ml.color || TEAL, padding: [2, 6], borderRadius: 4 },
+    label:     { show: true, formatter: ml.label, color: '#0b0b0e', fontSize: 10, fontWeight: 700, fontFamily: 'JetBrains Mono, monospace', position: 'end', backgroundColor: ml.color || TEAL, padding: [2, 6], borderRadius: 4 },
     lineStyle: { color: ml.color || TEAL, type: 'dashed', width: 1.5, opacity: 0.8 }
   }, { yAxis: ml.yAxis }]);
 
@@ -732,8 +856,8 @@ function renderTeachingChart(elId, def) {
     if (!btn) {
       btn = document.createElement('button');
       btn.className = 'chart-replay-btn';
-      btn.innerHTML = '<i data-lucide="rotate-ccw" style="width:12px;height:12px;"></i> Replay';
-      btn.style.cssText = 'display:none;margin:4px 0 2px auto;padding:2px 10px;background:transparent;color:#9494b0;font-size:11px;border:1px solid '+getBullishColor()+';border-radius:10px;cursor:pointer;font-family:Barlow,sans-serif;';
+      btn.innerHTML = '<i data-lucide="rotate-ccw"></i> Replay';
+      btn.style.display = 'none';
       card.appendChild(btn);
       if (typeof lucide !== 'undefined') lucide.createIcons();
     }
@@ -744,12 +868,29 @@ function renderTeachingChart(elId, def) {
     const replayBtn = getTeachReplayBtn();
     if (replayBtn) replayBtn.style.display = 'none';
 
-    // Reset chart back to setup candles only — live lookup so stale closure never used
+    // Lock both axes to the FULL reveal up front (full x labels + fixed y-range) so
+    // the outcome candles slide into fixed slots instead of the chart rescaling on
+    // every tick — that per-tick rescale was the choppiness.
+    let _lo = Infinity, _hi = -Infinity;
+    def.ohlc.forEach(c => { if (c[2] < _lo) _lo = c[2]; if (c[3] > _hi) _hi = c[3]; });
+    const _pad = Math.max(0.5, (_hi - _lo) * 0.08);
+    const teachDivider = [
+      [
+        { xAxis: decisionIdx, label: { show: true, formatter: 'Decision', color: '#0b0b0e', fontSize: 10, fontWeight: 700, fontFamily: 'JetBrains Mono, monospace', position: 'insideEndTop', backgroundColor: TEAL, padding: [2, 6], borderRadius: 4 }, lineStyle: { color: TEAL, type: 'dashed', width: 1.5, opacity: 0.85 } },
+        { xAxis: decisionIdx }
+      ],
+      ...mlData
+    ];
+
     const instReset = charts[elId];
     if (instReset) {
       instReset.setOption({
-        xAxis:  { data: setupLabels },
-        series: [{ data: setupOhlc, markLine: { data: [] } }]
+        animationDurationUpdate: _REVEAL_MS,
+        animationEasingUpdate: 'cubicOut',
+        xAxis:  { data: def.labels },
+        yAxis:  { min: +(_lo - _pad).toFixed(2), max: +(_hi + _pad).toFixed(2) },
+        series: [{ data: setupOhlc, animationDuration: _REVEAL_MS, animationDelay: 0,
+                   markLine: { symbol: ['none', 'none'], silent: true, data: teachDivider } }]
       }, { notMerge: false });
     }
 
@@ -758,51 +899,29 @@ function renderTeachingChart(elId, def) {
 
     const teachTimer = setInterval(() => {
       count++;
-      const visibleLabels = [...setupLabels, ...outcomeLabels.slice(0, count)];
-      const wireframeData = outcomeOhlc.slice(0, count).map(c => {
-        const isBull = c[1] >= c[0];
-        return {
-          value: c,
-          itemStyle: {
-            color:        'transparent',
-            borderColor:  isBull ? TEAL : RED,
-            borderWidth:  1.5,
-            color0:       'transparent',
-            borderColor0: RED
-          }
-        };
+      // Outcome candles inherit the standard hollow-up / filled-down style; Course-4
+      // indicator charts keep their per-candle colours through the reveal.
+      const outcomeData = outcomeOhlc.slice(0, count).map((c, j) => {
+        const col = def.candleColors && def.candleColors[def.cutIndex + j];
+        return col
+          ? { value: c, itemStyle: { color: col, color0: col, borderColor: col, borderColor0: col } }
+          : c;
       });
 
       const instTick = charts[elId];
       if (instTick) {
-        instTick.setOption({
-          xAxis:  { data: visibleLabels },
-          series: [{
-            data: [...setupOhlc, ...wireframeData],
-            markLine: {
-              symbol: ['none', 'none'],
-              silent: true,
-              data: [
-                [
-                  { xAxis: decisionIdx, label: { show: true, formatter: 'Decision', color: '#0b0b0e', fontSize: 10, fontWeight: 700, fontFamily: 'Barlow, sans-serif', position: 'insideEndTop', backgroundColor: TEAL, padding: [2, 6], borderRadius: 4 }, lineStyle: { color: TEAL, type: 'dashed', width: 1.5, opacity: 0.85 } },
-                  { xAxis: decisionIdx }
-                ],
-                ...mlData
-              ]
-            }
-          }]
-        }, { notMerge: false });
+        instTick.setOption({ series: [{ data: [...setupOhlc, ...outcomeData], animationDuration: _REVEAL_MS, animationDelay: 0 }] }, { notMerge: false });
       }
 
       if (count >= total) {
         clearInterval(teachTimer);
         const btn = getTeachReplayBtn();
         if (btn) {
-          btn.style.display = 'block';
+          btn.style.display = 'flex';
           btn.onclick = runTeachAnimation;
         }
       }
-    }, 280);
+    }, _REVEAL_MS);
   }
 
   runTeachAnimation();
@@ -811,31 +930,58 @@ function renderTeachingChart(elId, def) {
 /* ══════════════════════════════════════════════════════════════════════════
    HTML BUILDERS
    ══════════════════════════════════════════════════════════════════════════ */
+/* ── colour-name highlighting (lesson TEXT only, never chart labels) ───────────
+   Renders colour words in the matching hue so "green hues" / "red bars" / "lime"
+   read in the colour they describe on the chart. Operates only on text BETWEEN
+   tags (never inside an HTML tag/attribute), so existing <strong> markup is safe.
+   Applied to prose cards (intro/lesson body + bullets, concept, quiz explanation);
+   chart cards/annotations are intentionally left untouched. */
+const LT_COLOR_TERMS = {
+  'lime green': 'lime', 'light blue': 'blue', 'lime': 'lime', 'turquoise': 'turquoise',
+  'teal': 'turquoise', 'cyan': 'turquoise', 'red': 'red', 'green': 'green',
+  'yellow': 'yellow', 'orange': 'orange', 'blue': 'blue', 'purple': 'purple',
+  'pink': 'pink', 'white': 'white'
+};
+// longest phrases first so "lime green" / "light blue" win over the bare colour
+const LT_COLOR_RE = /\b(lime green|light blue|lime|turquoise|teal|cyan|red|green|yellow|orange|blue|purple|pink|white)\b/gi;
+function ltClr(s) {
+  if (s == null) return s;
+  return String(s).replace(/(<[^>]+>)|([^<]+)/g, (m, tag, text) =>
+    tag ? tag : text.replace(LT_COLOR_RE, w => `<span class="lt-clr-${LT_COLOR_TERMS[w.toLowerCase()]}">${w}</span>`));
+}
+
 function bulletsHtml(bullets) {
   return `<ul class="lesson-bullets">
-    ${bullets.map(b => `<li>${b}</li>`).join('')}
+    ${bullets.map(b => `<li>${ltClr(b)}</li>`).join('')}
   </ul>`;
 }
 
-function chartCardHtml(id, title, badge, tall, chartHeight, videoUrl) {
+function chartCardHtml(id, title, badge, tall, chartHeight, videoUrl, reconMode) {
   const hStyle = chartHeight ? `height:${chartHeight}px;` : '';
   const hData  = chartHeight ? `data-configured-height="${chartHeight}"` : '';
-  const videoBtn = videoUrl
-    ? `<button class="chart-video-btn" id="intro-video-btn" onclick="toggleIntroVideo('${videoUrl}')" title="Watch the video lesson"><svg width="13" height="13" viewBox="0 0 24 24" fill="#FF0000" xmlns="http://www.w3.org/2000/svg"><path d="M21.582 6.186a2.506 2.506 0 0 0-1.765-1.773C18.265 4 12 4 12 4s-6.265 0-7.817.413A2.506 2.506 0 0 0 2.418 6.186C2 7.747 2 12 2 12s0 4.253.418 5.814a2.506 2.506 0 0 0 1.765 1.773C5.735 20 12 20 12 20s6.265 0 7.817-.413a2.506 2.506 0 0 0 1.765-1.773C22 16.253 22 12 22 12s0-4.253-.418-5.814zM10 15.464V8.536L16 12l-6 3.464z"/></svg><span>Watch Video</span></button>`
-    : '';
-  const videoWrap = videoUrl ? `<div class="intro-video-wrap" id="intro-video-wrap"></div>` : '';
+  // When a video is available, the chart-type badge becomes a tab you switch
+  // between (Candles ⇆ Video) like browser tabs. When a reconstruction recipe exists,
+  // the tabs become Lesson ⇆ Candles (player replaces the YouTube embed; video → link).
+  const ytIcon = '<svg width="12" height="12" viewBox="0 0 24 24" fill="#FF0000" xmlns="http://www.w3.org/2000/svg"><path d="M21.582 6.186a2.506 2.506 0 0 0-1.765-1.773C18.265 4 12 4 12 4s-6.265 0-7.817.413A2.506 2.506 0 0 0 2.418 6.186C2 7.747 2 12 2 12s0 4.253.418 5.814a2.506 2.506 0 0 0 1.765 1.773C5.735 20 12 20 12 20s6.265 0 7.817-.413a2.506 2.506 0 0 0 1.765-1.773C22 16.253 22 12 22 12s0-4.253-.418-5.814zM10 15.464V8.536L16 12l-6 3.464z"/></svg>';
+  // No embedded YouTube: the chart card shows candles; the source video is reachable via a
+  // plain "Watch original ↗" link (new tab), not an in-app iframe. (reconMode is legacy —
+  // reconstruction chapters now use the dedicated Visual/Lesson steps.)
+  const headerControls = reconMode
+    ? _reconTabs(badge)
+    : (badge ? `<span class="chart-card-badge">${badge}</span>` : '');
+  const videoWrap = reconMode ? `<div class="intro-video-wrap" id="intro-video-wrap"></div>` : '';
   return `
     <div class="chart-card" style="max-width:960px;margin:0 auto;">
       <div class="chart-card-header">
         <span class="chart-card-title">${title}</span>
         <div class="chart-card-header-right">
-          ${badge ? `<span class="chart-card-badge">${badge}</span>` : ''}
-          ${videoBtn}
+          ${headerControls}
           <button class="chart-expand-btn" id="expand-${id}" onclick="toggleChartExpand('${id}')" title="Expand chart" aria-label="Expand chart"><i data-lucide="maximize-2" style="width:14px;height:14px;"></i></button>
         </div>
       </div>
       <div id="${id}" class="chart-el${tall ? ' chart-el--tall' : ''}" style="${hStyle}" ${hData}></div>
       ${videoWrap}
+      ${(reconMode || videoUrl) ? _watchOriginalHtml(videoUrl) : ''}
     </div>`;
 }
 
@@ -879,7 +1025,7 @@ function _ensureVideoButton(chapter) {
    ══════════════════════════════════════════════════════════════════════════ */
 const LT_MODULE_THEME = {
   'Course Overview':                  { color:'#00d4d4', icon:'book-open',         tag:'Orientation & roadmap' },
-  'Supply & Demand':                  { color:'#00d4d4', icon:'layers',            tag:'Where price reacts' },
+  'Price Action Foundations':         { color:'#00d4d4', icon:'candlestick-chart', tag:'The building blocks of price' },
   'Identifying Trends':               { color:'#2bd47d', icon:'trending-up',       tag:'Reading directional bias' },
   'Market Structure':                 { color:'#4a9eff', icon:'waypoints',         tag:'The skeleton of price' },
   'Time Frame Analysis':              { color:'#7c83ff', icon:'clock',             tag:'Top-down context' },
@@ -898,7 +1044,7 @@ const LT_MODULE_THEME = {
   'Choosing Your Trading Style':      { color:'#7c83ff', icon:'compass',           tag:'Find your fit' },
   'Unlocking Your Potential':         { color:'#e0b020', icon:'key',               tag:'Level up' },
   'Identifying Liquidity':            { color:'#ff5c8a', icon:'droplets',          tag:'Where the orders hide' },
-  'Determining Control':              { color:'#cc2222', icon:'crosshair',         tag:'Who is in charge?' },
+  'Determining Control':              { color:'#f87171', icon:'crosshair',         tag:'Who is in charge?' },
   'Applying Sentiment':               { color:'#ec4899', icon:'activity',          tag:'Crowd psychology' }
 };
 const LT_MODULE_DEFAULT = { color:'#00d4d4', icon:'book-open', tag:'' };
@@ -917,44 +1063,441 @@ function moduleBannerHtml(chapter) {
     </div>`;
 }
 
+/* Roadmap panel — shown on course overview / recap pages instead of a chart.
+   Reflects the course's actual context (its modules / the journey), not a
+   decorative candlestick chart. Driven by `chapter.roadmap`. */
+function roadmapCardHtml(rm) {
+  const stops = (rm.stops || []).map((s, i) => `
+        <li class="roadmap-stop">
+          <span class="roadmap-node">${i + 1}</span>
+          <div class="roadmap-stop-main">
+            <div class="roadmap-stop-label">${s.label}</div>
+            ${s.desc ? `<div class="roadmap-stop-desc">${s.desc}</div>` : ''}
+          </div>
+        </li>`).join('');
+  return `
+      <div class="roadmap-card">
+        <div class="roadmap-head">
+          <span class="roadmap-head-ic"><i data-lucide="${rm.icon || 'route'}" style="width:18px;height:18px;"></i></span>
+          <div class="roadmap-head-text">
+            <div class="roadmap-title">${rm.title || 'Course Roadmap'}</div>
+            ${rm.sub ? `<div class="roadmap-sub">${rm.sub}</div>` : ''}
+          </div>
+        </div>
+        <ol class="roadmap-path">${stops}</ol>
+      </div>`;
+}
+
+/* ── ADAPTIVE CHAPTER TEMPLATE ─────────────────────────────────────────────
+   A chart def carries a `format` that decides how its visual slot renders:
+     'chart'  (default / absent) → candlestick or line (the existing path)
+     'concept'                   → conceptCardHtml below (diagram + checklist)
+     'tool'                      → reserved for an annotated UI-mock (not yet wired)
+   This lets a non-price-action topic (mindset, workflow, an exchange screen) stop
+   shoehorning fake OHLC "price" onto an abstract idea. A slot renders an ECharts
+   chart iff isChartSlot(def) — used to gate renderTeachingChart in the step renderers. */
+function isChartSlot(def) {
+  return !!def && (!def.format || def.format === 'chart');
+}
+
+/* Concept visual — for chapters whose subject isn't price (objectivity, process,
+   discipline). Renders an honest diagram instead of inventing candles: an optional
+   ordered flow (set `cycle:true` when the steps loop back on themselves) plus an
+   optional checklist of takeaways and a footnote. `bodyId` ('concept-intro' /
+   'concept-lesson') is what setIntroView toggles when a video tab is present.
+   Driven by a chart def with `format:'concept'`. */
+function conceptCardHtml(bodyId, def, videoUrl, reconMode) {
+  const steps = (def.steps || []).map((s, i) => `
+        <li class="concept-step">
+          <span class="concept-node">${s.icon ? `<i data-lucide="${s.icon}" style="width:14px;height:14px;"></i>` : (i + 1)}</span>
+          <div class="concept-step-main">
+            <div class="concept-step-label">${ltClr(s.label)}</div>
+            ${s.desc ? `<div class="concept-step-desc">${ltClr(s.desc)}</div>` : ''}
+          </div>
+        </li>`).join('');
+  const flow = (def.steps && def.steps.length)
+    ? `<ol class="concept-flow${def.cycle ? ' concept-flow--cycle' : ''}">${steps}</ol>`
+      + (def.cycle ? `<div class="concept-cycle-note"><i data-lucide="rotate-ccw" style="width:13px;height:13px;"></i><span>${def.cycleLabel || 'Repeat — the loop itself is the practice'}</span></div>` : '')
+    : '';
+  const checklist = (def.checklist && def.checklist.length)
+    ? `<ul class="concept-check">${def.checklist.map(c => {
+        const t = (typeof c === 'string') ? c : c.text;
+        return `<li><i data-lucide="check" style="width:14px;height:14px;"></i><span>${ltClr(t)}</span></li>`;
+      }).join('')}</ul>`
+    : '';
+  const note = def.note ? `<p class="concept-note">${ltClr(def.note)}</p>` : '';
+
+  const ytIcon = '<svg width="12" height="12" viewBox="0 0 24 24" fill="#FF0000" xmlns="http://www.w3.org/2000/svg"><path d="M21.582 6.186a2.506 2.506 0 0 0-1.765-1.773C18.265 4 12 4 12 4s-6.265 0-7.817.413A2.506 2.506 0 0 0 2.418 6.186C2 7.747 2 12 2 12s0 4.253.418 5.814a2.506 2.506 0 0 0 1.765 1.773C5.735 20 12 20 12 20s6.265 0 7.817-.413a2.506 2.506 0 0 0 1.765-1.773C22 16.253 22 12 22 12s0-4.253-.418-5.814zM10 15.464V8.536L16 12l-6 3.464z"/></svg>';
+  // With a video, the badge becomes a Diagram ⇆ Video tab pair (same machinery as
+  // chartCardHtml). setIntroView's 'chart' view shows the diagram body (#concept-intro).
+  const headerControls = reconMode
+    ? _reconTabs('Diagram')
+    : `<span class="chart-card-badge">Concept</span>`;   // no embedded YouTube tab
+  const videoWrap = reconMode ? `<div class="intro-video-wrap" id="intro-video-wrap"></div>` : '';
+
+  return `
+    <div class="chart-card" style="max-width:960px;margin:0 auto;">
+      <div class="chart-card-header">
+        <span class="chart-card-title">${def.title}</span>
+        <div class="chart-card-header-right">${headerControls}</div>
+      </div>
+      <div id="${bodyId}" class="concept-card">
+        ${flow}
+        ${checklist}
+        ${note}
+      </div>
+      ${videoWrap}
+      ${(reconMode || videoUrl) ? _watchOriginalHtml(videoUrl) : ''}
+    </div>`;
+}
+
+/* Positioning note at the very start of Course 4 — it's an advanced, optional
+   framework (not the expected next step) that leans on specialized tooling. */
+function _course4NoteHtml() {
+  if (getActiveCourseNum() !== 4 || state.chapter !== 0) return '';
+  return `
+    <div class="course-note" role="note">
+      <div class="course-note-ic"><i data-lucide="info" style="width:18px;height:18px;"></i></div>
+      <div class="course-note-body">
+        <strong>Course 4 is an advanced, optional deep-dive.</strong> Liquidity Theory is our own opinionated framework that
+        builds on the fundamentals from Courses 1–3 — you don't need it to become a capable trader. It also leans on some
+        specialized charting tools to illustrate the ideas; focus on the underlying concepts, which matter far more than any one tool.
+      </div>
+    </div>`;
+}
+
+/* Honest risk gate shown at the top of leverage/derivatives lessons (Course 3+),
+   where real-money danger first appears. Matched by module name so it's automatic. */
+function _riskCalloutHtml(chapter) {
+  const m = (chapter && chapter.module) || '';
+  if (!/derivative|leverage/i.test(m)) return '';
+  return `
+    <div class="risk-callout" role="note">
+      <div class="risk-callout-ic"><i data-lucide="alert-triangle" style="width:18px;height:18px;"></i></div>
+      <div class="risk-callout-body">
+        <strong>Real money, real risk.</strong> Leverage and derivatives can wipe out your entire
+        position in minutes, and <strong>most beginners lose money</strong>. Only ever risk what you can
+        afford to lose, practice on a testnet first, and treat everything here as education — not financial advice.
+      </div>
+    </div>`;
+}
+
+/* A chart is "cluttered" when several long annotation labels overlap at the
+   cramped half-width — those default to expanded (full-width, taller) so the
+   learner can actually read them. */
+function _isChartCluttered(def) {
+  if (!def) return false;
+  const anns = [].concat(def.markPoints || [], def.revealMarkPoints || [], def.markLines || [], def.markAreas || []);
+  if (!anns.length) return false;
+  const chars = anns.reduce((n, a) => n + (a && a.label ? String(a.label).length : 0), 0);
+  const longLabels = anns.filter(a => a && a.label && String(a.label).length >= 12).length;
+  return longLabels >= 4 || chars >= 120;
+}
+function _autoExpandIfCluttered(id, def) {
+  if (!_isChartCluttered(def) || typeof toggleChartExpand !== 'function') return;
+  const card = document.getElementById(id) && document.getElementById(id).closest('.chart-card');
+  if (card && card.dataset.expanded !== '1') toggleChartExpand(id);
+}
+
+/* ── RECONSTRUCTION PLAYER LAYER ─────────────────────────────────────────────
+   A chapter with a reconstruction recipe (rebuild/recon/lt-recon-courseN.js) plays the
+   native lesson player IN PLACE of the YouTube embed — the recipe's presence IS the
+   policy (the 21 live-chart modules have none and keep the video). Lazy-loaded per course. */
+function _reconSetForCourse(n) {
+  return ({ 1: 'LT_RECON_1', 2: 'LT_RECON_2', 3: 'LT_RECON_3', 4: 'LT_RECON_4' })[n];
+}
+const _reconLoadState = {};
+function ensureReconLoaded(n) {
+  const g = _reconSetForCourse(n);
+  if (!g) return Promise.resolve(false);
+  if (typeof window[g] !== 'undefined') return Promise.resolve(true);
+  if (_reconLoadState[n]) return _reconLoadState[n];
+  _reconLoadState[n] = new Promise((resolve) => {
+    const s = document.createElement('script');
+    s.src = `rebuild/recon/lt-recon-course${n}.js?v=1.7.0`;
+    s.async = true;
+    s.onload  = () => resolve(typeof window[g] !== 'undefined');
+    s.onerror = () => { _reconLoadState[n] = null; resolve(false); };
+    document.head.appendChild(s);
+  });
+  return _reconLoadState[n];
+}
+function getRecon(chapter) {
+  if (!chapter || !chapter.videoUrl) return null;
+  const g = _reconSetForCourse(getActiveCourseNum());
+  const map = (g && typeof window[g] !== 'undefined') ? window[g] : null;
+  if (!map) return null;
+  const id = (chapter.videoUrl.split('embed/')[1] || '');
+  if (map[id]) return map[id];
+  const lid = id.toLowerCase(), k = Object.keys(map).find(x => x.toLowerCase() === lid);
+  return k ? map[k] : null;
+}
+function hasRecon(chapter) { return !!getRecon(chapter); }
+
+/* TTS narration timelines (rebuild/recon/lt-recon-timelines-courseN.js). When a module
+   has one, the player runs AUDIO-DRIVEN: real measured clip durations pace the scene +
+   captions, a single <audio> plays each chunk's clip. Lazy-loaded per course. */
+function _timelinesSetForCourse(n) {
+  return ({ 1: 'LT_TIMELINES_1', 2: 'LT_TIMELINES_2', 3: 'LT_TIMELINES_3', 4: 'LT_TIMELINES_4' })[n];
+}
+const _timelinesLoadState = {};
+function ensureTimelinesLoaded(n) {
+  const g = _timelinesSetForCourse(n);
+  if (!g) return Promise.resolve(false);
+  if (typeof window[g] !== 'undefined') return Promise.resolve(true);
+  if (_timelinesLoadState[n]) return _timelinesLoadState[n];
+  _timelinesLoadState[n] = new Promise((resolve) => {
+    const s = document.createElement('script');
+    s.src = `rebuild/recon/lt-recon-timelines-course${n}.js?v=1.4.0`;
+    s.async = true;
+    s.onload  = () => resolve(typeof window[g] !== 'undefined');
+    s.onerror = () => { _timelinesLoadState[n] = null; resolve(false); };
+    document.head.appendChild(s);
+  });
+  return _timelinesLoadState[n];
+}
+function getTimeline(chapter) {
+  if (!chapter || !chapter.videoUrl) return null;
+  const g = _timelinesSetForCourse(getActiveCourseNum());
+  const map = (g && typeof window[g] !== 'undefined') ? window[g] : null;
+  if (!map) return null;
+  const id = (chapter.videoUrl.split('embed/')[1] || '');
+  if (map[id]) return map[id];
+  const lid = id.toLowerCase(), k = Object.keys(map).find(x => x.toLowerCase() === lid);
+  return k ? map[k] : null;
+}
+
+/* Transcript-reactive CUE TRACK (rebuild/recon/lt-recon-cues-courseN.js). Per-module timed
+   accents (S/R lines, zones, touch markers, sweeps…) grounded in the scene overlays + dialogue
+   timing (build_cues_all.py — NOT runtime string-matching). When a module has cues, the player
+   fires them on the audio clock instead of dumping every overlay at chunk start. Lazy per course. */
+function _cuesSetForCourse(n) {
+  return ({ 1: 'LT_CUES_1', 2: 'LT_CUES_2', 3: 'LT_CUES_3', 4: 'LT_CUES_4' })[n];
+}
+const _cuesLoadState = {};
+function ensureCuesLoaded(n) {
+  const g = _cuesSetForCourse(n);
+  if (!g) return Promise.resolve(false);
+  if (typeof window[g] !== 'undefined') return Promise.resolve(true);
+  if (_cuesLoadState[n]) return _cuesLoadState[n];
+  _cuesLoadState[n] = new Promise((resolve) => {
+    const s = document.createElement('script');
+    s.src = `rebuild/recon/lt-recon-cues-course${n}.js?v=1.1.0`;
+    s.async = true;
+    s.onload  = () => resolve(typeof window[g] !== 'undefined');
+    s.onerror = () => { _cuesLoadState[n] = null; resolve(false); };
+    document.head.appendChild(s);
+  });
+  return _cuesLoadState[n];
+}
+function getCues(chapter) {
+  if (!chapter || !chapter.videoUrl) return null;
+  const g = _cuesSetForCourse(getActiveCourseNum());
+  const map = (g && typeof window[g] !== 'undefined') ? window[g] : null;
+  if (!map) return null;
+  const id = (chapter.videoUrl.split('embed/')[1] || '');
+  if (map[id]) return map[id];
+  const lid = id.toLowerCase(), k = Object.keys(map).find(x => x.toLowerCase() === lid);
+  return k ? map[k] : null;
+}
+
+/* Chart META (rebuild/recon/lt-recon-chartmeta-courseN.js): per-chart-chunk real asset/pair/
+   timeframe (ticker) + price-axis calibration. Lazy per course, like recon/cues. */
+function _chartmetaSetForCourse(n) {
+  return ({ 1: 'LT_CHARTMETA_1', 2: 'LT_CHARTMETA_2', 3: 'LT_CHARTMETA_3', 4: 'LT_CHARTMETA_4' })[n];
+}
+const _chartmetaLoadState = {};
+function ensureChartMetaLoaded(n) {
+  const g = _chartmetaSetForCourse(n);
+  if (!g) return Promise.resolve(false);
+  if (typeof window[g] !== 'undefined') return Promise.resolve(true);
+  if (_chartmetaLoadState[n]) return _chartmetaLoadState[n];
+  _chartmetaLoadState[n] = new Promise((resolve) => {
+    const s = document.createElement('script');
+    s.src = `rebuild/recon/lt-recon-chartmeta-course${n}.js?v=1.0.0`;
+    s.async = true;
+    s.onload  = () => resolve(typeof window[g] !== 'undefined');
+    s.onerror = () => { _chartmetaLoadState[n] = null; resolve(false); };
+    document.head.appendChild(s);
+  });
+  return _chartmetaLoadState[n];
+}
+function getChartMeta(chapter) {
+  if (!chapter || !chapter.videoUrl) return null;
+  const g = _chartmetaSetForCourse(getActiveCourseNum());
+  const map = (g && typeof window[g] !== 'undefined') ? window[g] : null;
+  if (!map) return null;
+  const id = (chapter.videoUrl.split('embed/')[1] || '');
+  if (map[id]) return map[id];
+  const lid = id.toLowerCase(), k = Object.keys(map).find(x => x.toLowerCase() === lid);
+  return k ? map[k] : null;
+}
+
+function _youtubeWatchUrl(videoUrl) {
+  const id = (videoUrl || '').split('embed/')[1] || '';
+  return id ? ('https://www.youtube.com/watch?v=' + id) : (videoUrl || '#');
+}
+const _reconPlayIcon = '<svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>';
+function _reconTabs(badge) {
+  return `<div class="chart-view-tabs" role="tablist" aria-label="Switch between lesson and chart">
+      <button class="cvt-tab cvt-tab--active cvt-tab--lesson" role="tab" aria-selected="true" data-view="play" onclick="setIntroView('play')">${_reconPlayIcon}<span>Lesson</span></button>
+      <button class="cvt-tab" role="tab" aria-selected="false" data-view="chart" onclick="setIntroView('chart')">${badge || 'Chart'}</button>
+    </div>`;
+}
+function _watchOriginalHtml(videoUrl) {
+  return `<a class="recon-watch-original" href="${_youtubeWatchUrl(videoUrl)}" target="_blank" rel="noopener">Watch original on YouTube ↗</a>`;
+}
+let _reconPlayer = null;
+function disposeReconPlayer() {
+  if (_reconPlayer) { try { _reconPlayer.destroy(); } catch (e) {} _reconPlayer = null; }
+}
+
 function renderIntro(chapter) {
   const { intro, introChart } = chapter;
   const _mt = moduleTheme(chapter.module);
+  const _accent = ltCourseAccent(getActiveCourseNum());
+
+  // Reconstruction default: if a recipe exists, the native player replaces the YouTube
+  // embed (Lesson ⇆ Candles tabs + a "Watch original" link). Otherwise the video tab.
+  const _recon = hasRecon(chapter);
+  const _vurl = chapter.videoUrl;
+
+  const introCardHtml = `
+    ${_course4NoteHtml()}
+    ${moduleBannerHtml(chapter)}
+    <div class="content-card content-card--teal">
+      <div class="content-card-tag">Introduction</div>
+      <h2 class="content-card-heading">${intro.heading}</h2>
+      <p class="content-card-body">${ltClr(intro.body)}</p>
+      ${bulletsHtml(intro.bullets)}
+    </div>`;
+
+  // Reconstruction chapters: the chart + player move to their own "Visual" step, so the
+  // Introduction is the overview only (full-width). Non-recon chapters keep the classic
+  // two-column intro (overview + chart/video card).
+  if (_recon) {
+    // Overview-only intro (the chart + player live on the Visual / Lesson steps). When the
+    // chapter also carries a roadmap — e.g. a course's first chapter doubling as the course
+    // overview — pair the overview with the module roadmap in the same two-column layout the
+    // dedicated overview chapters use, rather than leaving the space below the card empty.
+    const _inner = chapter.roadmap
+      ? `<div class="intro-layout module-themed" style="--mod-accent:${_accent}">
+          <div>${introCardHtml}</div>
+          <div>${roadmapCardHtml(chapter.roadmap)}</div>
+        </div>`
+      : `<div class="intro-layout intro-layout--solo module-themed" style="--mod-accent:${_accent}">
+          <div>${introCardHtml}</div>
+        </div>`;
+    setContent(`${_riskCalloutHtml(chapter)}${_inner}`);
+    setTimeout(() => { if (typeof lucide !== 'undefined') lucide.createIcons(); }, 30);
+    return;
+  }
+
+  const rightHtml = chapter.roadmap
+    ? roadmapCardHtml(chapter.roadmap)
+    : (introChart.format === 'concept')
+      ? conceptCardHtml('concept-intro', introChart, _vurl, _recon)
+      : chartCardHtml('chart-intro', introChart.title, introChart.type === 'line' ? 'Line' : 'Candles', false, introChart.chartHeight, _vurl, _recon);
 
   const html = `
-    <div class="intro-layout module-themed" style="--mod-accent:${_mt.color}">
+    ${_riskCalloutHtml(chapter)}
+    <div class="intro-layout module-themed" style="--mod-accent:${_accent}">
+      <div>${introCardHtml}</div>
       <div>
-        ${moduleBannerHtml(chapter)}
-        <div class="content-card content-card--teal">
-          <div class="content-card-tag">Introduction</div>
-          <h2 class="content-card-heading">${intro.heading}</h2>
-          <p class="content-card-body">${intro.body}</p>
-          ${bulletsHtml(intro.bullets)}
-        </div>
-      </div>
-      <div>
-        ${chartCardHtml('chart-intro', introChart.title, introChart.type === 'line' ? 'Line' : 'Candles', false, introChart.chartHeight, chapter.videoUrl)}
+        ${rightHtml}
       </div>
     </div>`;
 
   setContent(html);
 
   setTimeout(() => {
-    renderTeachingChart('chart-intro', introChart);
-    if (state.chapter === 0 && state.step === 0 && CHAPTERS === LT_CHAPTERS && typeof renderCandlestickGallery === 'function') {
-      renderCandlestickGallery('chart-intro');
+    if (!chapter.roadmap && isChartSlot(introChart)) {
+      renderTeachingChart('chart-intro', introChart);
+      if (state.chapter === 0 && state.step === 0 && CHAPTERS === LT_CHAPTERS && typeof renderCandlestickGallery === 'function') {
+        renderCandlestickGallery('chart-intro');
+      } else {
+        _autoExpandIfCluttered('chart-intro', introChart);   // busy charts open expanded so labels are legible
+      }
     }
     if (typeof lucide !== 'undefined') lucide.createIcons();
   }, 80);
+}
+
+/* VISUAL step (reconstruction chapters) — just the candle chart, no view toggle.
+   The animated lesson lives on its own "Lesson" step now, so this is a clean static
+   read of the structure being taught. */
+function renderVisual(chapter) {
+  const { introChart } = chapter;
+  const _accent = ltCourseAccent(getActiveCourseNum());
+
+  // The Visual step is the static structure read (candles / concept) — never a roadmap,
+  // even when the chapter carries one for its Introduction overview.
+  const cardHtml = (introChart.format === 'concept')
+    ? conceptCardHtml('concept-intro', introChart, null)
+    : chartCardHtml('chart-intro', introChart.title, introChart.type === 'line' ? 'Line' : 'Candles', false, introChart.chartHeight);
+
+  setContent(`
+    <div class="intro-layout intro-layout--solo module-themed" style="--mod-accent:${_accent}">
+      <div>
+        ${moduleBannerHtml(chapter)}
+        ${cardHtml}
+      </div>
+    </div>`);
+
+  setTimeout(() => {
+    if (isChartSlot(introChart)) {
+      renderTeachingChart('chart-intro', introChart);
+      if (state.chapter === 0 && CHAPTERS === LT_CHAPTERS && typeof renderCandlestickGallery === 'function') {
+        renderCandlestickGallery('chart-intro');
+      } else {
+        _autoExpandIfCluttered('chart-intro', introChart);
+      }
+    }
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+  }, 80);
+}
+
+/* Mount the native animated reconstruction player into a host element. */
+function mountReconPlayer(hostEl, chapter) {
+  disposeReconPlayer();
+  if (!hostEl) return;
+  hostEl.innerHTML = '';
+  const doc   = getRecon(chapter);
+  const tline = getTimeline(chapter);
+  const cues  = getCues(chapter);
+  const meta  = getChartMeta(chapter);
+  if (doc && typeof LTPlayer !== 'undefined') _reconPlayer = new LTPlayer(hostEl, doc, tline, cues, meta);
+}
+
+/* LESSON step for reconstruction chapters — the animated narrated player IS the lesson
+   (replaces the written lesson card). Non-recon chapters keep renderLesson(). */
+function renderReconLesson(chapter) {
+  const _accent = ltCourseAccent(getActiveCourseNum());
+  setContent(`
+    <div class="lesson-wrap lesson-wrap--player module-themed" style="--mod-accent:${_accent}">
+      ${moduleBannerHtml(chapter)}
+      <div class="recon-lesson-card">
+        <div class="recon-player-host" id="recon-lesson-host"></div>
+        ${chapter.videoUrl ? _watchOriginalHtml(chapter.videoUrl) : ''}
+      </div>
+    </div>`);
+  setTimeout(() => {
+    mountReconPlayer(document.getElementById('recon-lesson-host'), chapter);
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+  }, 60);
 }
 
 function _practiceBtnHtml(chapter) {
   if (typeof getSimPatternForChapter !== 'function') return '';
   const pattern = getSimPatternForChapter(chapter.title);
   if (!pattern) return '';
+  // The Simulator is still flagged Work-In-Progress, so the in-lesson CTA carries a
+  // muted "Beta" chip — the button's framing now matches the caution-taped destination
+  // instead of promising a finished feature.
   return `<button class="chapter-practice-btn" onclick="window.showSimulator({pattern:'${pattern}',label:'${chapter.title.replace(/'/g,"\\'")}',courseMode:true})">
     <i data-lucide="activity" style="width:13px;height:13px;"></i>
     Practice This Pattern
+    <span class="chapter-practice-beta">Beta</span>
   </button>`;
 }
 
@@ -980,12 +1523,15 @@ function _findRealPattern(chapter) {
   if (typeof LT_PATTERNS === 'undefined') return null;
   const matches = LT_PATTERNS.filter(p => p.concept === chapter.title);
   if (matches.length === 0) return null;
-  if (matches.length === 1) return matches[0];
   const dir = _lessonNetDirection(chapter);
   if (dir) {
     const want = dir === 'bear' ? 'sell' : 'buy';
     const m = matches.find(p => p.correctAnswer === want);
     if (m) return m;
+    // The lesson simulation clearly moves one way, but the only real example(s) for
+    // this concept move the other way. Show nothing rather than an inverse, contradictory
+    // chart — the real example must replicate the simulation, not oppose it.
+    if (matches.some(p => p.correctAnswer === 'buy' || p.correctAnswer === 'sell')) return null;
   }
   return matches[0];
 }
@@ -1066,7 +1612,7 @@ async function renderLessonRealExample(containerId, pattern, indicator) {
     new Date(c.time).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: '2-digit' }));
   const ohlc = candles.map(c => [c.open, c.close, c.low, c.high]);
   const bearish = pattern.correctAnswer === 'sell';
-  const accent  = bearish ? RED : TEAL;
+  const accent  = bearish ? BEAR : TEAL;
   const decisionIdx = Math.min(pattern.lookback - 1, ohlc.length - 1);
 
   const def = {
@@ -1171,25 +1717,28 @@ window.toggleLessonExample = async function() {
 function renderLesson(chapter) {
   const { lesson, lessonChart } = chapter;
   const _mt = moduleTheme(chapter.module);
-  const realPattern = _findRealPattern(chapter);
+  const _accent = ltCourseAccent(getActiveCourseNum());
+  // const realPattern = _findRealPattern(chapter); // Real Example disabled
 
   const html = `
-    <div class="lesson-wrap module-themed" style="--mod-accent:${_mt.color}">
+    <div class="lesson-wrap module-themed" style="--mod-accent:${_accent}">
       ${moduleBannerHtml(chapter)}
       <div class="content-card">
         <div class="content-card-tag">Lesson</div>
         <h2 class="content-card-heading content-card-heading--lesson">${lesson.heading}</h2>
-        <p class="content-card-body">${lesson.body}</p>
+        <p class="content-card-body">${ltClr(lesson.body)}</p>
         ${bulletsHtml(lesson.bullets)}
         ${_practiceBtnHtml(chapter)}
       </div>
-      ${chartCardHtml('chart-lesson', lessonChart.title, lessonChart.type === 'line' ? 'Line' : 'Candles', true, lessonChart.chartHeight)}
+      ${(lessonChart.format === 'concept')
+        ? conceptCardHtml('concept-lesson', lessonChart, null)
+        : chartCardHtml('chart-lesson', lessonChart.title, lessonChart.type === 'line' ? 'Line' : 'Candles', true, lessonChart.chartHeight)}
     </div>`;
 
   setContent(html);
   setTimeout(() => {
-    renderTeachingChart('chart-lesson', lessonChart);
-    if (realPattern) _setupLessonExampleToggle(chapter, lessonChart, realPattern);
+    if (isChartSlot(lessonChart)) renderTeachingChart('chart-lesson', lessonChart);
+    // if (realPattern) _setupLessonExampleToggle(chapter, lessonChart, realPattern); // Real Example disabled
     if (typeof lucide !== 'undefined') lucide.createIcons();
   }, 80);
 }
@@ -1262,7 +1811,7 @@ function _revealQuizRealStatic() {
   const decisionIndex = setupOhlc.length - 1;
   const revealData = revealOhlc.map(c => {
     const isBull = c[1] >= c[0];
-    return { value: c, itemStyle: { color: 'transparent', borderColor: isBull ? TEAL : RED, borderWidth: 1.5, color0: 'transparent', borderColor0: RED } };
+    return { value: c, itemStyle: { color: 'transparent', borderColor: isBull ? TEAL : BEAR, borderWidth: 1.5, color0: 'transparent', borderColor0: BEAR } };
   });
   inst.setOption({
     xAxis:  { data: [...setupLabels, ...revealLabels] },
@@ -1375,10 +1924,13 @@ function renderQuiz(chapter) {
           else if (a.correct) cls += ' answer-btn--missed';
           else cls += ' answer-btn--dimmed';
         }
+        // Strip the legacy baked-in "● " glyph; a state-aware .answer-dot marker
+        // replaces it so the bullet follows the button's hover/correct/wrong colour.
+        const txt = a.text.replace(/^●\s*/, '');
         return `<button class="${cls}" data-answer="${a.id}"
           ${alreadyDone ? 'disabled' : ''}
           onclick="handleAnswer('${a.id}')">
-          ${a.text}
+          <span class="answer-dot" aria-hidden="true"></span>${txt}
         </button>`;
       }).join('')}
     </div>`;
@@ -1387,10 +1939,16 @@ function renderQuiz(chapter) {
   // Explanation (shown if already answered)
   const explHtml = alreadyDone ? buildExplanationHtml(quiz, savedAnswer) : '';
 
+  // Conceptual quizzes (funding rates, margin modes, journaling, meditation…) set
+  // `hideChart:true` — a candlestick "Decision Point" chart would only mislead, so
+  // we show the question alone. The answer-reveal flow degrades gracefully (revealChart
+  // no-ops with no chart instance, the badge query is null-guarded).
+  const showChart = !!(quiz.chart && !quiz.hideChart);
+
   const html = `
-    ${chartCardHtml('chart-quiz', quiz.chart.title, alreadyDone ? 'Revealed' : 'Decision Point', true, quiz.chart.chartHeight)}
+    ${showChart ? chartCardHtml('chart-quiz', quiz.chart.title, alreadyDone ? 'Revealed' : 'Decision Point', true, quiz.chart.chartHeight) : ''}
     <div class="quiz-card">
-      <div class="quiz-label">Quiz — Chapter ${chapterIdx + 1}</div>
+      <div class="quiz-label">Quiz</div>
       <div class="quiz-question">${quiz.question}</div>
       <div class="quiz-hint">${quiz.hint}</div>
       ${btnHtml}
@@ -1402,11 +1960,11 @@ function renderQuiz(chapter) {
   // Render chart — ALWAYS start with the synthetic simulation. If a real
   // historical pattern matches this chapter, wire the optional real-example toggle.
   setTimeout(() => {
-    const realPattern = _findRealPatternForQuiz(chapter);
+    // const realPattern = _findRealPatternForQuiz(chapter); // Real Example disabled
     window._currentRealPattern = null;
     _quizExample = null;
-    _renderQuizSim(quiz, alreadyDone);
-    if (realPattern) _setupQuizExampleToggle(chapter, quiz, realPattern, alreadyDone);
+    if (showChart) _renderQuizSim(quiz, alreadyDone);
+    // if (realPattern) _setupQuizExampleToggle(chapter, quiz, realPattern, alreadyDone); // Real Example disabled
     if (typeof lucide !== 'undefined') lucide.createIcons();
   }, 80);
 
@@ -1425,9 +1983,116 @@ function buildExplanationHtml(quiz, answerId) {
   return `
     <div class="explanation-box ${cls}">
       <div class="explanation-verdict">${verdict}</div>
-      <div class="explanation-body">${quiz.explanation}</div>
-      ${quiz.rule ? `<div class="explanation-rule">${quiz.rule}</div>` : ''}
+      <div class="explanation-body">${ltClr(quiz.explanation)}</div>
+      ${quiz.rule ? `<div class="explanation-rule"><i data-lucide="pin"></i><span>${ltClr(quiz.rule)}</span></div>` : ''}
     </div>`;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   SYNTHETIC REVEAL — deliberate candle-by-candle reveal for the simulation quiz
+   chart (the default, since real-data examples are disabled). The setup candles
+   are already on screen; this prints the hidden outcome candles one at a time —
+   so the answer lands as a "moment" instead of an instant pop — then applies the
+   full reveal styling (revealMarkPoints, Decision divider, revealed-region shade)
+   and fires the completion glow.
+   ══════════════════════════════════════════════════════════════════════════ */
+const _REVEAL_MS = 190;
+
+function _revealGlow(elId) {
+  const el = document.getElementById(elId);
+  if (!el) return;
+  el.style.transition = 'box-shadow 0.3s ease';
+  el.style.boxShadow  = '0 0 18px 4px rgba(0,212,212,0.45)';
+  setTimeout(() => { el.style.boxShadow = ''; }, 1400);
+}
+
+// The "Decision" divider shown live while the outcome candles print in.
+function _revealDividerData(dividerX) {
+  const sm = (typeof window !== 'undefined' && window.innerWidth <= 768);
+  return [[
+    { xAxis: dividerX,
+      label: { show: true, formatter: 'Decision', rotate: 0, position: 'insideEndTop',
+               color: '#0b0b0e', fontSize: sm ? 8 : 9, fontWeight: 700, fontFamily: 'JetBrains Mono, monospace',
+               backgroundColor: TEAL, padding: sm ? [1, 4] : [2, 6], borderRadius: 4 },
+      lineStyle: { color: TEAL, type: 'dashed', width: 1.5, opacity: 0.9 } },
+    { xAxis: dividerX }
+  ]];
+}
+
+function _animateSyntheticReveal(elId, def, onComplete) {
+  const inst = charts[elId];
+  const cut  = def.cutIndex;
+  // Nothing to animate (no hidden outcome) → straight to the full reveal.
+  if (!inst || cut == null || cut >= def.ohlc.length) {
+    revealChart(elId, def);
+    _revealGlow(elId);
+    if (onComplete) onComplete();
+    return;
+  }
+  const setupOhlc   = def.ohlc.slice(0, cut);
+  const outOhlc     = def.ohlc.slice(cut);
+  const candleCols  = def.candleColors || null;
+  const divider     = _revealDividerData(cut - 0.5);
+
+  const mkOut = k => outOhlc.slice(0, k).map((c, j) => {
+    const col = candleCols && candleCols[cut + j];
+    return col ? { value: c, itemStyle: { color: col, color0: col, borderColor: col, borderColor0: col } } : c;
+  });
+
+  // Lock both axes BEFORE printing so they never rescale mid-reveal — the per-tick
+  // jump (x-axis growing one label at a time, y-axis re-fitting) is what made the
+  // reveal choppy. Frame 0 expands to the full x-axis + a fixed y-range while still
+  // showing only the setup candles, so the outcome simply slides into fixed slots.
+  let lo = Infinity, hi = -Infinity;
+  def.ohlc.forEach(c => { if (c[2] < lo) lo = c[2]; if (c[3] > hi) hi = c[3]; });
+  const pad = Math.max(0.5, (hi - lo) * 0.08);
+  inst.setOption({
+    animationDurationUpdate: _REVEAL_MS,
+    animationEasingUpdate: 'cubicOut',
+    xAxis:  { data: def.labels },
+    yAxis:  { min: +(lo - pad).toFixed(2), max: +(hi + pad).toFixed(2) },
+    series: [{ data: setupOhlc, animationDuration: _REVEAL_MS, animationDelay: 0,
+               markLine: { symbol: ['none', 'none'], silent: true, data: divider } }]
+  }, { notMerge: false });
+
+  let n = 0;
+  const total = outOhlc.length;
+  const timer = setInterval(() => {
+    n++;
+    inst.setOption({ series: [{ data: [...setupOhlc, ...mkOut(n)], animationDuration: _REVEAL_MS, animationDelay: 0 }] }, { notMerge: false });
+    if (n >= total) {
+      clearInterval(timer);
+      // Full reveal styling (revealMarkPoints + shade). The fixed y min/max persist
+      // through this merge, so there's no final rescale jump.
+      revealChart(elId, def);
+      _revealGlow(elId);
+      if (onComplete) onComplete();
+    }
+  }, _REVEAL_MS);
+}
+
+// Replay button under a revealed synthetic chart — resets to the setup candles
+// and re-runs the candle-by-candle reveal.
+function _addReplayBtn(elId, def) {
+  const card = document.getElementById(elId)?.closest('.chart-card');
+  if (!card || card.querySelector('.chart-replay-btn')) return;
+  const btn = document.createElement('button');
+  btn.className = 'chart-replay-btn';
+  btn.innerHTML = '<i data-lucide="rotate-ccw"></i> Replay';
+  card.appendChild(btn);
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+  btn.onclick = () => {
+    const cut = def.cutIndex;
+    const inst = charts[elId];
+    if (!inst || cut == null) return;
+    btn.style.display = 'none';
+    // Reset to setup candles only — keep price-zone markAreas, drop reveal pins + divider.
+    inst.setOption({
+      xAxis:  { data: def.labels.slice(0, cut) },
+      series: [{ data: def.ohlc.slice(0, cut), markLine: { data: [] }, markPoint: { data: [] } }]
+    }, { notMerge: false });
+    setTimeout(() => _animateSyntheticReveal(elId, def, () => { btn.style.display = 'flex'; }), 200);
+  };
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
@@ -1445,33 +2110,35 @@ window.handleAnswer = function(answerId) {
 
   const correct = !!chosen.correct;
 
-  if (correct) {
-    // Correct: lock all buttons permanently with full visual states
-    document.querySelectorAll('.answer-btn').forEach(btn => {
-      btn.disabled = true;
-      const btnId  = btn.dataset.answer;
-      const btnDef = quiz.answers.find(a => a.id === btnId);
-      if (!btnDef) return;
-      if (btnId === answerId) {
-        btn.classList.add('answer-btn--correct');
-      } else if (btnDef.correct) {
-        btn.classList.add('answer-btn--missed');
-      } else {
-        btn.classList.add('answer-btn--dimmed');
-      }
-    });
-  } else {
-    // Wrong: briefly highlight the wrong choice, then re-enable all buttons for retry
-    document.querySelectorAll('.answer-btn').forEach(btn => {
-      if (btn.dataset.answer === answerId) btn.classList.add('answer-btn--wrong');
-    });
-    setTimeout(() => {
-      document.querySelectorAll('.answer-btn').forEach(btn => {
-        btn.classList.remove('answer-btn--wrong');
-        btn.disabled = false;
-      });
-    }, 1200);
+  if (!correct) {
+    // Wrong: shake + red flash on selected button, then re-enable for retry
+    // Chart is NOT revealed until the correct answer is chosen
+    const wrongBtn = document.querySelector(`.answer-btn[data-answer="${answerId}"]`);
+    if (wrongBtn) {
+      wrongBtn.disabled = true;
+      wrongBtn.classList.add('answer-btn--wrong', 'answer-btn--shake');
+      setTimeout(() => {
+        wrongBtn.classList.remove('answer-btn--wrong', 'answer-btn--shake');
+        wrongBtn.disabled = false;
+      }, 650);
+    }
+    return;
   }
+
+  // Correct: lock all buttons permanently with full visual states
+  document.querySelectorAll('.answer-btn').forEach(btn => {
+    btn.disabled = true;
+    const btnId  = btn.dataset.answer;
+    const btnDef = quiz.answers.find(a => a.id === btnId);
+    if (!btnDef) return;
+    if (btnId === answerId) {
+      btn.classList.add('answer-btn--correct');
+    } else if (btnDef.correct) {
+      btn.classList.add('answer-btn--missed');
+    } else {
+      btn.classList.add('answer-btn--dimmed');
+    }
+  });
 
   // Helper: inject explanation panel into quiz card
   function showExplanation() {
@@ -1524,10 +2191,10 @@ window.handleAnswer = function(answerId) {
           value: c,
           itemStyle: {
             color:        'transparent',
-            borderColor:  isBull ? TEAL : RED,
+            borderColor:  isBull ? TEAL : BEAR,
             borderWidth:  1.5,
             color0:       'transparent',
-            borderColor0: RED
+            borderColor0: BEAR
           }
         };
       });
@@ -1578,8 +2245,7 @@ window.handleAnswer = function(answerId) {
         if (quizCard && !quizCard.querySelector('.chart-replay-btn')) {
           const replayBtn = document.createElement('button');
           replayBtn.className = 'chart-replay-btn';
-          replayBtn.innerHTML = '<i data-lucide="rotate-ccw" style="width:12px;height:12px;"></i> Replay';
-          replayBtn.style.cssText = 'display:block;margin:4px 0 2px auto;padding:2px 10px;background:transparent;color:#9494b0;font-size:11px;border:1px solid '+getBullishColor()+';border-radius:10px;cursor:pointer;font-family:Barlow,sans-serif;';
+          replayBtn.innerHTML = '<i data-lucide="rotate-ccw"></i> Replay';
           quizCard.appendChild(replayBtn);
           if (typeof lucide !== 'undefined') lucide.createIcons();
           replayBtn.onclick = () => {
@@ -1609,10 +2275,10 @@ window.handleAnswer = function(answerId) {
                     value: c,
                     itemStyle: {
                       color:        'transparent',
-                      borderColor:  isBull ? TEAL : RED,
+                      borderColor:  isBull ? TEAL : BEAR,
                       borderWidth:  1.5,
                       color0:       'transparent',
-                      borderColor0: RED
+                      borderColor0: BEAR
                     }
                   };
                 });
@@ -1642,7 +2308,7 @@ window.handleAnswer = function(answerId) {
                 if (rc >= rTotal) {
                   clearInterval(_replayInterval);
                   _replayInterval = null;
-                  replayBtn.style.display = 'block';
+                  replayBtn.style.display = 'flex';
                 }
               }, 280);
             }, 300);
@@ -1651,23 +2317,27 @@ window.handleAnswer = function(answerId) {
       }
     }, 280);
 
-  } else if (!correct && window._currentRealPattern) {
-    // Wrong answer on real data: red glow + immediate explanation; keep pattern for retry
-    const chartEl = document.getElementById('chart-quiz');
-    if (chartEl) {
-      chartEl.style.transition = 'box-shadow 0.3s ease';
-      chartEl.style.boxShadow  = '0 0 18px 4px rgba(204,34,34,0.45)';
-      setTimeout(() => { chartEl.style.boxShadow = ''; }, 1400);
-    }
-    showExplanation();
-
   } else {
-    // Static chart path: reveal all candles immediately
-    const def = { ...quiz.chart, revealMarkPoints: quiz.revealMarkPoints || [] };
-    revealChart('chart-quiz', def);
+    // Synthetic (simulation) path — deliberate candle-by-candle reveal so the
+    // outcome lands as a moment (was an instant pop), then explanation + glow.
+    const def     = { ...quiz.chart, revealMarkPoints: quiz.revealMarkPoints || [] };
     const badgeEl = document.querySelector('.chart-card-badge');
-    if (badgeEl) badgeEl.textContent = 'Revealed';
-    showExplanation();
+    if (def.cutIndex != null && def.cutIndex < def.ohlc.length) {
+      window._ltRevealing = true;
+      if (badgeEl) badgeEl.textContent = 'Revealing…';
+      updateNavButtons();
+      _animateSyntheticReveal('chart-quiz', def, () => {
+        window._ltRevealing = false;
+        if (badgeEl) badgeEl.textContent = 'Revealed';
+        showExplanation();
+        updateNextBtn();
+        _addReplayBtn('chart-quiz', def);
+      });
+    } else {
+      revealChart('chart-quiz', def);
+      if (badgeEl) badgeEl.textContent = 'Revealed';
+      showExplanation();
+    }
   }
 
   // Save progress — quizCorrect only becomes true on a correct answer
@@ -1693,14 +2363,15 @@ function navigate(direction) {
   let step    = state.step;
 
   if (direction === 'next') {
-    // BUG 1 + BUG 2: Quiz gating — cannot advance from quiz step without a correct answer
-    if (step === 2) {
+    const kind = stepKindAt(CHAPTERS[ch], step);
+    // Quiz gating — cannot advance from the quiz step without a correct answer.
+    if (kind === 'quiz') {
       const prog = state.progress[ch];
       if (!prog || !prog.quizCorrect) {
         showToast('Answer the question to continue');
         return;
       }
-      // BUG 2: Mark chapter complete only here — correct answer + clicking Next
+      // Mark chapter complete only here — correct answer + clicking Next.
       markChapterCompleted(ch);
       updateProgressUI();
       updateSidebar();
@@ -1711,17 +2382,17 @@ function navigate(direction) {
           const lockIcon = document.getElementById('exam-lock-icon');
           if (lockIcon) lockIcon.style.display = 'none';
         }
-        setTimeout(() => showToast('<i data-lucide="award" style="width:14px;height:14px;"></i> All chapters complete! Final Exam is now unlocked.'), 800);
+        setTimeout(() => showToast('<i data-lucide="award" style="width:14px;height:14px;"></i> All sessions complete! Final Exam is now unlocked.'), 800);
         setTimeout(() => maybeShowBackupReminder(getActiveCourseNum()), 1900);
       }
     }
     step++;
-    if (step > 2) {
+    if (step > lastStepIdx(CHAPTERS[ch])) {
       step = 0;
       ch++;
       if (ch >= CHAPTERS.length) {
         // End of course
-        showToast('🎉 Course complete! Take the Final Exam.');
+        showToast('Course complete! Take the Final Exam.', 3000, 'award');
         return;
       }
     }
@@ -1730,7 +2401,7 @@ function navigate(direction) {
     if (step < 0) {
       ch--;
       if (ch < 0) return;
-      step = 2;
+      step = lastStepIdx(CHAPTERS[ch]);
     }
   }
 
@@ -1766,9 +2437,30 @@ function jumpToChapter(chapterIdx) {
     scrollContentToTop();
     closeSidebar();
   } else {
-    showToast('⚠️ Complete the previous chapter first.');
+    showToast('Complete the previous session first.', 3000, 'lock');
   }
 }
+
+/* Jump between steps (Introduction / Lesson / Quiz) within the CURRENT chapter —
+   driven by the step pills now shown in the sidebar under the active chapter. */
+window.goToStep = function(stepIdx) {
+  if (state.view !== 'course') return;
+  const chapter = currentChapter();
+  if (stepIdx < 0 || stepIdx > lastStepIdx(chapter) || stepIdx === state.step) return;
+  state.step = stepIdx;
+  const prog = state.progress[state.chapter];
+  state.quizAnsweredThisStep = stepKindAt(chapter, stepIdx) === 'quiz' && !!(prog && prog.quizCorrect);
+
+  markChapterStarted(state.chapter);
+  saveState();
+
+  renderCurrentStep();
+  updateHeaderUI();
+  updateProgressUI();
+  updateSidebar();
+  updateNavButtons();
+  scrollContentToTop();
+};
 
 function scrollContentToTop() {
   const ca = document.getElementById('content-area');
@@ -1780,28 +2472,46 @@ function scrollContentToTop() {
    ══════════════════════════════════════════════════════════════════════════ */
 function renderCurrentStep() {
   state.view = 'course';   // course content now owns #content-area
+  setHomeNavActive();
   disposeAllCharts();
   const chapter = CHAPTERS[state.chapter];
   if (!chapter) return;
 
-  if (state.step === 0) {
-    renderIntro(chapter);
-    updateStepPills();
-    updateStepDots();
-  } else if (state.step === 1) {
-    renderLesson(chapter);
-    updateStepPills();
-    updateStepDots();
-  } else if (state.step === 2) {
-    // Check if already answered from saved state
-    const prog = state.progress[state.chapter];
-    if (prog && prog.quizCorrect) {
-      state.quizAnsweredThisStep = true;
+  // Lazy-load this course's reconstruction recipes + TTS timelines + cues. The step
+  // model itself depends on whether a recipe exists (recon chapters get the 4th "Visual"
+  // step), so on first load we re-render the chapter once the recipe resolves.
+  if (chapter.videoUrl) {
+    const _cn = getActiveCourseNum();
+    const needRecon = typeof window[_reconSetForCourse(_cn)] === 'undefined';
+    const needTl    = typeof window[_timelinesSetForCourse(_cn)] === 'undefined';
+    const needCues  = typeof window[_cuesSetForCourse(_cn)] === 'undefined';
+    const needMeta  = typeof window[_chartmetaSetForCourse(_cn)] === 'undefined';
+    if (needRecon || needTl || needCues || needMeta) {
+      const _c = state.chapter;
+      Promise.all([ensureReconLoaded(_cn), ensureTimelinesLoaded(_cn), ensureCuesLoaded(_cn), ensureChartMetaLoaded(_cn)]).then(() => {
+        if (needRecon && state.chapter === _c && getRecon(CHAPTERS[_c])) renderCurrentStep();
+      });
     }
-    renderQuiz(chapter);
-    updateStepPills();
-    updateStepDots();
   }
+
+  const kind = stepKindAt(chapter, state.step);
+  if (kind === 'intro') {
+    renderIntro(chapter);
+  } else if (kind === 'visual') {
+    renderVisual(chapter);
+  } else if (kind === 'lesson') {
+    if (hasRecon(chapter)) renderReconLesson(chapter);   // animated player IS the lesson
+    else renderLesson(chapter);
+  } else { // quiz
+    const prog = state.progress[state.chapter];
+    if (prog && prog.quizCorrect) state.quizAnsweredThisStep = true;
+    renderQuiz(chapter);
+  }
+  updateStepPills();
+  updateStepDots();
+  // Keep the Next button's gate state in sync with the rendered step — important when a
+  // recon-triggered re-render changes the step kind (e.g. lesson → visual) after load.
+  updateNavButtons();
 }
 
 function setContent(html) {
@@ -1813,11 +2523,18 @@ function setContent(html) {
    HEADER UI
    ══════════════════════════════════════════════════════════════════════════ */
 /* Per-course identity accent (course 1 teal, 2 gold, 3 purple, 4 red). Drives
-   the header's accent (header tag, step pills, progress bar) via --course-accent. */
-const LT_COURSE_ACCENTS = { 1: '#00d4d4', 2: '#e0b020', 3: '#a855f7', 4: '#cc2222' };
+   the header's accent (header tag, step pills, progress bar) via --course-accent.
+   Light mode uses deeper variants so the accents stay legible on white. */
+/* Miami Vice neon spectrum: cyan → hot-pink → purple → sunset-coral.
+   Cyan stays the brand primary (C1); light variants are deepened for white. */
+const LT_COURSE_ACCENTS       = { 1: '#00d4d4', 2: '#ff7a4d', 3: '#a855f7', 4: '#ff2e88' };
+const LT_COURSE_ACCENTS_LIGHT = { 1: '#0d9488', 2: '#ea580c', 3: '#7c3aed', 4: '#db2777' };
+function ltCourseAccent(n) {
+  const map = _ltIsLight() ? LT_COURSE_ACCENTS_LIGHT : LT_COURSE_ACCENTS;
+  return map[n] || (_ltIsLight() ? '#0d9488' : '#00d4d4');
+}
 function applyCourseAccent() {
-  const accent = LT_COURSE_ACCENTS[getActiveCourseNum()] || '#00d4d4';
-  document.documentElement.style.setProperty('--course-accent', accent);
+  document.documentElement.style.setProperty('--course-accent', ltCourseAccent(getActiveCourseNum()));
 }
 
 function updateHeaderUI() {
@@ -1834,22 +2551,37 @@ function updateHeaderUI() {
   if (countEl) countEl.textContent = `${state.chapter + 1} / ${CHAPTERS.length}`;
 }
 
-function updateStepPills() {
-  const container = document.getElementById('step-pills');
-  if (!container) return;
+/* Hub/tool views (Home, Glossary, Flashcards, Simulator, Community, Settings)
+   share one header treatment: a "Learning Hub" eyebrow + the page name. Without
+   this, a hub view would keep whatever chapter title was last shown in the header. */
+function setHubHeader(pageName) {
+  applyCourseAccent();
+  const tagEl   = document.getElementById('header-tag');
+  const titleEl = document.getElementById('header-title');
+  if (tagEl)   tagEl.textContent   = 'Learning Hub';
+  if (titleEl) titleEl.textContent = pageName;
+}
 
-  container.innerHTML = STEP_LABELS.map((label, i) => {
-    let cls = 'step-pill';
-    if (i === state.step) cls += ' step-pill--active';
-    else if (i < state.step) cls += ' step-pill--done';
-    return `<div class="${cls}">${i < state.step ? '✓ ' : ''}${label}</div>`;
+// Step indicators now live in the sidebar, under the active chapter (see buildSidebar).
+function stepPillsHtml() {
+  return chapterStepLabels(currentChapter()).map((label, i) => {
+    let cls = 'sb-step';
+    if (i === state.step) cls += ' sb-step--active';
+    else if (i < state.step) cls += ' sb-step--done';
+    return `<button class="${cls}" type="button" onclick="goToStep(${i})">${label}</button>`;
   }).join('');
+}
+
+function updateStepPills() {
+  const container = document.getElementById('sidebar-step-pills');
+  if (!container) return;
+  container.innerHTML = stepPillsHtml();
 }
 
 function updateStepDots() {
   const container = document.getElementById('step-dots');
   if (!container) return;
-  container.innerHTML = STEP_LABELS.map((_, i) => {
+  container.innerHTML = chapterStepLabels(currentChapter()).map((_, i) => {
     let cls = 'step-dot';
     if (i === state.step) cls += ' step-dot--active';
     else if (i < state.step) cls += ' step-dot--done';
@@ -1879,8 +2611,8 @@ function updateProgressUI() {
   // Exam button unlock
   const examBtn  = document.getElementById('start-exam-btn');
   const lockIcon = document.getElementById('exam-lock-icon');
-  if (examBtn) examBtn.disabled = !allChaptersComplete();
-  if (lockIcon) lockIcon.style.display = allChaptersComplete() ? 'none' : '';
+  if (examBtn) examBtn.disabled = !examUnlockedNow();
+  if (lockIcon) lockIcon.style.display = examUnlockedNow() ? 'none' : '';
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
@@ -1895,19 +2627,22 @@ function updateNavButtons() {
   }
 
   if (nextBtn) {
-    const isLast = (state.chapter === CHAPTERS.length - 1 && state.step === 2);
+    const chapter  = currentChapter();
+    const kind     = stepKindAt(chapter, state.step);
+    const isLast   = (state.chapter === CHAPTERS.length - 1 && state.step === lastStepIdx(chapter));
     const nextLabel = document.querySelector('#btn-next .nav-label');
     if (isLast) {
       if (nextLabel) nextLabel.textContent = 'Finish';
-    } else if (state.step === 2) {
-      if (nextLabel) nextLabel.textContent = 'Next Chapter';
+    } else if (kind === 'quiz') {
+      if (nextLabel) nextLabel.textContent = 'Next Session';
     } else {
       if (nextLabel) nextLabel.textContent = 'Next';
     }
-    // BUG 1: Keep Next disabled on quiz step until the student answers correctly
-    const isQuizStep = state.step === 2;
-    const quizPassed = isQuizStep && !!(state.progress[state.chapter] && state.progress[state.chapter].quizCorrect);
-    nextBtn.disabled = isQuizStep && !quizPassed;
+    const prog = state.progress[state.chapter];
+    // Keep Next disabled on the quiz step until answered correctly, and while a reveal
+    // animation is mid-flight (so they watch the outcome land).
+    const quizGate = kind === 'quiz' && !(prog && prog.quizCorrect);
+    nextBtn.disabled = quizGate || !!window._ltRevealing;
   }
 }
 
@@ -1951,9 +2686,9 @@ function buildSidebar() {
 
       let statusIcon = '';
       if (isLocked)                                statusIcon = '<span class="chapter-status" title="Locked"><i data-lucide="lock" style="width:16px;height:16px;color:#555555;"></i></span>';
-      else if (isCompleted && answered && correct) statusIcon = '<span class="chapter-status" title="Passed"><i data-lucide="check-circle" style="width:16px;height:16px;color:#00c878;"></i></span>';
-      else if (isCompleted && answered)            statusIcon = '<span class="chapter-status" title="Reviewed"><i data-lucide="check-circle" style="width:16px;height:16px;color:#00c878;"></i></span>';
-      else if (isCompleted)                        statusIcon = '<span class="chapter-status" title="Complete"><i data-lucide="check-circle" style="width:16px;height:16px;color:#00c878;"></i></span>';
+      else if (isCompleted && answered && correct) statusIcon = '<span class="chapter-status" title="Passed"><i data-lucide="check" style="width:16px;height:16px;color:#00c878;"></i></span>';
+      else if (isCompleted && answered)            statusIcon = '<span class="chapter-status" title="Reviewed"><i data-lucide="check" style="width:16px;height:16px;color:#00c878;"></i></span>';
+      else if (isCompleted)                        statusIcon = '<span class="chapter-status" title="Complete"><i data-lucide="check" style="width:16px;height:16px;color:#00c878;"></i></span>';
       else if (isCurrent)                          statusIcon = '<span class="chapter-status" title="In Progress"><i data-lucide="clock" style="width:16px;height:16px;color:#c8960c;"></i></span>';
 
       let cls = 'chapter-item chapter-item--indented';
@@ -1961,15 +2696,21 @@ function buildSidebar() {
       if (isLocked)    cls += ' chapter-item--locked';
       if (isCompleted) cls += ' chapter-item--completed';
 
+      // The active chapter expands to show its Introduction / Lesson / Quiz steps,
+      // which used to live in the top-right header.
+      const stepsBlock = isCurrent
+        ? `<div class="chapter-steps" id="sidebar-step-pills">${stepPillsHtml()}</div>`
+        : '';
+
       return `
-        <div class="${cls}" role="button" tabindex="0" onclick="jumpToCourseChapter(${courseNum},${i})" title="${ch.title}" aria-label="${ch.title}">
-          <span class="chapter-num" style="color:${COURSE_ACCENTS[courseNum] || '#00d4d4'}">${String(i + 1).padStart(2, '0')}</span>
+        <div class="${cls}" role="button" tabindex="0" data-course="${courseNum}" data-chapter="${i}" onclick="jumpToCourseChapter(${courseNum},${i})" title="${ch.title}" aria-label="${ch.title}">
+          <span class="chapter-num" style="color:${ltCourseAccent(courseNum)}">${String(i + 1).padStart(2, '0')}</span>
           <div class="chapter-item-info">
             <div class="chapter-item-title">${ch.title}</div>
             <div class="chapter-item-tag">${ch.tag}</div>
           </div>
           ${statusIcon}
-        </div>`;
+        </div>${stepsBlock}`;
     }).join('');
   }
 
@@ -1980,36 +2721,33 @@ function buildSidebar() {
     { num: 4, label: 'Course 4: ' + (typeof COURSE4_META !== 'undefined' ? COURSE4_META.subtitle : 'Advanced Mastery'), chapters: typeof LT_CHAPTERS_4 !== 'undefined' ? LT_CHAPTERS_4 : null }
   ].filter(c => c.chapters);
 
-  const COURSE_ACCENTS = { 1: '#00d4d4', 2: '#e0b020', 3: '#a855f7', 4: '#cc2222' };
-
+  // Open the active course's dropdown only when actually inside a course — on the
+  // hub it stays collapsed (re-opens where it was on return).
   nav.innerHTML = courseDefs.map(c => {
     const isActive = c.num === activeCourseNum;
-    const accent   = COURSE_ACCENTS[c.num] || '#00d4d4';
+    const isOpen   = isActive && state.view === 'course';
+    const accent   = ltCourseAccent(c.num);
     return `
       <div class="course-accordion${isActive ? ' course-accordion--active' : ''}" data-course="${c.num}">
         <div class="course-accordion-header" role="button" tabindex="0" onclick="toggleCourseAccordion(${c.num})">
-          <span class="course-accordion-label"><span style="color:${accent}">${c.label.split(':')[0]}:</span><span style="color:#ffffff"> ${c.label.split(':').slice(1).join(':').trim()}</span></span>
-          <span class="course-accordion-chevron${isActive ? ' course-accordion-chevron--open' : ''}" style="color:${accent}">
+          <span class="course-accordion-label"><span style="color:${accent}">${c.label.split(':')[0]}:</span><span class="course-accordion-name"> ${c.label.split(':').slice(1).join(':').trim()}</span>${c.num === 4 ? '<span class="sb-adv">Advanced</span>' : ''}</span>
+          <span class="course-accordion-chevron${isOpen ? ' course-accordion-chevron--open' : ''}" style="color:${accent}">
             <i data-lucide="chevron-right" style="width:16px;height:16px;"></i>
           </span>
         </div>
-        <div class="course-accordion-body${isActive ? ' course-accordion-body--open' : ''}">
+        <div class="course-accordion-body${isOpen ? ' course-accordion-body--open' : ''}">
           ${renderChapters(c.chapters, c.num)}
         </div>
       </div>`;
   }).join('');
 
-  // Final Exam — sits directly under the courses (per active course; unlocks
-  // once every chapter in the active course is complete).
-  const examUnlocked = allChaptersComplete();
+  // Final Exam — sits directly under the courses (per active course; unlocks once
+  // every chapter is complete, and stays unlocked after the first completed attempt).
+  const examUnlocked = examUnlockedNow();
   nav.innerHTML += `
     <div class="sidebar-exam-slot">
-      <button class="btn-exam btn-flashcards" onclick="showFlashcards()" title="Drill this course's terms before the exam">
-        <i data-lucide="layers" style="width:14px;height:14px;"></i>
-        Flashcards
-      </button>
       <button class="btn-exam" id="start-exam-btn" onclick="startExam()" ${examUnlocked ? '' : 'disabled'}
-              title="${examUnlocked ? 'Take the final exam' : 'Complete every chapter in this course to unlock'}">
+              title="${examUnlocked ? 'Take the final exam' : 'Complete every session in this course to unlock'}">
         <i data-lucide="lock" id="exam-lock-icon" class="exam-lock" style="width:14px;height:14px;"></i>
         <i data-lucide="file-text" style="width:14px;height:14px;"></i>
         Final Exam
@@ -2017,6 +2755,32 @@ function buildSidebar() {
     </div>`;
 
   if (typeof lucide !== 'undefined') lucide.createIcons();
+  requestAnimationFrame(scrollActiveChapterIntoView);
+}
+
+/* Keep the active chapter (and its step pills) in view as the learner progresses,
+   scrolling the sidebar's chapter list only when the active item drifts out of view. */
+function scrollActiveChapterIntoView() {
+  const list = document.getElementById('chapter-list');
+  if (!list) return;
+  const active = list.querySelector('.chapter-item--active');
+  if (!active) return;
+  const steps    = document.getElementById('sidebar-step-pills'); // sits just below the active chapter
+  const listRect = list.getBoundingClientRect();
+  const aRect    = active.getBoundingClientRect();
+  const bRect    = steps ? steps.getBoundingClientRect() : aRect;
+  const margin   = 10;
+
+  let delta = 0;
+  if (aRect.top < listRect.top + margin) {
+    delta = aRect.top - (listRect.top + margin);            // active scrolled above the viewport
+  } else if (bRect.bottom > listRect.bottom - margin) {
+    delta = bRect.bottom - (listRect.bottom - margin);      // active/steps fell below the viewport
+  }
+  if (Math.abs(delta) > 1) {
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    list.scrollBy({ top: delta, behavior: reduce ? 'auto' : 'smooth' });
+  }
 }
 
 function updateSidebar() {
@@ -2064,11 +2828,12 @@ function closeSidebar() {
    TOAST
    ══════════════════════════════════════════════════════════════════════════ */
 let toastTimer = null;
-function showToast(msg, duration = 3000) {
+function showToast(msg, duration = 3000, icon) {
   const el = document.getElementById('toast');
   if (!el) return;
-  el.innerHTML = msg;
+  el.innerHTML = icon ? `<i data-lucide="${icon}"></i><span>${msg}</span>` : msg;
   el.classList.remove('hidden');
+  if (icon && typeof lucide !== 'undefined') { try { lucide.createIcons(); } catch(_) {} }
   if (toastTimer) clearTimeout(toastTimer);
   toastTimer = setTimeout(() => el.classList.add('hidden'), duration);
 }
@@ -2081,13 +2846,17 @@ function showWelcomeModal(savedData) {
   const infoEl    = document.getElementById('modal-progress-info');
   const chapter   = CHAPTERS[savedData.chapter];
   const completed = Object.values(savedData.progress || {}).filter(p => p.completed).length;
+  const accent    = ltCourseAccent(getActiveCourseNum());
 
   if (infoEl && chapter) {
-    const stepName = STEP_LABELS[savedData.step] || 'Introduction';
+    const stepName = chapterStepLabels(chapter)[savedData.step] || 'Introduction';
     infoEl.innerHTML = `
       <strong>${chapter.title}</strong><br/>
-      Step: ${stepName} · ${completed} / ${CHAPTERS.length} chapters complete`;
+      Step: ${stepName} · ${completed} / ${CHAPTERS.length} sessions complete`;
   }
+
+  const box = modal && modal.querySelector('.modal-box');
+  if (box) box.style.setProperty('--modal-accent', accent);
 
   if (modal) modal.classList.remove('hidden');
 }
@@ -2100,12 +2869,40 @@ function hideWelcomeModal() {
 /* ══════════════════════════════════════════════════════════════════════════
    EXAM HELPERS
    ══════════════════════════════════════════════════════════════════════════ */
-function getExamQuestions() {
+// Full authored question POOL for the active course.
+function _examPool() {
   const n = getActiveCourseNum();
   if (n === 4 && typeof LT_EXAM_QUESTIONS_4 !== 'undefined') return LT_EXAM_QUESTIONS_4;
   if (n === 3 && typeof LT_EXAM_QUESTIONS_3 !== 'undefined') return LT_EXAM_QUESTIONS_3;
   if (n === 2 && typeof LT_EXAM_QUESTIONS_2 !== 'undefined') return LT_EXAM_QUESTIONS_2;
   return LT_EXAM_QUESTIONS;
+}
+
+// Sample a fresh exam from the pool each attempt (shuffled subset) so the Final
+// Exam varies between attempts instead of being a fixed list of chapter quizzes.
+const EXAM_LENGTH      = 10;
+const EXAM_CHART_QUOTA = 4;   // guarantee chart-reading is tested when the pool has chart questions
+function _shuffleArr(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {          // Fisher–Yates
+    const j = (Math.random() * (i + 1)) | 0;
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+function _buildExamSet() {
+  const pool     = _examPool().slice();
+  const charts_  = _shuffleArr(pool.filter(q => q.chart));   // chart-reading questions
+  const concepts = _shuffleArr(pool.filter(q => !q.chart));  // text/recall questions
+  const wantChart = Math.min(EXAM_CHART_QUOTA, charts_.length, EXAM_LENGTH);
+  // Front-load the guaranteed charts, then concepts, then any leftover charts; take
+  // EXAM_LENGTH so the set always includes the chart quota, then shuffle display order.
+  const set = charts_.slice(0, wantChart).concat(concepts, charts_.slice(wantChart));
+  return _shuffleArr(set.slice(0, Math.min(EXAM_LENGTH, set.length)));
+}
+
+// During an attempt the exam reads the fixed sampled set; otherwise the full pool.
+function getExamQuestions() {
+  return (state.examMode && Array.isArray(state.examSet) && state.examSet.length) ? state.examSet : _examPool();
 }
 
 function getCourseName() {
@@ -2119,10 +2916,16 @@ function getCourseName() {
 /* ══════════════════════════════════════════════════════════════════════════
    FINAL EXAM
    ══════════════════════════════════════════════════════════════════════════ */
+/* Once a course's exam has been completed at least once, keep it permanently
+   unlocked so the student can revisit / review it anytime — even after a reset. */
+function _examDoneKey(n) { return 'lt_examDone_' + n; }
+function examDoneBefore(n) { try { return localStorage.getItem(_examDoneKey(n)) === '1'; } catch (_) { return false; } }
+function examUnlockedNow() { return allChaptersComplete() || examDoneBefore(getActiveCourseNum()); }
+
 window.startExam = startExam;
 function startExam() {
-  if (!allChaptersComplete()) {
-    showToast(`⚠️ Complete all ${CHAPTERS.length} chapters first.`);
+  if (!examUnlockedNow()) {
+    showToast(`Complete all ${CHAPTERS.length} sessions first.`, 3000, 'lock');
     return;
   }
 
@@ -2130,6 +2933,8 @@ function startExam() {
   state.examQuestion = 0;
   state.examAnswers  = {};
   state.examComplete = false;
+  state.examSeed     = (Math.random() * 0x7fffffff) | 0;  // randomise answer order per attempt
+  state.examSet      = _buildExamSet();                   // sample this attempt's questions from the pool
 
   const examScreen = document.getElementById('exam-screen');
   const examResult = document.getElementById('exam-result');
@@ -2143,6 +2948,7 @@ function startExam() {
 }
 
 function renderExamQuestion() {
+  disposeChart('exam-chart');   // tear down the prior question's chart before its DOM node is replaced
   const q   = getExamQuestions()[state.examQuestion];
   const idx = state.examQuestion;
 
@@ -2157,13 +2963,20 @@ function renderExamQuestion() {
 
   const letters = ['A','B','C','D','E'];
 
+  // Shuffle answer order so the correct choice isn't always in the same slot.
+  // Seeded by (per-attempt seed + question index) → stable within an attempt,
+  // re-randomised on each new attempt. Selection/scoring keys off answer id,
+  // so changing display order never affects correctness.
+  const shuffledAnswers = _seededShuffle(q.answers, (state.examSeed || 0) + idx * 101);
+
   body.innerHTML = `
     <div class="exam-q-card">
       <div class="exam-q-num">Question ${idx + 1} of ${getExamQuestions().length}</div>
+      ${q.chart ? `<div class="exam-chart-card"><div id="exam-chart" class="exam-chart"></div></div>` : ''}
       <div class="exam-q-text">${q.question}</div>
-      <div class="exam-q-chapter">Chapter ${q.chapterIndex + 1}: ${q.chapterTitle}</div>
+      <div class="exam-q-chapter">${q.chapterTitle}</div>
       <div class="exam-answers" id="exam-answers-${idx}">
-        ${q.answers.map((a, ai) => `
+        ${shuffledAnswers.map((a, ai) => `
           <button class="exam-answer-btn" data-qidx="${idx}" data-aid="${a.id}"
             onclick="handleExamAnswer(${idx}, '${a.id}')">
             <span class="exam-answer-letter">${letters[ai] || a.id.toUpperCase()}</span>
@@ -2175,29 +2988,37 @@ function renderExamQuestion() {
         ${idx === getExamQuestions().length - 1 ? 'Submit Exam <i data-lucide="arrow-right" style="width:14px;height:14px;"></i>' : 'Next Question <i data-lucide="arrow-right" style="width:14px;height:14px;"></i>'}
       </button>
     </div>`;
+
+  // Render the scenario chart at the decision point — the outcome is NOT revealed
+  // (revealMode false), so the student must actually read the chart to answer.
+  if (q.chart) renderChart('exam-chart', q.chart, false);
+
+  // Restore a prior selection (e.g. after a re-render) without revealing correctness.
+  const prior = state.examAnswers[idx];
+  if (prior !== undefined) {
+    document.querySelectorAll(`#exam-answers-${idx} .exam-answer-btn`).forEach(btn => {
+      btn.classList.toggle('exam-answer-btn--selected', btn.dataset.aid === prior);
+    });
+    const nb = document.getElementById('exam-next-btn');
+    if (nb) nb.classList.add('show');
+  }
+
   if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
 window.handleExamAnswer = function(qIdx, answerId) {
-  if (state.examAnswers[qIdx] !== undefined) return;
+  if (qIdx !== state.examQuestion) return;
 
+  // Record the choice. Correctness is NOT revealed per-question — only the final
+  // score grades the exam, so it functions as a real assessment. The answer stays
+  // changeable until the student advances to the next question.
   state.examAnswers[qIdx] = answerId;
 
-  const q      = getExamQuestions()[qIdx];
-  const correct = q.answers.find(a => a.id === answerId && a.correct);
-
-  // Style buttons
   document.querySelectorAll(`#exam-answers-${qIdx} .exam-answer-btn`).forEach(btn => {
-    btn.disabled = true;
-    const bid = btn.dataset.aid;
-    const bDef = q.answers.find(a => a.id === bid);
-    if (!bDef) return;
-    if (bid === answerId && bDef.correct) btn.classList.add('exam-answer-btn--correct');
-    else if (bid === answerId && !bDef.correct) btn.classList.add('exam-answer-btn--wrong');
-    else if (bDef.correct) btn.classList.add('exam-answer-btn--missed');
+    btn.classList.toggle('exam-answer-btn--selected', btn.dataset.aid === answerId);
   });
 
-  // Show next button
+  // Show next/submit button
   const nextBtn = document.getElementById('exam-next-btn');
   if (nextBtn) nextBtn.classList.add('show');
 };
@@ -2219,6 +3040,7 @@ window.examNext = function() {
 
 function finishExam() {
   state.examComplete = true;
+  try { localStorage.setItem(_examDoneKey(getActiveCourseNum()), '1'); } catch (_) {}   // keep the exam unlocked for revisits
 
   const fill    = document.getElementById('exam-progress-fill');
   const counter = document.getElementById('exam-q-counter');
@@ -2242,6 +3064,7 @@ function finishExam() {
 
   if (body)   body.classList.add('hidden');
   if (result) result.classList.remove('hidden');
+  disposeChart('exam-chart');
 
   // Find weak chapters
   const weak = getExamQuestions()
@@ -2286,6 +3109,8 @@ window.restartExam = function() {
   state.examAnswers  = {};
   state.examQuestion = 0;
   state.examComplete = false;
+  state.examSeed     = (Math.random() * 0x7fffffff) | 0;  // reshuffle answers on retry
+  state.examSet      = _buildExamSet();                   // fresh sample of questions on retry
 
   const result = document.getElementById('exam-result');
   const body   = document.getElementById('exam-body');
@@ -2303,7 +3128,103 @@ window.restartExam = function() {
 window.exitExam = function() {
   const examScreen = document.getElementById('exam-screen');
   if (examScreen) examScreen.classList.add('hidden');
+  disposeChart('exam-chart');
   state.examMode = false;
+};
+
+/* ══════════════════════════════════════════════════════════════════════════
+   EXAM ANSWER KEY — read-only review of every exam question + correct answer,
+   across all four courses. Opened from Settings. Not a graded attempt.
+   ══════════════════════════════════════════════════════════════════════════ */
+function _injectAnswerKeyStyles() {
+  if (document.getElementById('lt-ak-styles')) return;
+  const s = document.createElement('style');
+  s.id = 'lt-ak-styles';
+  s.textContent = `
+  .ak-wrap { max-width:860px; margin:0 auto; padding:0 0 60px; }
+  .ak-head { margin:0 0 22px; padding:0 0 16px; border-bottom:1px solid var(--border); }
+  .ak-back { display:inline-flex; align-items:center; gap:6px; background:none; border:none; color:var(--teal); font-family:'JetBrains Mono',monospace; font-size:13px; font-weight:600; cursor:pointer; padding:0; margin-bottom:12px; }
+  .ak-back:hover { opacity:.8; }
+  .ak-back i { width:15px; height:15px; }
+  .ak-title { font-family:'JetBrains Mono',monospace; font-size:21px; font-weight:800; letter-spacing:-0.5px; color:var(--text); }
+  .ak-sub { font-size:12px; color:var(--text3); margin-top:5px; line-height:1.55; }
+  .ak-course { margin-bottom:30px; }
+  .ak-course-head { display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:14px; padding-bottom:8px; border-bottom:1px solid var(--ak-accent); }
+  .ak-course-tag { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:1px; color:#0b0b0e; background:var(--ak-accent); padding:2px 8px; border-radius:6px; }
+  .ak-course-name { font-size:15px; font-weight:700; color:var(--text); }
+  .ak-course-count { font-size:11px; color:var(--text3); margin-left:auto; }
+  .ak-q { background:var(--bg3); border:1px solid var(--border); border-radius:var(--radius); padding:14px 16px; margin-bottom:10px; }
+  .ak-q-top { display:flex; align-items:center; gap:9px; margin-bottom:9px; flex-wrap:wrap; }
+  .ak-q-n { font-size:11px; font-weight:700; color:var(--ak-accent); font-family:'JetBrains Mono',monospace; }
+  .ak-q-chapter { font-size:10px; text-transform:uppercase; letter-spacing:.5px; color:var(--text3); background:var(--bg4); border:1px solid var(--border2); padding:2px 8px; border-radius:8px; }
+  .ak-q-chart { display:inline-flex; align-items:center; gap:4px; font-size:10px; color:var(--teal); }
+  .ak-q-chart i { width:12px; height:12px; }
+  .ak-q-text { font-size:14px; font-weight:600; color:var(--text); line-height:1.45; margin-bottom:11px; }
+  .ak-opts { display:flex; flex-direction:column; gap:6px; }
+  .ak-opt { display:flex; align-items:flex-start; gap:9px; font-size:12.5px; color:var(--text2); line-height:1.5; padding:8px 11px; border:1px solid var(--border); border-radius:8px; background:var(--bg4); }
+  .ak-opt--correct { border-color:var(--teal); background:var(--teal-faint); color:var(--text); }
+  .ak-opt-mark { flex-shrink:0; width:15px; min-width:15px; color:var(--teal); }
+  .ak-opt-mark i { width:14px; height:14px; }`;
+  document.head.appendChild(s);
+}
+
+window.showExamAnswerKey = function() {
+  const area = document.getElementById('content-area');
+  if (!area) return;
+  state.view = 'answerkey';
+
+  const pools = [
+    { n: 1, name: 'Laying the Foundation',  pool: (typeof LT_EXAM_QUESTIONS   !== 'undefined' ? LT_EXAM_QUESTIONS   : []) },
+    { n: 2, name: (typeof COURSE2_META !== 'undefined' ? COURSE2_META.title : 'Building Your Toolbox'),   pool: (typeof LT_EXAM_QUESTIONS_2 !== 'undefined' ? LT_EXAM_QUESTIONS_2 : []) },
+    { n: 3, name: (typeof COURSE3_META !== 'undefined' ? COURSE3_META.title : 'Sharpening Your Edge'),    pool: (typeof LT_EXAM_QUESTIONS_3 !== 'undefined' ? LT_EXAM_QUESTIONS_3 : []) },
+    { n: 4, name: (typeof COURSE4_META !== 'undefined' ? COURSE4_META.title : 'Liquidity Theory'),        pool: (typeof LT_EXAM_QUESTIONS_4 !== 'undefined' ? LT_EXAM_QUESTIONS_4 : []) }
+  ];
+  const total = pools.reduce((s, p) => s + p.pool.length, 0);
+
+  const esc = t => String(t == null ? '' : t);
+  const sections = pools.map(p => {
+    const accent = (typeof ltCourseAccent === 'function') ? ltCourseAccent(p.n) : '#00d4d4';
+    const qs = p.pool.map((q, i) => {
+      const opts = q.answers.map(a => `
+            <div class="ak-opt${a.correct ? ' ak-opt--correct' : ''}">
+              <span class="ak-opt-mark">${a.correct ? '<i data-lucide="check"></i>' : ''}</span>
+              <span>${esc(a.text)}</span>
+            </div>`).join('');
+      return `
+          <div class="ak-q">
+            <div class="ak-q-top">
+              <span class="ak-q-n">Q${i + 1}</span>
+              <span class="ak-q-chapter">${esc(q.chapterTitle)}</span>
+              ${q.chart ? '<span class="ak-q-chart"><i data-lucide="candlestick-chart"></i> chart question</span>' : ''}
+            </div>
+            <div class="ak-q-text">${esc(q.question)}</div>
+            <div class="ak-opts">${opts}</div>
+          </div>`;
+    }).join('');
+    return `
+      <div class="ak-course" style="--ak-accent:${accent}">
+        <div class="ak-course-head">
+          <span class="ak-course-tag">Course ${p.n}</span>
+          <span class="ak-course-name">${esc(p.name)}</span>
+          <span class="ak-course-count">${p.pool.length} questions</span>
+        </div>
+        ${qs}
+      </div>`;
+  }).join('');
+
+  area.innerHTML = `
+    <div class="ak-wrap">
+      <div class="ak-head">
+        <button class="ak-back" onclick="showSettings()"><i data-lucide="arrow-left"></i> Back to Settings</button>
+        <div class="ak-title">Exam Answer Key</div>
+        <div class="ak-sub">${total} questions across all four final exams — correct answers marked. Review only; each real exam randomly samples and shuffles from these.</div>
+      </div>
+      ${sections}
+    </div>`;
+
+  _injectAnswerKeyStyles();
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+  area.scrollTop = 0;
 };
 
 /* ══════════════════════════════════════════════════════════════════════════
@@ -2315,6 +3236,18 @@ window.showCertificate = function(correct, total) {
   const certScreen = document.getElementById('cert-screen');
   const scoreEl    = document.getElementById('cert-score-display');
   const dateEl     = document.getElementById('cert-date-display');
+  const courseEl   = document.getElementById('cert-course-name');
+  const nameEl     = document.getElementById('cert-name');
+
+  // Name the specific course completed (not a generic "Full Curriculum").
+  if (courseEl) courseEl.textContent = getCourseName();
+
+  // Optional recipient name — no account, so it's stored locally and editable
+  // right on the certificate. Persists across visits.
+  if (nameEl) {
+    nameEl.value = localStorage.getItem('lt_cert_name') || '';
+    nameEl.oninput = () => { localStorage.setItem('lt_cert_name', nameEl.value); };
+  }
 
   if (scoreEl) scoreEl.textContent = `Final Exam Score: ${correct}/${total} (${pct}%)`;
   if (dateEl)  dateEl.textContent  = `Completed: ${new Date().toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' })}`;
@@ -2327,40 +3260,94 @@ window.showCertificate = function(correct, total) {
 /* ══════════════════════════════════════════════════════════════════════════
    INTRO VIDEO BUTTON
    ══════════════════════════════════════════════════════════════════════════ */
-window.toggleIntroVideo = function(videoUrl) {
-  const wrap     = document.getElementById('intro-video-wrap');
-  const btn      = document.getElementById('intro-video-btn');
-  const chartEl  = document.getElementById('chart-intro');
+// Switch the intro chart card between its candlestick chart and the video lesson,
+// driven by the segmented tabs in the chart-card header. Idempotent.
+window.setIntroView = function(view, videoUrl) {
+  const wrap      = document.getElementById('intro-video-wrap');
+  const chartEl   = document.getElementById('chart-intro');
+  const conceptEl = document.getElementById('concept-intro');  // concept-format intro body
   const expandBtn = document.getElementById('expand-chart-intro');
-  if (!wrap) return;
+  const layout    = document.querySelector('.intro-layout');
+  const chartCard = wrap ? wrap.closest('.chart-card')
+                         : (chartEl || conceptEl ? (chartEl || conceptEl).closest('.chart-card') : null);
+  if (!chartCard) return;
+  const tabs = chartCard.querySelector('.chart-view-tabs');
 
-  const existing = wrap.querySelector('.intro-video-frame-wrap');
-  if (existing) {
-    // Close: remove iframe, restore the chart + controls
-    existing.remove();
+  const markActive = (v) => {
+    if (!tabs) return;
+    tabs.querySelectorAll('.cvt-tab').forEach(t => {
+      const on = t.dataset.view === v;
+      t.classList.toggle('cvt-tab--active', on);
+      t.setAttribute('aria-selected', on ? 'true' : 'false');
+    });
+  };
+
+  if (view === 'play') {
+    // Native reconstruction player IN PLACE of the YouTube embed.
+    if (!wrap) return;
+    const frame = wrap.querySelector('.intro-video-frame-wrap');
+    if (frame) frame.remove();
+    disposeReconPlayer();
+    let host = wrap.querySelector('.recon-player-host');
+    if (!host) { host = document.createElement('div'); host.className = 'recon-player-host'; wrap.appendChild(host); }
+    host.innerHTML = '';
+    const _chap = (typeof CHAPTERS !== 'undefined') ? CHAPTERS[state.chapter] : null;
+    const doc = _chap ? getRecon(_chap) : null;
+    const tline = _chap ? getTimeline(_chap) : null;     // audio-driven when a TTS timeline exists
+    const cues = _chap ? getCues(_chap) : null;          // transcript-reactive accents when present
+    const meta = _chap ? getChartMeta(_chap) : null;     // real ticker + price-axis calibration
+    if (doc && typeof LTPlayer !== 'undefined') _reconPlayer = new LTPlayer(host, doc, tline, cues, meta);
+    if (chartEl)   chartEl.style.display = 'none';
+    if (conceptEl) conceptEl.style.display = 'none';
+    if (expandBtn) expandBtn.style.display = 'none';
+    if (layout)    layout.classList.add('intro-layout--theater');
+    chartCard.style.maxWidth = '100%';
+    markActive('play');
+  } else if (view === 'video') {
+    if (!wrap) return;
+    disposeReconPlayer();
+    const ph = wrap.querySelector('.recon-player-host'); if (ph) ph.remove();
+    if (!wrap.querySelector('.intro-video-frame-wrap')) {
+      const frameWrap = document.createElement('div');
+      frameWrap.className = 'intro-video-frame-wrap';
+      frameWrap.innerHTML = `
+        <iframe
+          src="${videoUrl}"
+          width="100%" height="520"
+          style="border:0;display:block;border-radius:4px;"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+          allowfullscreen
+          loading="lazy"
+        ></iframe>`;
+      wrap.appendChild(frameWrap);
+    }
+    if (chartEl)   chartEl.style.display = 'none';
+    if (conceptEl) conceptEl.style.display = 'none';
+    if (expandBtn) expandBtn.style.display = 'none';
+    if (layout)    layout.classList.add('intro-layout--theater');
+    chartCard.style.maxWidth = '100%';
+    markActive('video');
+  } else {
+    const frame = wrap ? wrap.querySelector('.intro-video-frame-wrap') : null;
+    if (frame) frame.remove();
+    disposeReconPlayer();
+    const ph = wrap ? wrap.querySelector('.recon-player-host') : null; if (ph) ph.remove();
     if (chartEl)   chartEl.style.display = '';
+    if (conceptEl) conceptEl.style.display = '';
     if (expandBtn) expandBtn.style.display = '';
-    if (btn) { btn.classList.remove('active'); btn.querySelector('span').textContent = 'Watch Video'; }
-    return;
+    if (layout)    layout.classList.remove('intro-layout--theater');
+    chartCard.style.maxWidth = '';
+    markActive('chart');
+    // ECharts needs a resize after the chart is shown again
+    setTimeout(() => { try { const inst = echarts.getInstanceByDom(chartEl); if (inst) inst.resize(); } catch (e) {} }, 60);
   }
+};
 
-  // Show the video in place of the chart
-  if (chartEl)   chartEl.style.display = 'none';
-  if (expandBtn) expandBtn.style.display = 'none';
-  if (btn) { btn.classList.add('active'); btn.querySelector('span').textContent = 'Hide Video'; }
-
-  const frameWrap = document.createElement('div');
-  frameWrap.className = 'intro-video-frame-wrap';
-  frameWrap.innerHTML = `
-    <iframe
-      src="${videoUrl}"
-      width="100%" height="360"
-      style="border:0;display:block;"
-      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-      allowfullscreen
-      loading="lazy"
-    ></iframe>`;
-  wrap.appendChild(frameWrap);
+// Back-compat shim: any legacy "Watch/Hide Video" button just toggles the view.
+window.toggleIntroVideo = function(videoUrl) {
+  const wrap = document.getElementById('intro-video-wrap');
+  const showing = wrap && wrap.querySelector('.intro-video-frame-wrap');
+  setIntroView(showing ? 'chart' : 'video', videoUrl);
 };
 
 /* ══════════════════════════════════════════════════════════════════════════
@@ -2391,6 +3378,9 @@ function injectChartStyles() {
     .chart-el { transition: height 0.35s cubic-bezier(0.4, 0, 0.2, 1); }
     .chart-card { transition: max-width 0.35s cubic-bezier(0.4, 0, 0.2, 1); }
     .intro-layout.chart-layout-expanded { grid-template-columns: 1fr !important; }
+    .intro-layout--theater { grid-template-columns: 1fr !important; transition: grid-template-columns 0.3s ease; }
+    .intro-layout--theater .chart-card { max-width: 100% !important; order: 1; }
+    .intro-layout--theater .content-card { order: 2; margin-top: 12px; }
     .intro-video-wrap { margin-top: 16px; }
     .intro-video-btn {
       display: inline-flex;
@@ -2401,7 +3391,7 @@ function injectChartStyles() {
       border-radius: 20px;
       color: #9494b0;
       font-size: 11px;
-      font-family: Barlow, sans-serif;
+      font-family: 'JetBrains Mono', monospace;
       padding: 4px 12px 4px 8px;
       cursor: pointer;
       transition: border-color 0.2s, color 0.2s, background 0.2s;
@@ -2415,7 +3405,7 @@ function injectChartStyles() {
       border: none;
       color: #5a5a78;
       font-size: 11px;
-      font-family: Barlow, sans-serif;
+      font-family: 'JetBrains Mono', monospace;
       cursor: pointer;
       padding: 2px 0;
       transition: color 0.15s;
@@ -2568,7 +3558,7 @@ function switchActiveCourse(courseNum, targetChapter) {
     state.quizAnsweredThisStep = false;
     if (!state.progress[targetChapter]) state.progress[targetChapter] = { completed:false, quizAnswered:false, quizCorrect:false, quizAnswer:null };
   }
-  if (state.step === 2) {
+  if (stepKindAt(CHAPTERS[state.chapter], state.step) === 'quiz') {
     const prog = state.progress[state.chapter];
     state.quizAnsweredThisStep = !!(prog && prog.quizCorrect);
   }
@@ -2605,6 +3595,174 @@ window.jumpToCourseChapter = function(courseNum, chIdx) {
   // Same course — within-course chapter ordering still applies.
   jumpToChapter(chIdx);
 };
+
+/* "Skip to here" (sidebar right-click) — mark every session BEFORE the target as
+   complete so the chosen one unlocks, then open it. Handles the active course or
+   any other (writing that course's stored state directly). */
+window.ltSkipToChapter = function(courseNum, targetIdx) {
+  if (typeof targetIdx !== 'number' || targetIdx < 0) return;
+  const fresh = function() { return { completed: false, quizAnswered: false, quizCorrect: false, quizAnswer: null }; };
+
+  if (courseNum === getActiveCourseNum()) {
+    for (let i = 0; i < targetIdx; i++) {
+      if (!state.progress[i]) state.progress[i] = fresh();
+      state.progress[i].completed = true;
+    }
+    saveState();
+    jumpToChapter(targetIdx);                    // now unlocked — opens the target session
+  } else {
+    const key = courseNum === 4 ? 'lt_course4_state' : courseNum === 3 ? 'lt_course3_state' : courseNum === 2 ? 'lt_course2_state' : STORAGE_KEY;
+    let saved = {};
+    try { const raw = localStorage.getItem(key); if (raw) saved = JSON.parse(raw) || {}; } catch (_) {}
+    const prog = saved.progress || {};
+    for (let i = 0; i < targetIdx; i++) {
+      if (!prog[i]) prog[i] = fresh();
+      prog[i].completed = true;
+    }
+    saved.progress = prog;
+    if (typeof saved.step !== 'number') saved.step = 0;
+    try { localStorage.setItem(key, JSON.stringify(saved)); } catch (_) {}
+    switchActiveCourse(courseNum, targetIdx);    // switch course + deep-link to the target
+  }
+  if (typeof showToast === 'function' && targetIdx > 0) {
+    showToast('Skipped ahead — earlier sessions marked complete', 3000, 'check');
+  }
+};
+
+/* One-shot "ignore the next click" — used after a long-press so the touch doesn't
+   also fire the element's tap action (navigate / open course). The document-level
+   capture listener added in _ltInitChapterContextMenu consumes it. */
+function _ltSuppressNextClick() {
+  window._ltSuppressClick = true;
+  setTimeout(function () { window._ltSuppressClick = false; }, 700);
+}
+
+/* Right-click (desktop) OR long-press (touch) a sidebar session → a small
+   "Skip to here" menu. Attached once to #chapter-list (persists across rebuilds). */
+function _ltInitChapterContextMenu() {
+  if (window._ltCtxInit) return;
+  const list = document.getElementById('chapter-list');
+  if (!list) return;
+  window._ltCtxInit = true;
+
+  const menu = document.createElement('div');
+  menu.className = 'lt-ctx-menu hidden';
+  menu.innerHTML =
+    '<div class="lt-ctx-title" id="lt-ctx-title"></div>' +
+    '<button class="lt-ctx-item" id="lt-ctx-skip" type="button">' +
+      '<i data-lucide="fast-forward" style="width:14px;height:14px;"></i>' +
+      '<span class="lt-ctx-item-text"><span class="lt-ctx-item-label">Skip to here</span><span class="lt-ctx-item-sub">Mark earlier sessions complete</span></span>' +
+    '</button>';
+  document.body.appendChild(menu);
+
+  let ctxCourse = null, ctxChapter = null;
+  const hide = function () { menu.classList.add('hidden'); };
+
+  function openMenuFor(item, cx, cy) {
+    ctxCourse  = parseInt(item.getAttribute('data-course'), 10);
+    ctxChapter = parseInt(item.getAttribute('data-chapter'), 10);
+    const titleEl = menu.querySelector('#lt-ctx-title');
+    if (titleEl) titleEl.textContent = (item.querySelector('.chapter-item-title') || {}).textContent || 'Session';
+    menu.classList.remove('hidden');
+    const mw = menu.offsetWidth, mh = menu.offsetHeight;
+    let x = cx, y = cy;
+    if (x + mw > window.innerWidth  - 8) x = window.innerWidth  - mw - 8;
+    if (y + mh > window.innerHeight - 8) y = window.innerHeight - mh - 8;
+    if (x < 8) x = 8;
+    if (y < 8) y = 8;
+    menu.style.left = x + 'px';
+    menu.style.top  = y + 'px';
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+  }
+
+  // Desktop: right-click
+  list.addEventListener('contextmenu', function (e) {
+    const item = e.target.closest('.chapter-item[data-chapter]');
+    if (!item) { hide(); return; }   // not a session → leave the browser menu alone
+    e.preventDefault();
+    openMenuFor(item, e.clientX, e.clientY);
+  });
+
+  // Touch: long-press (~480ms, cancelled by scroll/move)
+  let lpTimer = null, lpXY = null;
+  list.addEventListener('touchstart', function (e) {
+    const item = e.target.closest('.chapter-item[data-chapter]');
+    if (!item) return;
+    const t = e.touches[0];
+    lpXY = { x: t.clientX, y: t.clientY };
+    lpTimer = setTimeout(function () {
+      lpTimer = null;
+      openMenuFor(item, lpXY.x, lpXY.y);
+      _ltSuppressNextClick();                         // don't also navigate to the session
+      if (navigator.vibrate) { try { navigator.vibrate(15); } catch (e2) {} }
+    }, 480);
+  }, { passive: true });
+  const lpCancel = function () { if (lpTimer) { clearTimeout(lpTimer); lpTimer = null; } };
+  list.addEventListener('touchmove', function (e) {
+    if (!lpTimer || !lpXY) return;
+    const t = e.touches[0];
+    if (Math.abs(t.clientX - lpXY.x) > 12 || Math.abs(t.clientY - lpXY.y) > 12) lpCancel();
+  }, { passive: true });
+  list.addEventListener('touchend', lpCancel);
+  list.addEventListener('touchcancel', lpCancel);
+
+  menu.querySelector('#lt-ctx-skip').addEventListener('click', function () {
+    hide();
+    if (ctxCourse != null && !isNaN(ctxChapter)) ltSkipToChapter(ctxCourse, ctxChapter);
+  });
+
+  // Shared: swallow the phantom click that follows a long-press (capture phase),
+  // but never the deliberate tap on the menu's own buttons.
+  document.addEventListener('click', function (e) {
+    if (window._ltSuppressClick && !(e.target.closest && e.target.closest('.lt-ctx-menu'))) {
+      window._ltSuppressClick = false; e.stopPropagation(); e.preventDefault();
+    }
+  }, true);
+
+  // Dismiss the menu on outside click/touch, Escape, resize, or sidebar scroll
+  const dismiss = function (e) { if (!menu.contains(e.target)) hide(); };
+  document.addEventListener('click', dismiss);
+  document.addEventListener('touchstart', dismiss, { passive: true });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') hide(); });
+  window.addEventListener('resize', hide);
+  list.addEventListener('scroll', hide);
+}
+
+/* Touch: long-press a Home-hub course card to preview it in the Continue card
+   (the touch equivalent of the desktop hover). Release restores the resting state. */
+function _ltInitCourseTouchPeek() {
+  if (window._ltCoursePeekInit) return;
+  const area = document.getElementById('content-area');
+  if (!area) return;
+  window._ltCoursePeekInit = true;
+
+  let timer = null, startXY = null, peeking = false;
+  area.addEventListener('touchstart', function (e) {
+    const card = e.target.closest('.lt-home-course-card[data-course]');
+    if (!card || e.target.closest('.lt-home-course-share')) return;
+    const num = parseInt(card.getAttribute('data-course'), 10);
+    const t = e.touches[0];
+    startXY = { x: t.clientX, y: t.clientY };
+    timer = setTimeout(function () {
+      timer = null;
+      peeking = true;
+      if (typeof ltPeekCourse === 'function') ltPeekCourse(num);
+      _ltSuppressNextClick();                          // don't also open the course
+      if (navigator.vibrate) { try { navigator.vibrate(15); } catch (e2) {} }
+    }, 420);
+  }, { passive: true });
+  area.addEventListener('touchmove', function (e) {
+    if (!timer || !startXY) return;
+    const t = e.touches[0];
+    if (Math.abs(t.clientX - startXY.x) > 12 || Math.abs(t.clientY - startXY.y) > 12) { clearTimeout(timer); timer = null; }
+  }, { passive: true });
+  const endTouch = function () {
+    if (timer) { clearTimeout(timer); timer = null; }
+    if (peeking) { peeking = false; if (typeof ltPeekReset === 'function') ltPeekReset(); }
+  };
+  area.addEventListener('touchend', endTouch);
+  area.addEventListener('touchcancel', endTouch);
+}
 
 /* ══════════════════════════════════════════════════════════════════════════
    INIT
@@ -2643,7 +3801,7 @@ function init(checkSaved = true) {
       state.step     = saved.step     || 0;
       state.progress = saved.progress || {};
       // Restore quizAnsweredThisStep for the current quiz step
-      if (state.step === 2) {
+      if (stepKindAt(CHAPTERS[state.chapter], state.step) === 'quiz') {
         const prog = state.progress[state.chapter];
         state.quizAnsweredThisStep = !!(prog && prog.quizCorrect);
       }
@@ -2654,8 +3812,10 @@ function init(checkSaved = true) {
       updateNavButtons();
       updateStepPills();
       updateStepDots();
-      showWelcomeModal(saved);
-      return; // Don't render until user confirms modal
+      // Land on the Home hub; its Continue card resumes this saved position.
+      // (The old "Welcome back" modal is retired in favour of the hub.)
+      showHome();
+      return;
     }
   }
 
@@ -2667,23 +3827,180 @@ function init(checkSaved = true) {
   updateNavButtons();
   updateStepPills();
   updateStepDots();
-  renderCurrentStep();
+  showHome();
 }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   URL ROUTING — shareable deep links (?c=<course>&ch=<chapter>&s=<step>),
+   plus ?t=<glossaryTermId> and ?view=<name>. The address bar is kept in sync as
+   the learner navigates so any link can be copied and reopened.
+   ══════════════════════════════════════════════════════════════════════════ */
+const _LT_VIEW_PARAMS = ['glossary', 'simulator', 'community', 'flashcards', 'settings'];
+
+function _ltCourseArray(n) {
+  if (n === 4) return typeof LT_CHAPTERS_4 !== 'undefined' ? LT_CHAPTERS_4 : null;
+  if (n === 3) return typeof LT_CHAPTERS_3 !== 'undefined' ? LT_CHAPTERS_3 : null;
+  if (n === 2) return typeof LT_CHAPTERS_2 !== 'undefined' ? LT_CHAPTERS_2 : null;
+  return LT_CHAPTERS;
+}
+function _ltCourseKey(n) {
+  return n === 4 ? 'lt_course4_state' : n === 3 ? 'lt_course3_state' : n === 2 ? 'lt_course2_state' : STORAGE_KEY;
+}
+
+function _ltParseRoute() {
+  try {
+    const p = new URLSearchParams(location.search);
+    if (p.has('c') && p.has('ch')) {
+      const c = parseInt(p.get('c'), 10);
+      const ch = parseInt(p.get('ch'), 10);
+      const s = p.has('s') ? parseInt(p.get('s'), 10) : 0;
+      if (c >= 1 && c <= 4 && ch >= 0) {
+        return { kind: 'lesson', course: c, chapter: ch, step: (s >= 0 && s <= 3) ? s : 0 };
+      }
+    }
+    if (p.get('t')) return { kind: 'term', term: p.get('t') };
+    const v = p.get('view');
+    if (v && _LT_VIEW_PARAMS.includes(v)) return { kind: 'view', view: v };
+  } catch (_) {}
+  return null;
+}
+
+/* Open a deep-linked lesson at boot WITHOUT clobbering saved progress.
+   (We can't reuse switchActiveCourse here: its leading saveState() would write the
+   still-empty in-memory state over the target course's stored progress.) */
+function _ltBootLesson(route) {
+  const arr = _ltCourseArray(route.course);
+  if (!arr) { init(true); return; }
+  localStorage.setItem('lt_active_course', String(route.course));
+  CHAPTERS = arr;
+  let restored = { chapter: 0, step: 0, progress: {} };
+  try {
+    const raw = localStorage.getItem(_ltCourseKey(route.course));
+    if (raw) { const p = JSON.parse(raw); restored = { chapter: p.chapter || 0, step: p.step || 0, progress: p.progress || {} }; }
+  } catch (_) {}
+  const ch = Math.min(Math.max(0, route.chapter), arr.length - 1);
+  state.progress = restored.progress;
+  state.chapter  = ch;
+  state.step     = Math.min(Math.max(0, route.step), lastStepIdx(arr[ch]));
+  state.quizAnsweredThisStep = stepKindAt(arr[ch], state.step) === 'quiz' && !!(state.progress[ch] && state.progress[ch].quizCorrect);
+  markChapterStarted(ch);
+  buildSidebar();
+  updateHeaderUI();
+  updateProgressUI();
+  updateNavButtons();
+  updateStepPills();
+  updateStepDots();
+  renderCurrentStep();   // sets view='course' and (via setHomeNavActive) syncs the URL
+  scrollContentToTop();
+}
+
+function _ltRouteOnBoot() {
+  const route = _ltParseRoute();
+  if (!route) { init(true); return; }
+  if (route.kind === 'lesson') { _ltBootLesson(route); return; }
+  // term / view routes: boot normally (no welcome-resume), then open the target view
+  init(false);
+  if (route.kind === 'term') { showGlossary(route.term); return; }
+  const fn = 'show' + route.view.charAt(0).toUpperCase() + route.view.slice(1);
+  if (typeof window[fn] === 'function') window[fn]();
+}
+
+/* Reflect the current view in the address bar (no reload) so links are copyable. */
+function _ltSyncURL() {
+  try {
+    let qs = '';
+    if (state.view === 'course') {
+      qs = `?c=${getActiveCourseNum()}&ch=${state.chapter}&s=${state.step}`;
+    } else if (state.view && state.view !== 'home') {
+      qs = `?view=${state.view}`;
+    }
+    history.replaceState(null, '', location.pathname + qs);
+  } catch (_) {}
+}
+
+/* ── Share links ────────────────────────────────────────────────────────────
+   Lesson/course shares are IN-APP deep links (?c&ch&s) — they open the exact
+   lesson or course straight inside the interactive app (parsed by _ltParseRoute /
+   _ltBootLesson), not the standalone /learn/ SEO wrapper page. The generalized
+   "Share Liquidity Theory" link (ltShareSite) points at the marketing landing
+   page. Uses location.origin + location.pathname so links work on any domain and
+   preserve whichever app path (/lt-index.html or clean /lt-index) is in use. */
+function _ltCopy(text, msg) {
+  const done = () => showToast('<i data-lucide="link" style="width:14px;height:14px;"></i> ' + msg);
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(done, () => showToast('Press Ctrl/Cmd+C to copy'));
+  } else {
+    showToast('Press Ctrl/Cmd+C to copy');
+  }
+}
+
+// Build an in-app deep link to an exact lesson (mirrors what _ltSyncURL writes).
+function _ltAppUrl(course, chapter, step) {
+  return location.origin + location.pathname + '?c=' + course + '&ch=' + chapter + '&s=' + (step || 0);
+}
+
+// Share the current lesson — opens straight to this lesson inside the app.
+window.ltCopyLessonLink = function() {
+  if (state.view !== 'course') { _ltCopy(location.href, 'Link copied'); return; }
+  _ltCopy(_ltAppUrl(getActiveCourseNum(), state.chapter, state.step), 'Lesson link copied');
+};
+
+// Share a whole course — opens straight to the course (chapter 1) inside the app.
+window.ltShareCourse = function(n) {
+  _ltCopy(_ltAppUrl(n, 0, 0), 'Course link copied');
+};
+
+// Share the whole project — the generalized landing page (Settings button).
+window.ltShareSite = function() {
+  _ltCopy(location.origin + '/', 'Liquidity Theory link copied');
+};
 
 /* ══════════════════════════════════════════════════════════════════════════
    BOOT
    ══════════════════════════════════════════════════════════════════════════ */
+/* Cross-device sync: a #sync=<lz> fragment carries another device's progress blob
+   (built by ltBuildSyncLink in lt-settings.js). On boot we decode it, confirm, write
+   it to localStorage, drop the hash, and reload so the app starts on the imported
+   state. Fragments are never sent to a server — nothing is uploaded anywhere. */
+function _ltCheckSyncImport() {
+  const m = (location.hash || '').match(/[#&]sync=([^&]+)/);
+  if (!m) return false;
+  const cleanUrl = location.pathname + location.search;
+  let data = null;
+  try {
+    const json = (typeof LZString !== 'undefined') ? LZString.decompressFromEncodedURIComponent(m[1]) : null;
+    data = json ? JSON.parse(json) : null;
+  } catch (e) { data = null; }
+  if (!data || typeof data !== 'object') {
+    history.replaceState(null, '', cleanUrl);
+    if (typeof showToast === 'function') showToast('That sync link looks invalid or expired.', 3000, 'alert-triangle');
+    return false;
+  }
+  if (!window.confirm('Import saved progress from another device?\n\nThis replaces the progress currently saved in this browser.')) {
+    history.replaceState(null, '', cleanUrl);
+    return false;
+  }
+  Object.keys(data).forEach((k) => { if (k.indexOf('lt_') === 0) { try { localStorage.setItem(k, data[k]); } catch (e) {} } });
+  history.replaceState(null, '', cleanUrl);   // drop the #sync hash so the reload boots clean
+  location.reload();
+  return true;
+}
+
 document.addEventListener('DOMContentLoaded', () => {
+  // A cross-device sync link takes priority — import + reload before anything else renders.
+  if (_ltCheckSyncImport()) return;
   /* Theme, bullish-color and font are applied by ltApplySavedSettings() in
      lt-settings.js (runs at parse time, before this) — it is the single source
      of truth for the palette, so we must NOT re-apply a different override here. */
   wireEvents();
+  _ltInitChapterContextMenu();
+  _ltInitCourseTouchPeek();
   // Restore desktop sidebar-collapsed preference (focus mode)
   if (localStorage.getItem('lt_sidebar_collapsed') === '1' && !window.matchMedia('(max-width: 768px)').matches) {
     document.querySelector('.app-layout')?.classList.add('sidebar-collapsed');
     document.getElementById('sidebar-toggle')?.setAttribute('aria-expanded', 'false');
   }
-  init(true);
+  _ltRouteOnBoot();
   startBtcTicker();
 });
 
@@ -2737,23 +4054,18 @@ async function _fetchBtcPrice() {
 let _btcRenderedPrice = NaN;
 function _renderBtcTicker(price, chg) {
   const pEl = document.getElementById('btc-ticker-price');
-  const cEl = document.getElementById('btc-ticker-chg');
-  if (!pEl || !cEl) return;
+  if (!pEl) return;
   _btcLastChg = chg;
   const up = chg >= 0;
-  // 2 decimals so every tick is visible as real-time movement
   pEl.textContent = '$' + price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   pEl.className = 'btc-ticker-price ' + (up ? 'up' : 'down');
-  // brief green/red flash in the direction of the tick
   if (!isNaN(_btcRenderedPrice) && price !== _btcRenderedPrice) {
     const dir = price > _btcRenderedPrice ? 'tick-up' : 'tick-down';
     pEl.classList.remove('tick-up', 'tick-down');
-    void pEl.offsetWidth; // restart the animation
+    void pEl.offsetWidth;
     pEl.classList.add(dir);
   }
   _btcRenderedPrice = price;
-  cEl.textContent = (up ? '+' : '') + chg.toFixed(2) + '%';
-  cEl.className = 'btc-ticker-chg ' + (up ? 'up' : 'down');
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
@@ -2763,6 +4075,7 @@ window.jumpToChapter = jumpToChapter;
 
 window.ltRefreshCharts = function() {
   TEAL = getBullishColor();
+  BEAR = getBearishColor();
   // Only the course view owns the engine charts; settings/simulator redraw
   // their own previews, so don't render course content over them.
   if (state.view !== 'course') return;
@@ -2775,8 +4088,297 @@ function showSettings() {
   const area = document.getElementById('content-area');
   area.innerHTML = '';
   renderSettingsPage('content-area');
+  setHubHeader('Settings');
+  setHomeNavActive();
   if (typeof lucide !== 'undefined') lucide.createIcons();
 }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   HOME HUB — in-app landing view: per-course progress, overall progress,
+   a continue card, quick-launch tools, and a Discord invite. Separate from the
+   marketing landing page (index.html). state.view === 'home'.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* Toggle the static sidebar Home button's active state to match the current view,
+   and hide the Back/Next footer on the hub (it has no chapters to page through). */
+function setHomeNavActive() {
+  const onHome = state.view === 'home';
+  const b = document.getElementById('sidebar-home-btn');
+  if (b) b.classList.toggle('sidebar-home-btn--active', onHome);
+  // Hide the Back/Next footer on every non-course view — it only pages through
+  // chapters, so it's inert (and now removed) on Home, Glossary, Simulator,
+  // Flashcards, Community and Settings. Each of those has its own way back.
+  const footer = document.querySelector('.nav-footer');
+  if (footer) footer.classList.toggle('hidden', state.view !== 'course');
+  const ca = document.getElementById('content-area');
+  if (ca) ca.classList.toggle('content-area--home', onHome);  // grid backdrop on the hub only
+  const cl = document.getElementById('copy-link-btn');
+  if (cl) cl.classList.toggle('hidden', state.view !== 'course');  // share button only matters on a lesson
+  // Collapse the open course dropdown on the hub (Continue just brings you back);
+  // the active course's dropdown re-opens where it was once you're back in a course.
+  const activeNum = getActiveCourseNum();
+  document.querySelectorAll('.course-accordion').forEach(acc => {
+    const open = (+acc.dataset.course === activeNum) && state.view === 'course';
+    acc.querySelector('.course-accordion-body')?.classList.toggle('course-accordion-body--open', open);
+    acc.querySelector('.course-accordion-chevron')?.classList.toggle('course-accordion-chevron--open', open);
+  });
+  if (typeof _ltSyncURL === 'function') _ltSyncURL();         // keep the address bar in sync with the current view
+}
+
+/* The four courses, with display names + accents, filtered to those actually loaded. */
+function _ltHomeCourses() {
+  const names = (typeof LT_COURSE_NAMES !== 'undefined') ? LT_COURSE_NAMES : ['Course 1','Course 2','Course 3','Course 4'];
+  return [
+    { num: 1, chapters: LT_CHAPTERS },
+    { num: 2, chapters: typeof LT_CHAPTERS_2 !== 'undefined' ? LT_CHAPTERS_2 : null },
+    { num: 3, chapters: typeof LT_CHAPTERS_3 !== 'undefined' ? LT_CHAPTERS_3 : null },
+    { num: 4, chapters: typeof LT_CHAPTERS_4 !== 'undefined' ? LT_CHAPTERS_4 : null }
+  ].filter(c => c.chapters).map(c => ({
+    num: c.num,
+    chapters: c.chapters,
+    name: names[c.num - 1] || ('Course ' + c.num),
+    accent: ltCourseAccent(c.num)
+  }));
+}
+
+function _ltCourseCompleted(courseNum) {
+  const prog = (typeof window.ltGetCourseProgress === 'function') ? window.ltGetCourseProgress(courseNum) : {};
+  return Object.keys(prog).reduce((n, k) => n + (prog[k] && prog[k].completed ? 1 : 0), 0);
+}
+
+/* Term of the Day — deterministic daily pick from the glossary. The index is
+   floor(Date.now()/86400000), i.e. days since the epoch in UTC, so it rolls over
+   at exactly 00:00 UTC. */
+function _ltTermOfDay() {
+  if (typeof LT_GLOSSARY === 'undefined' || !LT_GLOSSARY.length) return null;
+  const dayIndex = Math.floor(Date.now() / 86400000);
+  return LT_GLOSSARY[dayIndex % LT_GLOSSARY.length];
+}
+
+/* Term-of-Day card HTML (id'd so an open page can refresh it at UTC midnight). */
+function _ltTermSectionHtml() {
+  const tod = _ltTermOfDay();
+  if (!tod) return '';
+  // Compact, low-key card — a fun daily bite, not a headline feature.
+  return `
+      <div class="lt-home-term" id="lt-home-term-section">
+        <div class="lt-home-term-head">
+          <span class="lt-home-term-eyebrow">Term of the day</span>
+          <span class="lt-home-term-name">${tod.term}</span>
+          <span class="lt-home-term-cat">${tod.cat}</span>
+          <button class="lt-home-term-link" onclick="showGlossary('${tod.id}')">Open →</button>
+        </div>
+        <div class="lt-home-term-def">${tod.def}</div>
+      </div>`;
+}
+
+/* Refresh the Term card exactly at the next 00:00 UTC so a page left open updates
+   without a reload (rescheduled each day; only touches the DOM if the card exists). */
+let _ltTermTimer = null;
+function _ltScheduleTermRefresh() {
+  if (_ltTermTimer) { clearTimeout(_ltTermTimer); _ltTermTimer = null; }
+  const msToUtcMidnight = 86400000 - (Date.now() % 86400000) + 50;  // +50ms past the boundary
+  _ltTermTimer = setTimeout(function () {
+    const el = document.getElementById('lt-home-term-section');
+    if (el) {
+      el.outerHTML = _ltTermSectionHtml();
+      if (typeof lucide !== 'undefined') lucide.createIcons();
+    }
+    _ltScheduleTermRefresh();
+  }, msToUtcMidnight);
+}
+
+/* Hovering a course card turns the Continue card into a quick preview of that
+   course — its mascot avatar, "Course N", the course name, and a one-line blurb.
+   Leaving restores the resting content (default laptop Perpingo + resume info). */
+const LT_PERPINGO_BY_COURSE = { 1: 'perpingo-cap.png', 2: 'perpingo-builder.png', 3: 'perpingo-ninja.png', 4: 'perpingo-brain.png' };
+const LT_COURSE_BLURB = {
+  1: 'Price-action fundamentals — candles, supply & demand, market structure, and risk.',
+  2: 'The trader’s toolkit — chart patterns, Fibonacci, Ichimoku, oscillators, and volume.',
+  3: 'Derivatives, leverage, trade execution, and the psychology of staying consistent.',
+  4: 'Our advanced framework — liquidity, control, and sentiment for high-conviction trades.'
+};
+let _ltContinueDefault = null;   // resting Continue-card content, captured in renderHome
+window.ltPeekCourse = function(num) {
+  const card = document.querySelector('.lt-home-continue');
+  const img = document.getElementById('lt-continue-avatar');
+  const eb  = document.getElementById('lt-continue-eyebrow');
+  const ti  = document.getElementById('lt-continue-title');
+  const me  = document.getElementById('lt-continue-meta');
+  const file = LT_PERPINGO_BY_COURSE[num];
+  const name = (typeof LT_COURSE_NAMES !== 'undefined' && LT_COURSE_NAMES[num - 1]) || ('Course ' + num);
+  if (img && file) img.src = file + '?v=1.1.0';
+  if (eb) eb.textContent = 'Course ' + num;
+  if (ti) ti.textContent = name;
+  if (me) me.textContent = LT_COURSE_BLURB[num] || '';
+  if (card) {
+    card.style.setProperty('--peek-accent', (typeof ltCourseAccent === 'function' ? ltCourseAccent(num) : '') || '');
+    card.classList.add('lt-home-continue--peek');   // drives the accent / hidden-button / avatar transitions
+  }
+};
+window.ltPeekReset = function() {
+  const card = document.querySelector('.lt-home-continue');
+  const img = document.getElementById('lt-continue-avatar');
+  const eb  = document.getElementById('lt-continue-eyebrow');
+  const ti  = document.getElementById('lt-continue-title');
+  const me  = document.getElementById('lt-continue-meta');
+  const d = _ltContinueDefault || {};
+  if (img) img.src = 'perpingo-laptop.png?v=1.1.0';
+  if (eb && d.eyebrow != null) eb.textContent = d.eyebrow;
+  if (ti && d.title   != null) ti.textContent = d.title;
+  if (me && d.meta    != null) me.textContent = d.meta;
+  // keep --peek-accent set so the colour transitions back out; the class controls whether it applies
+  if (card) card.classList.remove('lt-home-continue--peek');
+};
+
+window.showHome = function() {
+  disposeAllCharts();
+  state.view = 'home';
+  const area = document.getElementById('content-area');
+  if (area) { area.scrollTop = 0; area.innerHTML = ''; }
+  renderHome('content-area');
+  // Header reflects the hub rather than a chapter
+  setHubHeader('Home');
+  setHomeNavActive();
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+  closeSidebar();
+};
+
+function renderHome(containerId) {
+  const area = document.getElementById(containerId);
+  if (!area) return;
+
+  const courses = _ltHomeCourses();
+
+  // Overall progress across all loaded courses
+  let totDone = 0, totAll = 0;
+  const courseStats = courses.map(c => {
+    const done = _ltCourseCompleted(c.num);
+    const all  = c.chapters.length;
+    totDone += done; totAll += all;
+    return { ...c, done, all, pct: all ? Math.round((done / all) * 100) : 0 };
+  });
+  const overallPct = totAll ? Math.round((totDone / totAll) * 100) : 0;
+  const coursesDone = courseStats.filter(c => c.all && c.done === c.all).length;
+
+  // Continue card — active course's saved position
+  const activeNum   = getActiveCourseNum();
+  const activeName  = (typeof LT_COURSE_NAMES !== 'undefined' ? LT_COURSE_NAMES[activeNum - 1] : null) || ('Course ' + activeNum);
+  const activeCh    = CHAPTERS[state.chapter];
+  const chTitle     = activeCh ? activeCh.title : 'Get started';
+  const stepLabel   = chapterStepLabels(activeCh)[state.step] || 'Introduction';
+
+  // First-time visitor (nothing completed and sitting at the very first step) gets a
+  // "start here" framing instead of "resume".
+  const firstTime   = totDone === 0 && state.chapter === 0 && state.step === 0;
+  const heroTitle   = firstTime ? 'Welcome to Liquidity Theory' : 'Welcome back';
+  const heroSub     = firstTime
+    ? 'Start your trading education from the very first candle — free, no account needed.'
+    : 'Pick up where you left off, or jump into any course.';
+  const contEyebrow = firstTime ? 'Get started' : 'Continue learning';
+  const contBtn     = firstTime ? 'Start learning →' : 'Resume →';
+  // Stash the resting Continue-card content so the course-hover preview can restore it.
+  _ltContinueDefault = { eyebrow: contEyebrow, title: chTitle, meta: `${activeName} · ${stepLabel}` };
+
+  const courseCards = courseStats.map(c => {
+    const isDone = c.all && c.done === c.all;
+    const right  = isDone
+      ? `<span class="lt-home-course-done"><i data-lucide="check" style="width:13px;height:13px;"></i> Complete</span>`
+      : `<span class="lt-home-course-stat-count">${c.done} / ${c.all} sessions</span>`;
+    return `
+      <button class="lt-home-course-card" data-course="${c.num}" style="--caccent:${c.accent}" onclick="ltOpenCourse(${c.num})" onmouseenter="ltPeekCourse(${c.num})" aria-label="Open ${c.name}">
+        <span class="lt-home-course-share" role="button" tabindex="0" title="Share this course" aria-label="Share ${c.name}"
+          onclick="event.stopPropagation(); ltShareCourse(${c.num})"
+          onkeydown="if(event.key==='Enter'||event.key===' '){event.stopPropagation();event.preventDefault();ltShareCourse(${c.num});}">
+          <i data-lucide="share-2" style="width:13px;height:13px;"></i>
+        </span>
+        <div class="lt-home-course-label">Course ${c.num}${c.num === 4 ? ' <span class="lt-home-course-adv">Advanced</span>' : ''}</div>
+        <div class="lt-home-course-name">${c.name}</div>
+        <div class="lt-home-course-track"><div class="lt-home-course-fill" style="width:${c.pct}%"></div></div>
+        <div class="lt-home-course-stat">
+          <span class="lt-home-course-stat-pct">${c.pct}%</span>
+          ${right}
+        </div>
+      </button>`;
+  }).join('');
+
+  const tools = [
+    { fn: 'showSimulator',  ic: 'activity',  name: 'Simulator', wip: true },
+    { fn: 'showGlossary',   ic: 'book-open', name: 'Glossary'   },
+    { fn: 'showFlashcards', ic: 'layers',    name: 'Flashcards' },
+    { fn: 'showCommunity',  ic: 'users',     name: 'Community'  },
+    { fn: 'showSettings',   ic: 'settings',  name: 'Settings'   }
+  ].map(t => `
+    <button class="lt-home-tool" onclick="${t.fn}()">
+      ${t.wip ? '<span class="lt-home-tool-wip">WIP</span>' : ''}
+      <span class="lt-home-tool-ic"><i data-lucide="${t.ic}" style="width:20px;height:20px;"></i></span>
+      <span class="lt-home-tool-name">${t.name}</span>
+    </button>`).join('');
+
+  const coursesDoneTxt = coursesDone ? ` · <strong>${coursesDone}</strong> course${coursesDone > 1 ? 's' : ''} done` : '';
+
+  const termSection = _ltTermSectionHtml();
+
+  area.innerHTML = `
+    <div class="lt-home-wrap">
+
+      <div class="lt-home-hero">
+        <div class="lt-home-hero-text">
+          <div class="lt-home-hero-title">${heroTitle}</div>
+          <div class="lt-home-hero-sub">${heroSub}</div>
+        </div>
+        <div class="lt-home-overall">
+          <div class="lt-home-overall-top">
+            <span class="lt-home-overall-pct">${overallPct}%</span>
+            <span class="lt-home-overall-meta"><strong>${totDone}</strong> / ${totAll} sessions${coursesDoneTxt}</span>
+          </div>
+          <div class="lt-home-overall-track"><div class="lt-home-overall-fill" style="width:${overallPct}%"></div></div>
+        </div>
+      </div>
+
+      <div class="lt-home-continue">
+        <div class="lt-home-continue-left">
+          <div class="lt-home-continue-avatar"><img id="lt-continue-avatar" src="perpingo-laptop.png?v=1.1.0" alt="Perpingo" width="60" height="60" /></div>
+          <div class="lt-home-continue-info">
+            <div class="lt-home-continue-eyebrow" id="lt-continue-eyebrow">${contEyebrow}</div>
+            <div class="lt-home-continue-title" id="lt-continue-title">${chTitle}</div>
+            <div class="lt-home-continue-meta" id="lt-continue-meta">${activeName} · ${stepLabel}</div>
+          </div>
+        </div>
+        <button class="btn-primary" onclick="ltOpenCourse(${activeNum})">${contBtn}</button>
+      </div>
+
+      <div class="lt-home-section">
+        <div class="lt-home-section-label">Your Courses</div>
+        <div class="lt-home-courses" onmouseleave="ltPeekReset()">${courseCards}</div>
+      </div>
+
+      <div class="lt-home-section">
+        <div class="lt-home-section-label">Tools</div>
+        <div class="lt-home-tools">${tools}</div>
+      </div>
+
+      ${termSection}
+
+    </div>`;
+
+  _ltScheduleTermRefresh();   // keep the Term of the Day current at 00:00 UTC on open pages
+}
+
+/* Open a course from the hub. Switches active course if needed, else resumes it. */
+window.ltOpenCourse = function(num) {
+  if (num !== getActiveCourseNum()) {
+    switchActiveCourse(num);          // already renders current step + sets view='course'
+  } else {
+    renderCurrentStep();              // sets view='course'
+    updateHeaderUI();
+    updateProgressUI();
+    updateNavButtons();
+    scrollContentToTop();
+  }
+  setHomeNavActive();
+  closeSidebar();
+};
 
 /* ══════════════════════════════════════════════════════════════════════════
    BACKUP REMINDER — one-time-per-course nudge about exporting progress
@@ -2802,10 +4404,10 @@ function showBackupReminder() {
       @keyframes ltBackupOut { to{opacity:0; transform:translateY(16px);} }
       .lt-backup-pop-x { position:absolute; top:8px; right:10px; background:none; border:none; color:var(--text3); font-size:13px; cursor:pointer; padding:2px 4px; }
       .lt-backup-pop-x:hover { color:var(--text); }
-      .lt-backup-pop-title { font-family:'Barlow Condensed',sans-serif; font-size:18px; font-weight:800; color:var(--text); margin-bottom:6px; }
+      .lt-backup-pop-title { font-family:'JetBrains Mono',monospace; font-size:18px; font-weight:800; color:var(--text); margin-bottom:6px; }
       .lt-backup-pop-msg { font-size:12.5px; line-height:1.6; color:var(--text2); margin-bottom:13px; }
       .lt-backup-pop-actions { display:flex; gap:8px; justify-content:flex-end; }
-      .lt-backup-pop-btn { font-family:'Barlow',sans-serif; font-size:12px; font-weight:700; padding:7px 13px; border-radius:var(--radius); cursor:pointer; transition:all .15s; }
+      .lt-backup-pop-btn { font-family:'JetBrains Mono',monospace; font-size:12px; font-weight:700; padding:7px 13px; border-radius:var(--radius); cursor:pointer; transition:all .15s; }
       .lt-backup-pop-btn.ghost { background:transparent; border:1px solid var(--border2); color:var(--text3); }
       .lt-backup-pop-btn.ghost:hover { border-color:var(--border3); color:var(--text2); }
       .lt-backup-pop-btn.primary { background:var(--teal); border:1px solid var(--teal); color:#04201f; }
@@ -2817,14 +4419,15 @@ function showBackupReminder() {
   pop.id = 'lt-backup-pop';
   pop.className = 'lt-backup-pop';
   pop.innerHTML = `
-    <button class="lt-backup-pop-x" onclick="window._dismissBackupPop()" aria-label="Dismiss">✕</button>
-    <div class="lt-backup-pop-title">🎉 Course complete!</div>
+    <button class="lt-backup-pop-x" onclick="window._dismissBackupPop()" aria-label="Dismiss"><i data-lucide="x" style="width:14px;height:14px;"></i></button>
+    <div class="lt-backup-pop-title"><i data-lucide="award" style="width:18px;height:18px;vertical-align:-3px;"></i> Course complete!</div>
     <div class="lt-backup-pop-msg">Your progress is already saved automatically in this browser — nothing you need to do. If you'd like a copy to keep or move to another device, you can <strong>export a backup</strong> in Settings. Completely optional, and you can still jump to any course freely.</div>
     <div class="lt-backup-pop-actions">
       <button class="lt-backup-pop-btn ghost" onclick="window._dismissBackupPop()">Maybe later</button>
       <button class="lt-backup-pop-btn primary" onclick="window._dismissBackupPop(); showSettings(); setTimeout(function(){var el=document.getElementById('lt-s-backup'); if(el) el.scrollIntoView({behavior:'smooth',block:'center'});},160);">Back up progress</button>
     </div>`;
   document.body.appendChild(pop);
+  if (typeof lucide !== 'undefined') { try { lucide.createIcons(); } catch(_) {} }
   // Auto-dismiss after a while if ignored
   pop._timer = setTimeout(() => window._dismissBackupPop(), 16000);
 }
@@ -2842,6 +4445,8 @@ window.showSimulator = function(opts) {
   if (typeof renderSimulator === 'function') {
     state.view = 'simulator';
     renderSimulator('content-area', opts || {});
+    setHubHeader('Simulator');
+    setHomeNavActive();
   } else {
     showToast('Simulator not available.');
   }
@@ -2859,6 +4464,8 @@ window.showGlossary = function(termId) {
   // No termId → start at the top; with a termId, renderGlossary scrolls to it.
   if (!termId) scrollContentToTop();
   renderGlossary('content-area', termId);
+  setHubHeader('Glossary');
+  setHomeNavActive();
   if (typeof lucide !== 'undefined') lucide.createIcons();
   closeSidebar();
 };
@@ -2870,6 +4477,8 @@ window.showFlashcards = function() {
   const area = document.getElementById('content-area');
   if (area) { area.scrollTop = 0; area.innerHTML = ''; }
   renderFlashcards('content-area', getActiveCourseNum(), getCourseName());
+  setHubHeader('Flashcards');
+  setHomeNavActive();
   if (typeof lucide !== 'undefined') lucide.createIcons();
   closeSidebar();
 };
@@ -2881,6 +4490,8 @@ window.showCommunity = function() {
   const area = document.getElementById('content-area');
   if (area) { area.scrollTop = 0; area.innerHTML = ''; }
   renderCommunity('content-area');
+  setHubHeader('Community');
+  setHomeNavActive();
   if (typeof lucide !== 'undefined') lucide.createIcons();
   closeSidebar();
 };

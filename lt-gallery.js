@@ -9,6 +9,9 @@
 function getBullishColor() {
   return localStorage.getItem('lt_bullish_color') || '#00d4d4';
 }
+function getBearishColor() {
+  return localStorage.getItem('lt_bearish_color') || '#f2f2f2';
+}
 
 function renderCandlestickGallery(containerId) {
 
@@ -28,7 +31,7 @@ function renderCandlestickGallery(containerId) {
       id: 'marubozu-bear',
       name: 'Marubozu Bear',
       sentiment: 'Bearish',
-      svg: '<rect x="13" y="8" width="14" height="64" fill="#cc2222"/>',
+      svg: '<rect x="13" y="8" width="14" height="64" fill="' + getBearishColor() + '"/>',
       body:    'Full body, no wicks. Sellers were completely in control from open to close — a strong momentum signal.',
       wicks:   'No wicks. Buyers had zero influence. Price opened at the high and closed at the low.',
       context: 'Common after breakdowns below key support or during panic selling. Watch for it at distribution tops.',
@@ -49,8 +52,8 @@ function renderCandlestickGallery(containerId) {
       id: 'hanging-man',
       name: 'Hanging Man',
       sentiment: 'Bearish',
-      svg: '<rect x="13" y="8" width="14" height="14" fill="#cc2222"/>' +
-           '<line x1="20" y1="22" x2="20" y2="72" stroke="#cc2222" stroke-width="1.5"/>',
+      svg: '<rect x="13" y="8" width="14" height="14" fill="' + getBearishColor() + '"/>' +
+           '<line x1="20" y1="22" x2="20" y2="72" stroke="' + getBearishColor() + '" stroke-width="1.5"/>',
       body:    'Same shape as a Hammer, but context changes everything. Small body at the top of an uptrend.',
       wicks:   'Long lower wick at the top of a rally. Buyers are losing control — sellers are starting to win intrabar.',
       context: 'Appears at the TOP of uptrends. A warning sign of reversal. Requires bearish confirmation next candle.',
@@ -60,8 +63,8 @@ function renderCandlestickGallery(containerId) {
       id: 'shooting-star',
       name: 'Shooting Star',
       sentiment: 'Bearish',
-      svg: '<rect x="13" y="58" width="14" height="14" fill="#cc2222"/>' +
-           '<line x1="20" y1="8" x2="20" y2="58" stroke="#cc2222" stroke-width="1.5"/>',
+      svg: '<rect x="13" y="58" width="14" height="14" fill="' + getBearishColor() + '"/>' +
+           '<line x1="20" y1="8" x2="20" y2="58" stroke="' + getBearishColor() + '" stroke-width="1.5"/>',
       body:    'Small body near the bottom. Buyers pushed price up sharply but sellers slammed it back down.',
       wicks:   'Long upper wick — buyers tried hard but got completely rejected at highs. Buyer exhaustion signal.',
       context: 'Appears at the TOP of uptrends. One of the most reliable single-candle bearish reversal patterns.',
@@ -116,8 +119,8 @@ function renderCandlestickGallery(containerId) {
       id: 'gravestone-doji',
       name: 'Gravestone Doji',
       sentiment: 'Bearish',
-      svg: '<line x1="8" y1="68" x2="32" y2="68" stroke="#cc2222" stroke-width="2"/>' +
-           '<line x1="20" y1="8" x2="20" y2="68" stroke="#cc2222" stroke-width="1.5"/>',
+      svg: '<line x1="8" y1="68" x2="32" y2="68" stroke="' + getBearishColor() + '" stroke-width="2"/>' +
+           '<line x1="20" y1="8" x2="20" y2="68" stroke="' + getBearishColor() + '" stroke-width="1.5"/>',
       body:    'Body sits at the very bottom. Buyers pushed price all the way up but sellers dragged it back to the open.',
       wicks:   'Long upper wick only, no lower wick. Buyers tried — sellers won completely.',
       context: 'Strongest at key resistance levels or the top of an uptrend. Strong reversal signal.',
@@ -146,7 +149,7 @@ function renderCandlestickGallery(containerId) {
       '.lt-gallery-wrap {',
       '  width: 100%;',
       '  box-sizing: border-box;',
-      '  font-family: system-ui, -apple-system, sans-serif;',
+      '  font-family: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;',
       '}',
 
       /* candle row */
@@ -155,12 +158,25 @@ function renderCandlestickGallery(containerId) {
       '  justify-content: space-between;',
       '  align-items: flex-end;',
       '  width: 100%;',
-      '  padding: 12px 0 4px;',
+      '  gap: 8px;',
+      '  padding: 12px 2px 8px;',
       '  box-sizing: border-box;',
+      /* horizontal swipe when the candles outgrow the width (e.g. on phones) */
+      '  overflow-x: auto;',
+      '  overflow-y: hidden;',
+      '  -webkit-overflow-scrolling: touch;',
+      '  scroll-snap-type: x proximity;',
+      '  scrollbar-width: thin;',
+      '  scrollbar-color: var(--border3) transparent;',
       '}',
+      '.lt-candle-row::-webkit-scrollbar { height: 5px; }',
+      '.lt-candle-row::-webkit-scrollbar-thumb { background: var(--border3); border-radius: 3px; }',
+      '.lt-candle-row::-webkit-scrollbar-track { background: transparent; }',
 
       '.lt-candle-item {',
       '  display: inline-flex;',
+      '  flex: 0 0 auto;',              /* keep natural width so the row scrolls instead of squishing */
+      '  scroll-snap-align: center;',
       '  flex-direction: column;',
       '  align-items: center;',
       '  gap: 6px;',

@@ -1,351 +1,379 @@
 'use strict';
 
+/* ═══════════════════════════════════════════════════════════════════════════
+   Liquidity Theory — Practice Simulator: synthetic market generator
+   lt-simulator.js
+
+   Design (rebuilt 2026-06-09):
+   • Each pattern injector builds ONLY the setup — the candles up to the
+     decision point — and lands the last close AT the key level it teaches
+     (so the "Key Level" line sits where you actually trade, not floating off
+     the top of the chart). It returns { setup, keyLevel, label, winDir }.
+   • winDir is where the textbook says price goes next (+1 up / -1 down).
+   • The reveal (post-decision continuation) is built separately from winDir
+     and the requested `outcome`:
+        outcome='resolve' → price moves the textbook way (the setup works)
+        outcome='fail'    → price moves AGAINST it, after a brief lure that
+                            traps textbook traders (the setup fails)
+     The setup is identical for both outcomes — you cannot tell from the chart
+     which one you're getting. Difficulty (Learn vs Realistic) just changes how
+     often 'fail' is chosen; that decision lives in the UI.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
 // Seeded PRNG
 function mulberry32(seed) {
- let a = seed >>> 0;
- return function() {
- a |= 0; a = (a + 0x6D2B79F5) | 0;
- let t = Math.imul(a ^ (a >>> 15), 1 | a);
- t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
- return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
- };
+  let a = seed >>> 0;
+  return function() {
+    a |= 0; a = (a + 0x6D2B79F5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
 }
 
-// Base random walk — n 15-minute candles
+// Base random walk — n candles (1-hour base units; aggregated up by viewMarket).
 function baseWalk(rand, n, startPrice, drift, vol) {
- const out = [];
- let prevClose = startPrice;
- for (let i = 0; i < n; i++) {
- const open = prevClose;
- const pct = drift + (rand() * 2 - 1) * vol;
- const close = open * (1 + pct);
- const bodyHi = Math.max(open, close);
- const bodyLo = Math.min(open, close);
- const high = bodyHi * (1 + rand() * vol * 0.6);
- const low = bodyLo * (1 - rand() * vol * 0.6);
- out.push([+open.toFixed(2), +close.toFixed(2), +low.toFixed(2), +high.toFixed(2)]);
- prevClose = close;
- }
- return out;
+  const out = [];
+  let prevClose = startPrice;
+  for (let i = 0; i < n; i++) {
+    const open = prevClose;
+    const pct = drift + (rand() * 2 - 1) * vol;
+    const close = open * (1 + pct);
+    const bodyHi = Math.max(open, close);
+    const bodyLo = Math.min(open, close);
+    const high = bodyHi * (1 + rand() * vol * 0.6);
+    const low = bodyLo * (1 - rand() * vol * 0.6);
+    out.push([+open.toFixed(2), +close.toFixed(2), +low.toFixed(2), +high.toFixed(2)]);
+    prevClose = close;
+  }
+  return out;
 }
 
-// Aggregate 15m candles up to a higher timeframe. factor: 4=1h,16=4h,48=12h,96=1d
+// Aggregate base candles up to a higher timeframe. factor: 4=4h,6=6h,12=12h,24=1d
 function aggregateCandles(ohlc, factor) {
- const out = [];
- for (let i = 0; i + factor <= ohlc.length; i += factor) {
- const grp = ohlc.slice(i, i + factor);
- const open = grp[0][0];
- const close = grp[grp.length - 1][1];
- const low = Math.min(...grp.map(c => c[2]));
- const high = Math.max(...grp.map(c => c[3]));
- out.push([+open.toFixed(2), +close.toFixed(2), +low.toFixed(2), +high.toFixed(2)]);
- }
- return out;
+  const out = [];
+  for (let i = 0; i + factor <= ohlc.length; i += factor) {
+    const grp = ohlc.slice(i, i + factor);
+    const open = grp[0][0];
+    const close = grp[grp.length - 1][1];
+    const low = Math.min(...grp.map(c => c[2]));
+    const high = Math.max(...grp.map(c => c[3]));
+    out.push([+open.toFixed(2), +close.toFixed(2), +low.toFixed(2), +high.toFixed(2)]);
+  }
+  return out;
 }
+
+/* ── build helpers ─────────────────────────────────────────────────────────
+   SETUP_N setup candles per scenario; REVEAL_N continuation candles. Chosen so
+   every timeframe reads cleanly (4h≈60 setup candles, not 90; 1d≈10).        */
+const SETUP_N  = 240;
+const REVEAL_N = 140;
+
+// A directional leg from `start` to `target` over n candles. Prices follow a
+// deterministic geometric ramp with an AR(1) deviation layered on top, so the
+// leg has organic swings BUT reliably lands at `target` (a plain drifted random
+// walk compounds variance over 240 candles and wanders ±5% off, which breaks the
+// level-pinned candles — sweeps, zone probes, retests — that the patterns rely on).
+function legTo(rand, start, target, n, vol) {
+  const out = [];
+  let prevClose = start, dev = 0;
+  const phi = 0.88; // deviation persistence → visible swings, still mean-reverting
+  for (let i = 0; i < n; i++) {
+    const ramp = start * Math.pow(target / start, (i + 1) / n);
+    dev = dev * phi + (rand() * 2 - 1) * vol;
+    const open = prevClose;
+    const close = ramp * (1 + dev);
+    const bodyHi = Math.max(open, close), bodyLo = Math.min(open, close);
+    const high = bodyHi * (1 + rand() * vol * 0.6);
+    const low  = bodyLo * (1 - rand() * vol * 0.6);
+    out.push([+open.toFixed(2), +close.toFixed(2), +low.toFixed(2), +high.toFixed(2)]);
+    prevClose = close;
+  }
+  return out;
+}
+
+// A clean OHLC candle from open/close + wick fractions (always valid).
+function mkCandle(open, close, lowFrac, highFrac) {
+  const bodyHi = Math.max(open, close), bodyLo = Math.min(open, close);
+  return [+open.toFixed(2), +close.toFixed(2), +(bodyLo * (1 - lowFrac)).toFixed(2), +(bodyHi * (1 + highFrac)).toFixed(2)];
+}
+
+// Force an OHLC array valid (low ≤ body ≤ high) — used for hand-shaped candles.
+function fixCandle(open, close, low, high) {
+  low = Math.min(low, open, close);
+  high = Math.max(high, open, close);
+  return [+open.toFixed(2), +close.toFixed(2), +low.toFixed(2), +high.toFixed(2)];
+}
+
+const _last = arr => arr[arr.length - 1][1];
+
+// Mean-reverting oscillation between floor and ceiling (for ranges).
+function rangeWalk(rand, n, mid, half, vol) {
+  const floor = mid - half, ceiling = mid + half;
+  const out = [];
+  let prev = mid;
+  for (let i = 0; i < n; i++) {
+    const o = prev;
+    const dist = (mid - o) / half;
+    let c = o * (1 + dist * 0.012 + (rand() * 2 - 1) * vol);
+    if (c > ceiling) c = ceiling - (c - ceiling);
+    if (c < floor) c = floor + (floor - c);
+    out.push(mkCandle(o, c, rand() * 0.003, rand() * 0.003));
+    prev = c;
+  }
+  return out;
+}
+
+/* ── reveal builder ────────────────────────────────────────────────────────
+   dir = actual outcome direction (+1 up / -1 down). fakeout = brief lure in the
+   opposite (textbook-expected) direction before committing — models the trap
+   where a setup pulls you in, then reverses.                                  */
+function buildReveal(rand, start, dir, n, vol, fakeout) {
+  if (!fakeout) return baseWalk(rand, n, start, dir * 0.0014, vol);
+  const k = Math.max(3, Math.floor(n * 0.18));
+  const lure = baseWalk(rand, k, start, -dir * 0.0011, vol);
+  const mid = lure.length ? _last(lure) : start;
+  const rest = baseWalk(rand, n - k, mid, dir * 0.0017, vol * 1.05);
+  return lure.concat(rest);
+}
+
+/* ── PATTERN INJECTORS (setup only) ─────────────────────────────────────────
+   Each returns { setup, keyLevel, label, winDir }. setup.length === SETUP_N.  */
 
 function _injUptrend(rand) {
- const ohlc = baseWalk(rand, 600, 30000, 0.0008, 0.006);
- return { ohlc, cutIndex: 360, keyLevel: ohlc[360][1], patternLabel: 'Uptrend' };
+  const setup = legTo(rand, 28000, 28000 * 1.22, SETUP_N, 0.006);
+  const keyLevel = Math.min(...setup.slice(SETUP_N - 40).map(c => c[2])); // recent higher-low (support)
+  return { setup, keyLevel, label: 'Uptrend', winDir: +1 };
 }
 
 function _injDowntrend(rand) {
- const ohlc = baseWalk(rand, 600, 30000, -0.0008, 0.006);
- return { ohlc, cutIndex: 360, keyLevel: ohlc[360][1], patternLabel: 'Downtrend' };
+  const setup = legTo(rand, 36000, 36000 * 0.80, SETUP_N, 0.006);
+  const keyLevel = Math.max(...setup.slice(SETUP_N - 40).map(c => c[3])); // recent lower-high (resistance)
+  return { setup, keyLevel, label: 'Downtrend', winDir: -1 };
 }
 
 function _injRange(rand) {
- // strongly mean-reverting walk that bounces visibly between floor and ceiling
- const mid = 30000, halfBand = 1500; // floor=28500, ceiling=31500
- const floor = mid - halfBand, ceiling = mid + halfBand;
- const ohlc = [];
- let prevClose = mid;
- for (let i = 0; i < 600; i++) {
- const open = prevClose;
- const dist = (mid - open) / halfBand; // -1..+1 normalised distance from mid
- const pull = dist * 0.010; // strong pull back toward mid
- const pct = pull + (rand() * 2 - 1) * 0.004; // gentle noise
- let close = open * (1 + pct);
- // hard-reflect off the bounds so it never runs away
- if (close > ceiling) close = ceiling - (close - ceiling);
- if (close < floor) close = floor + (floor - close);
- const bodyHi = Math.max(open, close), bodyLo = Math.min(open, close);
- const high = bodyHi * (1 + rand() * 0.0025), low = bodyLo * (1 - rand() * 0.0025);
- ohlc.push([+open.toFixed(2), +close.toFixed(2), +low.toFixed(2), +high.toFixed(2)]);
- prevClose = close;
- }
- return { ohlc, cutIndex: 360, keyLevel: ceiling, patternLabel: 'Range' };
+  const mid = 30000, half = 1800;
+  const body = rangeWalk(rand, SETUP_N - 16, mid, half, 0.004);
+  // Drift the final candles to one band edge so there's a clear range trade.
+  const toCeiling = rand() < 0.5;
+  const edge = toCeiling ? mid + half : mid - half;
+  const tail = legTo(rand, _last(body), edge * (toCeiling ? 0.998 : 1.002), 16, 0.003);
+  const setup = body.concat(tail);
+  return { setup, keyLevel: edge, label: 'Range', winDir: toCeiling ? -1 : +1 }; // revert toward mid
 }
 
 function _injBullFlag(rand) {
- // impulse up, tight down-drift consolidation, cut at end of flag, resolution continues up
- const impulse = baseWalk(rand, 220, 30000, 0.0014, 0.005);
- const flagStart = impulse[impulse.length - 1][1];
- const flag = baseWalk(rand, 140, flagStart, -0.0004, 0.0025);
- const contStart = flag[flag.length - 1][1];
- const cont = baseWalk(rand, 240, contStart, 0.0014, 0.005);
- const ohlc = impulse.concat(flag, cont);
- return { ohlc, cutIndex: 360, keyLevel: flagStart, patternLabel: 'Bull Flag' };
+  const impulse = legTo(rand, 30000, 30000 * 1.13, 130, 0.006);
+  const flagHigh = _last(impulse);
+  const flag = legTo(rand, flagHigh, flagHigh * 0.975, SETUP_N - 130, 0.0028); // tight shallow pullback
+  return { setup: impulse.concat(flag), keyLevel: flagHigh, label: 'Bull Flag', winDir: +1 };
 }
 
 function _injBearFlag(rand) {
- const impulse = baseWalk(rand, 220, 30000, -0.0014, 0.005);
- const flagStart = impulse[impulse.length - 1][1];
- const flag = baseWalk(rand, 140, flagStart, 0.0004, 0.0025);
- const contStart = flag[flag.length - 1][1];
- const cont = baseWalk(rand, 240, contStart, -0.0014, 0.005);
- const ohlc = impulse.concat(flag, cont);
- return { ohlc, cutIndex: 360, keyLevel: flagStart, patternLabel: 'Bear Flag' };
+  const impulse = legTo(rand, 33000, 33000 * 0.87, 130, 0.006);
+  const flagLow = _last(impulse);
+  const flag = legTo(rand, flagLow, flagLow * 1.025, SETUP_N - 130, 0.0028);
+  return { setup: impulse.concat(flag), keyLevel: flagLow, label: 'Bear Flag', winDir: -1 };
 }
 
 function _injBreakout(rand) {
- // range, then decisive break up through keyLevel at cut
- const mid = 30000, top = 31500;
- const range = [];
- let prevClose = mid;
- for (let i = 0; i < 360; i++) {
- const open = prevClose;
- const pull = (mid - open) / 1500 * 0.004;
- const pct = pull + (rand() * 2 - 1) * 0.005;
- const close = Math.min(open * (1 + pct), top); // capped under resistance
- const bodyHi = Math.max(open, close), bodyLo = Math.min(open, close);
- range.push([+open.toFixed(2), +close.toFixed(2), +(bodyLo*(1-rand()*0.003)).toFixed(2), +(bodyHi*(1+rand()*0.003)).toFixed(2)]);
- prevClose = close;
- }
- const cont = baseWalk(rand, 240, top, 0.0014, 0.005);
- const ohlc = range.concat(cont);
- return { ohlc, cutIndex: 360, keyLevel: top, patternLabel: 'Breakout' };
+  const res = 31000;
+  const range = rangeWalk(rand, 150, res * 0.965, res * 0.03, 0.004); // oscillate under resistance
+  const brk = legTo(rand, _last(range), res * 1.022, 35, 0.006);       // decisive break above
+  const retest = legTo(rand, _last(brk), res * 1.004, SETUP_N - 185, 0.0035); // pull back to old resistance
+  // Last candle taps the level from above and holds (now support).
+  const o = retest.length > 1 ? retest[retest.length - 2][1] : _last(brk);
+  retest[retest.length - 1] = fixCandle(o, res * 1.004, res * 0.997, Math.max(o, res * 1.004) * 1.002);
+  return { setup: range.concat(brk, retest), keyLevel: res, label: 'Breakout', winDir: +1 };
 }
 
 function _injDoubleTop(rand) {
- // rally to resistance, pull back, rally to ~same resistance, reject at cut, resolution down
- const res = 32000;
- const up1 = baseWalk(rand, 160, 30000, 0.0012, 0.004);
- const pb = baseWalk(rand, 100, up1[up1.length-1][1], -0.0011, 0.004);
- const up2 = baseWalk(rand, 100, pb[pb.length-1][1], 0.0012, 0.004);
- // Smoothly guide the last 20 candles of up2 toward resistance to avoid a teleport jump
- const rampStart = up2.length - 20;
- const rampFrom = up2[rampStart][1]; // close at ramp entry
- const rampTo = res * (0.997 + rand() * 0.003); // target near resistance
- for (let i = rampStart; i < up2.length; i++) {
- const t = (i - rampStart + 1) / 20; // 0..1
- const targetClose = rampFrom + (rampTo - rampFrom) * t;
- const open = i === 0 ? up2[i][0] : up2[i - 1][1]; // continuous open
- const bodyHi = Math.max(open, targetClose), bodyLo = Math.min(open, targetClose);
- const wick = rand() * 0.002;
- up2[i] = [+open.toFixed(2), +targetClose.toFixed(2), +(bodyLo * (1 - wick)).toFixed(2), +(bodyHi * (1 + wick)).toFixed(2)];
- }
- const peakClose = up2[up2.length - 1][1]; // continuous handoff, no gap
- const down = baseWalk(rand, 240, peakClose, -0.0014, 0.005);
- const ohlc = up1.concat(pb, up2, down);
- return { ohlc, cutIndex: 360, keyLevel: res, patternLabel: 'Double Top' };
+  const res = 32000, neck = res * 0.93;
+  const up1 = legTo(rand, 29500, res * 0.998, 95, 0.005);
+  const pb  = legTo(rand, _last(up1), neck, 65, 0.005);
+  const up2 = legTo(rand, _last(pb), res * 0.997, SETUP_N - 160, 0.005);
+  // Reject candle: equal-high test of resistance with an upper wick, close back below.
+  const o = up2.length > 1 ? up2[up2.length - 2][1] : _last(pb);
+  up2[up2.length - 1] = fixCandle(o, res * 0.985, Math.min(o, res * 0.985) * 0.997, res * 1.006);
+  return { setup: up1.concat(pb, up2), keyLevel: res, label: 'Double Top', winDir: -1 };
 }
 
 function _injDoubleBottom(rand) {
- const sup = 28000;
- const dn1 = baseWalk(rand, 160, 30000, -0.0012, 0.004);
- const bb = baseWalk(rand, 100, dn1[dn1.length-1][1], 0.0011, 0.004);
- const dn2 = baseWalk(rand, 100, bb[bb.length-1][1], -0.0012, 0.004);
- // Smoothly guide the last 20 candles of dn2 toward support to avoid a teleport jump
- const rampStart = dn2.length - 20;
- const rampFrom = dn2[rampStart][1]; // close at ramp entry
- const rampTo = sup * (1.0 + rand() * 0.003); // target near support
- for (let i = rampStart; i < dn2.length; i++) {
- const t = (i - rampStart + 1) / 20; // 0..1
- const targetClose = rampFrom + (rampTo - rampFrom) * t;
- const open = i === 0 ? dn2[i][0] : dn2[i - 1][1]; // continuous open
- const bodyHi = Math.max(open, targetClose), bodyLo = Math.min(open, targetClose);
- const wick = rand() * 0.002;
- dn2[i] = [+open.toFixed(2), +targetClose.toFixed(2), +(bodyLo * (1 - wick)).toFixed(2), +(bodyHi * (1 + wick)).toFixed(2)];
- }
- const troughClose = dn2[dn2.length - 1][1]; // continuous handoff, no gap
- const up = baseWalk(rand, 240, troughClose, 0.0014, 0.005);
- const ohlc = dn1.concat(bb, dn2, up);
- return { ohlc, cutIndex: 360, keyLevel: sup, patternLabel: 'Double Bottom' };
+  const sup = 28000, neck = sup * 1.07;
+  const dn1 = legTo(rand, 30500, sup * 1.002, 95, 0.005);
+  const bb  = legTo(rand, _last(dn1), neck, 65, 0.005);
+  const dn2 = legTo(rand, _last(bb), sup * 1.003, SETUP_N - 160, 0.005);
+  const o = dn2.length > 1 ? dn2[dn2.length - 2][1] : _last(bb);
+  dn2[dn2.length - 1] = fixCandle(o, sup * 1.015, sup * 0.994, Math.max(o, sup * 1.015) * 1.003);
+  return { setup: dn1.concat(bb, dn2), keyLevel: sup, label: 'Double Bottom', winDir: +1 };
 }
 
 function _injDemandBounce(rand) {
- // decline into support with pronounced lower wicks at the level, cut at level, resolution up
- const sup = 28000;
- const decline = baseWalk(rand, 360, 31000, -0.0009, 0.005);
- // last ~90 setup candles probe support; apply wick every 3rd candle
- for (let i = decline.length - 90; i < decline.length; i++) {
- if (i % 3 === 0) {
- const c = decline[i];
- c[2] = +(sup * (1 - rand()*0.004)).toFixed(2); // pronounced lower wick below support
- if (c[1] < sup) c[1] = +(sup * (1 + rand()*0.003)).toFixed(2); // close back above
- }
- }
- const bounce = baseWalk(rand, 240, decline[decline.length-1][1], 0.0014, 0.005);
- const ohlc = decline.concat(bounce);
- return { ohlc, cutIndex: 360, keyLevel: sup, patternLabel: 'Demand Zone' };
+  const zone = 28000;
+  const decline = legTo(rand, zone * 1.16, zone, 210, 0.0055); // decline that lands AT the zone
+  const probe = [];
+  for (let i = 0; i < SETUP_N - 210; i++) {
+    const o = i === 0 ? _last(decline) : probe[i - 1][1];
+    const close = zone * (1 + (rand() * 0.008 - 0.001)); // mostly closes just above the zone
+    const low   = zone * (1 - rand() * 0.006);           // long lower wick below the zone
+    const high  = Math.max(o, close) * (1 + rand() * 0.002);
+    probe.push(fixCandle(o, close, low, high));
+  }
+  return { setup: decline.concat(probe), keyLevel: zone, label: 'Demand Zone', winDir: +1 };
 }
 
 function _injSupplyReject(rand) {
- const res = 32000;
- const rally = baseWalk(rand, 360, 29000, 0.0009, 0.005);
- // last ~90 setup candles probe resistance; apply wick every 3rd candle
- for (let i = rally.length - 90; i < rally.length; i++) {
- if (i % 3 === 0) {
- const c = rally[i];
- c[3] = +(res * (1 + rand()*0.004)).toFixed(2); // pronounced upper wick above resistance
- if (c[1] > res) c[1] = +(res * (1 - rand()*0.003)).toFixed(2); // close back below
- }
- }
- const drop = baseWalk(rand, 240, rally[rally.length-1][1], -0.0014, 0.005);
- const ohlc = rally.concat(drop);
- return { ohlc, cutIndex: 360, keyLevel: res, patternLabel: 'Supply Zone' };
+  const zone = 32000;
+  const rally = legTo(rand, zone * 0.84, zone, 210, 0.0055);
+  const probe = [];
+  for (let i = 0; i < SETUP_N - 210; i++) {
+    const o = i === 0 ? _last(rally) : probe[i - 1][1];
+    const close = zone * (1 - (rand() * 0.008 - 0.001)); // mostly closes just below the zone
+    const high  = zone * (1 + rand() * 0.006);           // long upper wick above the zone
+    const low   = Math.min(o, close) * (1 - rand() * 0.002);
+    probe.push(fixCandle(o, close, low, high));
+  }
+  return { setup: rally.concat(probe), keyLevel: zone, label: 'Supply Zone', winDir: -1 };
 }
 
 function _injReversalHammer(rand) {
- // downtrend, hammer candle (long lower wick, small body) at index 359 = decision, resolution up
- const down = baseWalk(rand, 360, 32000, -0.0009, 0.005);
- const h = down[down.length-1];
- const o = h[1]; // open near prior close
- const close = +(o * (1 + 0.001)).toFixed(2); // tiny body
- const low = +(o * (1 - 0.02)).toFixed(2); // long lower wick ~2%
- const high = +(Math.max(o, close) * (1 + 0.002)).toFixed(2);
- down[down.length-1] = [o, close, low, high]; // index 359 is the hammer
- const up = baseWalk(rand, 240, close, 0.0014, 0.005);
- const ohlc = down.concat(up);
- return { ohlc, cutIndex: 360, keyLevel: low, patternLabel: 'Hammer' };
+  const down = legTo(rand, 32000, 28500, SETUP_N - 1, 0.0055);
+  const o = _last(down);
+  const close = o * 1.001;            // tiny body
+  const hammer = fixCandle(o, close, o * 0.978, Math.max(o, close) * 1.002); // long lower wick
+  return { setup: down.concat([hammer]), keyLevel: hammer[2], label: 'Hammer', winDir: +1 };
 }
 
 function _injShootingStar(rand) {
- // uptrend, shooting star candle (long upper wick, small body) at index 359 = decision, resolution down
- const up = baseWalk(rand, 360, 28000, 0.0009, 0.005);
- const s = up[up.length-1];
- const o = s[1];
- const close = +(o * (1 - 0.001)).toFixed(2);
- const high = +(o * (1 + 0.02)).toFixed(2); // long upper wick ~2%
- const low = +(Math.min(o, close) * (1 - 0.002)).toFixed(2);
- up[up.length-1] = [o, close, low, high]; // index 359 is the shooting star
- const down = baseWalk(rand, 240, close, -0.0014, 0.005);
- const ohlc = up.concat(down);
- return { ohlc, cutIndex: 360, keyLevel: high, patternLabel: 'Shooting Star' };
+  const up = legTo(rand, 28000, 31500, SETUP_N - 1, 0.0055);
+  const o = _last(up);
+  const close = o * 0.999;
+  const star = fixCandle(o, close, Math.min(o, close) * 0.998, o * 1.022); // long upper wick
+  return { setup: up.concat([star]), keyLevel: star[3], label: 'Shooting Star', winDir: -1 };
 }
 
 function _injInvertedHammer(rand) {
- // downtrend then inverted hammer (long upper wick, small body) at the bottom, resolution up
- const down = baseWalk(rand, 360, 32000, -0.0009, 0.005);
- const o = down[359][1];
- const close = +(o*(1+0.001)).toFixed(2); // tiny body
- const high = +(o*(1+0.02)).toFixed(2); // long upper wick
- const low = +(Math.min(o,close)*(1-0.002)).toFixed(2);
- down[359] = [o, close, low, high];
- const up = baseWalk(rand, 240, close, 0.0013, 0.005);
- return { ohlc: down.concat(up), cutIndex: 360, keyLevel: high, patternLabel: 'Inverted Hammer' };
+  const down = legTo(rand, 32000, 28500, SETUP_N - 1, 0.0055);
+  const o = _last(down);
+  const close = o * 1.001;
+  const ih = fixCandle(o, close, Math.min(o, close) * 0.998, o * 1.02); // long upper wick at the bottom
+  return { setup: down.concat([ih]), keyLevel: o, label: 'Inverted Hammer', winDir: +1 };
 }
 
 function _injDoji(rand) {
- // mild uptrend into a doji (open ≈ close, wicks both sides) at the decision point
- const up = baseWalk(rand, 360, 29000, 0.0006, 0.005);
- const o = up[359][1];
- const close = +(o*(1+0.0002)).toFixed(2); // open ≈ close
- const high = +(o*(1+0.01)).toFixed(2);
- const low = +(o*(1-0.01)).toFixed(2);
- up[359] = [o, close, low, high];
- const after = baseWalk(rand, 240, close, 0.0, 0.004); // indecision → drift ~flat
- return { ohlc: up.concat(after), cutIndex: 360, keyLevel: o, patternLabel: 'Doji' };
+  const up = legTo(rand, 29000, 31000, SETUP_N - 1, 0.005);
+  const o = _last(up);
+  const close = o * (1 + (rand() * 0.0006 - 0.0003)); // open ≈ close
+  const doji = fixCandle(o, close, o * 0.991, o * 1.009);
+  return { setup: up.concat([doji]), keyLevel: o, label: 'Doji', winDir: rand() < 0.5 ? +1 : -1 };
 }
 
 function _injSrFlip(rand) {
- // resistance-becomes-support: break above level, retest from above, continuation up
- const level = 30000;
- const approach = baseWalk(rand, 200, 28500, 0.0009, 0.005); // rally toward level
- const breakUp = baseWalk(rand, 80, level*1.01, 0.0011, 0.005); // break above level
- const retest = baseWalk(rand, 80, breakUp[breakUp.length-1][1], -0.0009, 0.004); // pull back to level
- // force the retest low to tag the level from above
- retest[retest.length-1][2] = +(level*0.998).toFixed(2);
- retest[retest.length-1][1] = +(level*1.003).toFixed(2); // close back above = support holds
- const cont = baseWalk(rand, 240, retest[retest.length-1][1], 0.0013, 0.005);
- return { ohlc: approach.concat(breakUp, retest, cont), cutIndex: 360, keyLevel: level, patternLabel: 'S/R Flip' };
+  const level = 30000;
+  const approach = legTo(rand, 28000, level * 1.012, 130, 0.005);            // rally through the level
+  const retest = legTo(rand, _last(approach), level * 1.004, SETUP_N - 130, 0.004); // pull back to it
+  const o = retest.length > 1 ? retest[retest.length - 2][1] : _last(approach);
+  retest[retest.length - 1] = fixCandle(o, level * 1.004, level * 0.998, Math.max(o, level * 1.004) * 1.002);
+  return { setup: approach.concat(retest), keyLevel: level, label: 'S/R Flip', winDir: +1 };
 }
 
 function _injLiquiditySweep(rand) {
- // price pokes just past a prior high to grab liquidity, then sharply reverses (Swing Failure Pattern)
- const priorHigh = 31000;
- const run = baseWalk(rand, 340, 29000, 0.0008, 0.005); // rally to just under prior high
- // sweep candle: spikes above priorHigh then closes back below
- const o = run[run.length-1][1];
- const sweepHigh = +(priorHigh*1.012).toFixed(2); // pokes above the high
- const sweepClose = +(priorHigh*0.992).toFixed(2); // closes back below = failure
- const sweep = [o, sweepClose, +(o*0.998).toFixed(2), sweepHigh];
- const reversal = baseWalk(rand, 240, sweepClose, -0.0014, 0.006);
- const ohlc = run.concat([sweep], reversal);
- return { ohlc, cutIndex: run.length + 1, keyLevel: priorHigh, patternLabel: 'Liquidity Sweep' };
+  const priorHigh = 31000;
+  const run = legTo(rand, priorHigh * 0.93, priorHigh * 0.992, SETUP_N - 1, 0.005); // approach from below
+  const o = _last(run);
+  // Sweep candle: spikes ABOVE the prior high then closes back below it = failure.
+  const sweep = fixCandle(o, priorHigh * 0.986, Math.min(o, priorHigh * 0.986) * 0.998, priorHigh * 1.014);
+  return { setup: run.concat([sweep]), keyLevel: priorHigh, label: 'Liquidity Sweep', winDir: -1 };
 }
 
 function _injBos(rand) {
- // Break of Structure: uptrend making HH/HL, then price breaks the most recent higher-low
- const up = baseWalk(rand, 360, 28000, 0.0010, 0.005); // uptrend making HH/HL
- const lastHL = Math.min(...up.slice(300, 360).map(c => c[2])); // recent higher-low level
- const breakDown = baseWalk(rand, 240, up[359][1], -0.0013, 0.006); // breaks below structure
- return { ohlc: up.concat(breakDown), cutIndex: 360, keyLevel: +lastHL.toFixed(2), patternLabel: 'Break of Structure' };
+  const up = legTo(rand, 28000, 33000, 200, 0.0055);                       // uptrend making HH/HL
+  const hl = Math.min(...up.slice(160).map(c => c[2]));                    // most recent higher-low
+  const brk = legTo(rand, _last(up), hl * 0.975, SETUP_N - 200, 0.006);    // break DOWN below it (visible BOS)
+  return { setup: up.concat(brk), keyLevel: +hl.toFixed(2), label: 'Break of Structure', winDir: -1 };
 }
 
 // Map pattern keys to injector functions
 const _INJECTORS = {
- uptrend: _injUptrend,
- downtrend: _injDowntrend,
- range: _injRange,
- bull_flag: _injBullFlag,
- bear_flag: _injBearFlag,
- breakout: _injBreakout,
- double_top: _injDoubleTop,
- double_bottom: _injDoubleBottom,
- demand_bounce: _injDemandBounce,
- supply_reject: _injSupplyReject,
- reversal_hammer: _injReversalHammer,
- shooting_star: _injShootingStar,
- inverted_hammer: _injInvertedHammer,
- doji: _injDoji,
- sr_flip: _injSrFlip,
- liquidity_sweep: _injLiquiditySweep,
- bos: _injBos
+  uptrend: _injUptrend,
+  downtrend: _injDowntrend,
+  range: _injRange,
+  bull_flag: _injBullFlag,
+  bear_flag: _injBearFlag,
+  breakout: _injBreakout,
+  double_top: _injDoubleTop,
+  double_bottom: _injDoubleBottom,
+  demand_bounce: _injDemandBounce,
+  supply_reject: _injSupplyReject,
+  reversal_hammer: _injReversalHammer,
+  shooting_star: _injShootingStar,
+  inverted_hammer: _injInvertedHammer,
+  doji: _injDoji,
+  sr_flip: _injSrFlip,
+  liquidity_sweep: _injLiquiditySweep,
+  bos: _injBos
 };
 
-const _TF_FACTOR = { '4h': 4, '6h': 6, '12h': 12, '1d': 24 };
+const _TF_FACTOR = { '4h': 4, '6h': 6, '12h': 12, '1d': 24 }; // 1h base units
 const _TF_HOURS  = { '4h': 4, '6h': 6, '12h': 12, '1d': 24 };
 const _SIM_MON   = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
 // Format a candle timestamp for the x-axis. Higher TF → date only; intraday →
 // time, with the date shown at each midnight boundary.
 function _simFmtTime(d, tf) {
- const mo = _SIM_MON[d.getUTCMonth()], day = d.getUTCDate();
- if (tf === '1d') return mo + ' ' + day;
- const h = d.getUTCHours();
- return h === 0 ? mo + ' ' + day : (h < 10 ? '0' : '') + h + ':00';
+  const mo = _SIM_MON[d.getUTCMonth()], day = d.getUTCDate();
+  if (tf === '1d') return mo + ' ' + day;
+  const h = d.getUTCHours();
+  return h === 0 ? mo + ' ' + day : (h < 10 ? '0' : '') + h + ':00';
 }
 
-// Generate the single source-of-truth base (1h) market. No timeframe — callers view it via viewMarket.
-function generateMarket(simPattern, seed) {
- const rand = mulberry32((seed | 0) + 1);
- const inj = (_INJECTORS[simPattern] || _injUptrend);
- const raw = inj(rand); // { ohlc(1h base), cutIndex(1h base), keyLevel, patternLabel }
- return { ohlcBase: raw.ohlc, cutIndexBase: raw.cutIndex, keyLevel: raw.keyLevel, patternLabel: raw.patternLabel, pattern: simPattern, seed };
+/* Generate the single source-of-truth base market (1h units, no timeframe).
+   outcome: 'resolve' (setup works) | 'fail' (setup fails). Default 'resolve'.
+   The setup is identical for both — only the reveal differs. */
+function generateMarket(simPattern, seed, outcome) {
+  const rand = mulberry32((seed | 0) + 1);
+  const inj  = (_INJECTORS[simPattern] || _injUptrend);
+  const built = inj(rand);                         // { setup, keyLevel, label, winDir }
+  outcome = outcome === 'fail' ? 'fail' : 'resolve';
+  const dir = outcome === 'fail' ? -built.winDir : built.winDir;
+  const reveal = buildReveal(rand, _last(built.setup), dir, REVEAL_N, 0.006, outcome === 'fail');
+  return {
+    ohlcBase: built.setup.concat(reveal),
+    cutIndexBase: built.setup.length,
+    keyLevel: +built.keyLevel.toFixed(2),
+    patternLabel: built.label,
+    pattern: simPattern,
+    seed,
+    winDir: built.winDir,
+    outcome
+  };
 }
 
 // View an already-generated market at a timeframe — pure re-bucketing, no randomness.
 function viewMarket(market, timeframe) {
- const factor = _TF_FACTOR[timeframe] || 24; // 4h=4, 6h=6, 12h=12, 1d=24
- const ohlc = aggregateCandles(market.ohlcBase, factor);
- const cutIndex = Math.max(1, Math.min(ohlc.length - 2, Math.floor(market.cutIndexBase / factor)));
- // Coordinated simulated time axis: each candle is `timeframe` apart, anchored
- // (midnight-aligned, varied per seed) so the dates/times line up with the TF.
- const stepMs   = (_TF_HOURS[timeframe] || 24) * 3600 * 1000;
- const anchorMs = Date.UTC(2024, 0, 1) + ((market.seed || 1) % 200) * 86400000;
- const labels = ohlc.map((_, i) => _simFmtTime(new Date(anchorMs + (i - cutIndex) * stepMs), timeframe));
- return {
- ohlc, labels, cutIndex,
- markLines: [{ yAxis: +market.keyLevel.toFixed(2), label: market.patternLabel, color: '#00d4d4' }],
- source: 'simulation',
- meta: { pattern: market.pattern, timeframe, seed: market.seed }
- };
+  const factor = _TF_FACTOR[timeframe] || 24;
+  const ohlc = aggregateCandles(market.ohlcBase, factor);
+  const cutIndex = Math.max(1, Math.min(ohlc.length - 2, Math.floor(market.cutIndexBase / factor)));
+  const stepMs   = (_TF_HOURS[timeframe] || 24) * 3600 * 1000;
+  const anchorMs = Date.UTC(2024, 0, 1) + ((market.seed || 1) % 200) * 86400000;
+  const labels = ohlc.map((_, i) => _simFmtTime(new Date(anchorMs + (i - cutIndex) * stepMs), timeframe));
+  return {
+    ohlc, labels, cutIndex,
+    // Neutral level line — never names the pattern (that would give away the answer).
+    markLines: [{ yAxis: +market.keyLevel.toFixed(2), label: 'Key Level', color: '#8a8f98' }],
+    keyLevel: +market.keyLevel.toFixed(2),
+    winDir: market.winDir,
+    outcome: market.outcome,
+    patternLabel: market.patternLabel,
+    source: 'simulation',
+    meta: { pattern: market.pattern, timeframe, seed: market.seed, outcome: market.outcome }
+  };
 }
 
 // Convenience wrapper — keeps old call sites working. Defaults to '1d'.
-function generateScenario(simPattern, seed, timeframe) {
- return viewMarket(generateMarket(simPattern, seed), timeframe || '1d');
+function generateScenario(simPattern, seed, timeframe, outcome) {
+  return viewMarket(generateMarket(simPattern, seed, outcome), timeframe || '1d');
 }
 
 // Exports (plain-script global access — no modules)
