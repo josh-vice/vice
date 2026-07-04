@@ -59,7 +59,7 @@
 
   <!-- Persistence facade: ONE registry of every fixed localStorage key + safe
        accessors. Must load before lt-settings.js (reads prefs at parse time). -->
-  <script src="lt-store.js?v=1.2.0"></script>
+  <script src="lt-store.js?v=1.1.0"></script>
 
   <!-- Settings load SYNCHRONOUSLY right after the store: ltApplySavedSettings() runs at
        parse time and sets the theme/palette CSS vars BEFORE first paint (no flash).
@@ -92,9 +92,8 @@
   <!-- Real historical pattern definitions -->
   <script src="lt-patterns.js?v=1.5.0" defer></script>
 
-  <!-- Synthetic market generator + live BTC data feed -->
-  <script src="lt-simulator.js?v=1.5.0" defer></script>
-  <script src="lt-sim-feed.js?v=1.2.0" defer></script>
+  <!-- Synthetic market generator -->
+  <script src="lt-simulator.js?v=1.4.0" defer></script>
 
   <!-- UI modules (loaded before engine so engine can call them) -->
   <script src="lt-gallery.js?v=2.0.1" defer></script>
@@ -105,8 +104,7 @@
   <script src="lt-msbuilder.js?v=1.1.1" defer></script>
   <script src="lt-divtrainer.js?v=1.0.1" defer></script>
   <script src="lt-volreader.js?v=1.0.1" defer></script>
-  <script src="lt-tradingview.js?v=1.0.1" defer></script>
-  <script src="lt-sim-ui.js?v=3.7.0" defer></script>
+  <script src="lt-sim-ui.js?v=2.1.0" defer></script>
   <script src="lt-glossary.js?v=2.2.1" defer></script>
   <script src="lt-flashcards.js?v=1.9.10" defer></script>
   <script src="lt-community.js?v=2.0.2" defer></script>

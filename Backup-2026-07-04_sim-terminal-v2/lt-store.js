@@ -38,7 +38,6 @@
     fcMode:           'lt_fc_mode',
     simStats:         'lt_sim_stats',
     simDifficulty:    'lt_sim_difficulty',
-    simSource:        'lt_sim_source',      // 'replay' (pattern generator) | 'live' (real BTC feed)
     riskDismissed:    'lt_risk_dismissed'   // '1' once the leverage risk callout is closed
   };
 

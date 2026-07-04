@@ -21,12 +21,6 @@
    v3.1: Insilico-style densification (hairline metrics bar, micro uppercase
    labels, 3-5px radii, tighter chrome throughout) + order size entry in USD
    or BTC (unit toggle converts the value in place; engine stays USD-notional).
-   v3.2 "flagship": synthetic depth ladder (click-to-set-price, honest "sim"
-   tag), per-pattern mastery records (session W/L + net per concept; click a
-   row to practice it), order-drag validation (no marketable crosses, margin
-   re-check), atomic live TF switches, 1s live heartbeat (candle roll +
-   countdown without waiting for a trade), full light-theme canvas palette,
-   reduced-motion + focus-visible + aria-pressed passes, fill flash feedback.
 
    Public API (unchanged for engine integration):
      renderSimulator(containerId, opts)   opts: {pattern, label, courseMode}
@@ -101,50 +95,23 @@ const SIM_GRID  = { left:56, right:96, top:18, bottomPricePct:70, volGapPct:6 };
 /* ── ACCOUNT (persisted) ──────────────────────────────────────────────────── */
 let A = null;   // { v:2, balance, trades, wins, streak, bestStreak, sessions, history[], log[] }
 
-/* HTML-escape any storage-derived string before it reaches innerHTML. */
-function _esc(s) {
-  return String(s == null ? '' : s).replace(/[&<>"']/g, c =>
-    ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
-}
-const _num = (v, d) => { const n = +v; return Number.isFinite(n) ? n : (d || 0); };
-
-/* Coerce a parsed account into a fully-typed, injection-safe shape. Numbers are
-   forced finite (a NaN balance can never brick the terminal); log/side strings
-   are whitelisted so hostile localStorage can't smuggle markup into innerHTML. */
-function _sanitizeAccount(s) {
-  const bal = _num(s.balance, 1000);
-  const hist = Array.isArray(s.history) ? s.history.map(v => _num(v, 0)).slice(-200) : [bal];
-  const log = (Array.isArray(s.log) ? s.log : []).slice(0, 40).map(t => ({
-    t: typeof t.t === 'string' ? t.t.slice(0, 24) : '',
-    side: t.side === 'short' ? 'short' : 'long',
-    qty: _num(t.qty), entry: _num(t.entry), exit: _num(t.exit),
-    fees: _num(t.fees), pnl: _num(t.pnl), tf: typeof t.tf === 'string' ? t.tf.slice(0, 4) : ''
-  }));
-  const bp = {};
-  if (s.byPattern && typeof s.byPattern === 'object') {
-    for (const k of Object.keys(s.byPattern)) {
-      if (!SIM_CONCEPTS[k]) continue;                 // key whitelist (used in onclick + text)
-      const e = s.byPattern[k] || {};
-      bp[k] = { s: Math.max(0, _num(e.s) | 0), w: Math.max(0, _num(e.w) | 0), pnl: _num(e.pnl) };
-    }
-  }
-  return { v:2, balance:bal, trades:_num(s.trades)|0, wins:_num(s.wins)|0,
-           streak:_num(s.streak)|0, bestStreak:_num(s.bestStreak)|0, sessions:_num(s.sessions)|0,
-           history:hist.length ? hist : [bal], log, byPattern:bp };
-}
-
 function simLoadAccount() {
   try {
     const r = localStorage.getItem(SIM_STORAGE);
     if (r) {
       const s = JSON.parse(r);
-      if (s && s.v === 2) return _sanitizeAccount(s);
+      if (s.v === 2) {
+        if (!Array.isArray(s.history)) s.history = [s.balance || 1000];
+        if (!Array.isArray(s.log)) s.log = [];
+        return s;
+      }
       // migrate v1 (equity-based quiz stats) → v2 terminal account
-      if (s) return _sanitizeAccount({ v:2, balance:(s.equity ?? 1000), trades:s.trades, wins:s.wins,
-               streak:s.streak, bestStreak:s.bestStreak, sessions:0, history:s.history, log:[], byPattern:{} });
+      return { v:2, balance:+(s.equity ?? 1000), trades:s.trades|0, wins:s.wins|0,
+               streak:s.streak|0, bestStreak:s.bestStreak|0, sessions:0,
+               history:Array.isArray(s.history)?s.history.slice(-200):[s.equity||1000], log:[] };
     }
   } catch(_) {}
-  return { v:2, balance:1000, trades:0, wins:0, streak:0, bestStreak:0, sessions:0, history:[1000], log:[], byPattern:{} };
+  return { v:2, balance:1000, trades:0, wins:0, streak:0, bestStreak:0, sessions:0, history:[1000], log:[] };
 }
 function simSaveAccount() { try { localStorage.setItem(SIM_STORAGE, JSON.stringify(A)); } catch(_) {} }
 
@@ -164,72 +131,17 @@ let S = null;
 let _simOpts = {};
 let _simLockedPattern = null;
 let _simChart = null, _simEqChart = null, _simChartRO = null, _simEqRO = null;
-let _tvHandle = null;          // TradingView study-view widget handle (opt-in)
-let _tvMountToken = 0;         // guards against a stale async mount after rapid source toggling
 let _simDragging = false;      // an SL/TP/order line is mid-drag — pause overlay repaints
 let _lastLivePaint = 0;        // live ticks arrive fast — throttle chart paints
-let _lastDomPaint = 0;         // depth ladder repaint throttle
-
-/* Theme palette for canvas surfaces (ECharts + zrender graphics can't read
-   CSS vars themselves). Refreshed on every chart (re)build, so a theme flip —
-   which re-enters the simulator — always paints correctly, light or dark. */
-let _simTh = null;
-function _readTheme() {
-  const cs = getComputedStyle(document.documentElement);
-  const v = (name, fb) => { const x = (cs.getPropertyValue(name) || '').trim(); return x || fb; };
-  const light = document.documentElement.classList.contains('theme-light');
-  _simTh = {
-    light,
-    bg2:  v('--bg2',  '#0b0b10'),
-    bg3:  v('--bg3',  '#0f0f0f'),
-    bg4:  v('--bg4',  '#16161c'),
-    bdr:  v('--border',  '#1e1e1e'),
-    bdr2: v('--border2', '#26262e'),
-    txt:  v('--text',  '#e8ebf0'),
-    txt2: v('--text2', '#aeb4c0'),
-    txt3: v('--text3', '#8a8f98'),
-    teal: v('--teal', '#00d4d4'),
-    // loss/short text: soft pink on dark (reads better); deep magenta on light so
-    // it clears AA even over the pink-tinted position/side backgrounds
-    loss: light ? '#be185d' : '#ff5f8f',
-    // positive/win text: user's bullish color on dark; AA-safe deep teal on light
-    win:  light ? '#0f766e' : _bc(),
-    // liquidation/warning: dark orange stays; light needs the deep amber for AA + 3:1 graphics
-    gold: light ? v('--gold', '#b45309') : '#e0a030'
-  };
-  return _simTh;
-}
-/* Loss/win/gold text colors for canvas + inline styles (theme-correct). */
-function _lossCol() { return (_simTh || _readTheme()).loss; }
-function _winCol()  { return (_simTh || _readTheme()).win; }
-function _goldCol() { return (_simTh || _readTheme()).gold; }
-/* Readable text color for a solid fill — picks black or white by true WCAG
-   contrast ratio (not a luma threshold) so a solid price tag always takes the
-   higher-contrast text, even on mid-tone light-theme accents like #0d9488. */
-function _relLum(r, g, b) {
-  const f = c => { c /= 255; return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4); };
-  return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b);
-}
-function _txtOn(hex) {
-  const m = /^#?([0-9a-f]{6})$/i.exec((hex || '').trim());
-  if (!m) return '#0b0b0b';
-  const n = parseInt(m[1], 16), L = _relLum((n >> 16) & 255, (n >> 8) & 255, n & 255);
-  const cWhite = 1.05 / (L + 0.05), cBlack = (L + 0.05) / 0.05;
-  return cBlack >= cWhite ? '#0b0b0b' : '#ffffff';
-}
 
 function _simDifficulty() { return localStorage.getItem(SIM_DIFF_KEY) === 'real' ? 'real' : 'learn'; }
-function _simSource() {
-  const s = localStorage.getItem(SIM_SRC_KEY);
-  return (s === 'live' || s === 'tradingview') ? s : 'replay';
-}
+function _simSource()     { return localStorage.getItem(SIM_SRC_KEY) === 'live' ? 'live' : 'replay'; }
 window._sim2SetDifficulty = function(mode) {
   localStorage.setItem(SIM_DIFF_KEY, mode === 'real' ? 'real' : 'learn');
   renderSimulator('content-area', _simOpts);
 };
 window._sim3SetSource = function(src) {
-  const v = (src === 'live' || src === 'tradingview') ? src : 'replay';
-  localStorage.setItem(SIM_SRC_KEY, v);
+  localStorage.setItem(SIM_SRC_KEY, src === 'live' ? 'live' : 'replay');
   renderSimulator('content-area', _simOpts);
 };
 
@@ -308,22 +220,15 @@ function _recalcOrderMargins() {
   }
 }
 
-/* Qty of the current position a NEW (side) order would reduce, after already-
-   resting same-side orders have claimed their share. 0 if it only adds. */
-function _reducibleQty(side) {
+/* Margin a NEW order of (side, qty, px, lev) would need right now, after the
+   position and already-resting same-side orders have claimed the reducible. */
+function _requiredMargin(side, qty, px, lev) {
   let reducible = 0;
   if (S.pos && S.pos.side === (side === 'buy' ? 'short' : 'long')) {
     reducible = S.pos.qty;
     for (const o of S.orders) if (o.side === side) reducible = Math.max(0, reducible - o.qty);
   }
-  return reducible;
-}
-function _reducibleUsd(side, px) { return _reducibleQty(side) * px; }
-
-/* Margin a NEW order of (side, qty, px, lev) would need right now, after the
-   position and already-resting same-side orders have claimed the reducible. */
-function _requiredMargin(side, qty, px, lev) {
-  const inc = Math.max(0, qty - _reducibleQty(side));
+  const inc = Math.max(0, qty - reducible);
   return inc * px / lev;
 }
 
@@ -388,12 +293,10 @@ function _newLiveSession(tf) {
 /* Fetch history + open the tick stream. Guards against the session changing
    underneath the async work (TF switch, new session, teardown). */
 function _liveBoot() {
-  const mySession = S, myTf = S.tf;
+  const mySession = S;
   if (!(window.LTSimFeed)) { _liveFail(); return; }
   LTSimFeed.loadKlines(SIM_LIVE_TF[S.tf]).then(data => {
-    // bail if the session ended, was replaced, or the user already switched TF
-    // (a fast TF fetch can resolve before this initial one — don't stomp it)
-    if (S !== mySession || S.ended || S.tf !== myTf || S.tfPending) return;
+    if (S !== mySession || S.ended) return;
     _liveApplyKlines(data);
     S.loading = false;
     const ld = _el('sim3-loading'); if (ld) ld.style.display = 'none';
@@ -402,50 +305,23 @@ function _liveBoot() {
       onTick: (px, sz) => { if (S === mySession && !S.ended && px > 0) _liveTick(px, sz); },
       onStatus: st => { if (S === mySession) _setConn(st); }
     });
-    // 1s heartbeat: keeps the candle countdown honest and rolls the candle at
-    // the wall-clock boundary even if no trade lands right on it
-    S.hb = setInterval(() => {
-      if (S !== mySession || S.ended) return;
-      if (!document.hidden) _paintHeader();
-      const bucket = Math.floor(Date.now() / S.stepMs) * S.stepMs;
-      if (S.forming && bucket > S.formingStart) _liveTick(S.forming.c, 0);
-    }, 1000);
   }).catch(() => { if (S === mySession) _liveFail(); });
 }
 
 function _liveFail() {
-  const ld = _el('sim3-loading'); if (ld) ld.textContent = 'Live data unavailable — returning to Replay…';
   _toast('Live data unavailable — switched to Replay', true);
   try { localStorage.setItem(SIM_SRC_KEY, 'replay'); } catch(_) {}
-  const mySession = S;
-  setTimeout(() => {
-    // only re-render if this session is still the mounted one — never stomp a
-    // lesson/page the user navigated to during the 900ms window
-    if (S === mySession && !S.ended && _el('sim3-chart-el')) renderSimulator('content-area', _simOpts);
-  }, 900);
+  setTimeout(() => renderSimulator('content-area', _simOpts), 900);
 }
 
 function _liveApplyKlines(data) {
   const n = data.ohlc.length;
-  const lastBucket = Math.floor(data.times[n - 1] / S.stepMs) * S.stepMs;
-  const nowBucket  = Math.floor(Date.now() / S.stepMs) * S.stepMs;
-  const lastC = data.ohlc[n - 1];
-  if (lastBucket >= nowBucket) {
-    // last row IS the live partial candle (Kraken/Binance, fresh Coinbase)
-    S.live.ohlc   = data.ohlc.slice(0, n - 1);
-    S.live.vols   = data.vols.slice(0, n - 1);
-    S.live.labels = data.times.slice(0, n - 1).map(t => _liveLabel(t));
-    S.formingStart = lastBucket;
-    S.forming = { o: lastC[0], c: lastC[1], l: lastC[2], h: lastC[3], vol: data.vols[n - 1] || 0 };
-  } else {
-    // provider lagged (Coinbase's cached /candles) — treat every row as closed
-    // history and let the first tick open a fresh candle at the true bucket
-    S.live.ohlc   = data.ohlc.slice();
-    S.live.vols   = data.vols.slice();
-    S.live.labels = data.times.map(t => _liveLabel(t));
-    S.formingStart = nowBucket;
-    S.forming = null;
-  }
+  S.live.ohlc   = data.ohlc.slice(0, n - 1);
+  S.live.vols   = data.vols.slice(0, n - 1);
+  S.live.labels = data.times.slice(0, n - 1).map(t => _liveLabel(t));
+  const lastC = data.ohlc[n - 1];              // current partial candle
+  S.formingStart = Math.floor(data.times[n - 1] / S.stepMs) * S.stepMs;
+  S.forming = { o: lastC[0], c: lastC[1], l: lastC[2], h: lastC[3], vol: data.vols[n - 1] || 0 };
   S.price = lastC[1];
   S.provider = data.provider || '';
   const sym = _el('sim3-sym'); if (sym) sym.textContent = 'BTC/USD · Live · ' + S.provider;
@@ -467,10 +343,6 @@ function _setConn(st) {
   if (st === 'live')          { badge.className = 'sim3-badge live';   badge.textContent = 'LIVE · REAL'; }
   else if (st === 'polling')  { badge.className = 'sim3-badge live';   badge.textContent = 'LIVE · POLL'; }
   else if (st === 'reconnecting') { badge.className = 'sim3-badge paused'; badge.textContent = 'RECONNECTING'; }
-  else if (st === 'dead')     {
-    if (S._feedSwap) return;   // deliberate stream restart (TF switch) — not a real stall
-    badge.className = 'sim3-badge paused'; badge.textContent = 'DATA STALLED';
-    _toast('Live data stalled — the market price is frozen. End the session or retry.', true); }
 }
 
 /* Real trade tick → forming candle, orders, position. Trades can arrive many
@@ -490,7 +362,8 @@ function _liveTick(px, sz) {
   S.forming.vol += sz || 0;
   S.price = px;
   S.elapsedTicks++;
-  _settleTick(px);
+  _processOrders(px);
+  _processPosition(px);
   if (now - _lastLivePaint > 250) { _lastLivePaint = now; _paintTick(); }
 }
 
@@ -551,7 +424,8 @@ function _advanceTick() {
   S.price = p;
   S.elapsedTicks++;
   _absorbTick(p);
-  _settleTick(p);
+  _processOrders(p);
+  _processPosition(p);
 }
 
 function _labelFor(i) {
@@ -610,7 +484,6 @@ function _net(side, qty, px, lev, isMaker, note, slTp) {
   const fee = px * qty * (isMaker ? SIM_MAKER : SIM_TAKER);
   A.balance -= fee; S.feesPaid += fee;
   _recordFill(side, isMaker ? 'limit' : 'market', px, qty, fee, note);
-  _flashPos();
 
   const dir = side === 'buy' ? 'long' : 'short';
   let realized = 0;
@@ -618,13 +491,12 @@ function _net(side, qty, px, lev, isMaker, note, slTp) {
   if (!S.pos) {
     S.pos = { side: dir, qty, entry: px, lev, margin: px * qty / lev,
               sl: slTp && slTp.sl || 0, tp: slTp && slTp.tp || 0,
-              liq: _liqPx(dir, px, lev), realized: 0, fees: fee, openLabel: _nowLabel(), openedQty: qty };
+              liq: _liqPx(dir, px, lev), realized: 0, fees: fee, openLabel: _nowLabel() };
   } else if (S.pos.side === dir) {
     // add: weighted average entry, margin stacks
     const newQty = S.pos.qty + qty;
     S.pos.entry  = (S.pos.entry * S.pos.qty + px * qty) / newQty;
     S.pos.qty    = newQty;
-    S.pos.openedQty = (S.pos.openedQty || 0) + qty;   // gross size traded (for the closed-trade record)
     S.pos.margin += px * qty / lev;
     S.pos.lev    = (S.pos.entry * S.pos.qty) / S.pos.margin;
     S.pos.liq    = _liqPx(S.pos.side, S.pos.entry, S.pos.lev);
@@ -635,11 +507,10 @@ function _net(side, qty, px, lev, isMaker, note, slTp) {
     // deducted from balance at open — so on reduce only the realized PnL moves
     // the balance; the margin share is simply un-reserved.
     const closeQty = Math.min(qty, S.pos.qty);
-    const closeFee = fee * (closeQty / qty);   // prorate: only the closing share hits the closed trade
     const pnl = S.pos.side === 'long' ? (px - S.pos.entry) * closeQty : (S.pos.entry - px) * closeQty;
     realized += pnl;
     S.pos.realized += pnl;
-    S.pos.fees += closeFee;
+    S.pos.fees += fee;
     A.balance += pnl;
     S.pos.margin *= 1 - closeQty / S.pos.qty;
     S.pos.qty -= closeQty;
@@ -649,7 +520,7 @@ function _net(side, qty, px, lev, isMaker, note, slTp) {
       if (flipQty > 1e-9) {
         S.pos = { side: dir, qty: flipQty, entry: px, lev, margin: px * flipQty / lev,
                   sl: slTp && slTp.sl || 0, tp: slTp && slTp.tp || 0,
-                  liq: _liqPx(dir, px, lev), realized: 0, fees: fee - closeFee, openLabel: _nowLabel(), openedQty: flipQty };
+                  liq: _liqPx(dir, px, lev), realized: 0, fees: 0, openLabel: _nowLabel() };
       }
     }
   }
@@ -657,25 +528,14 @@ function _net(side, qty, px, lev, isMaker, note, slTp) {
   return realized;
 }
 
-/* Fill feedback: one soft background pulse on the position card. */
-function _flashPos() {
-  const box = _el('sim3-pos-box');
-  if (!box) return;
-  box.classList.remove('sim3-flash');
-  void box.offsetWidth;                 // restart the animation
-  box.classList.add('sim3-flash');
-}
-
-/* Round-trip complete → book the trade into account stats + blotter. The logged
-   size is the gross opened quantity (openedQty), captured before _net decrements
-   S.pos.qty toward zero on the closing fill — so the record never shows 0.0000. */
+/* Round-trip complete → book the trade into account stats + blotter. */
 function _closeTrade(exitPx) {
   const p = S.pos;
   const net = p.realized - p.fees;
   A.trades++;
   if (net > 0) { A.wins++; A.streak++; if (A.streak > A.bestStreak) A.bestStreak = A.streak; }
   else A.streak = 0;
-  A.log.unshift({ t: _nowLabel(), side: p.side, qty: +(p.openedQty != null ? p.openedQty : p.qty).toFixed(4), entry: +p.entry.toFixed(2),
+  A.log.unshift({ t: _nowLabel(), side: p.side, qty: +p.qty.toFixed(4), entry: +p.entry.toFixed(2),
                   exit: +exitPx.toFixed(2), fees: +p.fees.toFixed(2), pnl: +net.toFixed(2), tf: S.tf });
   if (A.log.length > 40) A.log.pop();
   A.history.push(+A.balance.toFixed(2));
@@ -686,108 +546,69 @@ function _closeTrade(exitPx) {
   _paintBlotter(); _paintEquity();
 }
 
-/* ── TICK SETTLEMENT ─────────────────────────────────────────────────────────
-   Every trigger reachable this tick — liquidation, position SL/TP, and resting
-   orders — is resolved in the order price physically PASSES each level, not by a
-   fixed liq-first/orders-first rule. On a down-gap through a stop that sits above
-   the liq, the stop fills first (a controlled exit) and liquidation never
-   happens; a protective SL nearer than liq wins over liq. The list is
-   re-evaluated after each fill because a fill can close, flip, or add to the
-   position. This is what keeps losses bounded by the posted isolated margin. */
-function _settleTick(p) {
-  const prevP = (S._prevPrice == null) ? p : S._prevPrice;
-  S._prevPrice = p;
-  const down = p < prevP;                 // travel direction (nearest-first)
-  let did = { filled: 0, cancelled: 0, exit: false };
-  let guard = S.orders.length + 6;
-  while (guard-- > 0) {
-    const pos = S.pos;
-    const events = [];
-    if (pos) {
-      const long = pos.side === 'long';
-      if ((long && p <= pos.liq) || (!long && p >= pos.liq)) events.push({ k: 'liq', lvl: pos.liq });
-      if (pos.sl > 0 && ((long && p <= pos.sl) || (!long && p >= pos.sl))) events.push({ k: 'sl', lvl: pos.sl });
-      if (pos.tp > 0 && ((long && p >= pos.tp) || (!long && p <= pos.tp))) events.push({ k: 'tp', lvl: pos.tp });
+function _processOrders(p) {
+  if (!S.orders.length) return;
+  const remaining = [];
+  let filled = 0, cancelled = 0;
+  for (const o of S.orders) {
+    let hit = false, fillPx = 0, isMaker = false;
+    if (o.type === 'limit') {
+      if ((o.side === 'buy' && p <= o.px) || (o.side === 'sell' && p >= o.px)) {
+        hit = true; fillPx = o.px; isMaker = true;                    // maker at limit price
+      }
+    } else { // stop-market
+      if ((o.side === 'buy' && p >= o.px) || (o.side === 'sell' && p <= o.px)) {
+        hit = true; isMaker = false;
+        const sl = _slip(o.qty * o.px);
+        fillPx = o.side === 'buy' ? p * (1 + sl) : p * (1 - sl);
+      }
     }
-    for (const o of S.orders) {
-      const trig = o.type === 'limit'
-        ? ((o.side === 'buy' && p <= o.px) || (o.side === 'sell' && p >= o.px))
-        : ((o.side === 'buy' && p >= o.px) || (o.side === 'sell' && p <= o.px));
-      if (trig) events.push({ k: 'order', lvl: o.px, o });
-    }
-    if (!events.length) break;
-    // nearest level in the travel direction fires first
-    events.sort((a, b) => down ? (b.lvl - a.lvl) : (a.lvl - b.lvl));
-    const ev = events[0];
-    if (ev.k === 'liq') { _fireLiquidation(); did.exit = true; }
-    else if (ev.k === 'sl') { _fireStopLoss(); did.exit = true; }
-    else if (ev.k === 'tp') { _fireTakeProfit(); did.exit = true; }
-    else { const r = _fireOrder(ev.o, p); if (r === 'cancel') did.cancelled++; else if (r === 'fill' || r === 'partial') did.filled++; }
+    if (!hit) { remaining.push(o); continue; }
+    // Fill-time margin gate: the account must fund the exposure-increasing
+    // part right now (position/equity may have changed since placement).
+    // Unfundable → the exchange cancels the order; it never over-leverages.
+    const need = _orderFillMargin(o, fillPx);
+    const freeExcl = _equity() - (_usedMargin() - (o.margin || 0));
+    if (need > freeExcl + 1e-9) { cancelled++; continue; }
+    _net(o.side, o.qty, fillPx, o.lev, isMaker, o.type === 'limit' ? 'limit fill' : 'stop triggered', o.slTp);
+    filled++;
   }
-  if (did.filled || did.cancelled || did.exit) {
+  if (filled || cancelled) {
+    S.orders = remaining;
     _recalcOrderMargins();
-    _paintOrders(); _paintPosition(); _paintAccount();
-    // An auto-cancel is a warning the trader must see, so surface it even when an
-    // exit also fired this tick (the exit is otherwise visible via the vanished
-    // position + blotter row). Only the generic "Order filled" summary is
-    // suppressed under an exit, so a liq/SL/TP message isn't clobbered by it.
-    if (did.cancelled) _toast(did.cancelled + ' order' + (did.cancelled > 1 ? 's' : '') + ' auto-cancelled — insufficient margin', true);
-    else if (did.filled && !did.exit) _toast('Order filled');
+    _paintOrders(); _paintPosition();
+    if (cancelled) _toast(cancelled + ' order' + (cancelled > 1 ? 's' : '') + ' auto-cancelled — insufficient margin', true);
+    else _toast('Order filled');
   }
 }
 
-function _fireLiquidation() {
+function _processPosition(p) {
   const pos = S.pos;
-  // isolated: the posted margin is wiped, but never more of the wallet than
-  // exists (fees were already drawn from balance at entry) — no negative wallet.
-  const lost = Math.min(pos.margin, Math.max(0, A.balance));
-  A.balance -= lost;
-  pos.realized -= lost;
-  _recordFill(pos.side === 'long' ? 'sell' : 'buy', 'liq', pos.liq, pos.qty, 0, 'LIQUIDATED');
-  _closeTrade(pos.liq);
-  _toast('Position liquidated — margin lost', true);
-}
-function _fireStopLoss() {
-  const pos = S.pos;
-  const sl = _slip(pos.qty * pos.sl);
-  const px = pos.side === 'long' ? pos.sl * (1 - sl) : pos.sl * (1 + sl);
-  _net(pos.side === 'long' ? 'sell' : 'buy', pos.qty, px, pos.lev, false, 'stop loss');
-  _toast('Stop loss hit');
-}
-function _fireTakeProfit() {
-  const pos = S.pos;
-  _net(pos.side === 'long' ? 'sell' : 'buy', pos.qty, pos.tp, pos.lev, true, 'take profit');
-  _toast('Take profit hit');
-}
-
-/* Execute one resting order. Removes it from S.orders BEFORE netting so its own
-   stale reservation can't double-count against the fill-time margin gate. */
-function _fireOrder(o, p) {
-  S.orders = S.orders.filter(x => x !== o);
-  let fillPx, isMaker;
-  if (o.type === 'limit') { fillPx = o.px; isMaker = true; }
-  else { const s = _slip(o.qty * o.px); fillPx = o.side === 'buy' ? p * (1 + s) : p * (1 - s); isMaker = false; }
-  _recalcOrderMargins();                                  // this order no longer reserves
-  const note = o.type === 'limit' ? 'limit fill' : 'stop triggered';
-  // Fund only the exposure-INCREASING part. Closing the netted portion RELEASES
-  // its share of the position margin, so credit that to available margin — a
-  // fundable reduce-and-flip is no longer wrongly cancelled.
-  const opp = o.side === 'buy' ? 'short' : 'long';
-  const reduceQty = (S.pos && S.pos.side === opp) ? Math.min(o.qty, S.pos.qty) : 0;
-  const released  = (reduceQty > 0) ? reduceQty / S.pos.qty * S.pos.margin : 0;
-  const need = _orderFillMargin(o, fillPx);
-  if (need > 1e-9 && need > _freeMargin() + released + 1e-9) {
-    // can't fund the flip remainder — still honor the reduce/close portion so a
-    // protective stop NEVER leaves the position open at its trigger; drop only
-    // the speculative excess.
-    if (reduceQty > 0) {
-      _net(o.side, reduceQty, fillPx, o.lev, isMaker, note + ' (reduce only — flip unfunded)', o.slTp);
-      return 'partial';
-    }
-    return 'cancel';
+  if (!pos) return;
+  // liquidation first — the exchange checks it before your orders
+  if ((pos.side === 'long' && p <= pos.liq) || (pos.side === 'short' && p >= pos.liq)) {
+    const lost = pos.margin;
+    A.balance -= lost;                    // isolated: the posted margin is wiped
+    pos.realized -= lost;
+    _recordFill(pos.side === 'long' ? 'sell' : 'buy', 'liq', pos.liq, pos.qty, 0, 'LIQUIDATED');
+    _closeTrade(pos.liq);
+    _toast('Position liquidated — margin lost', true);
+    _paintPosition(); _paintAccount();
+    return;
   }
-  _net(o.side, o.qty, fillPx, o.lev, isMaker, note, o.slTp);
-  return 'fill';
+  if (pos.sl > 0 && ((pos.side === 'long' && p <= pos.sl) || (pos.side === 'short' && p >= pos.sl))) {
+    const sl = _slip(pos.qty * pos.sl);
+    const px = pos.side === 'long' ? pos.sl * (1 - sl) : pos.sl * (1 + sl);
+    _net(pos.side === 'long' ? 'sell' : 'buy', pos.qty, px, pos.lev, false, 'stop loss');
+    _toast('Stop loss hit');
+    _paintPosition(); _paintAccount();
+    return;
+  }
+  if (pos.tp > 0 && ((pos.side === 'long' && p >= pos.tp) || (pos.side === 'short' && p <= pos.tp))) {
+    _net(pos.side === 'long' ? 'sell' : 'buy', pos.qty, pos.tp, pos.lev, true, 'take profit');
+    _toast('Take profit hit');
+    _paintPosition(); _paintAccount();
+  }
 }
 
 /* ── ORDER SUBMISSION (from the panel) ───────────────────────────────────── */
@@ -814,13 +635,10 @@ window._sim3Submit = function() {
     if (slTp.tp && (dirLong ? slTp.tp <= ref : slTp.tp >= ref)) return _toast('TP is on the wrong side of entry', true);
   }
 
-  // reduce-aware margin check: only the exposure-increasing part posts margin,
-  // plus the entry fee (isolated margin can't be funded by money the fee spends).
+  // reduce-aware margin check: only the exposure-increasing part posts margin
   const refPx = type === 'market' ? S.price : pxIn;
   if (!(refPx > 0)) return _toast(type === 'market' ? 'No market price yet' : 'Enter a price', true);
-  const feeRate = type === 'limit' ? SIM_MAKER : SIM_TAKER;
-  const incNotional = Math.max(0, usd - _reducibleUsd(side, refPx));   // exposure-increasing $
-  const needMargin = _requiredMargin(side, usd / refPx, refPx, lev) + incNotional * feeRate;
+  const needMargin = _requiredMargin(side, usd / refPx, refPx, lev);
   if (needMargin > _freeMargin() + 1e-9) return _toast('Not enough free margin', true);
 
   const clearAttach = () => { const a=_el('sim3-att-sl'), b=_el('sim3-att-tp'); if (a) a.value=''; if (b) b.value=''; };
@@ -833,10 +651,8 @@ window._sim3Submit = function() {
     if (!(pxIn > 0)) return _toast('Enter a limit price', true);
     const marketable = (side === 'buy' && pxIn >= S.price) || (side === 'sell' && pxIn <= S.price);
     if (marketable) {
-      // real exchanges fill marketable limits immediately as taker — but never
-      // WORSE than the limit price the trader set (that's the whole point of a limit)
-      const slipped = side === 'buy' ? S.price * (1 + _slip(usd)) : S.price * (1 - _slip(usd));
-      const px = side === 'buy' ? Math.min(pxIn, slipped) : Math.max(pxIn, slipped);
+      // real exchanges fill marketable limits immediately as taker
+      const px = side === 'buy' ? S.price * (1 + _slip(usd)) : S.price * (1 - _slip(usd));
       _net(side, usd / px, px, lev, false, 'marketable limit', slTp);
       _toast('Limit was marketable — filled now as taker');
     } else {
@@ -938,11 +754,7 @@ window._sim3Type = function(type) { S.uiType = type; _paintOrderPanel(true); };
 window._sim3End = function() {
   if (!S || S.ended) return;
   _setPlaying(false);
-  S.ended = true;   // set before stopping the feed so its onStatus('dead') is ignored
-  if (S.hb)   { clearInterval(S.hb); S.hb = null; }
   if (S.feed) { try { S.feed.stop(); } catch(_) {} S.feed = null; }
-  const ld = _el('sim3-loading'); if (ld) ld.style.display = 'none';   // never strand the loader over the verdict
-  S.loading = false;
   // flatten at market, cancel all
   if (S.pos) {
     const side = S.pos.side === 'long' ? 'sell' : 'buy';
@@ -954,15 +766,6 @@ window._sim3End = function() {
   _recalcOrderMargins();
   S.ended = true;
   A.sessions = (A.sessions || 0) + 1;
-  // per-pattern record (replay only — live sessions have no concept key;
-  // sessions with no fills don't count: they say nothing about the concept)
-  if (S.mode !== 'live' && S.market && S.fills.length > 0) {
-    const bp = A.byPattern = A.byPattern || {};
-    const e = bp[S.market.pattern] = bp[S.market.pattern] || { s: 0, w: 0, pnl: 0 };
-    const spnl = +(A.balance - S.startBal).toFixed(2);
-    e.s++; if (spnl > 0) e.w++;
-    e.pnl = +(e.pnl + spnl).toFixed(2);
-  }
   simSaveAccount();
   _paintAll();
   _showVerdict();
@@ -973,35 +776,17 @@ window._sim3New = function() { renderSimulator('content-area', _simOpts); };
 window._sim3SetTF = function(tf) {
   if (!S || S.ended || tf === S.tf) return;
   if (S.mode === 'live') {
-    // atomic: nothing changes until the new history has arrived — a failed
-    // fetch leaves the old timeframe fully intact (no half-switched state)
-    if (!(tf in SIM_LIVE_TF) || S.tfPending || S.loading) return;   // wait out the initial boot
-    S.tfPending = tf;
+    if (!(tf in SIM_LIVE_TF)) return;
+    S.tf = tf; S.stepMs = SIM_LIVE_TF[tf] * 60000;
+    S.forming = null; S.loading = true;
+    document.querySelectorAll('.sim3-tf-btn').forEach(b => b.classList.toggle('active', b.dataset.tf === tf));
     const mySession = S;
     LTSimFeed.loadKlines(SIM_LIVE_TF[tf]).then(data => {
-      if (S !== mySession || S.ended) return;
-      S.tfPending = null;
-      S.tf = tf; S.stepMs = SIM_LIVE_TF[tf] * 60000;
+      if (S !== mySession || S.ended || S.tf !== tf) return;
       _liveApplyKlines(data);
-      S.loading = false; S.userPanned = false;
-      document.querySelectorAll('.sim3-tf-btn').forEach(b => b.classList.toggle('active', b.dataset.tf === tf));
+      S.loading = false;
       _renderChart(); _paintAll();
-      // restart the tick stream so ticks follow the SAME venue the new klines
-      // resolved on (loadKlines can fail over to a different provider)
-      S._feedSwap = true;                              // suppress the old feed's stop() 'dead'
-      if (S.feed) { try { S.feed.stop(); } catch(_) {} }
-      S._feedSwap = false;
-      S.feed = LTSimFeed.streamTicks({
-        onTick: (px, sz) => { if (S === mySession && !S.ended && px > 0) _liveTick(px, sz); },
-        onStatus: st => { if (S === mySession) _setConn(st); }
-      });
-      S.provider = LTSimFeed.providerName() || S.provider;
-      const sym = _el('sim3-sym'); if (sym) sym.textContent = 'BTC/USD · Live · ' + S.provider;
-    }).catch(() => {
-      if (S !== mySession) return;
-      S.tfPending = null;
-      _toast('Could not load ' + tf.toUpperCase() + ' history — staying on ' + (S.tf || '').toUpperCase(), true);
-    });
+    }).catch(() => { if (S === mySession) _toast('Could not load ' + tf + ' history', true); });
     return;
   }
   if (!SIM_TIMEFRAMES.includes(tf)) return;
@@ -1017,8 +802,8 @@ window._sim3LockPattern = function(key) {
 };
 
 window._sim3Reset = function() {
-  if (!confirm('Reset the simulator account back to $1,000? Trade history and pattern records are cleared.')) return;
-  A = { v:2, balance:1000, trades:0, wins:0, streak:0, bestStreak:0, sessions:0, history:[1000], log:[], byPattern:{} };
+  if (!confirm('Reset the simulator account back to $1,000? Trade history is cleared.')) return;
+  A = { v:2, balance:1000, trades:0, wins:0, streak:0, bestStreak:0, sessions:0, history:[1000], log:[] };
   simSaveAccount();
   renderSimulator('content-area', _simOpts);
 };
@@ -1047,16 +832,6 @@ function _toast(msg, warn) {
 /* ── STYLES ───────────────────────────────────────────────────────────────── */
 function _simStyles() {
   LTUtils.injectStyles('lt-sim3-styles', `
-  /* sim-local, theme-scoped accents: dark keeps the soft pink + amber; light
-     swaps to AA-safe deep pink/amber so every loss/liq/warn signal stays legible */
-  .sim3-wrap { --s-loss:#ff5f8f; --s-loss-solid:#ff2e88; --s-loss-ink:#12030a; --s-gold:#e0a030; --s-win:var(--teal);
-    --s-warn:#ffcf87; --s-warn-bd:#e0a030; --s-loss-bg:rgba(255,46,136,.12);
-    --s-loss-bd:rgba(255,46,136,.35); --s-gold-bg:rgba(224,160,48,.08);
-    --s-ask-bar:rgba(255,46,136,.09); --s-bid-bar:rgba(0,212,212,.09); --s-flash:rgba(0,212,212,.08); }
-  html.theme-light .sim3-wrap { --s-loss:#be185d; --s-loss-solid:#be185d; --s-loss-ink:#ffffff; --s-gold:#b45309; --s-win:#0f766e;
-    --s-warn:#92400e; --s-warn-bd:#d97706; --s-loss-bg:rgba(219,39,119,.08);
-    --s-loss-bd:rgba(190,24,93,.35); --s-gold-bg:rgba(180,83,9,.08);
-    --s-ask-bar:rgba(190,24,93,.10); --s-bid-bar:rgba(13,148,136,.12); --s-flash:rgba(13,148,136,.10); }
   .sim3-wrap { width:100%; max-width:1180px; margin:0 auto; padding:0 0 40px; font-family:'Geist Mono',monospace; }
   .sim3-back-row { display:flex; align-items:center; justify-content:space-between; padding:12px 0 10px; flex-wrap:wrap; gap:8px; }
   .sim3-back-btn { display:inline-flex; align-items:center; gap:6px; background:none; border:none; color:var(--teal); font-size:12px; font-weight:600; cursor:pointer; padding:0; font-family:inherit; }
@@ -1083,7 +858,7 @@ function _simStyles() {
   .sim3-seg-btn.active { background:var(--teal-dim); color:var(--teal); }
   .sim3-pat-select { background:var(--bg4); border:1px solid var(--border2); border-radius:4px; color:var(--text2); font-family:inherit; font-size:10.5px; font-weight:600; padding:4px 7px; cursor:pointer; max-width:240px; }
   .sim3-end-btn { margin-left:auto; padding:4px 13px; border-radius:4px; border:1px solid var(--border2); background:var(--bg4); color:var(--text2); font-size:10px; font-weight:700; cursor:pointer; font-family:inherit; letter-spacing:.3px; }
-  .sim3-end-btn:hover { border-color:var(--s-warn-bd); color:var(--s-warn); }
+  .sim3-end-btn:hover { border-color:#e0a030; color:#e0a030; }
 
   /* account metrics bar — one dense hairline strip, not cards */
   .sim3-metrics { display:flex; flex-wrap:wrap; background:var(--bg2); border:1px solid var(--border); border-radius:5px; margin-bottom:10px; overflow:hidden; }
@@ -1091,30 +866,11 @@ function _simStyles() {
   .sim3-metric:last-child { border-right:none; }
   .sim3-metric-lbl { font-size:8.5px; font-weight:700; text-transform:uppercase; letter-spacing:.7px; color:var(--text3); }
   .sim3-stat-val { font-size:13px; font-weight:800; font-variant-numeric:tabular-nums; color:var(--text); line-height:1.35; }
-  .sim3-stat-val.up { color:var(--s-win); } .sim3-stat-val.down { color:var(--s-loss); }
+  .sim3-stat-val.up { color:var(--teal); } .sim3-stat-val.down { color:#ff5f8f; }
 
-  /* main grid — ladder column appears ≥1080px */
+  /* main grid */
   .sim3-grid { display:grid; grid-template-columns:1fr 324px; gap:10px; margin-bottom:10px; align-items:stretch; }
-  .sim3-dom { display:none; }
-  @media(min-width:1080px){
-    .sim3-grid { grid-template-columns:1fr 148px 324px; }
-    .sim3-dom { display:flex; flex-direction:column; background:var(--bg2); border:1px solid var(--border2); border-radius:5px; overflow:hidden; min-width:0; }
-  }
   @media(max-width:900px){ .sim3-grid { grid-template-columns:1fr; } }
-  .sim3-dom-head { display:flex; align-items:center; justify-content:space-between; padding:6px 10px; border-bottom:1px solid var(--border); font-size:10px; font-weight:700; color:var(--text2); text-transform:uppercase; letter-spacing:.7px; }
-  .sim3-dom-tag { font-size:8.5px; color:var(--text3); border:1px solid var(--border2); border-radius:3px; padding:1px 5px; letter-spacing:.5px; }
-  .sim3-dom-body { flex:1 1 auto; display:flex; flex-direction:column; justify-content:center; padding:4px 0; }
-  .sim3-dom-row { position:relative; display:flex; justify-content:space-between; align-items:center; gap:6px; padding:2px 9px; border:none; background:none; font-family:inherit; cursor:pointer; font-variant-numeric:tabular-nums; width:100%; font-size:9.5px; line-height:1.5; }
-  .sim3-dom-row::before { content:''; position:absolute; right:0; top:1px; bottom:1px; width:var(--d,0%); pointer-events:none; }
-  .sim3-dom-row.ask::before { background:var(--s-ask-bar); }
-  .sim3-dom-row.bid::before { background:var(--s-bid-bar); }
-  .sim3-dom-row:hover { background:var(--bg4); }
-  .sim3-dom-px { font-weight:700; position:relative; }
-  .sim3-dom-row.ask .sim3-dom-px { color:var(--s-loss); }
-  .sim3-dom-row.bid .sim3-dom-px { color:var(--s-win); }
-  .sim3-dom-sz { color:var(--text3); position:relative; }
-  .sim3-dom-mid { display:flex; align-items:center; justify-content:space-between; padding:3.5px 9px; margin:2px 0; border-top:1px solid var(--border); border-bottom:1px solid var(--border); font-size:9px; color:var(--text3); font-variant-numeric:tabular-nums; }
-  .sim3-dom-mid span:first-child { color:var(--text); font-weight:800; font-size:10px; }
 
   /* chart card */
   .sim3-chart-card { background:var(--bg3); border:1px solid var(--border); border-radius:5px; overflow:hidden; display:flex; flex-direction:column; min-width:0; position:relative; }
@@ -1128,7 +884,7 @@ function _simStyles() {
   .sim3-price { font-size:14px; font-weight:800; font-variant-numeric:tabular-nums; color:var(--text); }
   .sim3-badge { font-size:9px; font-weight:800; letter-spacing:.9px; padding:2px 8px; border-radius:3px; border:1px solid var(--border2); color:var(--text3); }
   .sim3-badge.live { border-color:var(--teal); color:var(--teal); background:var(--teal-dim); animation:sim3Pulse 1.6s infinite; }
-  .sim3-badge.paused { border-color:var(--s-gold); color:var(--s-gold); background:var(--s-gold-bg); }
+  .sim3-badge.paused { border-color:#e0a030; color:#e0a030; background:rgba(224,160,48,.08); }
   .sim3-badge.ended { border-color:var(--border2); color:var(--text3); }
   @keyframes sim3Pulse { 0%,100%{opacity:1} 50%{opacity:.55} }
   .sim3-countdown { font-size:9.5px; color:var(--text3); font-variant-numeric:tabular-nums; }
@@ -1137,16 +893,10 @@ function _simStyles() {
   .sim3-tr-btn:hover { border-color:var(--teal); color:var(--teal); }
   .sim3-tr-btn svg { width:10px; height:10px; }
   #sim3-chart-el { width:100%; flex:1 1 auto; min-height:460px; }
-  /* TradingView study view */
-  .sim3-tv-card { min-height:0; }
-  #sim3-tv-el { width:100%; height:clamp(420px, calc((100dvh / var(--app-zoom, 1)) - 240px), 760px); }
-  @media(max-width:600px){ #sim3-tv-el { height:clamp(360px, calc((100dvh / var(--app-zoom, 1)) - 200px), 620px); } }
-  .sim3-tv-note { font-size:10px; color:var(--text3); letter-spacing:.2px; margin-left:auto; align-self:center; max-width:340px; line-height:1.35; }
-  @media(max-width:600px){ .sim3-tv-note { margin-left:0; max-width:none; } }
-  .sim3-loading { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; background:var(--bg3); z-index:40; font-size:12px; color:var(--text3); letter-spacing:.4px; text-align:center; padding:0 20px; }
+  .sim3-loading { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; background:var(--bg3); z-index:40; font-size:12px; color:var(--text3); letter-spacing:.4px; }
   .sim3-toast { position:absolute; left:50%; bottom:12px; transform:translateX(-50%) translateY(8px); background:var(--bg4); border:1px solid var(--teal); color:var(--text); font-size:11px; font-weight:600; padding:6px 12px; border-radius:4px; opacity:0; pointer-events:none; transition:opacity 160ms cubic-bezier(0.23,1,0.32,1), transform 160ms cubic-bezier(0.23,1,0.32,1); z-index:50; white-space:nowrap; }
   .sim3-toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
-  .sim3-toast.warn { border-color:var(--s-warn-bd); color:var(--s-warn); }
+  .sim3-toast.warn { border-color:#e0a030; color:#ffcf87; }
 
   /* ── order terminal ── */
   .sim3-term { background:var(--bg2); border:1px solid var(--border2); border-radius:5px; overflow:hidden; display:flex; flex-direction:column; }
@@ -1157,10 +907,10 @@ function _simStyles() {
   .sim3-acct-val { font-size:12px; font-weight:800; color:var(--text2); font-variant-numeric:tabular-nums; }
 
   .sim3-blown { padding:12px 10px; border-bottom:1px solid var(--border2); background:rgba(255,46,136,.06); }
-  .sim3-blown-title { font-size:11px; font-weight:800; color:var(--s-loss); letter-spacing:.5px; margin-bottom:3px; text-transform:uppercase; }
+  .sim3-blown-title { font-size:11px; font-weight:800; color:#ff5f8f; letter-spacing:.5px; margin-bottom:3px; text-transform:uppercase; }
   .sim3-blown-sub { font-size:10.5px; color:var(--text2); line-height:1.5; margin-bottom:9px; }
-  .sim3-blown-btn { width:100%; padding:8px; border:1px solid var(--s-loss-solid); border-radius:4px; background:var(--s-loss-bg); color:var(--s-loss); font-size:11px; font-weight:800; cursor:pointer; font-family:inherit; }
-  .sim3-blown-btn:hover { filter:brightness(1.12); }
+  .sim3-blown-btn { width:100%; padding:8px; border:1px solid #ff2e88; border-radius:4px; background:rgba(255,46,136,.12); color:#ff5f8f; font-size:11px; font-weight:800; cursor:pointer; font-family:inherit; }
+  .sim3-blown-btn:hover { background:rgba(255,46,136,.2); }
 
   .sim3-type-tabs { display:flex; border-bottom:1px solid var(--border2); }
   .sim3-type-tab { flex:1; padding:7px 4px; border:none; background:none; color:var(--text3); font-size:10px; font-weight:700; cursor:pointer; font-family:inherit; text-transform:uppercase; letter-spacing:.5px; border-bottom:2px solid transparent; }
@@ -1169,7 +919,7 @@ function _simStyles() {
   .sim3-side-row { display:flex; gap:6px; padding:10px 10px 2px; }
   .sim3-side-btn { flex:1; padding:8px 6px; border-radius:4px; border:1px solid var(--border2); background:var(--bg4); font-size:11.5px; font-weight:800; cursor:pointer; font-family:inherit; letter-spacing:.5px; text-transform:uppercase; color:var(--text3); }
   .sim3-side-btn.buy.active  { background:rgba(0,212,212,.16); border-color:var(--teal); color:var(--teal); }
-  .sim3-side-btn.sell.active { background:var(--s-loss-bg); border-color:var(--s-loss-solid); color:var(--s-loss); }
+  .sim3-side-btn.sell.active { background:rgba(255,46,136,.14); border-color:#ff2e88; color:#ff5f8f; }
 
   .sim3-fields { padding:2px 10px 0; }
   .sim3-frow { padding:7px 0 2px; }
@@ -1197,24 +947,22 @@ function _simStyles() {
   .sim3-est-row { display:flex; justify-content:space-between; padding:2px 0; font-size:10.5px; }
   .sim3-est-lbl { color:var(--text3); }
   .sim3-est-val { color:var(--text2); font-weight:700; font-variant-numeric:tabular-nums; }
-  .sim3-est-val.gold { color:var(--s-gold); }
+  .sim3-est-val.gold { color:#e0a030; }
 
   .sim3-submit-wrap { padding:10px; }
   .sim3-submit { width:100%; padding:9px; border:none; border-radius:4px; font-size:12px; font-weight:900; cursor:pointer; font-family:inherit; letter-spacing:.4px; text-transform:uppercase; }
   .sim3-submit.buy  { background:var(--teal); color:#03211f; }
-  .sim3-submit.sell { background:var(--s-loss-solid); color:var(--s-loss-ink); }
+  .sim3-submit.sell { background:#ff2e88; color:#2b0313; }
   .sim3-submit:hover:not(:disabled) { filter:brightness(1.1); }
   .sim3-submit:disabled { opacity:.4; cursor:not-allowed; }
 
   /* position card */
   .sim3-pos { border-top:1px solid var(--border2); padding:9px 10px 11px; }
-  .sim3-pos.sim3-flash { animation:sim3FillFlash 420ms cubic-bezier(0.23,1,0.32,1); }
-  @keyframes sim3FillFlash { from { background:var(--s-flash); } to { background:transparent; } }
   .sim3-pos-head { display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; }
   .sim3-pos-title { font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:1px; color:var(--text3); }
   .sim3-pos-side { font-size:9px; font-weight:800; letter-spacing:.6px; padding:2px 8px; border-radius:3px; }
   .sim3-pos-side.long  { background:rgba(0,212,212,.14); color:var(--teal); border:1px solid rgba(0,212,212,.35); }
-  .sim3-pos-side.short { background:var(--s-loss-bg); color:var(--s-loss); border:1px solid var(--s-loss-bd); }
+  .sim3-pos-side.short { background:rgba(255,46,136,.12); color:#ff5f8f; border:1px solid rgba(255,46,136,.35); }
   .sim3-pos-grid { display:grid; grid-template-columns:1fr 1fr; gap:2px 12px; margin-bottom:7px; }
   .sim3-pos-kv { display:flex; justify-content:space-between; font-size:10.5px; padding:1.5px 0; }
   .sim3-pos-k { color:var(--text3); } .sim3-pos-v { color:var(--text2); font-weight:700; font-variant-numeric:tabular-nums; }
@@ -1226,7 +974,7 @@ function _simStyles() {
   .sim3-apply-btn:hover { border-color:var(--teal); color:var(--teal); }
   .sim3-close-row { display:flex; gap:5px; }
   .sim3-close-btn { flex:1; padding:6px 4px; border-radius:4px; border:1px solid var(--border2); background:var(--bg4); color:var(--text2); font-size:10px; font-weight:700; cursor:pointer; font-family:inherit; }
-  .sim3-close-btn:hover { border-color:var(--s-loss-solid); color:var(--s-loss); }
+  .sim3-close-btn:hover { border-color:#ff2e88; color:#ff5f8f; }
   .sim3-flat { font-size:10.5px; color:var(--text3); text-align:center; padding:5px 0 2px; }
 
   /* open orders */
@@ -1234,25 +982,15 @@ function _simStyles() {
   .sim3-ord-row { display:flex; align-items:center; gap:7px; font-size:10px; padding:3.5px 0; border-bottom:1px dashed var(--border); font-variant-numeric:tabular-nums; }
   .sim3-ord-row:last-child { border-bottom:none; }
   .sim3-ord-type { font-weight:800; text-transform:uppercase; font-size:8.5px; letter-spacing:.5px; color:var(--text3); width:34px; }
-  .sim3-ord-side { font-weight:800; width:32px; } .sim3-ord-side.buy{color:var(--s-win);} .sim3-ord-side.sell{color:var(--s-loss);}
+  .sim3-ord-side { font-weight:800; width:32px; } .sim3-ord-side.buy{color:var(--teal);} .sim3-ord-side.sell{color:#ff5f8f;}
   .sim3-ord-px { color:var(--text2); font-weight:700; }
   .sim3-ord-qty { color:var(--text3); margin-left:auto; }
   .sim3-ord-x { background:none; border:none; color:var(--text3); cursor:pointer; font-size:12px; padding:0 2px; font-family:inherit; }
-  .sim3-ord-x:hover { color:var(--s-loss); }
+  .sim3-ord-x:hover { color:#ff5f8f; }
 
   /* lower grid */
-  .sim3-lower { display:grid; grid-template-columns:.85fr 1fr 1.25fr; gap:10px; margin-bottom:10px; align-items:stretch; }
-  @media(max-width:1080px){ .sim3-lower { grid-template-columns:1fr 1.2fr; } .sim3-lower .sim3-panel:first-child { grid-column:1 / -1; } }
-  @media(max-width:900px){ .sim3-lower { grid-template-columns:1fr; } .sim3-lower .sim3-panel:first-child { grid-column:auto; } }
-  .sim3-mast-body { flex:1 1 auto; max-height:220px; overflow-y:auto; scrollbar-width:thin; padding:3px 0; }
-  .sim3-mast-row { display:grid; grid-template-columns:1fr auto auto auto; gap:8px; align-items:center; width:100%; padding:4px 10px; border:none; background:none; font-family:inherit; font-size:10px; cursor:pointer; text-align:left; border-bottom:1px solid var(--border); font-variant-numeric:tabular-nums; transition:background-color 120ms ease; }
-  .sim3-mast-row:last-child { border-bottom:none; }
-  .sim3-mast-row:hover { background:var(--bg4); }
-  .sim3-mast-row.cur { background:var(--teal-dim); }
-  .sim3-mast-name { color:var(--text2); font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-  .sim3-mast-rec { color:var(--text3); }
-  .sim3-mast-wr { font-weight:800; } .sim3-mast-wr.pos { color:var(--s-win); } .sim3-mast-wr.neg { color:var(--s-loss); }
-  .sim3-mast-pnl { font-weight:800; min-width:44px; text-align:right; } .sim3-mast-pnl.pos { color:var(--s-win); } .sim3-mast-pnl.neg { color:var(--s-loss); }
+  .sim3-lower { display:grid; grid-template-columns:1fr 1.2fr; gap:10px; margin-bottom:10px; align-items:stretch; }
+  @media(max-width:900px){ .sim3-lower { grid-template-columns:1fr; } }
   .sim3-panel { background:var(--bg3); border:1px solid var(--border); border-radius:5px; overflow:hidden; display:flex; flex-direction:column; }
   .sim3-panel-top { display:flex; align-items:center; justify-content:space-between; padding:6px 10px; border-bottom:1px solid var(--border); font-size:10px; font-weight:700; color:var(--text2); text-transform:uppercase; letter-spacing:.7px; }
   .sim3-panel-meta { font-size:9px; font-weight:600; color:var(--text3); text-transform:none; letter-spacing:0; }
@@ -1262,14 +1000,14 @@ function _simStyles() {
   .sim3-blot-body { flex:1 1 auto; max-height:190px; overflow-y:auto; scrollbar-width:thin; }
   .sim3-blot-row { font-size:10px; border-bottom:1px solid var(--border); font-variant-numeric:tabular-nums; color:var(--text3); }
   .sim3-blot-row:last-child { border-bottom:none; }
-  .sim3-blot-side { font-weight:800; } .sim3-blot-side.long{color:var(--s-win);} .sim3-blot-side.short{color:var(--s-loss);}
-  .sim3-blot-pnl { font-weight:800; text-align:right; } .sim3-blot-pnl.pos{color:var(--s-win);} .sim3-blot-pnl.neg{color:var(--s-loss);}
+  .sim3-blot-side { font-weight:800; } .sim3-blot-side.long{color:var(--teal);} .sim3-blot-side.short{color:#ff5f8f;}
+  .sim3-blot-pnl { font-weight:800; text-align:right; } .sim3-blot-pnl.pos{color:var(--teal);} .sim3-blot-pnl.neg{color:#ff5f8f;}
   .sim3-blot-empty { padding:22px 14px; text-align:center; font-size:11px; color:var(--text3); }
   .sim3-blot-fees { text-align:right; }
 
   /* verdict */
   .sim3-verdict { border-radius:5px; padding:14px 16px; margin-bottom:10px; border-left:3px solid; animation:sim3In .25s cubic-bezier(0.23,1,0.32,1); background:var(--bg3); border-top:1px solid var(--border); border-right:1px solid var(--border); border-bottom:1px solid var(--border); }
-  .sim3-verdict.win { border-color:var(--teal); } .sim3-verdict.loss { border-color:var(--s-loss-solid); } .sim3-verdict.flat { border-color:var(--border2); }
+  .sim3-verdict.win { border-color:var(--teal); } .sim3-verdict.loss { border-color:#ff2e88; } .sim3-verdict.flat { border-color:var(--border2); }
   @keyframes sim3In { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:none} }
   .sim3-verd-top { display:flex; align-items:baseline; gap:12px; flex-wrap:wrap; margin-bottom:7px; }
   .sim3-verd-pnl { font-size:21px; font-weight:900; font-variant-numeric:tabular-nums; }
@@ -1279,42 +1017,20 @@ function _simStyles() {
   .sim3-verd-coach { display:flex; gap:7px; font-size:12px; color:var(--text2); line-height:1.5; margin-top:9px; padding-top:9px; border-top:1px dashed var(--border2); }
   .sim3-verd-stats { display:flex; gap:16px; margin-top:9px; flex-wrap:wrap; font-size:10.5px; color:var(--text3); font-variant-numeric:tabular-nums; }
   .sim3-verd-stats strong { color:var(--text); }
-  .sim3-verd-record { font-size:10.5px; color:var(--text3); margin-top:8px; font-variant-numeric:tabular-nums; }
-  .sim3-verd-record strong { color:var(--text2); }
   .sim3-new-btn { width:100%; padding:10px; background:var(--teal); border:none; border-radius:4px; color:#03211f; font-size:12.5px; font-weight:800; cursor:pointer; font-family:inherit; margin-bottom:10px; letter-spacing:.3px; text-transform:uppercase; }
   .sim3-new-btn:hover { filter:brightness(1.08); }
 
   .sim3-reset-row { display:flex; justify-content:flex-end; }
   .sim3-reset-btn { background:transparent; border:1px solid var(--border2); color:var(--text3); font-size:10px; padding:4px 12px; border-radius:4px; cursor:pointer; font-family:inherit; transition:color 120ms ease, border-color 120ms ease; }
-  .sim3-reset-btn:hover { border-color:var(--s-loss-solid); color:var(--s-loss); }
+  .sim3-reset-btn:hover { border-color:#ff2e88; color:#ff5f8f; }
 
-  /* below ~680px the 6-up flex row would wrap raggedly — switch to a clean 3×2
-     hairline grid before that happens (no orphan divider in the 601-656 band) */
-  @media(max-width:680px) {
-    .sim3-metric { flex:1 1 calc(33.3% - 1px); min-width:0; border-bottom:1px solid var(--border); }
-    .sim3-metric:nth-child(3n) { border-right:none; }
-    .sim3-metric:nth-last-child(-n+3) { border-bottom:none; }
-  }
   @media(max-width:600px) {
     #sim3-chart-el { min-height:320px; }
     .sim3-sym { display:none; }
+    .sim3-metric { flex:1 1 calc(33.3% - 1px); min-width:0; border-bottom:1px solid var(--border); }
+    .sim3-metric:nth-child(3n) { border-right:none; }
+    .sim3-metric:nth-last-child(-n+3) { border-bottom:none; }
     .sim3-end-btn { margin-left:0; }
-  }
-
-  /* keyboard focus — same ring vocabulary as the rest of the app */
-  .sim3-wrap button:focus-visible, .sim3-wrap input:focus-visible, .sim3-wrap select:focus-visible
-    { outline:1px solid var(--teal); outline-offset:1px; }
-
-  @media (prefers-reduced-motion: reduce) {
-    .sim3-badge.live { animation:none; }
-    .sim3-verdict { animation:none; }
-    .sim3-pos.sim3-flash { animation:none; }
-    .sim3-toast { transition:opacity 160ms ease; transform:translateX(-50%); }
-    .sim3-toast.show { transform:translateX(-50%); }
-    .sim3-seg-btn:active, .sim3-chip:active, .sim3-tr-btn:active, .sim3-side-btn:active,
-    .sim3-submit:active:not(:disabled), .sim3-end-btn:active, .sim3-close-btn:active,
-    .sim3-apply-btn:active, .sim3-unit-btn:active, .sim3-new-btn:active, .sim3-blown-btn:active
-      { transform:none; }
   }
   `);
 }
@@ -1324,7 +1040,6 @@ const _icoPause = () => '<svg viewBox="0 0 24 24" fill="currentColor" width="11"
 const _icoStep  = () => '<svg viewBox="0 0 24 24" fill="currentColor" width="11" height="11"><path d="M6 6l8 6-8 6V6zm10 0h2v12h-2z"/></svg>';
 
 /* ── CHART ───────────────────────────────────────────────────────────────── */
-let _volOhlcRef = [];    // volume bar colors read candle direction from here (no per-tick alloc)
 function _chartData() {
   const ohlc = S.live.ohlc.slice();
   const vols = S.live.vols.slice();
@@ -1334,7 +1049,6 @@ function _chartData() {
     vols.push(+S.forming.vol.toFixed(1));
     labels.push(S.mode === 'live' ? _liveLabel(S.formingStart) : _labelFor(S.live.ohlc.length));
   }
-  _volOhlcRef = ohlc;
   return { ohlc, vols, labels };
 }
 
@@ -1345,8 +1059,9 @@ function _renderChart() {
   if (!el || !S) return;
   if (_simChart) { try { _simChart.dispose(); } catch(_) {} }
   const TEAL = _bc(), BEAR = _bear();
-  const th = _readTheme();
-  const bg3 = th.bg3, bdr = th.bdr;
+  const cs = getComputedStyle(document.documentElement);
+  const bg3 = (cs.getPropertyValue('--bg3') || '#0f0f0f').trim();
+  const bdr = (cs.getPropertyValue('--border') || '#1e1e1e').trim();
   const { ohlc, vols, labels } = _chartData();
   const len = labels.length;
 
@@ -1357,10 +1072,10 @@ function _renderChart() {
     axisPointer: { link: [{ xAxisIndex: [0, 1] }] },
     tooltip: {
       trigger: 'axis', confine: true, transitionDuration: 0,
-      axisPointer: { type: 'cross', crossStyle: { color: th.txt3 },
-        label: { backgroundColor: th.bg4, color: th.txt2, fontSize: 10, fontFamily: 'Geist Mono,monospace', precision: 0 } },
-      backgroundColor: th.bg4, borderColor: th.bdr2, borderWidth: 1, padding: [7, 10],
-      textStyle: { color: th.txt, fontSize: 11, fontFamily: 'Geist Mono,monospace' },
+      axisPointer: { type: 'cross', crossStyle: { color: '#4a4f58' },
+        label: { backgroundColor: '#16161c', color: '#cfd3da', fontSize: 10, fontFamily: 'Geist Mono,monospace', precision: 0 } },
+      backgroundColor: 'rgba(12,12,17,.96)', borderColor: bdr, borderWidth: 1, padding: [7, 10],
+      textStyle: { color: '#dfe3ea', fontSize: 11, fontFamily: 'Geist Mono,monospace' },
       formatter: params => {
         let head = '', body = '', vol = '';
         for (const p of params) {
@@ -1369,12 +1084,12 @@ function _renderChart() {
             const v = raw.length >= 5 ? raw.slice(1) : raw;   // echarts may prepend the index
             head = p.name;
             const up = +v[1] >= +v[0];
-            const cCol = up ? th.win : th.loss;
+            const cCol = up ? TEAL : '#ff5f8f';
             body = 'O ' + _fmtN(v[0]) + '&nbsp;&nbsp;H ' + _fmtN(v[3]) + '<br>' +
                    'L ' + _fmtN(v[2]) + '&nbsp;&nbsp;C <span style="color:' + cCol + '">' + _fmtN(v[1]) + '</span>';
           } else if (p.seriesName === 'Vol') {
             const v = (p.data && p.data.value != null) ? p.data.value : p.data;
-            if (v != null) vol = '<br><span style="color:' + th.txt3 + '">Vol ' + (+v).toFixed(1) + '</span>';
+            if (v != null) vol = '<br><span style="color:#8a8f98">Vol ' + (+v).toFixed(1) + '</span>';
           }
         }
         return head ? head + '<br>' + body + vol : '';
@@ -1392,34 +1107,31 @@ function _renderChart() {
     }],
     xAxis: [
       { type: 'category', data: labels, gridIndex: 0, axisLine: { lineStyle: { color: bdr } }, axisLabel: { show: false }, splitLine: { show: false }, axisTick: { show: false } },
-      { type: 'category', data: labels, gridIndex: 1, axisLine: { lineStyle: { color: bdr } }, axisLabel: { color: th.txt3, fontSize: 9, fontFamily: 'Geist Mono,monospace', hideOverlap: true }, splitLine: { show: false } }
+      { type: 'category', data: labels, gridIndex: 1, axisLine: { lineStyle: { color: bdr } }, axisLabel: { color: '#777', fontSize: 9, fontFamily: 'Geist Mono,monospace', hideOverlap: true }, splitLine: { show: false } }
     ],
     yAxis: [
       { scale: true, gridIndex: 0, position: 'left',
         splitLine: { lineStyle: { color: bdr, type: 'dashed' } }, axisLine: { lineStyle: { color: bdr } },
-        axisLabel: { color: th.txt3, fontSize: 10, fontFamily: 'Geist Mono,monospace' } },
+        axisLabel: { color: '#888', fontSize: 10, fontFamily: 'Geist Mono,monospace' } },
       { scale: true, gridIndex: 1, position: 'left', splitNumber: 2,
         splitLine: { show: false }, axisLine: { lineStyle: { color: bdr } },
-        axisLabel: { color: th.txt3, fontSize: 8, formatter: v => v >= 1000 ? (v/1000).toFixed(0)+'k' : v } }
+        axisLabel: { color: '#666', fontSize: 8, formatter: v => v >= 1000 ? (v/1000).toFixed(0)+'k' : v } }
     ],
     series: [
       { name: 'Price', type: 'candlestick', data: ohlc, xAxisIndex: 0, yAxisIndex: 0, barMaxWidth: 16,
         itemStyle: { color: 'transparent', color0: BEAR, borderColor: TEAL, borderColor0: BEAR, borderWidth: 1.4 },
         markLine: { symbol: ['none','none'], silent: true, data: (S.market ? [
-          [{ yAxis: S.market.keyLevel, label: { show: true, formatter: 'Key Level', color: th.txt3, fontSize: 10, position: 'insideStartTop' }, lineStyle: { color: th.txt3, type: 'dashed', width: 1, opacity: th.light ? .85 : .55 } }, { yAxis: S.market.keyLevel }]
+          [{ yAxis: S.market.keyLevel, label: { show: true, formatter: 'Key Level', color: '#8a8f98', fontSize: 10, position: 'insideStartTop' }, lineStyle: { color: '#8a8f98', type: 'dashed', width: 1, opacity: .55 } }, { yAxis: S.market.keyLevel }]
         ] : []) } },
-      // vol colors come from a formatter (no per-tick per-bar object allocation)
-      { name: 'Vol', type: 'bar', data: vols, xAxisIndex: 1, yAxisIndex: 1, barMaxWidth: 16,
-        itemStyle: { color: pr => { const c = _volOhlcRef[pr.dataIndex]; return (c && c[1] >= c[0]) ? _bc() + '55' : _bear() + '44'; } } }
+      { name: 'Vol', type: 'bar', data: vols.map((v, i) => ({ value: v, itemStyle: { color: (ohlc[i] && ohlc[i][1] >= ohlc[i][0]) ? TEAL + '55' : BEAR + '44' } })), xAxisIndex: 1, yAxisIndex: 1, barMaxWidth: 16 }
     ]
   });
-  // scroll-back detection → show the "Latest" re-pin chip (read the zoom state
-  // from the event payload — getOption() deep-clones the whole option per event)
-  _simChart.on('datazoom', e => {
+  // scroll-back detection → show the "Latest" re-pin chip
+  _simChart.on('datazoom', () => {
     try {
-      const dz = (e && e.batch && e.batch[0]) || e || {};
+      const dz = _simChart.getOption().dataZoom[0];
       const total = S.live.ohlc.length + (S.forming ? 1 : 0);
-      const endIdx = dz.endValue != null ? dz.endValue : Math.round(((dz.end != null ? dz.end : 100) / 100) * (total - 1));
+      const endIdx = dz.endValue != null ? dz.endValue : Math.round(((dz.end || 100) / 100) * (total - 1));
       const panned = endIdx < total - 2;
       if (panned !== S.userPanned) {
         S.userPanned = panned;
@@ -1427,23 +1139,24 @@ function _renderChart() {
       }
     } catch(_) {}
   });
-  _drawnIds = '';                 // fresh chart instance — force the first overlay build
   _drawLines();
   if (_simChartRO) { try { _simChartRO.disconnect(); } catch(_) {} }
   _simChartRO = new ResizeObserver(() => { try { if (_simChart) { _simChart.resize(); _drawLines(); } } catch(_) {} });
   _simChartRO.observe(el);
 }
 
-/* Per-tick incremental paint — data + lines only, no full re-init. Volume bars
-   are plain numbers (colors resolved by the series formatter over _volOhlcRef),
-   so no per-bar objects are allocated on the hot path. */
+/* Per-tick incremental paint — data + lines only, no full re-init. */
 function _paintTick(force) {
   if (!_simChart) return;
   if (document.hidden && !force) return;   // no point painting a hidden tab
+  const TEAL = _bc(), BEAR = _bear();
   const { ohlc, vols, labels } = _chartData();
   const opt = {
     xAxis: [{ data: labels }, { data: labels }],
-    series: [ { data: ohlc }, { data: vols } ]
+    series: [
+      { data: ohlc },
+      { data: vols.map((v, i) => ({ value: v, itemStyle: { color: (ohlc[i] && ohlc[i][1] >= ohlc[i][0]) ? TEAL + '55' : BEAR + '44' } })) }
+    ]
   };
   if (!S.userPanned) opt.dataZoom = [{ startValue: Math.max(0, labels.length - SIM_WINDOW), endValue: Math.max(0, labels.length - 1) }];
   _simChart.setOption(opt);
@@ -1451,7 +1164,6 @@ function _paintTick(force) {
   _paintHeader();
   _paintPosition(true);   // light: just the live numbers
   _paintAccount();
-  _paintDom();
 }
 
 /* ── price/order/position line overlays (draggable SL/TP + orders) ───────── */
@@ -1470,7 +1182,6 @@ function _drawLines() {
   const inGrid = y => y != null && !isNaN(y) && y > priceGridTop - 1 && y < priceGridBot + 8;
   const fmt = p => Math.round(p).toLocaleString();
   const TEAL = _bc();
-  const th = _simTh || _readTheme();
   const g = [];
 
   const line = (id, price, color, label, draggable, onMove, solidTag) => {
@@ -1497,23 +1208,23 @@ function _drawLines() {
       children: [
         { type: 'line', silent: !draggable, shape: { x1, y1: 0, x2: lineX2, y2: 0 }, style: { stroke: 'transparent', lineWidth: draggable ? 14 : 1 }, cursor: draggable ? 'ns-resize' : 'default' },
         { type: 'line', silent: true, shape: { x1, y1: 0, x2: lineX2, y2: 0 }, style: { stroke: color, lineWidth: 1.3, lineDash: [5, 4] } },
-        { type: 'rect', silent: !draggable, shape: { x: tagX, y: -tagH/2, width: tagW, height: tagH, r: 3 }, style: { fill: solidTag ? color : th.bg4, stroke: color, lineWidth: solidTag ? 0 : 1 }, cursor: draggable ? 'ns-resize' : 'default' },
-        { type: 'text', name: 't', silent: true, style: { text: label + ' ' + fmt(price), x: tagX + pad, y: -6, fill: solidTag ? _txtOn(color) : th.txt, font: '700 10px "Geist Mono",monospace' } }
+        { type: 'rect', silent: !draggable, shape: { x: tagX, y: -tagH/2, width: tagW, height: tagH, r: 3 }, style: { fill: solidTag ? color : 'rgba(14,14,18,.95)', stroke: color, lineWidth: solidTag ? 0 : 1 }, cursor: draggable ? 'ns-resize' : 'default' },
+        { type: 'text', name: 't', silent: true, style: { text: label + ' ' + fmt(price), x: tagX + pad, y: -6, fill: solidTag ? '#0b0b0b' : '#e8ebf0', font: '700 10px "Geist Mono",monospace' } }
       ]
     };
   };
 
   // last price (always)
-  const lp = line('sim3-l-last', S.price, S.pos ? (_uPnL(S.pos, S.price) >= 0 ? TEAL : th.loss) : th.txt2, '▸', false, null, true);
+  const lp = line('sim3-l-last', S.price, S.pos ? (_uPnL(S.pos, S.price) >= 0 ? TEAL : '#ff2e88') : '#aeb4c0', '▸', false, null, true);
   if (lp) g.push(lp);
 
   if (S.pos) {
-    const e = line('sim3-l-entry', S.pos.entry, th.txt2, 'Entry', false, null, false);
+    const e = line('sim3-l-entry', S.pos.entry, '#aeb4c0', 'Entry', false, null, false);
     if (e) g.push(e);
-    const lq = line('sim3-l-liq', S.pos.liq, th.gold, 'Liq', false, null, false);
+    const lq = line('sim3-l-liq', S.pos.liq, '#e0a030', 'Liq', false, null, false);
     if (lq) g.push(lq);
     if (S.pos.sl > 0) {
-      const sl = line('sim3-l-sl', S.pos.sl, th.loss, 'SL', !S.ended, p => {
+      const sl = line('sim3-l-sl', S.pos.sl, '#ff2e88', 'SL', !S.ended, p => {
         const long = S.pos.side === 'long';
         if (long ? p >= S.price : p <= S.price) { _toast('SL must stay on the loss side', true); _drawLines(); return; }
         S.pos.sl = +p.toFixed(2);
@@ -1534,122 +1245,17 @@ function _drawLines() {
     }
   }
   for (const o of S.orders) {
-    const col = o.side === 'buy' ? TEAL : th.loss;
+    const col = o.side === 'buy' ? TEAL : '#ff2e88';
     const ln = line('sim3-l-o' + o.id, o.px, col, (o.type === 'limit' ? 'LMT' : 'STP'), !S.ended, p => {
-      // a dragged limit must stay passive; a dragged stop must stay un-triggered
-      const crossed = o.type === 'limit'
-        ? (o.side === 'buy' ? p >= S.price : p <= S.price)
-        : (o.side === 'buy' ? S.price >= p : S.price <= p);
-      if (crossed) {
-        _toast(o.type === 'limit' ? 'Limit would fill instantly there — use market' : 'Trigger is already through the market', true);
-        _drawLines(); return;
-      }
-      const oldPx = o.px;
       o.px = +p.toFixed(2);                                  // qty keeps its BTC size
       _recalcOrderMargins();                                 // price moved → reserve changes
-      if (_usedMargin() > _equity() + 1e-9) {                // reserve no longer funded at the new price
-        o.px = oldPx; _recalcOrderMargins();
-        _toast('Not enough margin at that price', true);
-        _drawLines(); return;
-      }
       _toast((o.type === 'limit' ? 'Limit' : 'Stop') + ' moved to ' + _fmtPx(p));
       _paintOrders(); _paintAccount(); _drawLines();
     }, false);
     if (ln) g.push(ln);
   }
-  // Graphic ids are stable ('sim3-l-last', 'sim3-l-entry', …). When the SET of
-  // ids is unchanged (the common per-tick case — lines just move), normal merge
-  // patches elements in place; only when a line appears/disappears do we pay for
-  // one replaceMerge to flush the stale element. Saves ~20-35 element
-  // construct/dispose cycles per tick at 19Hz.
-  const ids = g.map(x => x.id).join('|');
-  try {
-    if (ids === _drawnIds) chart.setOption({ graphic: g });
-    else { chart.setOption({ graphic: g }, { replaceMerge: ['graphic'] }); _drawnIds = ids; }
-  } catch(_) {}
+  try { chart.setOption({ graphic: g }, { replaceMerge: ['graphic'] }); } catch(_) {}
 }
-let _drawnIds = '';
-
-/* ── DEPTH LADDER (synthetic L2 around the last price) ───────────────────────
-   Educational depth: sizes are seeded per price level (stable while price
-   holds, drifting every ~1.6s) with cumulative bars, a live spread row, and
-   click-to-set-price into the order ticket. Honest label: "sim" — it is
-   simulated depth in both modes, teaching the ladder-reading skill without
-   pretending to be real L2. */
-function _paintDom(force) {
-  const body = _el('sim3-dom-body');
-  if (!body || !S) return;
-  const now = Date.now();
-  if (!force && now - _lastDomPaint < 250) return;
-  if (!(S.price > 0)) { body.innerHTML = ''; return; }
-  _lastDomPaint = now;
-  const mid = S.price;
-  const tick = Math.max(mid * 0.0004, 0.5);
-  const slot = Math.floor(now / 1600);
-  const N = 9;
-  const lvl = i => {
-    const mk = px => {
-      const key = (Math.round(px / tick) * 2654435761) >>> 0;
-      const base = mulberry32(key)();
-      const drift = mulberry32(((key ^ slot) * 40503) >>> 0)();
-      return { px, sz: 0.35 + base * 5.2 + drift * 2.4 * (1 + i * 0.12) };
-    };
-    return { a: mk(mid + tick * i), b: mk(mid - tick * i) };
-  };
-  const asks = [], bids = [];
-  let ca = 0, cb = 0;
-  for (let i = 1; i <= N; i++) {
-    const { a, b } = lvl(i);
-    ca += a.sz; a.cum = ca; asks.push(a);
-    cb += b.sz; b.cum = cb; bids.push(b);
-  }
-  const maxCum = Math.max(ca, cb) || 1;
-  const row = (e, side) => `<button class="sim3-dom-row ${side}" style="--d:${(e.cum / maxCum * 100).toFixed(1)}%" onclick="_sim3DomClick(${e.px.toFixed(2)})" aria-label="Set order price ${Math.round(e.px)}">
-      <span class="sim3-dom-px">${Math.round(e.px).toLocaleString()}</span><span class="sim3-dom-sz">${e.sz.toFixed(2)}</span>
-    </button>`;
-  const spread = asks[0].px - bids[0].px;
-  body.innerHTML =
-    asks.slice().reverse().map(a => row(a, 'ask')).join('') +
-    `<div class="sim3-dom-mid"><span>${_fmtPx(mid)}</span><span>${(spread / mid * 10000).toFixed(1)}bp</span></div>` +
-    bids.map(b => row(b, 'bid')).join('');
-}
-window._sim3DomClick = function(px) {
-  if (!S || S.ended) return;
-  if ((S.uiType || 'market') === 'market') window._sim3Type('limit');
-  const el = _el('sim3-px'); if (el) el.value = Math.round(px);
-  _paintOrderPanel();
-  _toast('Price set from depth — ' + _fmtPx(px));
-};
-
-/* ── PATTERN MASTERY (per-concept session record; click = practice it) ───── */
-function _paintMastery() {
-  const box = _el('sim3-mastery-body');
-  if (!box) return;
-  const bp = (A && A.byPattern) || {};
-  const keys = Object.keys(bp).filter(k => SIM_CONCEPTS[k] && bp[k].s > 0)
-    .sort((a, b) => (bp[b].s - bp[a].s) || (bp[b].pnl - bp[a].pnl));
-  if (!keys.length) {
-    box.innerHTML = '<div class="sim3-blot-empty">No pattern sessions yet. Lock a market from the picker above — every ended replay session builds your per-concept record here.</div>';
-    return;
-  }
-  box.innerHTML = keys.map(k => {
-    const e = bp[k];
-    const wr = Math.round(e.w / e.s * 100);
-    const name = SIM_CONCEPTS[k].name.split('—')[0].trim();
-    return `<button class="sim3-mast-row${_simLockedPattern === k ? ' cur' : ''}" onclick="_sim3PracticePattern('${k}')" title="Practice: ${name}">
-      <span class="sim3-mast-name">${name}</span>
-      <span class="sim3-mast-rec">${e.w}W·${e.s - e.w}L</span>
-      <span class="sim3-mast-wr ${wr >= 50 ? 'pos' : 'neg'}">${wr}%</span>
-      <span class="sim3-mast-pnl ${e.pnl >= 0 ? 'pos' : 'neg'}">${(e.pnl >= 0 ? '+' : '') + _fmtUsd(e.pnl, 0).replace('$-', '-$')}</span>
-    </button>`;
-  }).join('');
-}
-window._sim3PracticePattern = function(k) {
-  if (!SIM_CONCEPTS[k]) return;
-  try { localStorage.setItem(SIM_SRC_KEY, 'replay'); } catch(_) {}
-  _simOpts.pattern = k; _simOpts.label = '';
-  renderSimulator('content-area', _simOpts);
-};
 
 /* ── PANEL PAINTERS ──────────────────────────────────────────────────────── */
 function _paintHeader() {
@@ -1657,7 +1263,7 @@ function _paintHeader() {
   if (pxEl) {
     pxEl.textContent = S.price > 0 ? _fmtPx(S.price) : '—';
     const prev = +pxEl.dataset.prev || S.price;
-    pxEl.style.color = S.price > prev ? _winCol() : S.price < prev ? _lossCol() : 'var(--text)';
+    pxEl.style.color = S.price > prev ? _bc() : S.price < prev ? '#ff5f8f' : 'var(--text)';
     pxEl.dataset.prev = S.price;
   }
   const cEl = _el('sim3-countdown');
@@ -1720,9 +1326,9 @@ function _paintPosition(lightOnly) {
   const p = S.pos;
   const u = _uPnL(p, S.price);
   const roe = p.margin > 0 ? u / p.margin * 100 : 0;
-  const col = u >= 0 ? _winCol() : _lossCol();
+  const col = u >= 0 ? _bc() : '#ff5f8f';
   const liqDist = S.price > 0 ? Math.abs(S.price - p.liq) / S.price * 100 : 0;
-  const liqCol = liqDist < 2 ? _lossCol() : liqDist < 5 ? _goldCol() : 'var(--text2)';
+  const liqCol = liqDist < 2 ? '#ff5f8f' : liqDist < 5 ? '#e0a030' : 'var(--text2)';
   const liqTxt = _fmtPx(p.liq) + ' · ' + liqDist.toFixed(1) + '%';
   if (lightOnly && _el('sim3-pos-upnl')) {
     const el = _el('sim3-pos-upnl');
@@ -1780,8 +1386,8 @@ function _paintOrders() {
 function _paintOrderPanel(retab) {
   const side = S.uiSide || 'buy', type = S.uiType || 'market';
   if (retab) {
-    document.querySelectorAll('.sim3-side-btn').forEach(b => { const on = b.dataset.side === side; b.classList.toggle('active', on); b.setAttribute('aria-pressed', on); });
-    document.querySelectorAll('.sim3-type-tab').forEach(b => { const on = b.dataset.type === type; b.classList.toggle('active', on); b.setAttribute('aria-pressed', on); });
+    document.querySelectorAll('.sim3-side-btn').forEach(b => b.classList.toggle('active', b.dataset.side === side));
+    document.querySelectorAll('.sim3-type-tab').forEach(b => b.classList.toggle('active', b.dataset.type === type));
     const pxRow = _el('sim3-px-row');
     if (pxRow) pxRow.style.display = type === 'market' ? 'none' : '';
     const pxLbl = _el('sim3-px-lbl');
@@ -1833,35 +1439,26 @@ function _paintOrderPanel(retab) {
     : usd > 0 && margin > _freeMargin() + 1e-9 ? 'exceeds free margin' : '';
 }
 
-/* Equity curve — the instance is created ONCE per render (a closed trade fires
-   this from inside the tick loop, so dispose+init per close was a mid-playback
-   hitch). Subsequent calls just setOption on the live instance. */
 function _paintEquity() {
   const el = _el('sim3-eq-el');
   if (!el) return;
+  if (_simEqChart) { try { _simEqChart.dispose(); } catch(_) {} }
   const h = A.history.length ? A.history : [1000];
   const up = A.balance >= (h[0] || 1000);
-  const th = _simTh || _readTheme();
-  const color = up ? _bc() : th.loss;
-  if (!_simEqChart) {
-    _simEqChart = echarts.init(el, null, { renderer: 'canvas' });
-    LTUtils.echartsZoomShim(el);
-    if (_simEqRO) { try { _simEqRO.disconnect(); } catch(_) {} }
-    _simEqRO = new ResizeObserver(() => { try { _simEqChart && _simEqChart.resize(); } catch(_) {} });
-    _simEqRO.observe(el);
-    _simEqChart.setOption({
-      backgroundColor: 'transparent', animation: false,
-      grid: { left: 52, right: 12, top: 10, bottom: 20 },
-      xAxis: { type: 'category', data: [], axisLabel: { color: th.txt3, fontSize: 9 }, axisLine: { lineStyle: { color: th.bdr } } },
-      yAxis: { scale: true, splitLine: { lineStyle: { color: th.bdr, type: 'dashed' } }, axisLabel: { color: th.txt3, fontSize: 9, formatter: v => '$' + (+v).toFixed(0) } },
-      series: [{ type: 'line', data: [], smooth: true, symbol: 'none', lineStyle: { width: 2 } }]
-    });
-  }
+  const color = up ? _bc() : '#ff2e88';
+  _simEqChart = echarts.init(el, null, { renderer: 'canvas' });
+  LTUtils.echartsZoomShim(el);
   _simEqChart.setOption({
-    xAxis: { data: h.map((_, i) => i ? 'T' + i : 'Start') },
-    series: [{ data: h, lineStyle: { color, width: 2 },
+    backgroundColor: 'transparent', animation: false,
+    grid: { left: 52, right: 12, top: 10, bottom: 20 },
+    xAxis: { type: 'category', data: h.map((_, i) => i ? 'T' + i : 'Start'), axisLabel: { color: '#555', fontSize: 9 }, axisLine: { lineStyle: { color: '#1e1e1e' } } },
+    yAxis: { scale: true, splitLine: { lineStyle: { color: '#1e1e1e', type: 'dashed' } }, axisLabel: { color: '#555', fontSize: 9, formatter: v => '$' + (+v).toFixed(0) } },
+    series: [{ type: 'line', data: h, smooth: true, symbol: 'none', lineStyle: { color, width: 2 },
       areaStyle: { color: { type: 'linear', x: 0, y: 0, x2: 0, y2: 1, colorStops: [{ offset: 0, color: color + '3a' }, { offset: 1, color: color + '06' }] } } }]
   });
+  if (_simEqRO) { try { _simEqRO.disconnect(); } catch(_) {} }
+  _simEqRO = new ResizeObserver(() => { try { _simEqChart && _simEqChart.resize(); } catch(_) {} });
+  _simEqRO.observe(el);
 }
 
 function _paintBlotter() {
@@ -1881,8 +1478,8 @@ function _paintBlotter() {
   }
   for (const t of A.log.slice(0, 14)) {
     rows.push(`<div class="sim3-blot-row">
-      <span>${_esc(t.t)}</span>
-      <span class="sim3-blot-side ${t.side === 'short' ? 'short' : 'long'}">${(t.side === 'short' ? 'SHORT' : 'LONG')}</span>
+      <span>${t.t || ''}</span>
+      <span class="sim3-blot-side ${t.side}">${(t.side || '').toUpperCase()}</span>
       <span>CLOSED</span>
       <span>${_fmtQty(t.qty)} · ${_fmtPx(t.entry)} → ${_fmtPx(t.exit)}</span>
       <span class="sim3-blot-fees">${_fmtUsd(t.fees)}</span>
@@ -1893,8 +1490,7 @@ function _paintBlotter() {
 }
 
 function _paintAll() {
-  _paintHeader(); _paintAccount(); _paintPosition(); _paintOrders(); _paintOrderPanel(true);
-  _paintEquity(); _paintBlotter(); _paintDom(true); _paintMastery();
+  _paintHeader(); _paintAccount(); _paintPosition(); _paintOrders(); _paintOrderPanel(true); _paintEquity(); _paintBlotter();
 }
 
 /* ── VERDICT ─────────────────────────────────────────────────────────────── */
@@ -1922,11 +1518,6 @@ function _showVerdict() {
   const coachLine = isLive
     ? 'Live market — there is no textbook answer. Judge the process, not the P&amp;L.'
     : 'Textbook bias for this market: <strong>' + biasWord + '</strong>.';
-  let recordLine = '';
-  if (!isLive && S.market && A.byPattern && A.byPattern[S.market.pattern]) {
-    const e = A.byPattern[S.market.pattern];
-    recordLine = `<div class="sim3-verd-record">Your record on this concept: <strong>${e.s}</strong> session${e.s === 1 ? '' : 's'} · <strong>${e.w}W-${e.s - e.w}L</strong> · net <strong>${(e.pnl >= 0 ? '+' : '') + _fmtUsd(e.pnl, 0).replace('$-', '-$')}</strong></div>`;
-  }
   const outcomeLine = !isLive && S.market.outcome === 'fail'
     ? 'This one was a trap round — the textbook setup failed. '
     : '';
@@ -1935,7 +1526,7 @@ function _showVerdict() {
   wrap.innerHTML = `
     <div class="sim3-verdict ${cls}">
       <div class="sim3-verd-top">
-        <span class="sim3-verd-pnl" style="color:${pnl >= 0 ? _winCol() : _lossCol()}">${(pnl >= 0 ? '+' : '') + _fmtUsd(pnl).replace('$-','-$')}</span>
+        <span class="sim3-verd-pnl" style="color:${pnl >= 0 ? _bc() : '#ff5f8f'}">${(pnl >= 0 ? '+' : '') + _fmtUsd(pnl).replace('$-','-$')}</span>
         <span class="sim3-verd-meta">session net · gross ${(gross >= 0 ? '+' : '') + _fmtUsd(gross).replace('$-','-$')} · fees ${_fmtUsd(S.feesPaid)}</span>
       </div>
       <div class="sim3-verd-pattern">${concept.name}${concept.course ? ' · ' + concept.course : ''}</div>
@@ -1944,7 +1535,6 @@ function _showVerdict() {
         <span>${coachLine}
         ${S.feesPaid > Math.abs(gross) && S.feesPaid > 1 ? ' Your fees outweighed the edge — fewer, better-placed orders.' : ''}</span>
       </div>
-      ${recordLine}
       <div class="sim3-verd-stats">
         <span>Balance <strong>${_fmtUsd(A.balance, 0)}</strong></span>
         <span>Win rate <strong>${A.trades ? Math.round(A.wins / A.trades * 100) : 0}%</strong></span>
@@ -1962,74 +1552,6 @@ function _showVerdict() {
   try { wrap.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'center' }); } catch(_) {}
 }
 
-/* ── TRADINGVIEW STUDY VIEW (opt-in reference chart) ─────────────────────────
-   A real TradingView Advanced Chart for studying the live market. NOT a trading
-   session — no account, orders, or engine — so the layout drops the whole
-   terminal and hosts a full-width chart. The external TV script is lazy-loaded
-   only here (see lt-tradingview.js). Switch back to Replay/Live BTC to trade. */
-function _renderTVStudy(container) {
-  const light = document.documentElement.classList.contains('theme-light');
-  container.innerHTML = `
-  <div class="sim3-wrap">
-    <div class="sim3-back-row">
-      <button class="sim3-back-btn" onclick="typeof init==='function'&&init(false)">
-        <i data-lucide="arrow-left" style="width:15px;height:15px;"></i> Back to Course
-      </button>
-      <div>
-        <div class="sim3-heading">Practice Simulator</div><span class="sim3-beta">TradingView · Study</span>
-        <div class="sim3-sub">the real market on a live TradingView chart · switch to Replay or Live BTC to trade</div>
-      </div>
-    </div>
-
-    <div class="sim3-controls">
-      <div class="sim3-ctrl-group">
-        <span class="sim3-ctrl-lbl">Source</span>
-        <div class="sim3-seg">
-          <button class="sim3-seg-btn" onclick="_sim3SetSource('replay')">Replay</button>
-          <button class="sim3-seg-btn" onclick="_sim3SetSource('live')">Live BTC</button>
-          <button class="sim3-seg-btn active" onclick="_sim3SetSource('tradingview')">TradingView</button>
-        </div>
-      </div>
-      <span class="sim3-tv-note">Reference chart only — no paper trading here. Third-party embed (loads TradingView).</span>
-    </div>
-
-    <div class="sim3-chart-card sim3-tv-card">
-      <div id="sim3-tv-el"></div>
-      <div class="sim3-loading" id="sim3-tv-loading">Loading TradingView…</div>
-    </div>
-  </div>`;
-
-  if (typeof lucide !== 'undefined') lucide.createIcons();
-  _mountTV(light);
-}
-
-function _mountTV(light) {
-  const host = _el('sim3-tv-el');
-  if (!host) return;
-  if (!window.LTTradingView) { _tvFail('TradingView module not available'); return; }
-  const token = ++_tvMountToken;   // this render's claim on the widget slot
-  LTTradingView.load().then(() => {
-    // bail if a later render superseded us, or we navigated away mid-load
-    if (token !== _tvMountToken || !_el('sim3-tv-el') || _simSource() !== 'tradingview') return;
-    if (_tvHandle) { try { _tvHandle.remove(); } catch(_) {} _tvHandle = null; }
-    _tvHandle = LTTradingView.mount('sim3-tv-el', {
-      symbol: 'BINANCE:BTCUSDT', interval: '60',
-      theme: light ? 'light' : 'dark'
-    });
-    // the script loaded but the widget constructor can still throw (blocked
-    // iframe/init sub-resource) — mount() swallows it and returns widget:null.
-    // Show the fallback rather than a blank card.
-    if (!_tvHandle || !_tvHandle.widget) { _tvHandle = null; _tvFail(); return; }
-    const ld = _el('sim3-tv-loading'); if (ld) ld.style.display = 'none';
-  }).catch(() => { if (token === _tvMountToken) _tvFail(); });
-}
-
-function _tvFail(msg) {
-  const ld = _el('sim3-tv-loading');
-  if (ld) ld.innerHTML = (msg || 'TradingView couldn’t load') +
-    ' — check your connection or an ad-blocker. <a href="https://www.tradingview.com/chart/?symbol=BINANCE%3ABTCUSDT" target="_blank" rel="noopener" style="color:var(--teal);text-decoration:underline;">Open on TradingView ↗</a>';
-}
-
 /* ── RENDER ──────────────────────────────────────────────────────────────── */
 function renderSimulator(containerId, opts) {
   _simStyles();
@@ -2037,14 +1559,11 @@ function renderSimulator(containerId, opts) {
   ltSimTeardown();
   _simLockedPattern = _simOpts.pattern || null;
   A = simLoadAccount();
+  _newSession();
 
   const container = document.getElementById(containerId);
   if (!container) return;
 
-  // TradingView study view — a real reference chart, no paper-trading session.
-  if (_simSource() === 'tradingview') { S = null; _renderTVStudy(container); return; }
-
-  _newSession();
   const isLive = S.mode === 'live';
   const byCourse = {};
   SIM_ALL_PATTERNS.forEach(k => { const c = SIM_CONCEPTS[k]; (byCourse[c.course] = byCourse[c.course] || []).push(k); });
@@ -2054,7 +1573,7 @@ function renderSimulator(containerId, opts) {
   const diff = _simDifficulty();
   const src = _simSource();
   const courseTag = _simOpts.label
-    ? `<span style="font-size:11px;color:var(--teal);font-weight:700;background:var(--teal-faint);border:1px solid rgba(0,212,212,.25);padding:2px 10px;border-radius:10px;margin-left:8px;">Practicing: ${_esc(_simOpts.label)}</span>` : '';
+    ? `<span style="font-size:11px;color:var(--teal);font-weight:700;background:var(--teal-faint);border:1px solid rgba(0,212,212,.25);padding:2px 10px;border-radius:10px;margin-left:8px;">Practicing: ${_simOpts.label}</span>` : '';
   const tfList = isLive ? Object.keys(SIM_LIVE_TF) : SIM_TIMEFRAMES;
 
   container.innerHTML = `
@@ -2075,7 +1594,6 @@ function renderSimulator(containerId, opts) {
         <div class="sim3-seg">
           <button class="sim3-seg-btn ${src === 'replay' ? 'active' : ''}" onclick="_sim3SetSource('replay')">Replay</button>
           <button class="sim3-seg-btn ${src === 'live' ? 'active' : ''}" onclick="_sim3SetSource('live')">Live BTC</button>
-          <button class="sim3-seg-btn ${src === 'tradingview' ? 'active' : ''}" onclick="_sim3SetSource('tradingview')">TradingView</button>
         </div>
       </div>
       ${isLive ? '' : `
@@ -2129,12 +1647,7 @@ function renderSimulator(containerId, opts) {
         </div>
         <div id="sim3-chart-el"></div>
         ${isLive ? '<div class="sim3-loading" id="sim3-loading">Connecting to live BTC data…</div>' : ''}
-        <div class="sim3-toast" id="sim3-toast" role="status" aria-live="polite"></div>
-      </div>
-
-      <div class="sim3-dom" aria-label="Market depth (simulated)">
-        <div class="sim3-dom-head"><span>Depth</span><span class="sim3-dom-tag">sim</span></div>
-        <div class="sim3-dom-body" id="sim3-dom-body"></div>
+        <div class="sim3-toast" id="sim3-toast"></div>
       </div>
 
       <div class="sim3-term">
@@ -2220,10 +1733,6 @@ function renderSimulator(containerId, opts) {
 
     <div class="sim3-lower">
       <div class="sim3-panel">
-        <div class="sim3-panel-top"><span>Pattern Record</span><span class="sim3-panel-meta">click to practice</span></div>
-        <div class="sim3-mast-body" id="sim3-mastery-body"></div>
-      </div>
-      <div class="sim3-panel">
         <div class="sim3-panel-top"><span>Account Equity Curve</span><span class="sim3-panel-meta">${A.sessions || 0} sessions</span></div>
         <div id="sim3-eq-el"></div>
       </div>
@@ -2242,10 +1751,7 @@ function renderSimulator(containerId, opts) {
   if (typeof lucide !== 'undefined') lucide.createIcons();
   S.uiSide = 'buy'; S.uiType = 'market'; S.uiSizeUnit = 'usd';
 
-  const mySession = S;
-  S.bootTimer = setTimeout(() => {
-    if (S !== mySession || S.ended) return;   // teardown/re-render beat us here
-    S.bootTimer = null;
+  setTimeout(() => {
     _renderChart();
     _paintAll();
     if (S.mode === 'live') _liveBoot();
@@ -2275,15 +1781,9 @@ document.addEventListener('visibilitychange', () => {
 
 /* Full teardown — idempotent; called on re-entry and by the engine on nav-away. */
 function ltSimTeardown() {
-  // mark the session dead FIRST so any in-flight async (loadKlines, boot timer,
-  // liveFail timeout) and the feed's own onStatus('dead') short-circuit their
-  // `S.ended` guard — no stray "DATA STALLED" toast on nav-away.
-  if (S) { S.playing = false; S.ended = true; }
-  if (S && S.timer)     { clearInterval(S.timer); S.timer = null; }
-  if (S && S.hb)        { clearInterval(S.hb); S.hb = null; }
-  if (S && S.bootTimer) { clearTimeout(S.bootTimer); S.bootTimer = null; }
-  if (S && S.feed)      { try { S.feed.stop(); } catch(_) {} S.feed = null; }
-  if (_tvHandle)        { try { _tvHandle.remove(); } catch(_) {} _tvHandle = null; }
+  if (S && S.timer) { clearInterval(S.timer); S.timer = null; }
+  if (S && S.feed)  { try { S.feed.stop(); } catch(_) {} S.feed = null; }
+  if (S) S.playing = false;
   _simDragging = false;
   if (_simEqChart) { try { _simEqChart.dispose(); } catch(_) {} _simEqChart = null; }
   if (_simChart)   { try { _simChart.dispose();   } catch(_) {} _simChart   = null; }

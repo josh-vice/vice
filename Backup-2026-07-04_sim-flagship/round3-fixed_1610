@@ -164,8 +164,6 @@ let S = null;
 let _simOpts = {};
 let _simLockedPattern = null;
 let _simChart = null, _simEqChart = null, _simChartRO = null, _simEqRO = null;
-let _tvHandle = null;          // TradingView study-view widget handle (opt-in)
-let _tvMountToken = 0;         // guards against a stale async mount after rapid source toggling
 let _simDragging = false;      // an SL/TP/order line is mid-drag — pause overlay repaints
 let _lastLivePaint = 0;        // live ticks arrive fast — throttle chart paints
 let _lastDomPaint = 0;         // depth ladder repaint throttle
@@ -219,17 +217,13 @@ function _txtOn(hex) {
 }
 
 function _simDifficulty() { return localStorage.getItem(SIM_DIFF_KEY) === 'real' ? 'real' : 'learn'; }
-function _simSource() {
-  const s = localStorage.getItem(SIM_SRC_KEY);
-  return (s === 'live' || s === 'tradingview') ? s : 'replay';
-}
+function _simSource()     { return localStorage.getItem(SIM_SRC_KEY) === 'live' ? 'live' : 'replay'; }
 window._sim2SetDifficulty = function(mode) {
   localStorage.setItem(SIM_DIFF_KEY, mode === 'real' ? 'real' : 'learn');
   renderSimulator('content-area', _simOpts);
 };
 window._sim3SetSource = function(src) {
-  const v = (src === 'live' || src === 'tradingview') ? src : 'replay';
-  localStorage.setItem(SIM_SRC_KEY, v);
+  localStorage.setItem(SIM_SRC_KEY, src === 'live' ? 'live' : 'replay');
   renderSimulator('content-area', _simOpts);
 };
 
@@ -1083,7 +1077,7 @@ function _simStyles() {
   .sim3-seg-btn.active { background:var(--teal-dim); color:var(--teal); }
   .sim3-pat-select { background:var(--bg4); border:1px solid var(--border2); border-radius:4px; color:var(--text2); font-family:inherit; font-size:10.5px; font-weight:600; padding:4px 7px; cursor:pointer; max-width:240px; }
   .sim3-end-btn { margin-left:auto; padding:4px 13px; border-radius:4px; border:1px solid var(--border2); background:var(--bg4); color:var(--text2); font-size:10px; font-weight:700; cursor:pointer; font-family:inherit; letter-spacing:.3px; }
-  .sim3-end-btn:hover { border-color:var(--s-warn-bd); color:var(--s-warn); }
+  .sim3-end-btn:hover { border-color:var(--s-gold); color:var(--s-gold); }
 
   /* account metrics bar — one dense hairline strip, not cards */
   .sim3-metrics { display:flex; flex-wrap:wrap; background:var(--bg2); border:1px solid var(--border); border-radius:5px; margin-bottom:10px; overflow:hidden; }
@@ -1137,13 +1131,7 @@ function _simStyles() {
   .sim3-tr-btn:hover { border-color:var(--teal); color:var(--teal); }
   .sim3-tr-btn svg { width:10px; height:10px; }
   #sim3-chart-el { width:100%; flex:1 1 auto; min-height:460px; }
-  /* TradingView study view */
-  .sim3-tv-card { min-height:0; }
-  #sim3-tv-el { width:100%; height:clamp(420px, calc((100dvh / var(--app-zoom, 1)) - 240px), 760px); }
-  @media(max-width:600px){ #sim3-tv-el { height:clamp(360px, calc((100dvh / var(--app-zoom, 1)) - 200px), 620px); } }
-  .sim3-tv-note { font-size:10px; color:var(--text3); letter-spacing:.2px; margin-left:auto; align-self:center; max-width:340px; line-height:1.35; }
-  @media(max-width:600px){ .sim3-tv-note { margin-left:0; max-width:none; } }
-  .sim3-loading { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; background:var(--bg3); z-index:40; font-size:12px; color:var(--text3); letter-spacing:.4px; text-align:center; padding:0 20px; }
+  .sim3-loading { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; background:var(--bg3); z-index:40; font-size:12px; color:var(--text3); letter-spacing:.4px; }
   .sim3-toast { position:absolute; left:50%; bottom:12px; transform:translateX(-50%) translateY(8px); background:var(--bg4); border:1px solid var(--teal); color:var(--text); font-size:11px; font-weight:600; padding:6px 12px; border-radius:4px; opacity:0; pointer-events:none; transition:opacity 160ms cubic-bezier(0.23,1,0.32,1), transform 160ms cubic-bezier(0.23,1,0.32,1); z-index:50; white-space:nowrap; }
   .sim3-toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
   .sim3-toast.warn { border-color:var(--s-warn-bd); color:var(--s-warn); }
@@ -1962,74 +1950,6 @@ function _showVerdict() {
   try { wrap.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'center' }); } catch(_) {}
 }
 
-/* ── TRADINGVIEW STUDY VIEW (opt-in reference chart) ─────────────────────────
-   A real TradingView Advanced Chart for studying the live market. NOT a trading
-   session — no account, orders, or engine — so the layout drops the whole
-   terminal and hosts a full-width chart. The external TV script is lazy-loaded
-   only here (see lt-tradingview.js). Switch back to Replay/Live BTC to trade. */
-function _renderTVStudy(container) {
-  const light = document.documentElement.classList.contains('theme-light');
-  container.innerHTML = `
-  <div class="sim3-wrap">
-    <div class="sim3-back-row">
-      <button class="sim3-back-btn" onclick="typeof init==='function'&&init(false)">
-        <i data-lucide="arrow-left" style="width:15px;height:15px;"></i> Back to Course
-      </button>
-      <div>
-        <div class="sim3-heading">Practice Simulator</div><span class="sim3-beta">TradingView · Study</span>
-        <div class="sim3-sub">the real market on a live TradingView chart · switch to Replay or Live BTC to trade</div>
-      </div>
-    </div>
-
-    <div class="sim3-controls">
-      <div class="sim3-ctrl-group">
-        <span class="sim3-ctrl-lbl">Source</span>
-        <div class="sim3-seg">
-          <button class="sim3-seg-btn" onclick="_sim3SetSource('replay')">Replay</button>
-          <button class="sim3-seg-btn" onclick="_sim3SetSource('live')">Live BTC</button>
-          <button class="sim3-seg-btn active" onclick="_sim3SetSource('tradingview')">TradingView</button>
-        </div>
-      </div>
-      <span class="sim3-tv-note">Reference chart only — no paper trading here. Third-party embed (loads TradingView).</span>
-    </div>
-
-    <div class="sim3-chart-card sim3-tv-card">
-      <div id="sim3-tv-el"></div>
-      <div class="sim3-loading" id="sim3-tv-loading">Loading TradingView…</div>
-    </div>
-  </div>`;
-
-  if (typeof lucide !== 'undefined') lucide.createIcons();
-  _mountTV(light);
-}
-
-function _mountTV(light) {
-  const host = _el('sim3-tv-el');
-  if (!host) return;
-  if (!window.LTTradingView) { _tvFail('TradingView module not available'); return; }
-  const token = ++_tvMountToken;   // this render's claim on the widget slot
-  LTTradingView.load().then(() => {
-    // bail if a later render superseded us, or we navigated away mid-load
-    if (token !== _tvMountToken || !_el('sim3-tv-el') || _simSource() !== 'tradingview') return;
-    if (_tvHandle) { try { _tvHandle.remove(); } catch(_) {} _tvHandle = null; }
-    _tvHandle = LTTradingView.mount('sim3-tv-el', {
-      symbol: 'BINANCE:BTCUSDT', interval: '60',
-      theme: light ? 'light' : 'dark'
-    });
-    // the script loaded but the widget constructor can still throw (blocked
-    // iframe/init sub-resource) — mount() swallows it and returns widget:null.
-    // Show the fallback rather than a blank card.
-    if (!_tvHandle || !_tvHandle.widget) { _tvHandle = null; _tvFail(); return; }
-    const ld = _el('sim3-tv-loading'); if (ld) ld.style.display = 'none';
-  }).catch(() => { if (token === _tvMountToken) _tvFail(); });
-}
-
-function _tvFail(msg) {
-  const ld = _el('sim3-tv-loading');
-  if (ld) ld.innerHTML = (msg || 'TradingView couldn’t load') +
-    ' — check your connection or an ad-blocker. <a href="https://www.tradingview.com/chart/?symbol=BINANCE%3ABTCUSDT" target="_blank" rel="noopener" style="color:var(--teal);text-decoration:underline;">Open on TradingView ↗</a>';
-}
-
 /* ── RENDER ──────────────────────────────────────────────────────────────── */
 function renderSimulator(containerId, opts) {
   _simStyles();
@@ -2037,14 +1957,11 @@ function renderSimulator(containerId, opts) {
   ltSimTeardown();
   _simLockedPattern = _simOpts.pattern || null;
   A = simLoadAccount();
+  _newSession();
 
   const container = document.getElementById(containerId);
   if (!container) return;
 
-  // TradingView study view — a real reference chart, no paper-trading session.
-  if (_simSource() === 'tradingview') { S = null; _renderTVStudy(container); return; }
-
-  _newSession();
   const isLive = S.mode === 'live';
   const byCourse = {};
   SIM_ALL_PATTERNS.forEach(k => { const c = SIM_CONCEPTS[k]; (byCourse[c.course] = byCourse[c.course] || []).push(k); });
@@ -2075,7 +1992,6 @@ function renderSimulator(containerId, opts) {
         <div class="sim3-seg">
           <button class="sim3-seg-btn ${src === 'replay' ? 'active' : ''}" onclick="_sim3SetSource('replay')">Replay</button>
           <button class="sim3-seg-btn ${src === 'live' ? 'active' : ''}" onclick="_sim3SetSource('live')">Live BTC</button>
-          <button class="sim3-seg-btn ${src === 'tradingview' ? 'active' : ''}" onclick="_sim3SetSource('tradingview')">TradingView</button>
         </div>
       </div>
       ${isLive ? '' : `
@@ -2283,7 +2199,6 @@ function ltSimTeardown() {
   if (S && S.hb)        { clearInterval(S.hb); S.hb = null; }
   if (S && S.bootTimer) { clearTimeout(S.bootTimer); S.bootTimer = null; }
   if (S && S.feed)      { try { S.feed.stop(); } catch(_) {} S.feed = null; }
-  if (_tvHandle)        { try { _tvHandle.remove(); } catch(_) {} _tvHandle = null; }
   _simDragging = false;
   if (_simEqChart) { try { _simEqChart.dispose(); } catch(_) {} _simEqChart = null; }
   if (_simChart)   { try { _simChart.dispose();   } catch(_) {} _simChart   = null; }

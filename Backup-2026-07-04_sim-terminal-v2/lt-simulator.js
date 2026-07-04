@@ -404,20 +404,20 @@ function extendMarket(market, n) {
    Deterministic price path through one candle for live playback: open → first
    extreme → second extreme → close, with seeded jitter between waypoints. Bull
    candles sweep the low first (O→L→H→C), bear candles the high first — the
-   standard replay heuristic. Returns k prices; the OPEN prints first and the
-   extremes/close are exact waypoints so intra-candle SL/TP/liq hits are exact. */
+   standard replay heuristic. Returns k prices ending exactly at close; the
+   extremes are always included so intra-candle SL/TP/liq hits are exact. */
 function synthTicks(candle, k, seed) {
   const [o, c, lo, hi] = candle;
   const bull = c >= o;
   const way = bull ? [o, lo, hi, c] : [o, hi, lo, c];
   const rand = mulberry32((seed | 0) >>> 0);
   k = Math.max(4, k | 0);
-  const out = [+o.toFixed(2)];                     // the open always prints
+  const out = [];
   const segs = way.length - 1;                     // 3 segments
-  const per = Math.max(1, Math.floor((k - 1) / segs));
+  const per = Math.max(1, Math.floor(k / segs));
   for (let s = 0; s < segs; s++) {
     const a = way[s], b = way[s + 1];
-    const steps = s === segs - 1 ? Math.max(1, k - out.length) : per;
+    const steps = s === segs - 1 ? k - out.length : per;
     for (let i = 1; i <= steps; i++) {
       const t = i / steps;
       let p = a + (b - a) * t;
