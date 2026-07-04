@@ -96,9 +96,7 @@ const SIM_LIVE_TF      = { '1m':1, '5m':5, '15m':15, '1h':60 }; // live (minutes
 const SIM_STORAGE      = LT_KEYS.simStats;
 const SIM_DIFF_KEY     = LT_KEYS.simDifficulty;
 const SIM_SRC_KEY      = LT_KEYS.simSource;
-const SIM_GRID  = { left:12, right:74, top:18, bottomPricePct:70, volGapPct:6 };  // price axis on the RIGHT (TradingView convention)
-const SIM_LIVE_HISTORY = 1000;  // klines fetched up front (providers cap: Coinbase 300 · Kraken 720 · Binance 1000)
-const SIM_OLDER_PAGE   = 300;   // candles fetched per infinite-scroll page
+const SIM_GRID  = { left:56, right:96, top:18, bottomPricePct:70, volGapPct:6 };
 
 /* ── ACCOUNT (persisted) ──────────────────────────────────────────────────── */
 let A = null;   // { v:2, balance, trades, wins, streak, bestStreak, sessions, history[], log[] }
@@ -156,7 +154,7 @@ let S = null;
      { mode:'replay', market, tf, factor, stepMs, anchorMs, cutView,
        live:{ohlc:[],vols:[],labels:[]}, forming:{o,h,l,c,vol}|null,
        baseIdx, tickBuf:[], tickIdx, price,
-       playing, speedIdx, timer, followLive, viewSpan, viewStart, viewEnd,
+       playing, speedIdx, timer, userPanned,
        pos:null|{side,qty,entry,margin,lev,sl,tp,liq,realized,fees,openLabel},
        orders:[{id,type,side,px,qty,lev,slTp,margin}], nextOid, fills:[],
        startBal, feesPaid, ended, elapsedTicks }
@@ -361,11 +359,10 @@ function _newSession() {
   S = {
     mode: 'replay',
     market, tf: null, factor: 0, stepMs: 0, anchorMs: 0, cutView: 0,
-    live: { ohlc: [], vols: [], labels: [], times: [] }, forming: null,
+    live: { ohlc: [], vols: [], labels: [] }, forming: null,
     baseIdx: market.cutIndexBase, tickBuf: [], tickIdx: 0,
     price: market.ohlcBase[market.cutIndexBase - 1][1],
-    playing: false, speedIdx: 1, timer: null,
-    followLive: true, viewSpan: SIM_WINDOW, viewStart: 0, viewEnd: 0,
+    playing: false, speedIdx: 1, timer: null, userPanned: false,
     pos: null, orders: [], nextOid: 1, fills: [],
     startBal: A.balance, feesPaid: 0, ended: false, elapsedTicks: 0
   };
@@ -380,10 +377,8 @@ function _newSession() {
 function _newLiveSession(tf) {
   S = {
     mode: 'live', tf, stepMs: SIM_LIVE_TF[tf] * 60000,
-    live: { ohlc: [], vols: [], labels: [], times: [] }, forming: null, formingStart: 0,
-    price: 0, playing: false, speedIdx: 1, timer: null,
-    followLive: true, viewSpan: SIM_WINDOW, viewStart: 0, viewEnd: 0,
-    loadingOlder: false, noMoreOlder: false,
+    live: { ohlc: [], vols: [], labels: [] }, forming: null, formingStart: 0,
+    price: 0, playing: false, speedIdx: 1, timer: null, userPanned: false,
     pos: null, orders: [], nextOid: 1, fills: [],
     startBal: A.balance, feesPaid: 0, ended: false, elapsedTicks: 0,
     feed: null, provider: '', loading: true, connStatus: 'connecting'
@@ -395,7 +390,7 @@ function _newLiveSession(tf) {
 function _liveBoot() {
   const mySession = S, myTf = S.tf;
   if (!(window.LTSimFeed)) { _liveFail(); return; }
-  LTSimFeed.loadKlines(SIM_LIVE_TF[S.tf], SIM_LIVE_HISTORY).then(data => {
+  LTSimFeed.loadKlines(SIM_LIVE_TF[S.tf]).then(data => {
     // bail if the session ended, was replaced, or the user already switched TF
     // (a fast TF fetch can resolve before this initial one — don't stomp it)
     if (S !== mySession || S.ended || S.tf !== myTf || S.tfPending) return;
@@ -439,8 +434,7 @@ function _liveApplyKlines(data) {
     // last row IS the live partial candle (Kraken/Binance, fresh Coinbase)
     S.live.ohlc   = data.ohlc.slice(0, n - 1);
     S.live.vols   = data.vols.slice(0, n - 1);
-    S.live.times  = data.times.slice(0, n - 1);
-    S.live.labels = S.live.times.map(t => _liveLabel(t));
+    S.live.labels = data.times.slice(0, n - 1).map(t => _liveLabel(t));
     S.formingStart = lastBucket;
     S.forming = { o: lastC[0], c: lastC[1], l: lastC[2], h: lastC[3], vol: data.vols[n - 1] || 0 };
   } else {
@@ -448,51 +442,13 @@ function _liveApplyKlines(data) {
     // history and let the first tick open a fresh candle at the true bucket
     S.live.ohlc   = data.ohlc.slice();
     S.live.vols   = data.vols.slice();
-    S.live.times  = data.times.slice();
-    S.live.labels = S.live.times.map(t => _liveLabel(t));
+    S.live.labels = data.times.map(t => _liveLabel(t));
     S.formingStart = nowBucket;
     S.forming = null;
   }
   S.price = lastC[1];
   S.provider = data.provider || '';
   const sym = _el('sim3-sym'); if (sym) sym.textContent = 'BTC/USD · Live · ' + S.provider;
-}
-
-/* Infinite history (TradingView-style): when the user scrolls near the left edge
-   of loaded candles, pull an older page and PREPEND it, shifting the view window
-   so the bars under the cursor stay put. Guarded against re-entry, session
-   changes, and unbounded growth. */
-function _maybeLoadOlder() {
-  if (!S || S.mode !== 'live' || S.ended || S.loading || S.loadingOlder || S.noMoreOlder) return;
-  if (!(window.LTSimFeed && LTSimFeed.loadOlder) || !S.live.times.length) return;
-  if (S.live.ohlc.length >= 5000) { S.noMoreOlder = true; return; }   // keep memory sane
-  const oldest = S.live.times[0];
-  if (!(oldest > 0)) return;
-  S.loadingOlder = true;
-  const mySession = S, myTf = S.tf;
-  LTSimFeed.loadOlder(SIM_LIVE_TF[S.tf], oldest, SIM_OLDER_PAGE).then(older => {
-    // always release the flag for THIS session, even if the TF changed under us
-    // (a stale page just gets discarded — never wedge future older-loads)
-    if (S === mySession) S.loadingOlder = false;
-    if (S !== mySession || S.ended || S.tf !== myTf) return;
-    const n = older && older.times ? older.times.length : 0;
-    if (!n) { S.noMoreOlder = true; return; }
-    // prepend (indices shift +n; overlays are price-based so they're unaffected)
-    S.live.ohlc   = older.ohlc.concat(S.live.ohlc);
-    S.live.vols   = older.vols.concat(S.live.vols);
-    S.live.times  = older.times.concat(S.live.times);
-    S.live.labels = older.times.map(t => _liveLabel(t)).concat(S.live.labels);
-    if (!_simChart) return;
-    const { ohlc, vols, labels } = _chartData();
-    // repaint + hold the SAME candles in view by shifting the window right by n
-    try { _simChart.setOption({
-      xAxis: [{ data: labels }, { data: labels }],
-      series: [{ data: ohlc }, { data: vols }],
-      dataZoom: [{ startValue: S.viewStart + n, endValue: S.viewEnd + n }]
-    }); } catch(_) {}
-    S.viewStart += n; S.viewEnd += n;
-    _drawLines();
-  }).catch(() => { if (S === mySession) S.loadingOlder = false; });
 }
 
 function _liveLabel(ms) {
@@ -526,13 +482,8 @@ function _liveTick(px, sz) {
     S.live.ohlc.push([+S.forming.o.toFixed(2), +S.forming.c.toFixed(2), +S.forming.l.toFixed(2), +S.forming.h.toFixed(2)]);
     S.live.vols.push(+S.forming.vol.toFixed(3));
     S.live.labels.push(_liveLabel(S.formingStart));
-    S.live.times.push(S.formingStart);
     S.forming = null;
-    // trim the oldest only while following the tape — never yank candles the
-    // user has scrolled back to look at (or just infinite-scroll-loaded)
-    if (S.followLive && S.live.ohlc.length > SIM_MAX_CANDLES) {
-      S.live.ohlc.shift(); S.live.vols.shift(); S.live.labels.shift(); S.live.times.shift();
-    }
+    if (S.live.ohlc.length > SIM_MAX_CANDLES) { S.live.ohlc.shift(); S.live.vols.shift(); S.live.labels.shift(); }
   }
   if (!S.forming) { S.formingStart = bucket; S.forming = { o: px, h: px, l: px, c: px, vol: 0 }; }
   else { S.forming.h = Math.max(S.forming.h, px); S.forming.l = Math.min(S.forming.l, px); S.forming.c = px; }
@@ -540,8 +491,7 @@ function _liveTick(px, sz) {
   S.price = px;
   S.elapsedTicks++;
   _settleTick(px);
-  if (!document.hidden) _paintHeader();                 // instant price ticker — snappy
-  if (now - _lastLivePaint > 110) { _lastLivePaint = now; _paintTick(); }   // chart ~9Hz
+  if (now - _lastLivePaint > 250) { _lastLivePaint = now; _paintTick(); }
 }
 
 /* Build the live view arrays from base data for the given TF (history up to the
@@ -1028,13 +978,12 @@ window._sim3SetTF = function(tf) {
     if (!(tf in SIM_LIVE_TF) || S.tfPending || S.loading) return;   // wait out the initial boot
     S.tfPending = tf;
     const mySession = S;
-    LTSimFeed.loadKlines(SIM_LIVE_TF[tf], SIM_LIVE_HISTORY).then(data => {
+    LTSimFeed.loadKlines(SIM_LIVE_TF[tf]).then(data => {
       if (S !== mySession || S.ended) return;
       S.tfPending = null;
       S.tf = tf; S.stepMs = SIM_LIVE_TF[tf] * 60000;
       _liveApplyKlines(data);
-      S.loading = false; S.followLive = true; S.viewSpan = SIM_WINDOW;
-      S.noMoreOlder = false; S.loadingOlder = false;   // new TF → fresh paging state
+      S.loading = false; S.userPanned = false;
       document.querySelectorAll('.sim3-tf-btn').forEach(b => b.classList.toggle('active', b.dataset.tf === tf));
       _renderChart(); _paintAll();
       // restart the tick stream so ticks follow the SAME venue the new klines
@@ -1077,7 +1026,7 @@ window._sim3Reset = function() {
 /* Follow the tape again after scrolling back. */
 window._sim3GoLive = function() {
   if (!S || !_simChart) return;
-  S.followLive = true; S.viewSpan = SIM_WINDOW;   // snap back to the default follow window
+  S.userPanned = false;
   const b = _el('sim3-golive'); if (b) b.style.display = 'none';
   const len = S.live.ohlc.length + (S.forming ? 1 : 0);
   try { _simChart.setOption({ dataZoom: [{ startValue: Math.max(0, len - SIM_WINDOW), endValue: Math.max(0, len - 1) }] }); } catch(_) {}
@@ -1446,13 +1395,12 @@ function _renderChart() {
       { type: 'category', data: labels, gridIndex: 1, axisLine: { lineStyle: { color: bdr } }, axisLabel: { color: th.txt3, fontSize: 9, fontFamily: 'Geist Mono,monospace', hideOverlap: true }, splitLine: { show: false } }
     ],
     yAxis: [
-      { scale: true, gridIndex: 0, position: 'right',
-        splitLine: { lineStyle: { color: bdr, opacity: th.light ? 0.7 : 0.5 } },
-        axisLine: { show: false }, axisTick: { show: false },
-        axisLabel: { color: th.txt3, fontSize: 10, fontFamily: 'Geist Mono,monospace', margin: 6, formatter: v => _fmtN(v) } },
-      { scale: true, gridIndex: 1, position: 'right', splitNumber: 2,
-        splitLine: { show: false }, axisLine: { show: false }, axisTick: { show: false },
-        axisLabel: { color: th.txt3, fontSize: 8, margin: 6, formatter: v => v >= 1000 ? (v/1000).toFixed(0)+'k' : v } }
+      { scale: true, gridIndex: 0, position: 'left',
+        splitLine: { lineStyle: { color: bdr, type: 'dashed' } }, axisLine: { lineStyle: { color: bdr } },
+        axisLabel: { color: th.txt3, fontSize: 10, fontFamily: 'Geist Mono,monospace' } },
+      { scale: true, gridIndex: 1, position: 'left', splitNumber: 2,
+        splitLine: { show: false }, axisLine: { lineStyle: { color: bdr } },
+        axisLabel: { color: th.txt3, fontSize: 8, formatter: v => v >= 1000 ? (v/1000).toFixed(0)+'k' : v } }
     ],
     series: [
       { name: 'Price', type: 'candlestick', data: ohlc, xAxisIndex: 0, yAxisIndex: 0, barMaxWidth: 16,
@@ -1465,27 +1413,18 @@ function _renderChart() {
         itemStyle: { color: pr => { const c = _volOhlcRef[pr.dataIndex]; return (c && c[1] >= c[0]) ? _bc() + '55' : _bear() + '44'; } } }
     ]
   });
-  // Follow-live model (TradingView-style): while the view's right edge sits at
-  // the newest candle we KEEP FOLLOWING at whatever zoom the user set — zooming
-  // out no longer snaps back. Scroll left of the edge and we stop following and
-  // show the "Latest ›" chip. Reading the zoom from the event payload avoids a
-  // full getOption() deep-clone per wheel tick.
+  // scroll-back detection → show the "Latest" re-pin chip (read the zoom state
+  // from the event payload — getOption() deep-clones the whole option per event)
   _simChart.on('datazoom', e => {
     try {
       const dz = (e && e.batch && e.batch[0]) || e || {};
       const total = S.live.ohlc.length + (S.forming ? 1 : 0);
-      const endIdx = dz.endValue != null ? dz.endValue
-        : Math.round(((dz.end != null ? dz.end : 100) / 100) * (total - 1));
-      const startIdx = dz.startValue != null ? dz.startValue
-        : Math.round(((dz.start != null ? dz.start : 0) / 100) * (total - 1));
-      S.viewStart = Math.max(0, Math.round(startIdx));
-      S.viewEnd   = Math.round(endIdx);
-      const atEdge = endIdx >= total - 2;
-      S.followLive = atEdge;
-      if (atEdge) S.viewSpan = Math.max(20, Math.round(endIdx - startIdx + 1));  // remember the zoom while following
-      const chip = _el('sim3-golive'); if (chip) chip.style.display = atEdge ? 'none' : '';
-      // infinite history: near the left edge, pull older candles (live only)
-      if (S.mode === 'live' && S.viewStart <= 12) _maybeLoadOlder();
+      const endIdx = dz.endValue != null ? dz.endValue : Math.round(((dz.end != null ? dz.end : 100) / 100) * (total - 1));
+      const panned = endIdx < total - 2;
+      if (panned !== S.userPanned) {
+        S.userPanned = panned;
+        const b = _el('sim3-golive'); if (b) b.style.display = panned ? '' : 'none';
+      }
     } catch(_) {}
   });
   _drawnIds = '';                 // fresh chart instance — force the first overlay build
@@ -1506,10 +1445,7 @@ function _paintTick(force) {
     xAxis: [{ data: labels }, { data: labels }],
     series: [ { data: ohlc }, { data: vols } ]
   };
-  if (S.followLive) {
-    const span = S.viewSpan || SIM_WINDOW;   // preserve the user's zoom while following the tape
-    opt.dataZoom = [{ startValue: Math.max(0, labels.length - span), endValue: Math.max(0, labels.length - 1) }];
-  }
+  if (!S.userPanned) opt.dataZoom = [{ startValue: Math.max(0, labels.length - SIM_WINDOW), endValue: Math.max(0, labels.length - 1) }];
   _simChart.setOption(opt);
   _drawLines();
   _paintHeader();

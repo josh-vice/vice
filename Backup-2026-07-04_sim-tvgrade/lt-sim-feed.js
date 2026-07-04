@@ -53,20 +53,6 @@
             };
           });
       },
-      older(tfMin, beforeMs, limit) {
-        const gran = tfMin * 60;
-        const end = Math.floor(beforeMs / 1000) - 1;                 // exclusive of the oldest we hold
-        const start = end - (Math.min(limit, 300) - 1) * gran;
-        return _fetchJson('https://api.exchange.coinbase.com/products/BTC-USD/candles?granularity=' + gran + '&start=' + start + '&end=' + end)
-          .then(rows => {
-            rows = rows.reverse();                                    // newest-first → oldest-first
-            return {
-              ohlc: rows.map(r => [+r[3], +r[4], +r[1], +r[2]]),
-              vols: rows.map(r => +(+r[5]).toFixed(3)),
-              times: rows.map(r => r[0] * 1000)
-            };
-          });
-      },
       pollPx() { return _fetchJson('https://api.exchange.coinbase.com/products/BTC-USD/ticker').then(j => +j.price); },
       wsUrl: 'wss://ws-feed.exchange.coinbase.com',
       wsSubscribe(ws) { ws.send(JSON.stringify({ type: 'subscribe', product_ids: ['BTC-USD'], channels: ['ticker'] })); },
@@ -109,15 +95,6 @@
             times: rows.map(r => r[0])
           }));
       },
-      older(tfMin, beforeMs, limit) {
-        const iv = { 1: '1m', 5: '5m', 15: '15m', 60: '1h' }[tfMin] || '15m';
-        return _fetchJson('https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=' + iv + '&endTime=' + (beforeMs - 1) + '&limit=' + Math.min(limit, 1000))
-          .then(rows => ({
-            ohlc: rows.map(r => [+r[1], +r[4], +r[3], +r[2]]),
-            vols: rows.map(r => +(+r[5]).toFixed(3)),
-            times: rows.map(r => r[0])
-          }));
-      },
       pollPx() { return _fetchJson('https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT').then(j => +j.price); },
       wsUrl: 'wss://stream.binance.com:9443/ws/btcusdt@trade',
       wsSubscribe() {},
@@ -148,23 +125,6 @@
       }).catch(tryNext);
     };
     return tryNext();
-  }
-
-  /* Older-history page for infinite scroll — candles STRICTLY before beforeMs,
-     oldest-first, on the sticky provider. Kraken has no clean backward paging,
-     so it (and any failure) resolves to an empty page = "no more history". */
-  function loadOlder(tfMin, beforeMs, limit) {
-    const prov = _sticky;
-    const empty = { ohlc: [], vols: [], times: [], provider: prov ? prov.name : '' };
-    if (!prov || typeof prov.older !== 'function' || !(beforeMs > 0)) return Promise.resolve(empty);
-    return prov.older(tfMin, beforeMs, limit || 300).then(data => {
-      const out = { ohlc: [], vols: [], times: [], provider: prov.name };
-      const t = data && data.times || [];
-      for (let i = 0; i < t.length; i++) {
-        if (t[i] < beforeMs) { out.ohlc.push(data.ohlc[i]); out.vols.push(data.vols[i]); out.times.push(t[i]); }
-      }
-      return out;
-    }).catch(() => empty);
   }
 
   /* Live tick stream. WS first on the sticky provider; if it can't stay
@@ -270,7 +230,6 @@
 
   g.LTSimFeed = {
     loadKlines,
-    loadOlder,
     streamTicks,
     providerName() { return _sticky ? _sticky.name : ''; }
   };
