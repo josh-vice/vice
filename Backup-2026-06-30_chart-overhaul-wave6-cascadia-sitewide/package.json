@@ -1,0 +1,12 @@
+{
+  "name": "liquidity-theory",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Liquidity Theory — a free, interactive crypto trading course (static site, no dependencies).",
+  "scripts": {
+    "build": "node tools/gen-seo.js"
+  },
+  "dependencies": {
+    "@vercel/analytics": "^2.0.1"
+  }
+}

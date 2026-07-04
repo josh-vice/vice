@@ -1,0 +1,17 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "lt-app",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["serve", "-l", "5173", "."],
+      "port": 5173
+    },
+    {
+      "name": "player-demo",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["serve", "-l", "8080", "./player"],
+      "port": 8080
+    }
+  ]
+}

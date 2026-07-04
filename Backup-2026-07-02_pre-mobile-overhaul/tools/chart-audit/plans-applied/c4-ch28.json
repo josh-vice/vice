@@ -1,0 +1,31 @@
+{
+  "course": 4,
+  "chapterId": 28,
+  "title": "Ichimoku Market Scenarios — Live Examples",
+  "module": "Ichimoku Masterclass",
+  "edits": [
+    {
+      "slot": "introChart",
+      "addMarkLines": [
+        { "yAxis": 89, "label": "LTE Entry $3,950 — Close Inside Cloud", "color": "#00d4d4" }
+      ],
+      "reason": "The intro bullet teaches the actual fill distinctly from the cloud boundary: 'entry at $3,950 via LTE; R = 3.55:1'. The existing teal line @87 is the $3,800 cloud BOTTOM EDGE; the $3,950 entry sits just inside the cloud above it. yAxis 89 is inside the price band (legs reach min 72 / max 102, band ~72-104), just above the @87 edge line, and the markPoint idx12 ('LTE Entry: Close INSIDE Cloud') marks the entry candle — so the level closes the gap between 'where the cloud starts' and 'where I actually got filled'. Teal = long, matching the bullish E2E side and the chapter convention."
+    },
+    {
+      "slot": "lessonChart",
+      "addMarkLines": [
+        { "yAxis": 96, "label": "H&S Neckline — Short Entry on Break", "color": "#ff2e88" }
+      ],
+      "fixes": [
+        {
+          "find": "H&S Target + Kijun Bid Zone",
+          "replaceWith": "H&S Target $8,500 + Kijun + DBS Bid (3-way long)",
+          "reason": "The lesson stresses three-way confluence for the re-entry long, not just Kijun: 'set bids at Kijun below for long; C-Clamp was forming simultaneously; DBS zone also there = three-way confluence long.' The $8,500 figure is the intro's stated H&S target ('H&S target from Kumo Pocket short: $8,500 -> hit perfectly'). The current label only names the Kijun, hiding the DBS/C-clamp confluence the lesson calls the highest-conviction signal."
+        }
+      ],
+      "reason": "Neckline: the short-entry trigger is taught as an EVENT (markPoint idx13 'H&S Neckline Break — Short!') but the neckline LEVEL whose break fires the short is never drawn. A pink line at 96 sits just under the 97-102 weekly-pocket markArea (the shoulder lows beneath the pocket), inside the band (legs min 80 / max 102), and lets learners see the level the short is taken on — distinct from the pocket zone fill. Pink = short/bearish, matching the pocket and neckline-break annotations."
+    }
+  ],
+  "alreadyGood": ["quiz.chart"],
+  "notes": "quiz.chart proposals (Stop @101 and Target @76 as 'reveal markLines') were REJECTED. Engine fact (lt-engine.js): markLines are read from def.markLines and render in BOTH pre-cut and revealed states (buildCandlestickOption never swaps them) — there is NO revealMarkLines mechanism; only revealMarkPoints (line 1005) are reveal-gated. Adding either as a markLine would render PRE-CUT and spoil the bearish/bullish decision by drawing a 'Stop above pocket — short' and 'Target below — next S/R' before the user answers. Expressing them as floating reveal pins is also unsound: a markPoint snaps to a candle's high/low (it cannot float ABOVE the swing for a stop), and the top slot at idx9 / bottom slot at idx15 are already occupied by existing reveal pins. The decision quiz already reveals the short entry (idx9) and the rejection outcome (idx15); per the restraint + no-spoiler rules, the Stop/Target — mentioned only generically in the rule — are best left to the explanation text rather than forced onto the chart with an unsupported mechanism. introChart and lessonChart edits above are mechanism-safe and text-justified; quiz.chart is left as-is."
+}

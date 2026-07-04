@@ -1,0 +1,18 @@
+{
+  "course": "4",
+  "file": "17_Crayons.js",
+  "lessonId": "course4/17_crayons",
+  "edits": [
+    {
+      "beatId": "chart",
+      "beatType": "CHART",
+      "move": "color_tool",
+      "addShow": [
+        { "kind": "marker", "at": "bottom", "label": "crayon turns green", "style": "dot", "place": "below" }
+      ],
+      "reason": "say: 'The candles are crayoned by trend — green while buyers lead, red once sellers take over'. The red/sellers turn is already labelled via the existing 'top' marker, but the green/buyers turn — the explicit teaching parallel — is unmarked. color_tool exposes 'bottom' as a valid (pt) anchor; marker is the correct kind for a point anchor. place 'below' keeps the label clear of the existing 'above' red marker."
+    }
+  ],
+  "alreadyGood": [],
+  "notes": "Single CHART beat ('chart', move color_tool scheme:crayons). Anchors for color_tool: top(pt), bottom(pt), resLevel(L), supLevel(L). The three existing show items are all valid and say-justified: resLevel/supLevel levels match 'dynamic support and resistance levels'; the 'top' marker 'crayon turns red' matches 'red once sellers take over'. APPROVED the auditor's single gap: the green/buyers crayon turn is the symmetric counterpart to the red marker and color_tool exposes a valid 'bottom' (pt) anchor for it — non-redundant, correct kind/type, say-justified ('green while buyers lead'), and balanced (not over-annotation). The grey/indecision state ('a neutral grey for indecision') is rendered by the move's candle coloring and has no dedicated anchor — no gap. All CONCEPT beats (intro, use, recap) skipped (no chart)."
+}

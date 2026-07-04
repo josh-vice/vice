@@ -1,0 +1,8 @@
+{
+  "course": "4",
+  "file": "11_Future_Basis.js",
+  "lessonId": "course4/11_future_basis",
+  "edits": [],
+  "alreadyGood": ["extremes"],
+  "notes": "Only one CHART beat exists ('extremes', move future_basis). The future_basis move draws the price candles and the basis sub-panel (premium/discount line with zero line). The beat's two existing markers are both correct: marker at 'top' ('premium extreme — longs over-eager', dot, above) is anchor-valid (top is a point anchor) and justified by 'the premium swells to an extreme right as price tops — longs are over-eager'; marker at 'reversal' ('premium collapses → reversal', sweep, below) is anchor-valid (reversal is a point anchor) and justified by 'price reverses and the premium collapses toward zero and into discount'. Both locatable events the say teaches (the top, the reversal) are already marked. The 'discount' / 'zero line' references are part of the basis sub-panel the move already renders, and future_basis exposes no further anchor for them — no noAnchorGap warranted. The three CONCEPT beats (intro, premium-discount, recap) draw no chart and are skipped. Concur with auditor: lesson is complete, nothing to add or fix."
+}

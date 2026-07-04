@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Liquidity Theory · Vice Terminal</title>
+  <link rel="icon" type="image/svg+xml" href="lt-logo.svg" />
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+
+  <!-- Styles -->
+  <link rel="stylesheet" href="lt-styles.css?v=1.98.3" />
+  <!-- v2 animated-lessons player chrome (scoped to .ltp2*; see lessons-v2/) -->
+  <link rel="stylesheet" href="lessons-v2/player.css?v=1.7.2" />
+
+  <!-- ECharts (chart rendering) -->
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+
+  <!-- Lucide icons -->
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+
+  <!-- Cross-device progress sync: LZ-String (compact link) + QRCode (scan to transfer).
+       Client-side only — the progress lives in the link's #fragment; nothing is uploaded. -->
+  <script src="https://cdn.jsdelivr.net/npm/lz-string@1.5.0/libs/lz-string.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/gh/davidshimjs/qrcodejs/qrcode.min.js"></script>
+
+  <!-- Teaching-candle generator (data files call ltCandles() at parse time) -->
+  <script src="lt-chartgen.js?v=1.0.0"></script>
+
+  <!-- Data files MUST load before lt-engine.js (engine reads LT_CHAPTERS at parse time) -->
+  <script src="lt-data.js?v=1.9.2"></script>
+  <script src="lt-data-course2.js?v=1.7.1"></script>
+  <script src="lt-data-course3.js?v=1.8.0"></script>
+  <script src="lt-data-course4.js?v=1.12.0"></script>
+
+  <!-- Module quizzes — multi-question end-of-module "Learning Assessment" (the Quiz step) -->
+  <script src="lt-module-quizzes.js?v=1.0.0"></script>
+
+  <!-- Real historical pattern definitions -->
+  <script src="lt-patterns.js?v=1.5.0"></script>
+
+  <!-- Synthetic market generator -->
+  <script src="lt-simulator.js?v=1.3.1"></script>
+
+  <!-- UI modules (loaded before engine so engine can call them) -->
+  <script src="lt-gallery.js?v=1.3.1"></script>
+  <script src="lt-settings.js?v=1.29.0"></script>
+  <script src="lt-sim-ui.js?v=1.15.11"></script>
+  <script src="lt-glossary.js?v=1.19.0"></script>
+  <script src="lt-flashcards.js?v=1.9.3"></script>
+  <script src="lt-community.js?v=1.10.4"></script>
+
+  <!-- v2 animated-lessons stack (dependency-free): vocabulary + Canvas renderer + lesson-file
+       manifest. THE lesson renderer (engine maps each chapter → a v2 lesson; lesson files
+       lazy-load per course via window.LT_V2_FILES). Must load before the deferred engine. -->
+  <script src="lessons-v2/chart-vocabulary.js?v=1.5.0"></script>
+  <script src="lessons-v2/renderer.js?v=1.13.0"></script>
+  <script src="lessons-v2/lessons/manifest.js?v=1.1.0"></script>
+  <!-- which lessons have pre-generated narration audio (window.LT_AUDIO_MANIFEST) -->
+  <script src="lessons-v2/audio/manifest.js?v=1.1.0"></script>
+
+  <!-- Main engine — boots on DOMContentLoaded -->
+  <script src="lt-engine.js?v=3.101.9" defer></script>
+  <!-- Vercel Analytics -->
+  <script>window.va=window.va||function(){(window.vaq=window.vaq||[]).push(arguments);};</script>
+  <script defer src="/_vercel/insights/script.js"></script>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     APP SHELL
+     ═══════════════════════════════════════════════════════════════ -->
+<div class="app-layout">
+
+  <!-- ── SIDEBAR ─────────────────────────────────────────────────── -->
+  <aside class="sidebar" id="sidebar">
+
+    <div class="sidebar-header">
+      <a class="logo" href="index.html" title="Back to home">
+        <span class="logo-icon" aria-hidden="true">
+          <svg viewBox="74 90 252 220" fill-rule="nonzero" role="img" aria-label="Liquidity Theory">
+            <path fill="currentColor" d="M124.0,179.0 H143.0 A3.0,3.0 0 0 1 146.0,182.0 V236.0 A3.0,3.0 0 0 1 143.0,239.0 H124.0 A3.0,3.0 0 0 1 121.0,236.0 V182.0 A3.0,3.0 0 0 1 124.0,179.0 Z M208.0,177.0 H227.0 A3.0,3.0 0 0 1 230.0,180.0 V265.0 A3.0,3.0 0 0 1 227.0,268.0 H208.0 A3.0,3.0 0 0 1 205.0,265.0 V180.0 A3.0,3.0 0 0 1 208.0,177.0 Z M297.0,144.0 H316.0 A3.0,3.0 0 0 1 319.0,147.0 V213.0 A3.0,3.0 0 0 1 316.0,216.0 H297.0 A3.0,3.0 0 0 1 294.0,213.0 V147.0 A3.0,3.0 0 0 1 297.0,144.0 Z M217.5,140.0 H217.5 A4.0,4.0 0 0 1 221.5,144.0 V298.0 A4.0,4.0 0 0 1 217.5,302.0 H217.5 A4.0,4.0 0 0 1 213.5,298.0 V144.0 A4.0,4.0 0 0 1 217.5,140.0 Z M306.5,141.0 H306.5 A4.0,4.0 0 0 1 310.5,145.0 V224.0 A4.0,4.0 0 0 1 306.5,228.0 H306.5 A4.0,4.0 0 0 1 302.5,224.0 V145.0 A4.0,4.0 0 0 1 306.5,141.0 Z M134.0,238.0 H134.0 A4.0,4.0 0 0 1 138.0,242.0 V264.0 A4.0,4.0 0 0 1 134.0,268.0 H134.0 A4.0,4.0 0 0 1 130.0,264.0 V242.0 A4.0,4.0 0 0 1 134.0,238.0 Z M129.0,160.0 H137.0 V182.0 H129.0 Z M139.0,162.5C137.2,162.5 130.2,163.2 128.0,162.5C125.8,161.8 125.9,159.4 125.5,158.0C125.1,156.6 126.2,155.2 125.5,154.0C124.8,152.8 123.1,150.6 121.0,150.5C118.9,150.4 116.0,151.5 113.0,153.5C110.0,155.5 105.6,161.1 103.0,162.5C100.4,163.9 96.5,164.5 97.5,162.0C98.5,159.5 105.2,151.2 109.0,147.5C112.8,143.8 116.8,141.3 120.0,139.5C123.2,137.7 124.3,137.2 128.0,136.5C131.7,135.8 138.7,135.0 142.0,135.5C145.3,136.0 146.2,138.8 148.0,139.5C149.8,140.2 151.7,139.8 153.0,139.5C154.3,139.2 154.0,137.8 156.0,137.5C158.0,137.2 163.1,137.1 165.0,137.5C166.9,137.9 167.1,137.6 167.5,140.0C167.9,142.4 167.9,149.6 167.5,152.0C167.1,154.4 166.9,154.1 165.0,154.5C163.1,154.9 158.2,155.0 156.0,154.5C153.8,154.0 153.5,152.0 152.0,151.5C150.5,151.0 148.8,150.8 147.0,151.5C145.2,152.2 142.8,154.2 141.5,156.0C140.2,157.8 139.4,161.4 139.0,162.5C138.6,163.6 140.8,162.5 139.0,162.5Z M311.0,143.5C309.4,143.4 303.1,144.8 301.5,143.0C299.9,141.2 302.0,135.3 301.5,133.0C301.0,130.7 299.0,130.7 298.5,129.0C298.0,127.3 297.9,124.6 298.5,123.0C299.1,121.4 301.2,120.0 302.0,119.5C302.8,119.0 303.2,118.8 303.5,120.0C303.8,121.2 302.9,125.4 303.5,127.0C304.1,128.6 305.8,129.5 307.0,129.5C308.2,129.5 309.9,128.6 310.5,127.0C311.1,125.4 310.2,121.2 310.5,120.0C310.8,118.8 311.3,119.2 312.0,119.5C312.7,119.8 313.9,120.8 314.5,122.0C315.1,123.2 316.0,125.2 315.5,127.0C315.0,128.8 312.2,130.2 311.5,133.0C310.8,135.8 311.1,141.8 311.0,143.5C310.9,145.2 312.6,143.6 311.0,143.5Z"/>
+            <path fill="#16E9D0" d="M83.0,231.0 H102.0 A3.0,3.0 0 0 1 105.0,234.0 V273.0 A3.0,3.0 0 0 1 102.0,276.0 H83.0 A3.0,3.0 0 0 1 80.0,273.0 V234.0 A3.0,3.0 0 0 1 83.0,231.0 Z M166.0,210.0 H185.0 A3.0,3.0 0 0 1 188.0,213.0 V243.0 A3.0,3.0 0 0 1 185.0,246.0 H166.0 A3.0,3.0 0 0 1 163.0,243.0 V213.0 A3.0,3.0 0 0 1 166.0,210.0 Z M251.0,127.0 H271.0 A3.0,3.0 0 0 1 274.0,130.0 V215.0 A3.0,3.0 0 0 1 271.0,218.0 H251.0 A3.0,3.0 0 0 1 248.0,215.0 V130.0 A3.0,3.0 0 0 1 251.0,127.0 Z M92.5,208.0 H92.5 A4.0,4.0 0 0 1 96.5,212.0 V279.0 A4.0,4.0 0 0 1 92.5,283.0 H92.5 A4.0,4.0 0 0 1 88.5,279.0 V212.0 A4.0,4.0 0 0 1 92.5,208.0 Z M175.5,207.0 H175.5 A4.0,4.0 0 0 1 179.5,211.0 V272.0 A4.0,4.0 0 0 1 175.5,276.0 H175.5 A4.0,4.0 0 0 1 171.5,272.0 V211.0 A4.0,4.0 0 0 1 175.5,207.0 Z M261.0,96.0 H261.0 A4.0,4.0 0 0 1 265.0,100.0 V265.0 A4.0,4.0 0 0 1 261.0,269.0 H261.0 A4.0,4.0 0 0 1 257.0,265.0 V100.0 A4.0,4.0 0 0 1 261.0,96.0 Z"/>
+          </svg>
+        </span>
+        <span class="logo-text">Liquidity Theory</span>
+      </a>
+      <button class="sidebar-close-btn icon-btn" id="sidebar-close" aria-label="Close sidebar">
+        <i data-lucide="x" style="width:16px;height:16px;"></i>
+      </button>
+    </div>
+
+    <!-- Home hub — static button below the logo, above the courses. Sits outside
+         #chapter-list so it never scrolls with the chapter list. -->
+    <button class="sidebar-home-btn" id="sidebar-home-btn" onclick="showHome()" aria-label="Home hub">
+      <i data-lucide="home" style="width:16px;height:16px;"></i>
+      <span>Home</span>
+    </button>
+
+    <!-- Legacy course-select (hidden — engine hides it, but the element must exist) -->
+    <select id="course-select" class="course-select" style="display:none;"></select>
+
+    <!-- Per-course progress bar -->
+    <div class="sidebar-progress-wrap">
+      <div class="sidebar-progress-track">
+        <div class="sidebar-progress-fill" id="sidebar-progress-bar" style="width:0%"></div>
+      </div>
+      <div class="sidebar-progress-text" id="sidebar-progress-text">0 / 0 completed</div>
+    </div>
+
+    <!-- Chapter list (engine builds this via buildSidebar()) -->
+    <nav class="chapter-list" id="chapter-list"></nav>
+
+    <!-- Parent brand — sits at the foot of the sidebar (and the mobile drawer). -->
+    <div class="sidebar-brand-foot">
+      <span class="vt-flamingo" role="img" aria-label="Vice Terminal"></span>
+      <span class="vt-foot-text">A <strong>Vice&nbsp;Terminal</strong> product</span>
+    </div>
+  </aside>
+
+  <!-- ── MAIN CONTENT WRAP ───────────────────────────────────────── -->
+  <div class="main-wrap">
+
+    <!-- Top header bar -->
+    <header class="top-header">
+      <button class="icon-btn menu-btn" id="sidebar-toggle" aria-label="Toggle sidebar" title="Toggle sidebar" aria-expanded="true">
+        <i data-lucide="menu" style="width:18px;height:18px;"></i>
+      </button>
+
+      <div class="header-info">
+        <span class="header-tag" id="header-tag">Module 1 · Session 1</span>
+        <div class="header-title" id="header-title">Loading…</div>
+      </div>
+
+      <!-- Live BTC price (Binance, streaming) -->
+      <div class="btc-ticker" id="btc-ticker" title="Live BTC · Binance">
+        <span class="btc-ticker-dot" aria-hidden="true"></span>
+        <span class="btc-ticker-sym">BTC</span>
+        <span class="btc-ticker-price" id="btc-ticker-price">—</span>
+      </div>
+
+      <!-- Discord -->
+      <a class="header-discord" href="https://discord.gg/LiquidityTheory" target="_blank" rel="noopener noreferrer" title="Join our Discord" aria-label="Join our Discord">
+        <svg viewBox="0 0 512 365.467" fill-rule="evenodd" clip-rule="evenodd" aria-hidden="true"><path fill="currentColor" d="M378.186 365.028s-15.794-18.865-28.956-35.099c57.473-16.232 79.41-51.77 79.41-51.77-17.989 11.846-35.099 20.182-50.454 25.885-21.938 9.213-42.997 14.917-63.617 18.866-42.118 7.898-80.726 5.703-113.631-.438-25.008-4.827-46.506-11.407-64.494-18.867-10.091-3.947-21.059-8.774-32.027-14.917-1.316-.877-2.633-1.316-3.948-2.193-.877-.438-1.316-.878-1.755-.878-7.898-4.388-12.285-7.458-12.285-7.458s21.06 34.659 76.779 51.331c-13.163 16.673-29.395 35.977-29.395 35.977C36.854 362.395 0 299.218 0 299.218 0 159.263 63.177 45.633 63.177 45.633 126.354-1.311 186.022.005 186.022.005l4.388 5.264C111.439 27.645 75.461 62.305 75.461 62.305s9.653-5.265 25.886-12.285c46.945-20.621 84.236-25.885 99.592-27.64 2.633-.439 4.827-.878 7.458-.878 26.763-3.51 57.036-4.387 88.624-.878 41.68 4.826 86.43 17.111 132.058 41.68 0 0-34.66-32.906-109.244-55.281l6.143-7.019s60.105-1.317 122.844 45.628c0 0 63.178 113.631 63.178 253.585 0-.438-36.854 62.739-133.813 65.81l-.001.001zm-43.874-203.133c-25.006 0-44.75 21.498-44.75 48.262 0 26.763 20.182 48.26 44.75 48.26 25.008 0 44.752-21.497 44.752-48.26 0-26.764-20.182-48.262-44.752-48.262zm-160.135 0c-25.008 0-44.751 21.498-44.751 48.262 0 26.763 20.182 48.26 44.751 48.26 25.007 0 44.75-21.497 44.75-48.26.439-26.763-19.742-48.262-44.75-48.262z"/></svg>
+      </a>
+
+      <!-- Global glossary search -->
+      <div class="header-search" id="header-search">
+        <i data-lucide="search" style="width:15px;height:15px;"></i>
+        <input id="lt-search-input" type="text" placeholder="Search terms — e.g. Ichimoku" autocomplete="off" spellcheck="false" />
+        <div class="lt-search-results hidden" id="lt-search-results"></div>
+      </div>
+
+      <div class="header-right">
+        <button class="icon-btn hidden" id="copy-link-btn" data-tip="Share lesson" aria-label="Share this lesson" onclick="typeof ltCopyLessonLink === 'function' && ltCopyLessonLink()">
+          <i data-lucide="share-2" style="width:16px;height:16px;"></i>
+        </button>
+        <button class="icon-btn" id="sim-sidebar-btn" data-tip="Practice Simulator" aria-label="Practice Simulator" onclick="typeof showSimulator === 'function' && showSimulator()">
+          <i data-lucide="activity" style="width:16px;height:16px;"></i>
+        </button>
+        <button class="icon-btn" id="glossary-sidebar-btn" data-tip="Glossary &amp; Definitions" aria-label="Glossary &amp; Definitions" onclick="typeof showGlossary === 'function' && showGlossary()">
+          <i data-lucide="book-open" style="width:16px;height:16px;"></i>
+        </button>
+        <button class="icon-btn" id="flashcards-sidebar-btn" data-tip="Flashcards" aria-label="Flashcards" onclick="typeof showFlashcards === 'function' && showFlashcards()">
+          <i data-lucide="layers" style="width:16px;height:16px;"></i>
+        </button>
+        <button class="icon-btn" id="community-sidebar-btn" data-tip="Community &amp; Social" aria-label="Community &amp; Social" onclick="typeof showCommunity === 'function' && showCommunity()">
+          <i data-lucide="users" style="width:16px;height:16px;"></i>
+        </button>
+        <button class="icon-btn" data-tip="Settings" aria-label="Settings" onclick="typeof showSettings === 'function' && showSettings()">
+          <i data-lucide="settings" style="width:16px;height:16px;"></i>
+        </button>
+      </div>
+    </header>
+
+    <!-- Global progress bar (3px strip beneath header) -->
+    <div class="global-progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+      <div class="global-progress-fill" id="global-progress-fill" style="width:0%"></div>
+    </div>
+
+    <!-- Scrollable content area — engine writes HTML here -->
+    <main class="content-area" id="content-area"></main>
+
+    <!-- Bottom nav bar -->
+    <footer class="nav-footer">
+      <div class="nav-footer-inner">
+        <button class="nav-btn nav-prev" id="btn-prev" disabled>
+          <span class="nav-arrow">←</span>
+          <span class="nav-label">Back</span>
+        </button>
+        <button class="nav-btn nav-next" id="btn-next">
+          <span class="nav-label">Next</span>
+          <span class="nav-arrow">→</span>
+        </button>
+      </div>
+    </footer>
+
+  </div><!-- /.main-wrap -->
+
+</div><!-- /.app-layout -->
+
+<!-- Sidebar overlay (mobile tap-to-close) -->
+<div class="sidebar-overlay hidden" id="sidebar-overlay"></div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     WELCOME BACK MODAL
+     ═══════════════════════════════════════════════════════════════ -->
+<div class="modal-overlay hidden" id="welcome-modal">
+  <div class="modal-box">
+    <div class="modal-brand">
+      <span class="modal-logo-mark" aria-hidden="true">
+        <svg viewBox="74 90 252 220" fill-rule="nonzero" width="36" height="36">
+          <path fill="currentColor" d="M124.0,179.0 H143.0 A3.0,3.0 0 0 1 146.0,182.0 V236.0 A3.0,3.0 0 0 1 143.0,239.0 H124.0 A3.0,3.0 0 0 1 121.0,236.0 V182.0 A3.0,3.0 0 0 1 124.0,179.0 Z M208.0,177.0 H227.0 A3.0,3.0 0 0 1 230.0,180.0 V265.0 A3.0,3.0 0 0 1 227.0,268.0 H208.0 A3.0,3.0 0 0 1 205.0,265.0 V180.0 A3.0,3.0 0 0 1 208.0,177.0 Z M297.0,144.0 H316.0 A3.0,3.0 0 0 1 319.0,147.0 V213.0 A3.0,3.0 0 0 1 316.0,216.0 H297.0 A3.0,3.0 0 0 1 294.0,213.0 V147.0 A3.0,3.0 0 0 1 297.0,144.0 Z M217.5,140.0 H217.5 A4.0,4.0 0 0 1 221.5,144.0 V298.0 A4.0,4.0 0 0 1 217.5,302.0 H217.5 A4.0,4.0 0 0 1 213.5,298.0 V144.0 A4.0,4.0 0 0 1 217.5,140.0 Z M306.5,141.0 H306.5 A4.0,4.0 0 0 1 310.5,145.0 V224.0 A4.0,4.0 0 0 1 306.5,228.0 H306.5 A4.0,4.0 0 0 1 302.5,224.0 V145.0 A4.0,4.0 0 0 1 306.5,141.0 Z M134.0,238.0 H134.0 A4.0,4.0 0 0 1 138.0,242.0 V264.0 A4.0,4.0 0 0 1 134.0,268.0 H134.0 A4.0,4.0 0 0 1 130.0,264.0 V242.0 A4.0,4.0 0 0 1 134.0,238.0 Z M129.0,160.0 H137.0 V182.0 H129.0 Z M139.0,162.5C137.2,162.5 130.2,163.2 128.0,162.5C125.8,161.8 125.9,159.4 125.5,158.0C125.1,156.6 126.2,155.2 125.5,154.0C124.8,152.8 123.1,150.6 121.0,150.5C118.9,150.4 116.0,151.5 113.0,153.5C110.0,155.5 105.6,161.1 103.0,162.5C100.4,163.9 96.5,164.5 97.5,162.0C98.5,159.5 105.2,151.2 109.0,147.5C112.8,143.8 116.8,141.3 120.0,139.5C123.2,137.7 124.3,137.2 128.0,136.5C131.7,135.8 138.7,135.0 142.0,135.5C145.3,136.0 146.2,138.8 148.0,139.5C149.8,140.2 151.7,139.8 153.0,139.5C154.3,139.2 154.0,137.8 156.0,137.5C158.0,137.2 163.1,137.1 165.0,137.5C166.9,137.9 167.1,137.6 167.5,140.0C167.9,142.4 167.9,149.6 167.5,152.0C167.1,154.4 166.9,154.1 165.0,154.5C163.1,154.9 158.2,155.0 156.0,154.5C153.8,154.0 153.5,152.0 152.0,151.5C150.5,151.0 148.8,150.8 147.0,151.5C145.2,152.2 142.8,154.2 141.5,156.0C140.2,157.8 139.4,161.4 139.0,162.5C138.6,163.6 140.8,162.5 139.0,162.5Z M311.0,143.5C309.4,143.4 303.1,144.8 301.5,143.0C299.9,141.2 302.0,135.3 301.5,133.0C301.0,130.7 299.0,130.7 298.5,129.0C298.0,127.3 297.9,124.6 298.5,123.0C299.1,121.4 301.2,120.0 302.0,119.5C302.8,119.0 303.2,118.8 303.5,120.0C303.8,121.2 302.9,125.4 303.5,127.0C304.1,128.6 305.8,129.5 307.0,129.5C308.2,129.5 309.9,128.6 310.5,127.0C311.1,125.4 310.2,121.2 310.5,120.0C310.8,118.8 311.3,119.2 312.0,119.5C312.7,119.8 313.9,120.8 314.5,122.0C315.1,123.2 316.0,125.2 315.5,127.0C315.0,128.8 312.2,130.2 311.5,133.0C310.8,135.8 311.1,141.8 311.0,143.5C310.9,145.2 312.6,143.6 311.0,143.5Z"/>
+          <path fill="#16E9D0" d="M83.0,231.0 H102.0 A3.0,3.0 0 0 1 105.0,234.0 V273.0 A3.0,3.0 0 0 1 102.0,276.0 H83.0 A3.0,3.0 0 0 1 80.0,273.0 V234.0 A3.0,3.0 0 0 1 83.0,231.0 Z M166.0,210.0 H185.0 A3.0,3.0 0 0 1 188.0,213.0 V243.0 A3.0,3.0 0 0 1 185.0,246.0 H166.0 A3.0,3.0 0 0 1 163.0,243.0 V213.0 A3.0,3.0 0 0 1 166.0,210.0 Z M251.0,127.0 H271.0 A3.0,3.0 0 0 1 274.0,130.0 V215.0 A3.0,3.0 0 0 1 271.0,218.0 H251.0 A3.0,3.0 0 0 1 248.0,215.0 V130.0 A3.0,3.0 0 0 1 251.0,127.0 Z M92.5,208.0 H92.5 A4.0,4.0 0 0 1 96.5,212.0 V279.0 A4.0,4.0 0 0 1 92.5,283.0 H92.5 A4.0,4.0 0 0 1 88.5,279.0 V212.0 A4.0,4.0 0 0 1 92.5,208.0 Z M175.5,207.0 H175.5 A4.0,4.0 0 0 1 179.5,211.0 V272.0 A4.0,4.0 0 0 1 175.5,276.0 H175.5 A4.0,4.0 0 0 1 171.5,272.0 V211.0 A4.0,4.0 0 0 1 175.5,207.0 Z M261.0,96.0 H261.0 A4.0,4.0 0 0 1 265.0,100.0 V265.0 A4.0,4.0 0 0 1 261.0,269.0 H261.0 A4.0,4.0 0 0 1 257.0,265.0 V100.0 A4.0,4.0 0 0 1 261.0,96.0 Z"/>
+        </svg>
+      </span>
+      <span class="modal-brand-name">Liquidity Theory</span>
+    </div>
+    <div class="modal-divider"></div>
+    <h2>Welcome back</h2>
+    <p class="modal-sub">Pick up where you left off.</p>
+    <div class="modal-progress-info" id="modal-progress-info"></div>
+    <div class="modal-actions">
+      <button class="btn-primary" id="modal-continue">Resume Course</button>
+      <button class="btn-ghost" id="modal-restart">Start Over</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     FINAL EXAM SCREEN
+     ═══════════════════════════════════════════════════════════════ -->
+<div class="exam-screen hidden" id="exam-screen">
+  <div class="exam-inner">
+
+    <button class="exam-exit-btn" onclick="typeof exitExam==='function' && exitExam()" aria-label="Exit exam">
+      <i data-lucide="arrow-left" style="width:14px;height:14px;"></i> Exit
+    </button>
+
+    <div class="exam-header">
+      <div class="exam-logo"><span class="exam-logo-mark" aria-hidden="true"><svg viewBox="74 90 252 220" fill-rule="nonzero"><path fill="currentColor" d="M124.0,179.0 H143.0 A3.0,3.0 0 0 1 146.0,182.0 V236.0 A3.0,3.0 0 0 1 143.0,239.0 H124.0 A3.0,3.0 0 0 1 121.0,236.0 V182.0 A3.0,3.0 0 0 1 124.0,179.0 Z M208.0,177.0 H227.0 A3.0,3.0 0 0 1 230.0,180.0 V265.0 A3.0,3.0 0 0 1 227.0,268.0 H208.0 A3.0,3.0 0 0 1 205.0,265.0 V180.0 A3.0,3.0 0 0 1 208.0,177.0 Z M297.0,144.0 H316.0 A3.0,3.0 0 0 1 319.0,147.0 V213.0 A3.0,3.0 0 0 1 316.0,216.0 H297.0 A3.0,3.0 0 0 1 294.0,213.0 V147.0 A3.0,3.0 0 0 1 297.0,144.0 Z M217.5,140.0 H217.5 A4.0,4.0 0 0 1 221.5,144.0 V298.0 A4.0,4.0 0 0 1 217.5,302.0 H217.5 A4.0,4.0 0 0 1 213.5,298.0 V144.0 A4.0,4.0 0 0 1 217.5,140.0 Z M306.5,141.0 H306.5 A4.0,4.0 0 0 1 310.5,145.0 V224.0 A4.0,4.0 0 0 1 306.5,228.0 H306.5 A4.0,4.0 0 0 1 302.5,224.0 V145.0 A4.0,4.0 0 0 1 306.5,141.0 Z M134.0,238.0 H134.0 A4.0,4.0 0 0 1 138.0,242.0 V264.0 A4.0,4.0 0 0 1 134.0,268.0 H134.0 A4.0,4.0 0 0 1 130.0,264.0 V242.0 A4.0,4.0 0 0 1 134.0,238.0 Z M129.0,160.0 H137.0 V182.0 H129.0 Z M139.0,162.5C137.2,162.5 130.2,163.2 128.0,162.5C125.8,161.8 125.9,159.4 125.5,158.0C125.1,156.6 126.2,155.2 125.5,154.0C124.8,152.8 123.1,150.6 121.0,150.5C118.9,150.4 116.0,151.5 113.0,153.5C110.0,155.5 105.6,161.1 103.0,162.5C100.4,163.9 96.5,164.5 97.5,162.0C98.5,159.5 105.2,151.2 109.0,147.5C112.8,143.8 116.8,141.3 120.0,139.5C123.2,137.7 124.3,137.2 128.0,136.5C131.7,135.8 138.7,135.0 142.0,135.5C145.3,136.0 146.2,138.8 148.0,139.5C149.8,140.2 151.7,139.8 153.0,139.5C154.3,139.2 154.0,137.8 156.0,137.5C158.0,137.2 163.1,137.1 165.0,137.5C166.9,137.9 167.1,137.6 167.5,140.0C167.9,142.4 167.9,149.6 167.5,152.0C167.1,154.4 166.9,154.1 165.0,154.5C163.1,154.9 158.2,155.0 156.0,154.5C153.8,154.0 153.5,152.0 152.0,151.5C150.5,151.0 148.8,150.8 147.0,151.5C145.2,152.2 142.8,154.2 141.5,156.0C140.2,157.8 139.4,161.4 139.0,162.5C138.6,163.6 140.8,162.5 139.0,162.5Z M311.0,143.5C309.4,143.4 303.1,144.8 301.5,143.0C299.9,141.2 302.0,135.3 301.5,133.0C301.0,130.7 299.0,130.7 298.5,129.0C298.0,127.3 297.9,124.6 298.5,123.0C299.1,121.4 301.2,120.0 302.0,119.5C302.8,119.0 303.2,118.8 303.5,120.0C303.8,121.2 302.9,125.4 303.5,127.0C304.1,128.6 305.8,129.5 307.0,129.5C308.2,129.5 309.9,128.6 310.5,127.0C311.1,125.4 310.2,121.2 310.5,120.0C310.8,118.8 311.3,119.2 312.0,119.5C312.7,119.8 313.9,120.8 314.5,122.0C315.1,123.2 316.0,125.2 315.5,127.0C315.0,128.8 312.2,130.2 311.5,133.0C310.8,135.8 311.1,141.8 311.0,143.5C310.9,145.2 312.6,143.6 311.0,143.5Z"/><path fill="#16E9D0" d="M83.0,231.0 H102.0 A3.0,3.0 0 0 1 105.0,234.0 V273.0 A3.0,3.0 0 0 1 102.0,276.0 H83.0 A3.0,3.0 0 0 1 80.0,273.0 V234.0 A3.0,3.0 0 0 1 83.0,231.0 Z M166.0,210.0 H185.0 A3.0,3.0 0 0 1 188.0,213.0 V243.0 A3.0,3.0 0 0 1 185.0,246.0 H166.0 A3.0,3.0 0 0 1 163.0,243.0 V213.0 A3.0,3.0 0 0 1 166.0,210.0 Z M251.0,127.0 H271.0 A3.0,3.0 0 0 1 274.0,130.0 V215.0 A3.0,3.0 0 0 1 271.0,218.0 H251.0 A3.0,3.0 0 0 1 248.0,215.0 V130.0 A3.0,3.0 0 0 1 251.0,127.0 Z M92.5,208.0 H92.5 A4.0,4.0 0 0 1 96.5,212.0 V279.0 A4.0,4.0 0 0 1 92.5,283.0 H92.5 A4.0,4.0 0 0 1 88.5,279.0 V212.0 A4.0,4.0 0 0 1 92.5,208.0 Z M175.5,207.0 H175.5 A4.0,4.0 0 0 1 179.5,211.0 V272.0 A4.0,4.0 0 0 1 175.5,276.0 H175.5 A4.0,4.0 0 0 1 171.5,272.0 V211.0 A4.0,4.0 0 0 1 175.5,207.0 Z M261.0,96.0 H261.0 A4.0,4.0 0 0 1 265.0,100.0 V265.0 A4.0,4.0 0 0 1 261.0,269.0 H261.0 A4.0,4.0 0 0 1 257.0,265.0 V100.0 A4.0,4.0 0 0 1 261.0,96.0 Z"/></svg></span>LIQUIDITY THEORY</div>
+      <h1 class="exam-title">Final Exam</h1>
+      <p class="exam-subtitle">Answer all questions to receive your certificate</p>
+      <div class="exam-progress-wrap">
+        <div class="exam-progress-track">
+          <div class="exam-progress-fill" id="exam-progress-fill" style="width:0%"></div>
+        </div>
+        <div class="exam-q-counter" id="exam-q-counter">Question 1</div>
+      </div>
+    </div>
+
+    <!-- Engine writes question cards here -->
+    <div class="exam-body" id="exam-body"></div>
+
+    <!-- Engine writes result here -->
+    <div class="exam-result hidden" id="exam-result"></div>
+
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     CERTIFICATE SCREEN
+     ═══════════════════════════════════════════════════════════════ -->
+<div class="cert-screen hidden" id="cert-screen">
+  <div class="cert-inner">
+    <div class="cert-watermark"><i data-lucide="award"></i></div>
+    <div class="cert-top-rule"></div>
+
+    <div class="cert-badge"><i data-lucide="award"></i></div>
+    <div class="cert-presents">Liquidity Theory presents</div>
+    <div class="cert-recipient">Certificate of Completion</div>
+    <input id="cert-name" class="cert-name-input" type="text" placeholder="Type your name" aria-label="Your name" autocomplete="name" spellcheck="false" maxlength="48" />
+    <div class="cert-has-completed">has successfully completed</div>
+    <div class="cert-course-name" id="cert-course-name">Liquidity Theory</div>
+    <div class="cert-course-sub">Liquidity Theory · Trading Academy</div>
+
+    <div class="cert-divider"></div>
+
+    <div class="cert-score-display" id="cert-score-display"></div>
+    <div class="cert-date-display" id="cert-date-display"></div>
+
+    <div class="cert-bottom-rule"></div>
+
+    <div class="cert-actions">
+      <button class="btn-primary" id="cert-review-btn">Back to Course</button>
+      <button class="btn-ghost" id="cert-print-btn">
+        <i data-lucide="printer" style="width:14px;height:14px;"></i>
+        Print
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     TOAST NOTIFICATION
+     ═══════════════════════════════════════════════════════════════ -->
+<div class="toast hidden" id="toast"></div>
+
+</body>
+</html>

@@ -1,0 +1,9 @@
+{
+  "course": 3,
+  "chapterId": 2,
+  "title": "Deposit and Withdraw",
+  "module": "Getting Started with Derivatives",
+  "edits": [],
+  "alreadyGood": ["introChart", "lessonChart", "quiz.chart"],
+  "notes": "This is an operational-mechanics chapter (deposits, withdrawals, realized P&L reflected in the wallet balance, and testnet practice). It teaches NO tradeable levels, zones, or events: no Entry/Stop/Target, no support/resistance, no swing high/low, no liquidity pool, no neckline/range edges. The three candlestick charts are deliberately CONCEPT illustrations (a growing account balance; a testnet->live progression), not worked trades, so per the restraint rule there is nothing taught-but-undrawn to close. The auditor's verdict (all three slots alreadyComplete) is confirmed. Coordinate re-check: introChart markPoints idx 0/5/11/15 are in-range over 16 bars; lessonChart idx 0/6/11/15 in-range over 16 bars; quiz.chart has 14 bars (8+6) with cutIndex:8 hiding the decision so the pre-cut is not spoiled, and revealMarkPoints idx 3/8/13 are all in [0,13] with sensible colors (gold #ffcc00 for the testnet/learning phase, teal #00d4d4 for confident/live execution) and idx 8 correctly sitting at the cut boundary as 'Transition to Live'. No inventions are warranted: proposing entry/stop/target lines here would fabricate levels the text never teaches and violate slot fit. No fixes needed -- all existing labels match the chapter narrative."
+}

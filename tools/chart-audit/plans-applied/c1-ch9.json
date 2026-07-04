@@ -1,0 +1,21 @@
+{
+  "course": 1,
+  "chapterId": 9,
+  "title": "LTF Entry Scenario",
+  "module": "Time Frame Analysis",
+  "edits": [
+    {
+      "slot": "quiz.chart",
+      "fixes": [
+        {
+          "find": "revealMarkPoint idx16 label \"Target Hit\"",
+          "replaceWith": "Target Hit — next support (~88)",
+          "reason": "Lesson teaches 'Target: the next significant S/R level lower' and the quiz explanation says 'target at the next support level'. The quiz chart's final leg runs to 88 (ltCandles(91, [...,{to:88,bars:3}])), so the outcome pin lands at ~88. Renaming the existing post-reveal pin ties the outcome event to the taught level, mirroring the explicit 'Target — next S/R level lower' markLine on the sibling lessonChart. Keep position:bottom and color #00d4d4. Post-reveal only, so no spoiler to the cut decision."
+        }
+      ],
+      "reason": "Pre-cut context (resistance line @100 + SR flip zone) is correctly minimal and must stay spoiler-free; the only improvement is clarifying the post-reveal target pin to name the support level the lesson teaches."
+    }
+  ],
+  "alreadyGood": ["introChart", "lessonChart"],
+  "notes": "Re-derived all three charts. introChart (4H, band ~92-108) is a concept illustration: it already draws the 100 breakdown-flip resistance line plus the three taught events (BREAKDOWN!, S/R Flip Retest, Short Entry!) — complete. lessonChart (15min, band ~88-100) is the worked trade and already draws every taught level: Entry@100, Stop@102.5 (just above the flip), Target@89 (next S/R lower), the 98-102 SR Flip Zone, and the Upper Wick / Short Entry / Target Hit events — complete; the Stop line uses #ff5fa3 (lighter pink) to distinguish it from the #ff2e88 entry/resistance line, a valid existing convention, not a gap. quiz.chart (cutIndex 12): pre-cut correctly shows only the resistance line and flip zone (decision context, no spoiler); outcome routed to revealMarkPoints. ACCEPTED the auditor's one gap but reclassified it from an add to a rename (fix) since it edits an existing pin; CORRECTED nothing about its value — '~88' is right (the quiz chart's last leg is to:88, distinct from the lessonChart's 89 target line). No stop-loss reveal is proposed because the engine reveal mechanism only supports markPoints, not markLines. No other gaps found."
+}

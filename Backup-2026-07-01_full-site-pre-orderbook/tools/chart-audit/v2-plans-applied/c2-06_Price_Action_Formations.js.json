@@ -1,0 +1,29 @@
+{
+  "course": "2",
+  "file": "06_Price_Action_Formations.js",
+  "lessonId": "course2/06_price_action_formations",
+  "edits": [],
+  "noAnchorGaps": [
+    {
+      "beatId": "engulf-bear",
+      "concept": "Tweezer tops/bottoms — two candles with matching highs or lows",
+      "quote": "Tweezer tops and bottoms work on a similar idea — two candles with matching highs or lows showing one side can't push any further.",
+      "why": "move engulfing_bearish exposes only prior and engulf; it renders the two engulfing candles, not a tweezer structure, so there is no anchor on which to draw/label a matching-high/low tweezer. Passing side reference — record, do not invent."
+    },
+    {
+      "beatId": "evening-star",
+      "concept": "Three-inside-up / three-inside-down formations referenced as same-logic siblings",
+      "quote": "The three-inside-up and three-inside-down formations follow the same logic, and tend to be excellent triggers at key levels.",
+      "why": "move evening_star exposes only star, confirm, midpoint; there is no anchor for a three-inside-up/down structure (a different formation not drawn here), so this passing reference cannot be anchored."
+    }
+  ],
+  "alreadyGood": [
+    "engulf-bull",
+    "engulf-bear",
+    "morning-star",
+    "evening-star",
+    "soldiers",
+    "crows"
+  ],
+  "notes": "Verified anchor names by reading chart-vocabulary.js (lines 554-646): engulfing_bullish/bearish=[prior,engulf]; morning_star/evening_star=[star,confirm,midpoint(L)]; three_white_soldiers=[soldier1,soldier3]; three_black_crows=[crow1,crow3]. All six CHART beats already label every exposed anchor the say teaches, with correct kind/type (level on midpoint, markers on point anchors) and side/place clear of candles. Two CONCEPT beats (intro, recap) skipped — no chart. The auditor's two noAnchorGaps are both genuine: tweezer tops/bottoms and three-inside-up/down are distinct formations not rendered by the engulfing/evening_star moves, so they have no anchor. No anchor-valid gaps were missed; nothing to add or fix."
+}

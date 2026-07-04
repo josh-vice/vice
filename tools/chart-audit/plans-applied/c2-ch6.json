@@ -1,0 +1,20 @@
+{
+  "course": 2,
+  "chapterId": 6,
+  "title": "Volume Analysis",
+  "module": "Price Action Concepts",
+  "edits": [
+    {
+      "slot": "lessonChart",
+      "addMarkPoints": [
+        { "dataIndex": 17, "label": "Trend Continues ✓", "position": "top" }
+      ],
+      "addMarkAreas": [
+        { "y0": 87, "y1": 92, "label": "Coiling Range", "color": "rgba(0,212,212,0.07)" }
+      ],
+      "reason": "This is the worked breakout trade. The chart draws the coil low (idx13 'Vol Declining — Coil') and the breakout spike (idx14 'VOLUME SPIKE! Breakout ✓') but stops there visually — the follow-through the spike confirmed is undrawn. Text: 'Spike in volume on the break = confirmation of direction — this is what you are waiting for' justifies marking the post-breakout continuation to ~108 at idx17 (last bar of the to:108 leg, in range 0–17, band 84–108). The 'Coiling Range' area shades the tightening consolidation between the coil low (~87) and the Breakout Level (92) that the existing 'Vol Declining — Coil' point and the intro line 'Decreasing volume inside a consolidation = healthy coiling before the move' describe; it sits above the existing 'Support Zone' 83–87 so it is a distinct band, not a duplicate. Teal matches the chapter's pre-bullish-break convention."
+    }
+  ],
+  "alreadyGood": ["introChart", "quiz.chart"],
+  "notes": "REJECTED the auditor's introChart markLine {yAxis:108 'Exhaustion High'}: 108 is in-band and the 'Potential Reversal' point sits near it, BUT introChart is a concept slot whose six markPoints already walk all four price/volume scenarios, and the text teaches the price–volume relationship ('potential trend exhaustion and reversal ahead') without naming any specific tradeable exhaustion LEVEL. Adding a level line over-annotates a concept chart and the auditor itself rated it 'low'. Per the restraint/slot-fit rule, dropped. ACCEPTED both lessonChart gaps (re-derived independently): the continuation markPoint and the coiling-range area, both directly text-justified and coordinate-sane. quiz.chart confirmed already-complete: cutIndex:5 keeps the decision un-spoiled and revealMarkPoints carry the outcome (Low Volume / Tiny Body Exhaustion / Reversal Begins) post-answer; no pre-cut annotation should be added."
+}

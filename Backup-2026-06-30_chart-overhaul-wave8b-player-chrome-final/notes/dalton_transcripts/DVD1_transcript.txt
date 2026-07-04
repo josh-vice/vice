@@ -1,0 +1,1624 @@
+# Transcript: Fields_of_Vision_DVD1.avi
+# Model: mlx-community/whisper-large-v3-mlx
+# Generated: 2026-06-02 00:31:36
+
+[00:00] Thank you.
+[00:30] Thank you.
+[01:00] Welcome everyone to the Field of Vision video with Jim Dalton.
+[01:07] Thank you for being here today.
+[01:09] And we have a full day to hear Jim share 40 years of market understanding and market experience and trading experience with us.
+[01:22] And we're all very fortunate to be a part of it.
+[01:25] Jim's taken a lot of time to lay the slides out and the material out in a way
+[01:29] that we can fit as much info as possible with our time here today.
+[01:34] And he's also laid it out and put a lot of thought into how to structure it so that it will flow
+[01:39] and you can absorb it and go home and start implementing it in your trading regimen.
+[01:45] Obviously, that's why we're here, to trade better.
+[01:47] And that's how this program was designed for you to go home and trade.
+[01:53] I've been working with Jim about a year.
+[01:55] And he has asked me to just talk a little bit about the learning process.
+[01:59] Because he's watched me struggle.
+[02:01] And at the same time, he's watched me come to a new level of trading.
+[02:05] And I do believe that this is an edge we develop within ourselves.
+[02:10] It's not an edge from an indicator or a strategy or a methodology.
+[02:13] This is something that we are developing internally.
+[02:17] Intuitively, we are developing what we see.
+[02:21] No one can take it from us once we have it.
+[02:24] And to me, that's very exciting.
+[02:26] Because when I am trading well, it's like hitting a golf ball, really.
+[02:29] Well, you change your grip.
+[02:31] It is nothing but hook and slice and pain.
+[02:33] And then one time you hit it, and it just feels perfect.
+[02:37] And when I'm trading like that with Jim, that's the feeling.
+[02:41] And it makes it all worth it.
+[02:43] So I just want to throw that out there because it isn't easy.
+[02:47] And it won't come overnight.
+[02:49] But stick with it.
+[02:50] Because I do believe that we really have a true edge here.
+[02:55] And to utilize 40 years, we don't have to make a new path.
+[02:59] And reinvent the wheel.
+[03:00] We can learn from someone who didn't have a mentor.
+[03:03] Who is now here because he wants to offer something that he didn't have.
+[03:07] And share with us.
+[03:09] I do want to say one other thing that I did hear when I was signing up for this and investing the money.
+[03:14] I was hesitant.
+[03:16] And a gentleman said to me when I asked him, should I try it?
+[03:22] Should I invest this money?
+[03:23] And he said, absolutely.
+[03:25] And he had no vested interest in Jim Dalton.
+[03:29] He said, you will never look at the markets the same way again.
+[03:33] And I can genuinely say that from a year ago when I started, I will never look at the markets the same way again.
+[03:42] And there's much more depth.
+[03:45] And there's much more interrelationships I consider.
+[03:48] And the longer I go through it, the more it becomes more intuitive and natural to me.
+[03:53] And I'm very grateful to be a part of it.
+[03:56] So with that, if you will help me welcome.
+[03:59] Mr. Jim Dalton.
+[04:01] Thank you.
+[04:14] Julia, thank you.
+[04:15] Thank you very much.
+[04:16] I've watched Julia go through this process.
+[04:20] And we were doing an intensive out in Napa.
+[04:23] It was the last day of the intensive.
+[04:25] We had about an hour to go.
+[04:26] And I looked out and she was kind of leaning over the desk.
+[04:30] Her eyes were about this big.
+[04:32] And I knew at that point in time that the information that we have talked about had absolutely overwhelmed her.
+[04:39] And it was really at that point that she really made the turning point.
+[04:44] I talked to her the following week.
+[04:46] And that turning point came.
+[04:48] And you could see the growth take place.
+[04:51] One of the best compliments I think we've ever received.
+[04:57] Rick in the middle was telling me yesterday about.
+[05:01] One of the blogs that he was reading.
+[05:03] And one of the blogs somebody asked about the program that we offer.
+[05:09] And they said no.
+[05:11] It was too complex and too complicated.
+[05:15] It wasn't for them.
+[05:16] That is probably the finest compliment we've ever received.
+[05:20] Because that is 100% true.
+[05:23] If it was, Julia said it, if it was easy there would be no edge.
+[05:28] If it was easy it would be reputable.
+[05:30] If it was easy it would be reputable.
+[05:31] If it was complicated almost overnight.
+[05:33] It is not easy.
+[05:34] It is a process that you will go through.
+[05:37] But understand that the rewards are huge if you make it.
+[05:41] Not many people are going to make the entire process.
+[05:45] But we're trying to give you a foundation.
+[05:48] Once you have that foundation then you start to build on the foundation.
+[05:54] Let's start off and let's just begin to review some of the basics.
+[05:59] That are involved.
+[06:02] The tool that we use is called market profile.
+[06:07] However, market profile is simply a tool.
+[06:11] What we are talking about is about trading.
+[06:14] And all of the intricacies and the interrelationships that occur when you're trading.
+[06:20] So many people want to know only where do I get in and where do I get out.
+[06:27] It is clearly not that simple.
+[06:29] It is far more complex than that.
+[06:33] What we talk about is trading.
+[06:36] We use the market profile.
+[06:37] We call it the market profile graphic.
+[06:40] And you'll see as we develop it is when you look at a graphic.
+[06:45] A graphic is something that brings together many complex points at one time.
+[06:53] The most famous graphic in the world is the graphic of Napoleon's army
+[06:58] going into Russia.
+[07:01] From just one simple graphic you see the size of the army as Napoleon started.
+[07:09] You see how the army shrinks.
+[07:11] You see the temperature change.
+[07:14] You see the distribution of food.
+[07:16] From one simple graphic, the most famous graphic in the world,
+[07:19] you can understand an awful lot of very complex information in a way that our minds are very welcoming.
+[07:28] We welcome looking at graphical type of information.
+[07:32] And so this is what when we get to the market profile graphic,
+[07:37] you will see that it is in fact very similar to this famous graphic.
+[07:43] Okay?
+[07:44] Let's take a look and start off.
+[07:47] This is just to get you started.
+[07:50] This gives you some idea of where we're going to be when we're all done.
+[07:55] This is not basic writing.
+[07:58] This is basic right here.
+[08:00] This is kind of how we look at days.
+[08:02] For example, up at the top you'll see something labeled afternoon pullback low.
+[08:09] If you have a trend day, a trend day being a day where the market has moved rapidly,
+[08:15] say to the upside, very often late in the afternoon you will get a pullback
+[08:21] or you'll get a little inventory correction.
+[08:24] Most people have no idea the significance
+[08:27] of that very minor point where the market pulled back.
+[08:32] That reference point late in the afternoon until it's taken out,
+[08:36] nothing's really changed in the marketplace.
+[08:38] So we're going to talk about that.
+[08:40] We're going to talk about the significance of how do you identify when change takes place.
+[08:46] We look around here and we look at significant highs and lows.
+[08:51] Triple references.
+[08:52] We look at what you're going to be introduced to is called
+[08:57] point of control.
+[08:58] Point of control or the fairest price at which business is being conducted.
+[09:03] It's very important.
+[09:04] If the fairest price at which business is being conducted throughout the day doesn't change,
+[09:09] then you don't have a lot of change in the market.
+[09:11] Sometimes you'll see that start to migrate.
+[09:14] So all this is just some idea of where you're going to be when we're done with this.
+[09:21] That is a point of control right there.
+[09:24] You'll understand the significance of that
+[09:26] or the fairest price to do business as we complete this.
+[09:29] You'll understand the importance of the references.
+[09:33] Anyhow, this just gives you some feel of what it's going to look like
+[09:38] and what you're going to start to understand as we get to the last portion of this presentation.
+[09:45] Okay, let's take a look.
+[09:47] Structure.
+[09:48] Another comment in here that you're going to understand.
+[09:54] If you think back,
+[09:56] and visualize a bar chart.
+[09:59] Most people that have ever traded look at a bar chart.
+[10:02] A bar chart is a straight line.
+[10:05] On that bar chart, you have an open, high, low, and close.
+[10:11] Okay, you have basically four data points.
+[10:15] You have no dimension to that bar chart.
+[10:19] When you look at a profile, and we haven't explained to you yet how you build a profile,
+[10:24] but you can look and see that,
+[10:26] it is not a straight line.
+[10:28] When we add another dimension,
+[10:31] we get into what we call market structure.
+[10:36] We will be talking about what is strong structure,
+[10:40] what is weak structure.
+[10:42] Just a few days ago,
+[10:44] the market had a historic break.
+[10:47] The Dow was down over a thousand points late in the afternoon on a huge drop,
+[10:54] and then the market rebounded over six months.
+[10:56] It was over 700 points before you knew what time it was.
+[11:00] If the underlying structure of that market had been strong,
+[11:05] I suspect we would not have had that kind of break.
+[11:09] Those that have been looking at the material that we've done for some period of time
+[11:13] know that I've been writing about the risk inherent in weak market structure.
+[11:18] But you'll start to learn about structure.
+[11:21] You'll learn what it means.
+[11:23] You'll also learn,
+[11:24] just as you would
+[11:25] if you had a house with shingles on it,
+[11:27] and you had a leak.
+[11:28] You'll start to learn how do you repair that house.
+[11:32] How do you repair,
+[11:33] or what happens to repair poor structure in the marketplace.
+[11:38] I don't expect you to understand any of this right now.
+[11:42] All I want to give you is a flavor of the depth of which we're going to get to
+[11:48] before we complete this process.
+[11:52] Okay.
+[11:54] At its foundation,
+[11:56] the market is simply a two-way auction process.
+[12:01] The motives and incentives of the buyers and sellers are infinite.
+[12:09] But let's talk a little bit about an auction process
+[12:13] so you get a feel for it.
+[12:15] Most people have been to some kind of an auction.
+[12:20] Generally, the auctions you've been to are maybe an art auction,
+[12:24] or at one time, years ago,
+[12:26] I had a client that owned the Galleria down in Texas.
+[12:31] When he used to come in to the programs,
+[12:35] he would fly in on his own plane.
+[12:37] He would take the whole floor of one of the hotels.
+[12:40] And he'd been to three or four of the programs.
+[12:43] And I said,
+[12:44] you know,
+[12:45] you keep coming back.
+[12:46] I said,
+[12:47] how is this working for you?
+[12:48] He said,
+[12:49] well,
+[12:50] you know,
+[12:51] Mr. Dalton,
+[12:52] he said,
+[12:53] I'm trading the market.
+[12:55] But he said,
+[12:56] in my life,
+[12:57] he said,
+[12:58] I buy ponies at the auctions all the time.
+[13:00] And he said,
+[13:01] they're sure not getting the best of me at the auctions for the ponies anymore.
+[13:05] He said,
+[13:06] I know what's going on.
+[13:07] And he said,
+[13:08] I can't tell you what you've done for me.
+[13:10] Learning to understand how an auction really functions.
+[13:13] And he said,
+[13:14] I thought I knew.
+[13:15] Well,
+[13:16] let's walk through an auction process.
+[13:18] In a traditional auction process,
+[13:19] it goes one way.
+[13:20] Let's start with a kind of an expensive auction.
+[13:23] Art object.
+[13:24] If the auctioneer is trying to get the auction started at say $100,000,
+[13:30] what happens if nobody will lift the bid at $100,000?
+[13:35] What does the auctioneer have to do now?
+[13:37] He's got to lower the bid, right?
+[13:39] So he lowers the bid.
+[13:40] And he may have to lower the bid down to $92,000 before the auction can get underway.
+[13:47] So all of a sudden,
+[13:48] he lowers it to $92,000.
+[13:50] And all of a sudden,
+[13:51] the bidding starts.
+[13:53] You got $93,000.
+[13:54] I got $94,000.
+[13:55] I got $95,000.
+[13:56] $97,000.
+[13:57] And sometimes it will tear right back through the original $100,000 level that no one would lift the bid for to begin with.
+[14:06] Now,
+[14:07] as the auction progresses,
+[14:09] you may hear a couple of things.
+[14:11] As the auction starts to slow down,
+[14:14] the auctioneer has to make it feel exciting and really keep your interest, right?
+[14:18] So he starts putting in what is called filler.
+[14:21] So let's say the auction slows down.
+[14:23] It slows down at $105,000.
+[14:25] Who will give $105,000?
+[14:27] And he goes into this elaborate description.
+[14:30] And at that point in time,
+[14:32] is the auction over?
+[14:33] No, the auction is not over.
+[14:35] But the auction is slowing down.
+[14:38] You need to,
+[14:39] if you really become aware of this,
+[14:41] you understand what's going on.
+[14:43] This same thing takes place in the markets.
+[14:46] What happens?
+[14:47] What other kind of response might you hear from the auctioneer?
+[14:50] Let's say you're up to $105,000.
+[14:49] You're going to say,
+[14:50] let's say you're up to $105,000.
+[14:53] And you know,
+[14:54] you've done your homework and you're pretty smug.
+[14:56] And you think it's certainly not worth $105,000.
+[15:00] But at $105,000,
+[15:02] all of a sudden you hear the auctioneer say,
+[15:04] new bidder.
+[15:06] Well, are higher prices cutting off activity?
+[15:09] Or are higher prices bringing in more bids and more activity?
+[15:13] When you hear the auctioneer say,
+[15:15] new bidder,
+[15:16] higher prices are bringing in more activity,
+[15:19] not cutting off the activity.
+[15:21] Guess what?
+[15:22] It doesn't make any difference what you think that value is.
+[15:27] That auction's not completed.
+[15:30] How many times in a market have you seen price go down,
+[15:34] whether it's a stock or whether it's a future?
+[15:36] You will see price go down and all of a sudden,
+[15:40] out of nowhere,
+[15:41] the price reverses and is going the other way.
+[15:45] And you start to see that higher prices,
+[15:48] instead of cutting off activity,
+[15:50] bring in more and more activity.
+[15:53] So one of the things,
+[15:55] one of the things that you really start to need to understand and appreciate
+[16:00] is this whole idea of the auction process.
+[16:04] This is how markets operate.
+[16:07] The first example we talked about was a very simple example.
+[16:12] It's a very expensive art auction.
+[16:15] One item could be auctioned.
+[16:17] Let's go and talk about where horses are being auctioned.
+[16:23] Horses are being auctioned.
+[16:25] It may not be,
+[16:27] there may be multiple horses or livestock available for auction.
+[16:33] Now, the same process as the auction gets underway,
+[16:37] some people are getting their demand fulfilled, right?
+[16:41] So they're dropping by the wayside,
+[16:44] and this auction continues,
+[16:46] and the auction continues up until what?
+[16:49] Until the demand has been filled,
+[16:51] or everybody has stepped aside.
+[16:53] So we go up until the last bidder bid.
+[16:57] And that's when the auction is completed.
+[17:00] Now, think about this.
+[17:02] If the auction was completed successfully,
+[17:06] and I now walk out and I say,
+[17:08] oh, by the way,
+[17:10] I have one more of the same thing to auction.
+[17:14] If the auction had been successful,
+[17:17] and let's say that this item went for,
+[17:19] pick a number, $150,000.
+[17:21] If the auction was successful,
+[17:23] I say, oh, by the way, I have one more.
+[17:25] Probably shouldn't get any more than $120,000, $125,000,
+[17:27] because the auction ought to go up,
+[17:29] and it ought to drop away from it very quickly
+[17:31] once it's completed.
+[17:33] So this is kind of the auction process.
+[17:35] Extremely important in understanding how markets operate.
+[17:40] Now, the difference between the art auction,
+[17:43] or the auction for livestock,
+[17:45] or multiple items,
+[17:47] is that in the stock market,
+[17:49] we continually, or futures market,
+[17:52] we continually auction from low to high,
+[17:55] and from high to low.
+[17:58] So that ongoing auction process is continuous in there.
+[18:04] If you go to the art auction, for example,
+[18:08] you have all types of people that are participating, right?
+[18:12] And this becomes very important also.
+[18:15] You may have a dealer that is at one of the auctions,
+[18:20] it could be the art auction,
+[18:22] or it can be in the auction for livestock.
+[18:24] You may have a dealer that's trying to get inventory for his business,
+[18:28] and then he's going to do what?
+[18:30] Resell it.
+[18:31] So that would be one motivation.
+[18:33] You may have a collector, right?
+[18:36] You may have a collector,
+[18:38] and he wants that for his own personal collection.
+[18:42] It's a legacy of thing, or maybe it's an ego type of thing.
+[18:45] The motivations go on and on.
+[18:48] We talk a lot about, in this time frame,
+[18:53] motivation and why, who are the buyers and sellers in these auctions.
+[18:59] In the stock and futures market,
+[19:03] we auction from low to high,
+[19:05] and then from high to low,
+[19:07] in this continual search for information.
+[19:11] When the market auctions too high,
+[19:14] at that point in time,
+[19:16] you start to feel that it was too much.
+[19:20] Once it gets too high,
+[19:22] then the process starts in the opposite direction,
+[19:25] and we start auctioning lower,
+[19:28] looking to attract what?
+[19:30] If we start auctioning lower,
+[19:32] we are searching for what?
+[19:34] For buyers, right?
+[19:36] As we're auctioning higher,
+[19:38] we're looking for sellers.
+[19:39] In this process,
+[19:41] this up and down, two-way auction process,
+[19:44] is generated a tremendous amount of information.
+[19:48] It's that kind of information that we want to capture.
+[19:53] Let's take a look at this process.
+[19:57] Right here, all this is,
+[19:59] and we haven't explained it yet,
+[20:01] but this is a market profile.
+[20:03] In the one on the left, on this profile,
+[20:05] and we've split it out,
+[20:07] your first auction is going
+[20:09] from high to low, right?
+[20:11] So the market started high,
+[20:13] it auctioned lower.
+[20:15] Down here, it finally got low enough.
+[20:18] When you auction lower, you're looking for what?
+[20:21] You're looking for buyers.
+[20:23] You got low enough to find buyers,
+[20:25] and now you start auctioning in the other direction.
+[20:29] When you auction in the other direction,
+[20:31] you're looking for what?
+[20:33] You're looking for sellers.
+[20:35] It's that two-way auction process.
+[20:37] What you're going to find
+[20:39] is that we use the market profile
+[20:41] in order to record the net effect
+[20:45] of that two-way auction process.
+[20:48] So this is what it looks like when it's completed.
+[20:51] This is what it looks like when it's spread out.
+[20:54] And I just put it this way
+[20:56] so you can see the auction going lower,
+[20:58] looking for buyers,
+[21:00] the auction going higher, looking for sellers.
+[21:02] And you can see that there is,
+[21:04] if you had a bar chart, you'd never see this, right?
+[21:07] We talked earlier about a bar chart.
+[21:09] One dimension.
+[21:10] All we've done is added another dimension.
+[21:12] We're going to show you how this is constructed
+[21:14] in just a moment.
+[21:15] Okay.
+[21:17] The following graphic represents
+[21:21] a normal distribution curve.
+[21:23] Scientists for years have employed
+[21:27] a distribution curve in order to organize the data.
+[21:34] They employ the curve to organize data,
+[21:37] and then,
+[21:38] so they can study the data.
+[21:40] That's the purpose of it.
+[21:41] It's a scientific approach to understanding data.
+[21:45] All we've done,
+[21:46] this is what's called a normal or bell-shaped curve.
+[21:50] Now, I can tell you that it is very rare
+[21:54] that you will ever see a normal or bell-shaped curve
+[21:58] in the marketplace.
+[22:01] But it's the idea of the distribution.
+[22:04] What we do, if we start off
+[22:06] and we look at a bell-shaped curve,
+[22:08] that would be a market that was perfectly balanced.
+[22:12] Now, what we start to observe is how far out of balance
+[22:17] the market is in either direction.
+[22:20] When you look at the curve,
+[22:21] one standard deviation is going to cover approximately 70,
+[22:26] they give you an actual number of 68%,
+[22:28] but it's going to cover about 70%.
+[22:30] One standard deviation,
+[22:32] the fattest part of the curve.
+[22:34] Two standard deviations, about 95% of the curve.
+[22:37] When you get into three standard deviations,
+[22:40] it's going to cover about 99% of the curve.
+[22:43] Well, you don't need to worry about those numbers.
+[22:47] It is just this idea of how information is distributed.
+[22:52] What you're going to find is the market profile graphic
+[22:57] really is keyed off of the idea of a normal distribution curve.
+[23:05] It is nothing more than a way to organize data.
+[23:08] Once the data is organized,
+[23:10] now you have a way to start to understand what is going on.
+[23:15] And you understand if you look at a market,
+[23:19] and one day you've got maybe 100,000 participants,
+[23:22] the next day you've got 150,000 participants,
+[23:25] it's all going to vary.
+[23:27] Let me give you a real-life example.
+[23:31] Let's say I have a barbecue in my backyard,
+[23:34] and I've invited 30 people to that barbecue.
+[23:38] And I'm looking out, everybody seems to be having fun,
+[23:42] and I look out and I say,
+[23:44] Rick, what do you think the average or mean height is
+[23:47] of the people at my barbecue?
+[23:49] He looks at me and says, Jim, how would I know?
+[23:52] All I do is I go out and I take that same data,
+[23:55] I take those 30 people,
+[23:57] I organize them under a distribution curve.
+[24:00] All of a sudden you start to look at it,
+[24:02] and you say, oh, well, it looks to me like
+[24:04] the average or mean height is maybe it's around 5'7 or 5'8.
+[24:08] Now, let's say we take a picture,
+[24:11] we take a picture or a snapshot,
+[24:13] a satellite flies over,
+[24:15] takes a picture of those organized people at my barbecue.
+[24:19] Now, some people leave early, right?
+[24:22] Some people come in a little bit later.
+[24:25] Those that leave early have some height,
+[24:27] those that come in later have a different height,
+[24:29] maybe more left than come back in.
+[24:31] So maybe the following morning or late the next morning,
+[24:34] late at night,
+[24:36] I go out and I reorganize those people again,
+[24:39] and I take another satellite photo
+[24:42] of the people at my barbecue.
+[24:44] All of a sudden, I take one picture,
+[24:47] I take the other, and I overlay those two pictures.
+[24:51] They're probably not going to be the same, right?
+[24:54] So what it's going to allow me to see is some shift
+[24:58] that took place in the underlying data.
+[25:01] Had I not organized that data,
+[25:04] the chances are that I wouldn't have seen
+[25:07] or been able to determine subtle shifts
+[25:10] that took place in the people attending that barbecue.
+[25:14] That's what we're after.
+[25:16] We're after the ability to organize data
+[25:18] and take that data and start to make some sense out of it.
+[25:22] Okay, let's take a look at how we actually form
+[25:28] the market profile graphic.
+[25:31] When, in order to form a distribution,
+[25:34] you need a distribution curve,
+[25:36] you need two things.
+[25:38] You need a variable and you need a constant.
+[25:42] The breakthrough in the ability to organize the data
+[25:48] was the discovery by an individual
+[25:51] by the name of Pete Stottlemyre.
+[25:54] He majored in statistics at Stanford.
+[25:58] The breakthrough was that you can make time the constant.
+[26:03] The time between 11 and 11.30 is the same as the time
+[26:06] between 12 and 12.30.
+[26:09] One day is as long as the next day,
+[26:11] one week as long as the next week, etc.
+[26:13] So you make time the constant.
+[26:15] Time the constant forms your horizontal axis.
+[26:19] If you then take price, which is a variable,
+[26:22] and plot price the variable against time the constant,
+[26:27] you have the makings of formulating a distribution curve
+[26:33] in order to organize the data that we're going to be talking about.
+[26:37] When Pete came up to talk to me some years back,
+[26:42] we had been talking for probably less than four minutes.
+[26:49] When Pete threw out the idea of time as a constant,
+[26:54] I knew immediately what he had been discovering.
+[26:57] I had been trying to find a way to organize the data.
+[27:00] I actually had some things on my desk that looked like distribution curves.
+[27:05] At that point in time, I was trying to figure out how to do certain option strategies.
+[27:11] But I knew immediately, I knew my stuff didn't work like it should.
+[27:15] I knew that Pete had something when he came in the idea of time as the constant.
+[27:20] We talked for another 15 or 20 minutes.
+[27:22] Pete walked out to the elevator, walked back in,
+[27:26] and he looked at me and said,
+[27:28] I want you to sponsor my first book.
+[27:31] The name of the first book that introduced this information was called
+[27:34] Markets and Market Logic.
+[27:36] And I said yes, and on the spot, I wrote him out a check for $10,000.
+[27:41] If you ever look at the first book, right across the front,
+[27:43] it said sponsored by J.F. Dalton.
+[27:45] But I knew the value of the idea of making time the constant.
+[27:50] So many great discoveries are far simpler than we would ever imagine.
+[27:57] Time the constant versus price the variable allows us to form the distribution curve.
+[28:05] If you take, there's a profile, all it is, you start to visualize,
+[28:10] it's nothing more than the distribution curve we looked at earlier turned on its side.
+[28:17] That's how we organize the data.
+[28:19] That's what a market profile looks like.
+[28:22] If you look, if you think about this, if you have a bar chart,
+[28:26] and we already said a bar chart has four data points, right?
+[28:29] Open, high, low, close.
+[28:32] When you look at a profile that is two-dimensional,
+[28:38] it is going to release tremendous amounts of information.
+[28:43] Now, not only do I still have the open, high, low, close on this, right?
+[28:49] But I now get some performance figures.
+[28:52] I can see how much time,
+[28:55] the more letters out here, the more time that was spent here,
+[28:59] I start to get some idea of how much time was spent at each price.
+[29:03] How much time was the auction down here?
+[29:05] It was rejected pretty quickly.
+[29:07] At the top, it was rejected pretty quickly.
+[29:10] So I get tremendous amounts of information that I didn't have before.
+[29:16] Remember, initially, with one dimension, open, high, low, close,
+[29:19] that's really what I was dealing with.
+[29:21] Now, tremendous amounts of information.
+[29:24] That, to some people, is a negative.
+[29:28] Sometimes, if you can't process basic information to begin with,
+[29:33] giving you more information is not necessarily a positive.
+[29:38] You have to really be able to learn to use the information,
+[29:43] which means you're probably going to have to get rid of some other information
+[29:47] in order to make room for this.
+[29:50] So, on its surface, while it intuitively may sound good
+[29:54] that more information is better, it is not necessarily true.
+[29:58] You have to use that information very intelligently.
+[30:02] Okay, let's work forward.
+[30:04] And we see now, the graphic is just,
+[30:07] the analogy is to putting the pieces of a puzzle together.
+[30:12] As you go through this, it's piece by piece by piece.
+[30:18] I would guess, if you're really pretty sharp,
+[30:22] it's going to take you,
+[30:24] probably a good year,
+[30:27] a good year to start to get a foundation
+[30:31] of how all these pieces begin to fit together.
+[30:34] We have a saying, and you'll hear it again,
+[30:36] and you'll see a slide on it later,
+[30:38] no real learning starts until you can put that information
+[30:43] within some contextual view.
+[30:46] Give me an idea.
+[30:49] Most people, and it's always amazed me,
+[30:52] I will get a tremendous number of clients
+[30:55] that have been very successful in business.
+[30:59] In business, if you raise the price of your product,
+[31:03] and your volume drops off, what do you do?
+[31:07] You're going to lower the price, right?
+[31:10] You raise the price of your product,
+[31:12] and the volume drops off, your market share drops off,
+[31:15] you're going to lower the price to get back your market share.
+[31:19] Those that have been in business,
+[31:21] if you raised your price too high,
+[31:23] and your volume dropped off,
+[31:25] are you going to get your market share back
+[31:27] by just going back to the original price?
+[31:30] Probably not, right?
+[31:32] You're probably going to have to lower it
+[31:35] below where you were initially,
+[31:37] in order to get your market share back,
+[31:39] and get your business back.
+[31:41] Now, sometimes we can see that by actually lowering the price,
+[31:45] or we can offer discounts.
+[31:47] You know, 0% financing, $500 cash back,
+[31:50] and you're going to get your market share back.
+[31:51] There's all kinds of ways in order to adjust the price,
+[31:56] in order to get the demand that you want.
+[31:59] That same kind of thing takes place in a market.
+[32:02] So, let's talk about this idea of context.
+[32:06] Many people, when they come out of business,
+[32:10] they understand context tremendously.
+[32:13] They understand price. They understand volume.
+[32:16] Yet, they will turn around and start to trade stocks and futures,
+[32:21] and they will focus mainly on price.
+[32:24] They don't pay attention to volume.
+[32:27] If I raise my price, and my volume drops off by 20%,
+[32:32] guess what?
+[32:33] In business, I know immediately that's not very healthy.
+[32:36] The structure of what I've done with that price
+[32:38] isn't going to last very long.
+[32:40] Does that mean I won't sell anything?
+[32:42] No, I'll sell something, but it's not going to be the same thing.
+[32:46] Or, if I raise my price, if I raise the price,
+[32:49] and I actually do the same or more volume,
+[32:53] does that give me information?
+[32:55] That gives me a whole entirely different context.
+[32:59] The best example that I can think of is,
+[33:02] years ago, I used to be amazed.
+[33:06] You'd watch interest rates.
+[33:10] And if interest rates were coming down,
+[33:13] all of a sudden, people would be looking and say,
+[33:17] well, I'm not going to buy the house right now,
+[33:19] because I think rates are going lower.
+[33:22] So, you know, it's going lower and lower,
+[33:25] and all of a sudden, finally, the Fed tightens the rates,
+[33:29] and the rates start to go higher.
+[33:32] Well, theoretically, as the rates go higher,
+[33:36] theoretically, that should cut off the activity, right?
+[33:40] But in fact, if you're coming from this low level,
+[33:43] when you raise the rates, does that cut off the activity?
+[33:47] No.
+[33:49] It's going into the market, because they're afraid
+[33:52] that the rates are now going the other way.
+[33:54] So higher prices bring in even more activity,
+[33:58] because people are afraid they're going to miss the market.
+[34:01] Now think about this in the stocks and futures market.
+[34:04] The price goes down and goes down,
+[34:06] and you're not going to buy, right?
+[34:08] You're not going to buy.
+[34:09] The market's going down, because it's going lower, right?
+[34:11] All of a sudden, it starts the other way,
+[34:14] and you start paying more and more and more.
+[34:17] Something you could have bought for seven yesterday,
+[34:19] and you're going to buy for nine, ten, and eleven for today,
+[34:22] because you're caught in this auction process,
+[34:24] and you want to make sure you don't miss it.
+[34:26] That's all part of the contextual view.
+[34:28] So I want you to think about those things,
+[34:30] those pieces of the puzzle.
+[34:32] Now, let's, for those that are new to this process,
+[34:36] let's talk about the construction of a market profile.
+[34:41] First of all, each letter,
+[34:43] and you'll see how the letters are formed in a minute,
+[34:46] each letter is called
+[34:48] a time price opportunity, TPO.
+[34:52] It is just simply a way to record the data.
+[34:57] It means nothing more than that.
+[34:58] It doesn't make any difference if it's an A, a B, or a C.
+[35:02] Okay, let's take a look at the next step
+[35:04] in how we start to put this together.
+[35:08] Initializing the initial balance,
+[35:11] or when we put this together,
+[35:13] on each, the way we have done it here,
+[35:18] is each period is in 30 minutes.
+[35:22] So for example, if a market,
+[35:24] the S&Ps open at, I believe it's 8.30,
+[35:28] we're in Chicago, I think they open at 8.30 Chicago time.
+[35:32] So for the first half hour of trading,
+[35:35] we might use the letter A.
+[35:38] So that would, so every time it trades at a given price,
+[35:42] we just put a letter to show that we traded at that price.
+[35:47] The second period would be B.
+[35:50] All we're doing is recording every time
+[35:52] the second period trades at a price.
+[35:56] Then you've got C, etc.
+[35:58] So it goes on.
+[36:00] So we traded at this price in only one 30-minute period.
+[36:04] We traded at this price in three 30-minute periods.
+[36:08] And this is the profile, how it starts to form,
+[36:11] or if you think of our puzzle,
+[36:13] it starts to put the left edge to the left edge.
+[36:17] It's going to move to the profile.
+[36:19] And then you'll see that the dimensions,
+[36:21] or the dynamics, move to the right.
+[36:24] Okay, the structure, this is what we refer to
+[36:30] as the structure of the market.
+[36:33] As we record this information,
+[36:36] we start to see the structure forming in the marketplace.
+[36:41] For example, we talked about the auction process to begin with.
+[36:45] If we traded down here,
+[36:47] we had the first period low,
+[36:49] and the low of the third period, C period, was up there.
+[36:53] What happened when prices were going lower,
+[36:56] you're advertising for what?
+[36:58] You're advertising for buyers, right?
+[37:01] Did they find buyers?
+[37:04] They found buyers down there,
+[37:06] and they were fairly aggressive
+[37:08] because the next period, that's the lowest price trade.
+[37:12] You now have some type of information about the marketplace.
+[37:17] You auctioned low enough,
+[37:19] you got the expected return,
+[37:21] and the expected return was to find buyers.
+[37:25] Now, the auction, here's the auction,
+[37:28] and now you see the auction starts in the opposite direction.
+[37:32] So it tried to go lower.
+[37:34] That auction, we said it's a two-way auction process.
+[37:37] It tried to go lower.
+[37:39] It got the expected response.
+[37:41] The expected response when you go lower is to find buyers.
+[37:44] It found the buyers.
+[37:46] Now, the market's going higher,
+[37:48] and as the market's going higher, it's advertising for what?
+[37:52] It's advertising for sellers, right?
+[37:54] And it goes up until it can find those sellers.
+[37:58] That's just, we're going to continue to work on this,
+[38:01] but that's just kind of the process.
+[38:03] I want you to relate it.
+[38:05] I want you to relate it to the auction process.
+[38:07] Think about the two-way auction process,
+[38:10] and start thinking about,
+[38:12] we organize data in order to gather
+[38:15] what? When we organize the data,
+[38:17] what do we want from that data?
+[38:19] Information, right?
+[38:21] Now, we call that information market-generated information.
+[38:25] Now, have I found any information right here?
+[38:29] I found information.
+[38:31] I found that there were buyers at that level, right?
+[38:34] And guess what?
+[38:36] It's not somebody's opinion.
+[38:38] It's not somebody on the news telling you anything.
+[38:41] This is real.
+[38:43] This happens with real people, with real money,
+[38:47] and that's what we're recording.
+[38:49] It's not somebody's view on the tube or a talking head.
+[38:53] This is supported by real, real money, real activity.
+[38:57] Now, as we go on, we're going to want to know
+[38:59] how much volume was here, how aggressive it was.
+[39:02] Let me just ask you a business question.
+[39:04] If, in fact, this low price down here was a good price,
+[39:09] how long should that price have been there?
+[39:13] Momentarily, right?
+[39:15] Now, let's say we get down here and we get up,
+[39:18] and if it's only there momentarily,
+[39:20] how much volume should there be?
+[39:22] Very little.
+[39:24] It ought to move away from there very quickly.
+[39:26] All of a sudden, I get a lot of volume.
+[39:28] Is there a long time?
+[39:30] You have a whole different context.
+[39:32] Okay, let's continue on and see how this develops.
+[39:37] We have, let me go back one slide.
+[39:40] I talk about something in here.
+[39:43] Initial balance.
+[39:46] Initial balance is really the first two periods of the day.
+[39:53] Now, it doesn't have to be an exact definition.
+[39:58] Initial balance is just something we're saying
+[40:01] when the market opens in the morning.
+[40:04] What is really, how are people seeing the market?
+[40:07] They auction a little bit lower, they find some buyers.
+[40:10] They auction a little bit higher, they find some sellers.
+[40:13] So you have a little bit of balance in the morning.
+[40:17] It's not an absolute type of thing.
+[40:20] It doesn't have to actually be two periods.
+[40:23] It is just to give you a foundation.
+[40:26] Once you have that initial balance,
+[40:29] then what you want to see is as the day goes on,
+[40:33] are you getting outside of that range?
+[40:36] So if your initial balance, let's say for example,
+[40:39] was from one to ten, and then as the day goes on,
+[40:43] you start trading at eleven, twelve, thirteen, fourteen.
+[40:46] So you're going beyond the initial balance.
+[40:49] You're extending that range.
+[40:51] And who's extending the range?
+[40:53] Is it buyers or sellers?
+[40:55] It's going to be buyers that are extending that range to the upside.
+[40:59] So again, it releases more information about what's going on in the market.
+[41:04] Okay, let's take a look.
+[41:06] And this is what we would call range extension.
+[41:09] So we have the first two periods, A, B, in this example.
+[41:13] So the first two periods would be our initial balance.
+[41:18] Now, the market extends down in C period.
+[41:22] When it extends down in C period, okay,
+[41:27] it found, as we talked already, it found what?
+[41:30] It found buyers.
+[41:32] Now, once we find the buyers there, the market starts to trade back up.
+[41:39] When it starts to trade back up again,
+[41:42] now it's going to start searching for the other end of that initial balance.
+[41:48] Does it have to get there? No.
+[41:50] But it's, get this idea of the flow of the auction process.
+[41:55] Okay, let's kind of move on.
+[41:59] We've just talked again, another piece of the anatomy,
+[42:05] or the description, would be called a buying tail.
+[42:09] Okay?
+[42:10] A buying tail is nothing more than a way to say that the buyers were what?
+[42:16] Aggressive?
+[42:17] They were very aggressive at that level.
+[42:20] So, a two tick buying tail, three tick time tail, four tick buying tail,
+[42:27] all is a different measure of how aggressive,
+[42:31] how aggressive the buyers were at that particular level.
+[42:36] Again, that's information.
+[42:39] Now, let me stop for a second.
+[42:42] What happens when people are first looking at this information?
+[42:51] They want to run out almost immediately and look for a stock or a future that has a buying tail.
+[42:59] Oh boy, I mean, I did this.
+[43:01] When I first started to learn about this, I would go out and I would look for something, a buying tail.
+[43:07] I've got aggressive buying in there.
+[43:10] And if I didn't have a buying tail, then I found myself unwilling to buy
+[43:15] because I didn't have the sign of the aggressiveness of that.
+[43:18] This is one data point.
+[43:20] It is one piece of information.
+[43:22] It is not in context.
+[43:24] Let me, we're very early in this process, but let me complicate this.
+[43:31] What does it mean if there is no buying tail?
+[43:35] Okay?
+[43:37] It may mean several things.
+[43:39] And this is when we talk about it takes time to understand this information
+[43:45] and to be able to use it effectively.
+[43:48] Sometimes if a market is too short, we've heard, we've all heard the phase,
+[43:54] the phase that a market is too short to go any lower or too long to go any higher.
+[44:02] Sometimes there's so many people that are short the market, that have sold the market short,
+[44:07] that every time the market goes down, they're buying to cover their short.
+[44:11] So the market may be weak, but it may have to rally before it can break
+[44:16] because you have to get some of that inventory.
+[44:19] When markets are too short, it's nothing different.
+[44:22] If you think about a business, it's nothing different than saying that a merchant has too much inventory.
+[44:29] In this case, the traders have too much short inventory.
+[44:32] And that inventory has to be balanced.
+[44:35] The same thing on the upper end.
+[44:16] The same thing on the upper end.
+[44:35] The same thing on the upper end.
+[44:33] The same thing on the upper end.
+[44:35] The same thing on the upper end.
+[44:36] The same thing on the upper end.
+[44:37] Sometimes we say a market has to break before it can rally.
+[44:41] Sometimes it's because there's too much long inventory up there.
+[44:45] Too many people nervous and they're looking for places to sell.
+[44:49] Or at the bottom, looking for places to cover their short.
+[44:53] That's inventory. Every trader's got an inventory.
+[44:56] You can come in in the morning with zero position, you have zero inventory.
+[45:00] You short a contract, you short one.
+[45:02] You buy one, you long one. That's your inventory.
+[45:04] You start taking that in total around the world.
+[45:08] And all of a sudden, you can get huge inventory imbalances.
+[45:12] So, one of the things you'll learn later on, and comes with cumulative experience,
+[45:17] is you find out there's also information in when there is no buying tail.
+[45:23] Anyhow, we're not here to talk about that now.
+[45:25] All I'm trying to warn you against right now is that it is not as simple as it looks.
+[45:32] I think about the time when I was in the service,
+[45:36] and the first class we had on hand-to-hand combat and martial arts and things like that.
+[45:44] And I remember the Sergeant Montgomery saying,
+[45:46] Gentlemen, let me warn you, you know, if you go out in the bars tonight, you don't know enough to really put this to use.
+[45:54] Of course, we were fast learners, right?
+[45:56] So we go out the first night.
+[45:58] We're down in one of the Navy SEAL areas.
+[46:02] Down in the southern part of the country.
+[46:05] And we got wise marking in a bar.
+[46:08] And guess what?
+[46:10] We learned very quickly we did not have enough information at that point in time to compete with some of the Navy SEALs.
+[46:17] I did come out alive, but it was not the pleasant experience.
+[46:21] I had some unpleasant experiences here early on.
+[46:25] Okay? Let's move on.
+[46:27] Okay, we talked earlier about a buying tail.
+[46:31] Now we come up and we talk about a selling tail.
+[46:33] It's just the, it's just the mirror image.
+[46:37] Again, it's information.
+[46:39] The longer the tail, the more aggressive the sellers were at that point in time.
+[46:45] That is a very valuable type of information.
+[46:49] And as you can see, as the day develops, you continue to get dimension to the profile.
+[46:57] Okay? Let's continue to look at the anatomy.
+[46:40] Um,
+[46:47] Um,
+[46:53] Um,
+[46:55] Um,
+[46:57] Um,
+[46:59] Um,
+[47:00] Um,
+[47:01] 
+[47:01] 
+[47:01] 
+[47:01] 
+[47:01] 
+[47:01] 
+[47:01] 
+[47:01] 
+[47:01] 
+[47:01] 
+[47:01] 
+[47:01] 
+[47:01] 
+[47:01] 
+[47:01] 
+[47:01] 
+[47:01] 
+[47:01] 
+[47:01] 
+[47:01] 
+[47:01] 
+[47:01] 
+[47:01] 
+[47:01] down here, picture before we had the C period.
+[47:07] Down here, we circled this so you were right here.
+[47:11] When you don't have the buying or selling tails,
+[47:15] what we're saying is the puzzle at this point is not yet completed.
+[47:22] Very key piece of information.
+[47:23] For example, you will see some days where you'll get right there, and you have ABC.
+[47:28] The market will rally from that level, and a lot of times,
+[47:35] this may turn out to be a previous day's high or low,
+[47:38] a very mechanical point that traders can very easily see.
+[47:42] So you'll see the market rally from here.
+[47:45] What it does, it changes the odds of the market going higher.
+[47:51] It may bounce from there.
+[47:52] You may get some short covering from there.
+[47:54] You may get some traders mechanically buying
+[47:57] at a previous morning low.
+[47:58] Or daily low.
+[48:00] But the fact that the auction is not complete here lowers the odds
+[48:06] of your success to the upside.
+[48:08] Very often, what you'll see is not completed.
+[48:10] You'll see it bounce.
+[48:11] Then you'll see it come back a second time
+[48:13] and actually complete that auction process.
+[48:18] Again, it's going to get more complicated.
+[48:20] But it's just a piece of information.
+[48:23] But it helps, as we go through this, it helps compute the odds
+[48:27] of being long.
+[48:28] 
+[48:28] It's a big deal.
+[48:28] It's a big deal.
+[48:29] It's a big deal.
+[48:30] Trading is about understanding the odds.
+[48:36] Most people have no idea when they're trading what the odds
+[48:41] they're dealing with are.
+[48:43] All they want to do is they're so emotionally involved,
+[48:46] they just want to buy something lower, sell it higher.
+[48:48] They have no idea that the risk they're taking.
+[48:50] The other day when the market dropped, you know,
+[48:53] 1,000 points at one time, we were talking
+[48:56] about poor structure going up.
+[48:58] Most of the people had no idea the risk that they had
+[49:02] by being long the market.
+[49:04] When you look underneath the market,
+[49:06] there was weakness in the structure.
+[49:08] Would I have predicted that?
+[49:10] No, I wouldn't have predicted that
+[49:11] because it was far beyond three, four, five.
+[49:14] It was probably an uncalculable event.
+[49:18] It was probably a 50 standard deviation move
+[49:22] when you had a break like that, which may be equivalent to the odds
+[49:26] of that happening in our lifetime.
+[49:27] Probably, you know, minuscule.
+[49:29] But the odds of having something bad happen were much greater
+[49:35] because of the fact of the underlying structure.
+[49:38] And we'll continue to come back to that.
+[49:40] Okay, let's look at more pieces that go into the puzzle.
+[49:45] I talked earlier about the point of control.
+[49:49] And this will be a very important concept for you
+[49:53] to deal with as we go through this.
+[49:56] Technically speaking,
+[49:57] when you look at the market profile,
+[50:01] the point of control is the longest line reading from left
+[50:06] to right of the daily profile.
+[50:09] It's the longest line means it traded there
+[50:13] in the greatest number of half-hour periods.
+[50:15] Incidentally, we use 30-minute periods
+[50:18] to construct the market profile.
+[50:21] That's on when you go across the horizontal line in the bottom.
+[50:25] The first period would be 30 minutes.
+[50:28] So if a market opened at 9.30,
+[50:29] the first period would be 9.30 to 10.
+[50:32] Second period would be 10 to 10.30.
+[50:34] It doesn't make any difference.
+[50:37] You can use 5 minutes, 15 minutes, an hour.
+[50:41] You can do it with a day.
+[50:42] You can have each period being a day.
+[50:45] It doesn't make any difference.
+[50:47] One of the important points that I want to make here,
+[50:51] when you go through this, the concepts that we are talking about,
+[50:56] the organization of the data,
+[50:57] data, the way the market works. If it doesn't work for all timeframes, and we haven't really
+[51:03] introduced the timeframes yet, but you can quickly understand that there's people with
+[51:07] very short timeframes and people with very long timeframes, day traders, people that
+[51:12] are going to buy for months. The concepts are exactly the same, whether it's five minute
+[51:19] timeframe, 30 minute timeframe, daily timeframe. All markets that are financial in nature should
+[51:27] operate in exactly the same manner. We'll talk about that more as we go. The first we had was
+[51:34] the point of control. It's the longest line, closest to the center of the range. That's the
+[51:40] technical definition. But what I want you to really appreciate more than anything else,
+[51:46] it is the fairest price at which business is being conducted. If I'm looking at a graphic,
+[51:54] a profile graphic for a particular
+[51:57] day, the longest line closest to the center of the range is the fairest price at which
+[52:03] business is being conducted for that particular day. That is extremely valuable information.
+[52:12] As you see, price move away from the fairest price to the downside or move away from it
+[52:19] on the upside. Let's add some context. If the fairest price is moved right here and
+[52:26] now you see the price move to the downside, that's the fairest price. If the price moves
+[52:27] to the downside, that's the fairest price. If the price moves to the downside, that's the
+[52:27] 
+[52:33] What would it take to change the fairest price? This is formed by time, right? So if I spent five
+[52:41] periods here in the middle and then four at the next price, it would take time in order to raise
+[52:48] or lower the fairest price to conduct business. But if I start to move away from the fairest price,
+[52:55] okay, or another way to do it is to move away from the fairest price to the downside.
+[52:57] to say I have price moving above value or above the fairest price and let's say it's on low volume.
+[53:04] If I move away from the fairest price to do business on low volume, what do you think the
+[53:09] odds are that that price change is going to be maintained? If I moved away on lower volume,
+[53:18] not very good, right? No different than a merchant or a manufacturer raising the price of a product
+[53:25] that they're offering and having the volume dry up. The chances are you're going to get regression
+[53:31] back to the mean. The same thing if price goes lower and the volume dries up or diminishes,
+[53:38] the chances are you're going to get pulled back. Now let's talk about a different scenario.
+[53:44] My fairest price to do business here and then price moves higher. As it moves higher, that's
+[53:49] going on increased volume. What do you think the chances are now? You see how the odds change?
+[53:55] It may get pulled back to this, but the odds have lessened. If I'm moving higher away from the
+[54:00] fairest price on solid volume, the odds are less that I'm going to regress back to this level.
+[54:07] Again, this is all part of the context and we'll continue to work on this.
+[54:14] The point of control or the fairest price to do business will migrate up or down
+[54:22] throughout the day. As you look at the profile,
+[54:25] you can see another way to describe the market profile. It is a time sensitive, real time,
+[54:33] time sensitive evolving database. It's alive. It's dynamic. It changes throughout the day.
+[54:42] We said each one of those letters is the TPO. As the TPO's change, it's dynamic, it grows
+[54:48] with you, it grows with the market. There's absolutely nothing static about it. The market,
+[54:55] the migration of the point of control up or down throughout the day. In other words,
+[55:01] if the fairest price to conduct business migrates up and down throughout the day, that is also
+[55:08] generating very valuable information. If in fact you start to see the point of control
+[55:15] migrating lower throughout the day, what is causing it to migrate lower? Is it because
+[55:22] of buyers or is it because of sellers?
+[55:24] When you're on the floor of exchange, this means buy, this means sell. If you have a
+[55:31] point of control migrating lower throughout the day, that means that you have somebody
+[55:39] selling into the market. In other words, what they're probably doing is on every rally,
+[55:45] you probably have some bigger money saying, you bought some, they let the market settle,
+[55:50] it comes up again, you bought some more. Be very subtle. But all of a sudden, you're going
+[55:53] to have a point of control that's going to be a little bit more dynamic. You're going
+[55:54] to have a point of control that is going to disappear into positions that are disappear
+[55:58] 
+[55:58] 
+[55:58] 
+[55:58] 
+[55:58] 
+[55:58] 
+[55:58] 
+[55:58] 
+[55:58] 
+[55:58] 
+[55:58] 
+[55:58] 
+[55:58] 
+[55:58] 
+[55:58] 
+[55:58] 
+[55:58] 
+[55:58] 
+[55:58] 
+[55:58] 
+[55:58] 
+[55:58] 
+[55:58] 
+[55:58] 
+[55:58] 
+[55:58] 
+[55:58] migrating lower. Then all of a sudden what you'll see sometimes
+[56:03] is you'll just see the market give way
+[56:06] and you'll see a big spike to the downside because all of a sudden
+[56:10] it started out very subtle, right? You know if you're really
+[56:14] if you're really a smart seller and you've got any size
+[56:18] you want to disguise your intentions
+[56:21] as much as you can, right? You really want to disguise it. You don't want the world to know
+[56:25] what you're doing.
+[56:26] If you're Fidelity or Magellan or somebody, Invesco or somebody like that
+[56:30] you don't want to advertise what you're doing. Matter of fact it's not uncommon
+[56:34] for these people to spread their orders out or do everything they can to disguise them.
+[56:38] So all of a sudden you see this point of control or fairest price to do business
+[56:43] migrating lower
+[56:44] all of a sudden the world wakes up and they say, uh oh, we've been had.
+[56:48] And then you'll start to see a very fast
+[56:52] break in the market. That's kind of a realization. One of my favorite
+[56:56] stories
+[56:57] I talked about years ago when I was on the board of trade.
+[57:01] There used to be a guy down there. He was a hedger
+[57:04] for one of the Minneapolis grain companies.
+[57:08] And that was so many years ago. That was a $500 suit.
+[57:13] It was a big deal. But he was very nicely dressed. His coat was always buttoned.
+[57:17] And he'd be standing there. He'd be standing like this talking to somebody.
+[57:21] And all of a sudden the market would move. One of the grain markets
+[57:24] would move up or down.
+[57:26] And he'd very politely excuse himself. He'd walk into the crowd and he'd either be
+[57:31] selling or buying.
+[57:33] Well the crowd knew, the folks on the floor knew he represented size.
+[57:38] And all of a sudden the market would go crazy for a while.
+[57:42] Then he'd walk back over, put his hands back behind his back, and he'd go back and engage
+[57:48] in the conversation he'd been in before.
+[57:51] Those people, that happened to be a very visual example.
+[57:54] But those people existed.
+[57:55] They were the people who were the leaders. They were the people who were the leaders.
+[57:56] They were all positions of positions of positions of positions of positions of positions of positions of positions of positions of positions of positions of positions of positions of positions of positions of positions of positions of positions of positions of positions of positions of positions of positions of positions of positions of positions of positions of positions of positions of positions of positions of positions of positions of positions of positions of positions of positions of positions of positions of positions of positions of positions of positions of positions of positions of positions of positions of positions of positions of positions of positions of positions of positions of positions of positions of positions of positions of positions of positions of positions of positions of positions of positions of positions of positions of positions of positions of positions of positions of positions of positions of positions of positions of positions of positions of positions of positions of positions of positions of positions of positions of positions of positions of positions of positions of positions of positions of positions of positions of positions of positions of positions of positions of positions of positions of positions of positions of positions of positions of positions of positions of positions of positions of positions of positions of positions of positions of positions of positions of
+[58:26] evolving database. Okay, so let's move on with some of our terminology.
+[58:33] What are we looking at next? Point of control is migrating lower and we're
+[58:41] looking to see as price moves lower, it's advertising for what? It's advertising
+[58:49] for buyers right? In any business, in any business the important thing to have
+[59:00] happen is to find a place where what can take place? Two-sided trade? I know this
+[59:07] gentleman works for Ford. In us there's two-sided trade that takes place. Ford's
+[59:13] not going to sell anything right? So that's what business and price discovery,
+[59:17] you're looking for those for those levels.
+[59:19] But you want those levels to be fair. Now let's take a look at what's going on
+[59:25] here. We saw the price, we saw the fairest price to do business initially migrate a
+[59:33] little lower. Now when the market breaks late in the day, the fairest price in
+[59:40] this example did not migrate lower. The fairest price did not migrate lower. So
+[59:48] you're coming down here,
+[59:49] and the fact that it didn't migrate lower is also a very valuable piece of
+[59:55] information. We talk about situations where people get caught short in a
+[60:04] marketplace. When the point of control doesn't migrate lower but price goes
+[60:12] lower and it may be because there's some rumor, somebody said something on CNBC
+[60:18] and
+[60:19] everybody's going to sell or it hits some technical level that brings in all
+[60:23] kind of sellers and you're looking, if you're looking just at price and most
+[60:27] people cannot trade successfully because they are too trapped by price. They can't
+[60:34] put the price in context. But you look here in this example, price goes lower,
+[60:39] it's trying to find, it's trying to find a place for two-sided trade to take
+[60:44] place. It's advertising, it's advertising down here for buyers.
+[60:49] But the fairest price to do business is up here. When this kind of situation happens,
+[60:57] how many people have heard the term short in the hole? When you talk about somebody,
+[61:03] a market people being short in the hole, all that means is you're being short, you're
+[61:09] getting short at bad prices. That's common parlance that you hear for years around the
+[61:15] trading community. When you get people caught short in the hole, it means they got, oh,
+[61:19] they got emotionally trapped. They got short at very bad, at very bad prices. And at that
+[61:25] point in time, watch out. You have a potential disaster on your hand.
+[61:30] So this clue up here, the point of control is not going lower. Let's take a look at where
+[61:36] we go next with this. And the people that know me know that I prefer to talk about things
+[61:44] that have actually happened.
+[61:46] And that I've written about before.
+[61:47] 
+[61:47] 
+[61:47] 
+[61:47] 
+[61:47] 
+[61:47] 
+[61:47] 
+[61:47] 
+[61:47] 
+[61:47] 
+[61:47] 
+[61:47] 
+[61:47] 
+[61:47] 
+[61:47] 
+[61:47] 
+[61:47] 
+[61:47] 
+[61:47] 
+[61:47] 
+[61:47] 
+[61:47] 
+[61:47] 
+[61:47] And that I've written about or put out notices ahead of time because I don't like
+[61:54] To ever be thought of as cherry-picking trying to find examples and say it make it fit in this particular day
+[62:02] The point of control this is real you see this going down
+[62:06] It's not uncommon to have this line be almost a 45 degree line
+[62:10] Don't make it exact exact like that, but in the last four periods price is trading lower
+[62:16] But the point of control is not migrating lower traders are getting short in the hole look at the PO the point of control
+[62:24] The date was April 21st
+[62:27] 2010
+[62:29] Okay, let's take a look. What happened? This is an email sent at 2 51 I advise
+[62:36] Two hedge funds I advise three trading companies in Chicago and two hedge funds
+[62:43] This is the email sent you can see the time of the day
+[62:46] Look at the POC not migrating large sellers are getting caught short in the hall
+[62:51] 45 degree line and then I say here no outside event
+[62:56] And we could we could be setting up for a route meaning no outside event no exogenous event no
+[63:03] Unexpected announcement. Okay, so this is actual there's the date that's going to be reproduced. Let's back up for one second
+[63:11] Look at the profile. So you see the profile you see this thing setting up now
+[63:16] Imagine yourself as a trader getting caught here because what is price doing?
+[63:21] Okay, price is just going lower and lower and lower a lot of traders
+[63:26] What happens a lot of traders that got on short early in the morning and let's say this thing's going down
+[63:32] They love it right and Keith what what tendency might you do at this point you start pressing it, right?
+[63:38] You got and I know because I've seen you trade you got you start off here and you're pressing it
+[63:43] You're pressing it you're pressing it and it's feeling pretty good
+[63:46] Because price is going your way you're patting yourself on the back and sometimes not
+[63:51] Recognizing the trap that is building. Okay, there's the caper. There's the low
+[63:57] We make the whole point of control didn't go look what happens late in the day
+[64:01] We rally all the way back to the to the point of control the value area
+[64:07] Again, we introduced it briefly earlier. It's where approximately
+[64:13] 70% of the daily trade takes place
+[64:17] Okay
+[64:18] And there's nothing there's nothing magical about it
+[64:23] It's it's just a way to think about the market and to think about
+[64:29] price versus value
+[64:32] One of the things you'll hear from us consistently is we trade value not price
+[64:37] The day we're seeing followers completed the profile graphic reveals the value area. This is calculated for you
+[64:46] Terry are you here Terry is back there Terry Lieberman owns a company called window trader
+[64:52] We get these we use window trader and it calculates the value area for you
+[64:59] As you become more efficient, you will start to visualize what the market profile will look like
+[65:06] prior to the end of the day now when we're talking about
+[65:11] really becoming a successful trader
+[65:15] One of the things we say is visualize don't predict
+[65:20] So for example, you've had just a little introduction
+[65:24] Let's say that we have a market that opens and it's got a pretty aggressive
+[65:29] Buying tail right off the opening in the morning and the market starts to auction higher
+[65:35] Okay, you start to visualize this is a pretty strong day and you start to see that this markets moving higher you start to
+[65:44] Visualize what the profile is going to look like now. You're not at that level yet
+[65:48] But this is ultimately where you want to get to the faster you can visualize
+[65:55] What the completed profile is going to look like when the day is over?
+[66:01] The better you're going to be able to position the trades the better you're going to be able to control your risk
+[66:07] In this whole situation. So this is the goal. This is just kind of a normal profile
+[66:13] We don't get many
+[66:14] Of these we don't get many of these but we're just using it to keep bringing the idea back. Okay
+[66:21] Incomplete auctions are
+[66:24] Revealed through the profile shape
+[66:28] Here we have the low made early the D auction opens and begins to complete
+[66:35] The completes the profile look over here that would be your initial balance and just a little more as
+[66:42] you get more comfortable
+[66:45] with
+[66:46] The profile and you get more comfortable with the range of a particular stock or future you're trading
+[66:51] all of a sudden you may look at a very narrow range like this and you say wait a minute
+[66:57] It's highly unlikely that the range is going to be that tight
+[67:01] for the remainder of the day
+[67:03] So if you see this and you look at this example you have a buying table
+[67:08] There is a couple positions you can use to sort of sort of sort of sort of
+[67:11] 
+[67:11] example, you have a buying tail, you don't have any completion up here. Now, it's not always
+[67:17] completed. It doesn't always fit perfectly. But you look at this, you see that the buyers were
+[67:21] more aggressive than were the what? Than were the sellers, right? So now you say, wait a minute,
+[67:27] let's take a look at what's going on here. Unlikely, we're going to hold that balance.
+[67:33] So the first thing you ought to be thinking about is opportunity. You know, I was thinking about,
+[67:38] wait a minute, is there an opportunity setting up? Years ago, when I used to advise a lot of the
+[67:43] folks on the Board of Trade, I used to say, when you saw a quiet market like this,
+[67:49] here's what the Board of Trade guys used to do. When you had a quiet market like this in the
+[67:52] first period, they'd go out and have coffee, right? They'd go out and have coffee. There's
+[67:56] nothing going on. Same thing happens to me. I'm in front of the machine, nothing going on.
+[68:01] I go down to make some cereal or something. No, no. When you've got this,
+[68:08] there ought to be guys, do not go out for coffee. The hair on the back of your neck ought to be
+[68:12] standing straight up because there ought to be a significant opportunity beginning to develop here.
+[68:20] It's unlikely you're going to hold that range for the day. So we have a buying tail on the bottom.
+[68:26] We don't have anything earlier. Early, one slide you saw, when you don't have a selling tail,
+[68:30] you have an auction that's not completed. Not as simple as that. But then, now you look and you
+[68:36] say, wait a minute, what happened?
+[68:38] We introduced a term earlier called range extension. Now, what happens, the market's
+[68:45] creeping up in here. You had some evidence of buying early, not completed. All of a sudden,
+[68:50] in the D period, the market comes to life. We come out of this narrow range. We come out of
+[68:57] this narrow range and, as we would say, the market goes bid. All of a sudden, the market has come in,
+[69:04] the bidders are there, price is going, price is going higher.
+[69:08] And you can see D period E-F-G-H-I. Let me introduce this term right here for a second.
+[69:16] We have a term that we call one timeframe. One timeframe is nothing more
+[69:23] than when one period, and let's say it's one timeframe you go up. One period does not take
+[69:30] out the low of the prior period. Does either stay within the range or take out
+[69:35] the high.
+[69:35] So,
+[69:36] the market, the auction starts here, pretty aggressive, and remember, I can split these
+[69:41] profiles out at any point. You've seen completed profiles, but I also can split them out. So when
+[69:46] something changes here, it gets aggressive, there we go. The D period, did E period take out the low
+[69:52] of D period? No. Did F period take out the low of E period? No. Did G period take out the low of F
+[70:00] period? Did H? No. I? No. Okay, and J did not, you came up and balanced in J. So for 30, 60, 90, 120,
+[70:13] 150, you can go on up, that once the market got started here, the market one time framed up for
+[70:20] all the way through the J period and close to the end of the day.
+[70:26] I was shocked, as this has always been a very natural,
+[70:30] thinking about it, I was shocked, I was shocked, I was shocked, I was shocked, I was shocked,
+[70:30] I was shocked, the first time, I had a room of probably 50 to 60 professional traders,
+[70:37] and I asked the question, how many people understand what one time framing is? And I got
+[70:44] one response. I was shocked, because it is just such a helpful thing to know what is going on,
+[70:52] because what happens, if you understand this, you don't fade, and fade means going against the
+[70:59] market. So in this direction, the market, the auction is going which way? It's going higher,
+[71:05] right? The biggest single mistake that traders make is fading a trend day or fading a market
+[71:14] that's one time framing higher or lower. Now, you fall into the trap, because it was quiet to begin
+[71:22] with, right? You fall into the trap, the market's going higher, and you think, oh boy, you know,
+[71:27] I could have sold this thing at $10,000. I could have sold this thing at $10,000. I could have sold
+[71:29] this thing at $10,000 this morning. I didn't, but boy, at $18,000, it looks like a real sell here at $18,000.
+[71:35] Intuitively, you just say, oh boy, listen, I got to sell it here. We're programmed to think that
+[71:39] that's less risk, and it actually, if it's one time framing up, you're taking a tremendous amount
+[71:45] of risk. Intuitively, you don't think that. You think, well, I've got less risk selling something
+[71:48] at $8,000 than I do at $6,000. Not necessarily true if the market's one time framing up.
+[71:54] When you see something like this, one of the things you're trying to learn to do
+[71:59] is just go with it. We make more errors by out-thinking ourself, by fighting against
+[72:06] what the market's actually doing, and it doesn't make any, we've got a room of people here
+[72:12] today that run from extremely experienced to very inexperienced, but I will promise
+[72:19] you, because I know an awful lot of very experienced traders, we make the same mistake. We get
+[72:25] it in our head that something's not worth something, and we sit down there, and we do
+[72:28] something like this. We make the same mistake. We make the same mistake. We make the same
+[72:29] mistake. We make the same mistake. We make the same mistake. We make the same mistake.
+[72:30] The day is over, and we look at why we weren't successful, and we say, how in the world
+[72:35] could I have done that? Because we got something else in our mind. We weren't objectively looking
+[72:42] at the market-generated information. Do not short a market that's one time framing up.
+[72:47] Anyhow, we get off in tangents, but that's all right. We started, we take the completed
+[72:52] day, we started down here, we had a buying tail, we had an uncompleted profile, a very
+[72:58] narrow base.
+[72:59] They came into the market, and all of a sudden, the auction started to go higher. Now, there's
+[73:04] a lot more information in here. There's a lot more information, but I just want you
+[73:10] to kind of get a feel of what's going on, and introducing the phrase of one time frame.
+[73:17] Let's kind of continue on with our example. Again, you've heard this before. In the old
+[73:25] days, when I used to have a...
+[73:29] A discount futures firm, JF Dalton Associates. In those days, most of the early business
+[73:38] and there were a lot of floor traders on the market. The really good floor traders developed
+[73:44] a skill, and that skill was listening to the market. Okay? If you went up to yesterday's
+[73:51] high, you went up to yesterday's high, and we all know that floor traders might play
+[73:57] games. What are you going to have to use to gain positions? What are you going to use
+[73:58] 
+[73:58] 
+[73:58] 
+[73:58] 
+[73:58] What are you going to have at yesterday's high?
+[74:01] You're going to have stops.
+[74:04] Okay?
+[74:04] A great game for the floor trader at that point in time was to bid the market up to get the stops.
+[74:13] Once you get the stops, you force people to buy.
+[74:16] If you're a floor trader, how do you profit from hitting the stops?
+[74:21] By selling into it, right?
+[74:22] You bid it up.
+[74:23] You force the stops to cover.
+[74:26] You're now sold.
+[74:28] All right?
+[74:29] Now, if that's as simple as it was, what would happen?
+[74:34] The floor traders would bid the market up.
+[74:36] They would hear the level of the orders are coming into the pit or what we call the outside flow of orders or the lack of outside flow of orders.
+[74:45] So the market comes in.
+[74:46] You take out yesterday's high.
+[74:49] This, I said, means buy on the floor.
+[74:51] So you go up.
+[74:52] You take out yesterday's high.
+[74:54] You hit the stops.
+[74:55] And all of a sudden, it gets deathly quiet.
+[74:58] It gets deathly quiet.
+[74:59] What does that tell you?
+[75:00] There is no more flow of orders from the outside.
+[75:05] So the good floor trader intuitively went from buy, hands out means sell.
+[75:11] He heard the market.
+[75:12] He heard there was no outside flow of orders.
+[75:16] Okay?
+[75:17] Gave him a tremendous advantage.
+[75:19] Now, you take out yesterday's high, and the level of volume increases tremendously.
+[75:25] So higher prices instead of cutting off.
+[75:27] The level goes up.
+[75:30] The bids are coming in.
+[75:31] So that's bringing in more orders.
+[75:34] It gets very noisy.
+[75:36] Keeps bidding.
+[75:37] But they heard that go on.
+[75:39] Okay?
+[75:40] Now, the floor, so much of the business on the floors has gone away.
+[75:46] That advantage to the floor trader is gone.
+[75:49] My single biggest client base has been among floor traders that were transitioning.
+[75:57] From the floor to the floor.
+[75:57] From the floor to the floor.
+[75:57] From the floor to the floor.
+[75:57] From the floor to the floor.
+[75:57] From the floor to the floor.
+[75:57] From the floor to the floor.
+[75:57] From the floor to the floor.
+[75:57] From the floor to learning to trade upstairs off of electronic screens.
+[76:03] It's a totally new business to them.
+[76:06] They lost the ability to hear what was going on on the floor of the market.
+[76:13] When that happens, and when you're learning to trade from an electronic screen upstairs,
+[76:19] what you start to do is you start to replace hearing with understanding structure
+[76:26] and how.
+[76:27] And how.
+[76:27] And how.
+[76:28] Structure builds in there.
+[76:31] The structure, the structure is your weight.
+[76:34] In other words, what you used to hear, you now develop an ability to see.
+[76:41] Some of the more experienced floor traders, they could tell you, for example, right down here in the low,
+[76:47] if this is the opening price, they could tell you if this was the low, they could look at it,
+[76:51] they can't hear it anymore, but they can still hear it in their mind, the bids were pretty aggressive.
+[76:57] So, now...
+[76:57] So, now...
+[76:57] Now I just want to look at some ideas of structure.
+[77:02] We're not going to cover this in any detail just yet.
+[77:05] But when I see a structure that goes thin on the bottom and it starts to look like the letter P on top, okay?
+[77:16] If you don't know anything about what we're talking about, it doesn't mean anything to you.
+[77:21] But from experience, I know that when I have a P shape in the structure, that is an indication that I have short covering, okay?
+[77:31] Another way we refer to short covering is old business.
+[77:37] In other words, the people that have already been short, how do you cover a short?
+[77:42] If you've been short, you have to buy in order to cover that short.
+[77:47] That is old business.
+[77:48] You're closing out something you already have.
+[77:51] Versus new business.
+[77:53] If you came in to buy something for the first time, that would be new business.
+[78:00] The visualized structure, if you had a market started out like this at the bottom with a relatively thin structure,
+[78:09] and you had a combination of short covering, and almost all rallies begin with short covering,
+[78:16] and they have that short covering joined by new buying.
+[78:20] So you had old business.
+[78:21] Combined with new business, then more than likely what's going to happen to your structure, it's going to elongate out.
+[78:30] Because you've got two different kinds of business coming in.
+[78:34] When your structure doesn't elongate and you start to get the formation that looks like the letter P, you had old business.
+[78:43] The old business was coming in.
+[78:45] People were covering shorts.
+[78:47] But it wasn't joined by new business.
+[78:51] When you look over on the right side, let's go all the way from the left to the right,
+[78:57] let's take the mirror image of short covering, would be long liquidation.
+[79:03] So let's say you have traders that have gotten too long.
+[79:07] For example, momentum traders that have gotten too long.
+[79:10] And all of a sudden, the liquidation starts, but it's liquidation not joined by new fresh shorts in the market.
+[79:17] It's just liquidating a long position.
+[79:19] You tend to get the mirror image of the P formation, which is the letter B.
+[79:26] Okay?
+[79:26] Now, again, there's not enough information for you to take and use yet with that.
+[79:34] Other than to have, increase your understanding of what is going on in the marketplace.
+[79:41] For example, here's a tough one that most people have a lot of difficulty with.
+[79:47] Does short covering.
+[79:49] After the short covering is completed, does it strengthen or weaken a market?
+[79:59] How many people think it strengthens the market?
+[80:02] Okay, and how many people thinks it weakens the market?
+[80:05] And how many people don't know?
+[80:07] Okay, short covering, when the short covering is over, it actually weakens the underlying structure of the market.
+[80:15] Because if somebody's short, what do they have to do to cover their short?
+[80:19] They have to.
+[80:20] They have to buy, right?
+[80:21] And once you take that buying, that buying inventory out of the market,
+[80:26] you've actually weakened the underlying structure of the market.
+[80:30] It's only one data point.
+[80:32] But it's something to remember.
+[80:34] When you have long liquidation, okay, when you get the long liquidation, again, it's kind of the mirror image.
+[80:42] Again, we are just touching on concepts.
+[80:45] There's far more to it than this.
+[80:47] I'm just kind of walking you along.
+[80:49] I'm just kind of walking you along to get some idea of the importance of understanding the structure of a market.
+[80:56] And that there is structure to a market.
+[80:59] Just as there's structure, if you go to Sotheby's for an auction, there is structure to the way that auction is handled.
+[81:05] They have rules.
+[81:06] They have regulations.
+[81:07] They have a procedure for that auction.
+[81:11] Any auction you go to will have some kind of structure to it.
+[81:15] Now, the day in the middle, the structure in the middle.
+[81:19] The two books you should read, I've written two books.
+[81:23] The first one was called Mind Over Markets.
+[81:27] And that's Mind Over Markets, the first book, is more linear.
+[81:33] Traders seem to enjoy that market, that book more because it feels more linear.
+[81:41] It feels more understandable.
+[81:42] The definitions aren't as ambiguous in it.
+[81:45] The second book is called Markets in Profile.
+[81:49] The best book is actually Markets in Profile.
+[81:53] It's more ambiguous.
+[81:55] It's harder to understand.
+[81:57] But guess what?
+[81:59] The harder it is to understand, the fewer people that are going to stick with it.
+[82:05] The greater the edge that you're going to get with it.
+[82:08] You need to read both books.
+[82:10] But the first book is more mechanical.
+[82:13] We've changed the terms.
+[82:16] When I wrote the first book, Mind Over Markets,
+[82:19] I basically used the terms that were introduced to me by Pete Stottlemyre,
+[82:24] who introduced this concept to begin with.
+[82:27] As I got more experience, I'm not as comfortable with the terms.
+[82:33] So I've renamed the terms.
+[82:36] The first term to start with is what I call a primary date.
+[82:41] In other words, when I call it a primary date,
+[82:44] it's a day that we have a tendency to see more often.
+[82:49] It's a more common type of day.
+[82:52] In this day, you'll see the high was made in B period.
+[82:55] You see the point of control in the center.
+[82:57] You see a little bit of range extension to the downside.
+[83:02] It's kind of the day I use to measure other days against now.
+[83:09] While we're at it, it's a nuance.
+[83:11] One of the things that you'll hear from us multiple times is the importance of nuances.
+[83:17] Nuances make a difference.
+[83:19] They make a huge amount of difference.
+[83:21] Unsuccessful traders have a tendency to skip over nuances.
+[83:26] You ever have somebody that's not telling you the truth?
+[83:30] They tell you a story.
+[83:33] They look in your eyes, and they just intuitively know that you didn't quite buy their story.
+[83:40] What do they do next?
+[83:43] They kind of repeat themselves, right?
+[83:46] They kind of repeat themselves.
+[83:47] They kind of tell you the story.
+[83:49] They repeat the story again.
+[83:52] They put just a little bit of different twist on it.
+[83:59] There's information in that.
+[84:02] You start to read that kind of information.
+[84:06] Is it real?
+[84:07] Are they telling me the truth?
+[84:08] Aren't they telling me the truth?
+[84:11] When you look at the market, you need some way to judge.
+[84:15] Is what you're seeing in price?
+[84:18] truth behind what is going on in the market. So many times the information is in a nuance,
+[84:27] just as the person that didn't tell you the truth tends to talk a little bit more and tends to
+[84:32] repeat the story, the nuances they're probably not telling the truth. Nuances do matter. Nuances
+[84:40] separate out the winners and losers. I always like the example, I had a very good, very good friend
+[84:45] when I was in the service that really desperately wanted to be a professional football player. He
+[84:52] played for Xavier and he said, he said, Jim, he said, I think what kept me back, he said,
+[84:58] I was probably just a fraction of a second too slow to get through the hole. He was very well
+[85:05] built, very athletic, but he said just a fraction and sometimes it's just a fraction that makes the
+[85:11] difference between winning and losing. So nuances are important.
+[85:15] Being able to look at a particular day like this and have some base against which to judge other
+[85:22] nuances is very important. Side while we're on here, very minor, but if you go back and I don't
+[85:32] ask anybody here to take what I say for granted. I want you to take and go take it back, study it,
+[85:42] and make the evaluation on your own.
+[85:45] I'm going to guess, and I've not done this mathematically and systematically, I'm going to guess that probably
+[85:53] about someplace in the order of 75 to 80 percent of the time, the high or low of a day is made within the first
+[86:02] hour or so. In this particular day, we have A period, B period, the high was made, the high was made early in
+[86:12] the morning.
+[86:13] We didn't set this up.
+[86:15] I just looked at it right here.
+[86:17] The low was made early in the morning.
+[86:21] Up there, the high was made.
+[86:23] Not a completed high, but it was made early in the morning.
+[86:25] But it's just something, it's a nuance to go back, look at, and think about.
+[86:30] There's very valuable information in some of that.
+[86:33] Now, price will mess you up throughout the day.
+[86:35] You'll forget about that.
+[86:37] But if you keep that in mind, it can be very helpful.
+[86:39] Okay?
+[86:40] Just an idea of some of the structure.
+[86:43] Um.
+[86:44] Okay.
+[86:45] So, we look here.
+[86:47] Um.
+[86:48] One of the things that we talked about earlier, here's April 9th.
+[86:55] We see the market break.
+[86:58] This was a Friday.
+[86:59] This was a Friday.
+[87:01] This market was absolutely dead quiet until very late in the day.
+[87:09] And I hope somebody will tell me that's a Friday, I hope I remember correctly.
+[87:12] And late in the day, the market broke.
+[87:15] To the upside.
+[87:16] The following Monday, the market remained within, within that upper section.
+[87:28] When markets make big price moves up or down, it usually takes some time to process before
+[87:35] it reverses itself.
+[87:36] Here's what's important.
+[87:39] This structure.
+[87:40] Remember earlier, we talked about to get away and remain.
+[87:42] This structure.
+[87:43] Remember earlier, we talked about to get away and remain.
+[87:44] This structure.
+[87:45] Remember earlier, we talked about to get away and remain.
+[87:46] Remember earlier, we talked about to get away and remain.
+[87:47] Remember earlier, we talked about to get away and remain.
+[87:48] Remember earlier, we talked about to get away and disappear into positions.
+[87:49] Remember earlier, we talked about to get away and disappear into positions.
+[87:50] Remember earlier, we talked about to get away and disappear into positions.
+[87:51] Remember earlier, we talked about to get away and disappear into positions.
+[87:52] Remember earlier, we talked about to get away and disappear into positions.
+[87:53] Remember earlier, we talked about to get away and disappear into positions.
+[87:54] Remember earlier, we talked about to get away and disappear into positions.
+[87:55] Remember earlier, we talked about to get away and disappear into positions.
+[87:56] Remember earlier, we talked about to get away and disappear into positions.
+[87:57] Remember earlier, we talked about to get away and disappear into positions.
+[87:58] Remember earlier, we talked about to get away and disappear into positions.
+[87:59] are that you're not going to be able to hold that. The same thing, we're a gentleman from Ford. Ford
+[88:05] raises the price of the new Ford Focus. They raise it too high. Guess what? They're not going to be
+[88:12] able to hold that level. You'll get some financing break or some cash back, but sometimes they're not
+[88:18] going to do it immediately, right? If a manufacturer raises a price that's too high, you know, he
+[88:25] doesn't get the information the next day. Sometimes it may take a few days or some time to sink in.
+[88:32] The difference is everything happens exactly the same way. In the markets, it seems to happen far
+[88:40] quicker sometimes than it does in a manufacturing organization. But this day, the market was not
+[88:47] elongating out. It probably caught some shorts, some game playing late in the day. The market went up
+[88:52] on low volume. We held that volume.
+[88:55] We held that volume on Monday and take a look what happened on Tuesday. So we came back down and
+[89:06] remember the early slide I was showing you. I use a term called repair. Early on I was saying here is
+[89:13] one of the things we're going to get to by the time we get through the seminar. When you have poor
+[89:20] structure and this is poor structure. There is no elongation.
+[89:24] 
+[89:24] 
+[89:24] 
+[89:24] 
+[89:24] 
+[89:24] 
+[89:24] 
+[89:24] 
+[89:24] 
+[89:24] 
+[89:24] 
+[89:24] 
+[89:24] 
+[89:24] 
+[89:24] 
+[89:24] 
+[89:24] 
+[89:24] 
+[89:24] good volume, you balanced on the following day, and you came back down and
+[89:30] you repaired this structure. So this whole thing was corrected a couple of
+[89:35] days later. Now here's what happens to traders very often. They don't have the
+[89:41] patience to recognize that this is an opportunity that is setting up, but that
+[89:51] opportunity may take some time to develop. But let's talk about odds for a
+[89:57] second. If this, if you're lucky, let's say you're lucky and you caught this spike
+[90:03] late in the day, you got the spike to the upside and you caught it, and when you go
+[90:09] home on Friday and you're long in your profit, how do you feel? You feel pretty
+[90:14] good. You know you you're walking around, you're kind of bouncing around at the
+[90:18] top of the world, this is pretty neat, I'm a pretty good trader, you kind of
+[90:21] pat me on the back.
+[90:21] Oblivious to how much risk that you really have. One of the things that we
+[90:30] talk about with traders, and when I first say this statement, I can look in the
+[90:39] eyes of the people I'm talking to and I can tell if they have any idea what I'm
+[90:43] saying or not. I can also have a pretty good idea their chances of success down
+[90:48] the road.
+[90:51] Most people are trading and their objective is just to make money. Can you
+[90:57] manage return? You can't manage return. The markets, whatever the market does, you
+[91:04] can't affect that. It's going to do what it's going to do. You cannot manage
+[91:07] return. However, you can manage your risk. You can manage the risk you take. If you
+[91:15] learn to manage your risk, which you can manage, but you cannot manage your return,
+[91:20] all you can do is just make money. You can't manage your risk. You can't manage your
+[91:21] return. All of a sudden, you have made a huge breakthrough. I said earlier, I advise
+[91:27] two hedge funds. One hedge fund, been profitable for 10 years. They got hurt in
+[91:34] the break a few years ago. First time we had lunch, they wanted to talk about, you
+[91:39] know, kind of getting the business rebuilt. We talked about it and I made
+[91:42] this same thing about you can manage, you can manage risk, but you can't manage
+[91:49] return.
+[91:50] I could just see kind of the blank look at the lunch, what was going on. One of the
+[91:56] principles of this firm was a basketball player for Utah. Very knowledgeable, very
+[92:05] intelligent trader, but it really didn't sink in at first. We talked about this
+[92:12] about a year later. I get a copy, I get a copy of a letter that he sent to his
+[92:19] partner.
+[92:20] His partner identified me and brought me in. He said, the best thing you ever did to us
+[92:24] was introducing Jim into the equation.
+[92:27] He said because it didn't make a lot of sense to me at lunch when he first said
+[92:32] it, but it's made all the difference how we manage the money into our return. It
+[92:37] finally got what he was saying is that we can manage risk and where we got hurt
+[92:42] the first time, we weren't managing risk. We were after return. He said now we know
+[92:47] how to manage risk and he said the return was very important.
+[92:50] Now we know how to manage risk and we know how to manage risk.
+[92:54] Now we know how to manage risk and we know how to manage risk.
+[92:56] Now we know how to manage risk and we know how to manage risk.
+[93:01] Now we know how to manage risk and we know how to manage risk.
+[93:04] Now we know how to manage risk and we know how to manage risk.
+[93:07] Now we know how to manage risk and we know how to manage risk.
+[93:10] Now we know how to manage risk and we know how to manage risk.
+[93:14] Now we know how to manage risk and we know how to manage risk.
+[93:17] Now we know how to manage risk and we know how to manage risk.
+[93:18] 
+[93:18] 
+[93:18] 
+[93:18] 
+[93:18] market was down big, over a thousand point and it ended up down what about
+[93:22] three four hundred, the market I think was off someplace in the three percent
+[93:27] area and if I remember right their fund was off point four percent. That's a big
+[93:33] that's a big change. We talk about managing risk and that came about
+[93:38] because on when this exogenous event took place, exogenous just means
+[93:44] something that's outside of anybody's model for you know running their
+[93:48] portfolio or running their account. When this exogenous event took place in
+[93:52] today because they had managed risk their loss was minimal. You talk if
+[93:57] you're running an awful lot of money and you start to get you know a couple
+[94:01] percent difference in that's big money.

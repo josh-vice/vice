@@ -1,0 +1,9 @@
+{
+  "course": 3,
+  "chapterId": 6,
+  "title": "Understanding Contracts",
+  "module": "Getting Started with Derivatives",
+  "edits": [],
+  "alreadyGood": ["introChart", "lessonChart", "quiz.chart"],
+  "notes": "Re-derived from chapter 6 text. This chapter teaches SENTIMENT/COST metrics (Open Interest, Funding Rate, the Calculator) — not a price-action trade. The chapter text contains NO locatable price levels: no entry/stop/target, no support/resistance, no swing high/low, no zones. Everything it teaches is conceptual ('positive funding = longs pay shorts every 8H', 'rising OI with rising price confirms a trend'). All three charts are concept illustrations that correctly use markPoints to narrate the taught idea over time. introChart (band ~88-127) walks the funding-cost accumulation across 8H periods — matches intro bullets. lessonChart (band ~80-125) shows OI rising with price = bullish confirmation — matches lesson bullets verbatim. quiz.chart (band ~88-118, cutIndex:10) correctly puts the only level pre-cut (Entry markLine yAxis 90 = the START price, teal=long, valid) and routes the OUTCOME (15 funding payments accumulating) to revealMarkPoints at dataIndex 0/3/10 (all within the 15-bar range, post-answer, not spoiling the cut). The auditor's verdict (all three complete, zero gaps) is CORRECT. Adding entry/stop/target levels here would be inventing things the text never teaches and would violate the restraint rule for concept charts. No edits or fixes warranted. Coordinate check passed: Entry yAxis 90 inside band; reveal dataIndices 0/3/10 in range and authored like existing markPoints (no manual offset); colors correct (teal entry for long, pink for the cost paid out by longs)."
+}

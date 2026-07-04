@@ -1,0 +1,36 @@
+{
+  "course": 4,
+  "chapterId": 26,
+  "title": "C-Clamps and Kumo Pockets",
+  "module": "Ichimoku Masterclass",
+  "edits": [
+    {
+      "slot": "introChart",
+      "addMarkLines": [
+        { "yAxis": 84, "label": "Entry — Resolution Begins", "color": "#00d4d4" }
+      ],
+      "fixes": [
+        { "find": "{ yAxis: 80, label: \"Tenkan-sen (C-Clamp Diverged)\", color: \"#ff2e88\" }", "replaceWith": "{ yAxis: 80, label: \"Tenkan — Min Target (Diverged)\", color: \"#ff2e88\" }", "reason": "Intro teaches the two-tier target 'Target minimum: price returns to Tenkan; ideally price returns all the way to Kijun.' Kijun is already labelled but the Tenkan line only says 'Diverged' — it never teaches that the Tenkan IS the minimum target. Relabel keeps the same level (80, in band 78-112) and pink color, adding the min-target role." }
+      ],
+      "reason": "C-Clamp counter-trend entry is timed to the resolution low (consolidation leg .to:84, ~84 in band 78-112); the entry markPoint exists at idx10 but the entry has no drawn level. Teal markLine @84 gives the long entry a price level. Tenkan relabel teaches the taught minimum-target role."
+    },
+    {
+      "slot": "lessonChart",
+      "addMarkLines": [
+        { "yAxis": 102.5, "label": "Stop — Above Swing High", "color": "#ff2e88" },
+        { "yAxis": 100, "label": "Short Entry — Pocket Asks", "color": "#ff2e88" },
+        { "yAxis": 76, "label": "Target — Next S/R Below", "color": "#00d4d4" }
+      ],
+      "reason": "Lesson explicitly teaches the full short trade at the Kumo pocket but only the pocket zone is drawn. Stop: 'beyond the previous swing high (for shorts)' -> markLine @102.5 just above the rally/swing top (leg .to:101, pocket top 103; in band 74-103), pink = stop against a short. Entry: 'set asks at the back end' of the pocket -> markLine @100 inside the 97-103 pocket near the back end, pink = short entry, pairs with the 'First Test' markPoint (idx8). Target: 'next S/R level below (shorts)' -> markLine @76 at the leg .to:76 low where 'Short Target Achieved' markPoint (idx15) sits, teal = TP target."
+    },
+    {
+      "slot": "quiz.chart",
+      "addMarkLines": [
+        { "yAxis": 89, "label": "Tenkan — Min Target", "color": "#ffcc00" }
+      ],
+      "reason": "Correct answer (a) and the rule teach 'target is at minimum the Tenkan, ideally the Kijun.' Pre-cut the chart draws only the Kijun (Target) @95; the taught minimum target (Tenkan) is never drawn. CORRECTED (applier review): the verifier copied the intro's Tenkan @80 pink, but this quiz is a DIFFERENT structure (legs 110->79->83->110, cutIndex 10, cut price ~83). A *minimum target* for the counter-trend LONG must sit ABOVE entry (~83) and BELOW the Kijun target (95) — 80 is below entry, so it cannot be a target, and pink is the stop/bearish colour. Moved to yAxis 89 (between entry ~83 and Kijun 95, where the Tenkan converges) and recoloured gold #ffcc00 to match the co-located 'Kijun-sen (Target)' gold line. Pure target/context — does NOT reveal the entry-timing decision the quiz tests, so safe pre-cut; revealMarkPoints handle the outcome."
+    }
+  ],
+  "alreadyGood": [],
+  "notes": "All auditor proposals accepted. introChart: Tenkan relabel + entry line @84 (both in band 78-112). lessonChart: all three trade levels accepted (stop @102.5, short entry @100, target @76) — all in band 74-103 and text-justified. quiz.chart: auditor marked it complete, but it MISSED the Tenkan minimum-target level that answer (a)/the rule explicitly teach — added a Tenkan min-target markLine @80 pre-cut (safe: it is target context, not the entry-timing decision, so no spoiler; revealMarkPoints already handle the outcome). All dataIndex references left untouched and authored as the existing markPoints (no manual offset added)."
+}

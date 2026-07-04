@@ -1,0 +1,17 @@
+{
+  "course": 2,
+  "chapterId": 5,
+  "title": "Price Action Examples",
+  "module": "Price Action Concepts",
+  "edits": [
+    {
+      "slot": "lessonChart",
+      "addMarkPoints": [
+        { "dataIndex": 8, "label": "Short Entry Trigger", "position": "bottom", "color": "#ff2e88" }
+      ],
+      "reason": "The lesson bullet teaches an actionable trade: 'Evening Star at resistance: up candle -> doji at resistance zone -> bearish candle closes past midpoint of first -- classic short entry trigger.' The chart already names the pattern bars (ES Candle 1 @6, Doji @7, Evening Star ✓ @8 from the top) but never marks WHERE the short is triggered. Bar 8 is the confirming bearish candle (leg 107->97, bars=1, index 8) whose close fires the short. A bottom callout on bar 8 turns the pattern into the named actionable event without colliding with the top 'Evening Star ✓' pin (engine de-conflicts top/bottom). Pink = short side, matching the chapter's bearish/resistance convention. Index is in range (16 bars, 0-15) and authored exactly like the sibling top markPoints (no manual offset). This is the lessonChart = the worked trade, where Entry most needs to be drawn; no specific stop/target price is taught in the text so none is invented."
+    }
+  ],
+  "alreadyGood": ["introChart", "quiz.chart"],
+  "notes": "introChart is a concept illustration (bullish engulfing at support, volume-confirmed): Support Zone 80-86 + Pre-Engulf/Bullish Engulfing ✓/Confirmation pins already cover every locatable thing the intro text teaches; no entry/stop/target prices are named, so it is complete. quiz.chart uses cutIndex:9 as a decision point; pre-cut it shows only the taught Support Zone (no spoiler), and revealMarkPoints (7 Down, 8 Doji, 9 Morning Star! ✓, 10 Confirmed Bounce) correctly route the outcome to post-answer -- verified indices against legs (down@7, doji@8, strong-up@9, bounce@10); leave as-is. The single accepted gap is the lessonChart short entry. Verdict on auditor: lessonChart gap ACCEPTED as specified (text-justified, in-band, correct bar/color, slot-fit). Auditor's two 'alreadyComplete' calls (intro, quiz) confirmed correct. No additional gaps found -- no stop/target levels are taught with concrete prices anywhere in this chapter, so proposing them would be inventions."
+}

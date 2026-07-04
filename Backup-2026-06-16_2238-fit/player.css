@@ -1,0 +1,226 @@
+/* ════════════════════════════════════════════════════════════════════════════
+   player.css — styling for the v2 lesson renderer (LAYER 3 chrome only).
+   Self-contained: every value is local, so the player can be dropped into the
+   isolated preview without pulling in the live site's stylesheet. Tokens mirror
+   the site aesthetic (#08070f bg, #00d4d4 teal, JetBrains Mono).
+   ════════════════════════════════════════════════════════════════════════════ */
+.ltp2 {
+  --bg:      #08070f;
+  --bg2:     #0d0b18;
+  --panel:   #14121f;
+  --line:    #272240;
+  --teal:    #00d4d4;
+  --bear:    #f2f2f2;
+  --ink:     #e8e8f0;
+  --muted:   #8d8aa3;
+  --red:     #cc2222;
+  /* accent follows the module/course colour when the host sets --mod-accent, else teal */
+  --accent:  var(--mod-accent, var(--teal));
+  /* strong easing (matches the site; self-contained for the standalone hubs) */
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  /* display font for headings/titles — IBM Plex Mono, falls back to the body mono */
+  --font-display: 'IBM Plex Mono', 'JetBrains Mono', ui-monospace, monospace;
+  /* caption (subtitle) size — Medium default; .cap-sm / .cap-lg override; mobile forces smallest */
+  --cap-fs: 13px; --cap-pad: 12px 18px; --cap-mh: 54px;
+  --font: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
+
+  position: relative;
+  width: 100%;
+  max-width: 960px;
+  margin: 0 auto;
+  font-family: var(--font);
+  color: var(--ink);
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 20px 60px rgba(0,0,0,.45);
+}
+
+/* ── stage (chart canvas + overlays live here) ── */
+.ltp2-stage {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background:
+    radial-gradient(120% 120% at 50% 0%, rgba(0,212,212,.05), transparent 60%),
+    var(--bg);
+}
+.ltp2-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+
+/* on-chart heading (chart / candle beats) */
+.ltp2-heading {
+  position: absolute; top: 18px; left: 0; right: 0;
+  text-align: center;
+  font-family: var(--font-display);
+  font-size: clamp(15px, 2.4vw, 24px);
+  font-weight: 700;
+  letter-spacing: .01em;
+  color: var(--ink);
+  pointer-events: none;
+  opacity: 0; transition: opacity .35s ease;
+}
+.ltp2-heading.on { opacity: 1; }
+
+/* ── concept panel (CONCEPT beats) ── */
+.ltp2-panel {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column; justify-content: center;
+  padding: clamp(20px, 6%, 64px);
+  background:
+    radial-gradient(130% 100% at 0% 0%, rgba(0,212,212,.06), transparent 55%),
+    var(--bg);
+  opacity: 0; pointer-events: none;
+  transition: opacity .3s ease;
+}
+.ltp2-panel.on { opacity: 1; }
+.ltp2-kicker {
+  font-size: clamp(10px, 1.4vw, 13px);
+  text-transform: uppercase;
+  letter-spacing: .22em;
+  color: var(--accent);
+  margin-bottom: 12px;
+}
+.ltp2-title {
+  font-family: var(--font-display);
+  font-size: clamp(22px, 4.4vw, 40px);
+  font-weight: 700;
+  line-height: 1.12;
+  margin-bottom: 20px;
+}
+/* short accent rule under the title for hierarchy */
+.ltp2-title::after {
+  content: ''; display: block;
+  width: 44px; height: 3px; margin-top: 12px;
+  background: var(--accent); border-radius: 2px;
+}
+/* concept "idea" glyph above the kicker (only on CONCEPT beats) */
+.ltp2-pmark { display: none; color: var(--accent); margin-bottom: 12px; }
+.ltp2-pmark svg { width: 30px; height: 30px; display: block; }
+.ltp2.is-concept .ltp2-pmark { display: block; }
+.ltp2-lines { list-style: none; margin: 0; padding: 0; display: grid; gap: clamp(10px, 1.8vw, 18px); }
+.ltp2-lines li {
+  position: relative;
+  padding-left: 26px;
+  font-size: clamp(13px, 2.1vw, 19px);
+  line-height: 1.4;
+  color: var(--ink);
+  opacity: 0; transform: translateY(8px);
+  transition: opacity .4s ease, transform .4s ease;
+}
+.ltp2-lines li.on { opacity: 1; transform: none; }
+.ltp2-lines li::before {
+  content: '›'; position: absolute; left: 4px; top: -1px;
+  color: var(--accent); font-weight: 700;
+}
+.ltp2-lines li em { color: var(--accent); font-style: normal; font-weight: 600; }
+.ltp2-lines li strong { color: #fff; }
+
+/* ── caption (narration `say` — the silent stand-in + future TTS sync point) ── */
+.ltp2-caption {
+  display: flex; align-items: flex-start; gap: 12px;
+  padding: var(--cap-pad);
+  min-height: var(--cap-mh);
+  background: var(--bg2);
+  border-top: 1px solid var(--line);
+  font-size: var(--cap-fs); line-height: 1.5; color: var(--ink);
+}
+/* caption size presets (set on the player root by the renderer from the setting) */
+.ltp2.cap-sm { --cap-fs: 11.5px; --cap-pad: 10px 16px; --cap-mh: 46px; }
+.ltp2.cap-md { --cap-fs: 13px;   --cap-pad: 12px 18px; --cap-mh: 54px; }
+.ltp2.cap-lg { --cap-fs: 15px;   --cap-pad: 15px 18px; --cap-mh: 66px; }
+.ltp2-caption .tag {
+  flex: none; margin-top: 1px;
+  font-size: 10px; letter-spacing: .12em; text-transform: uppercase;
+  color: var(--bg); background: var(--teal);
+  padding: 3px 7px; border-radius: 4px; font-weight: 700;
+}
+.ltp2-caption .tag.concept { background: #6f6cff; color: #fff; }
+.ltp2-caption .tag.candle  { background: #ffb454; color: #1a1208; }
+.ltp2-caption .say { flex: 1; }
+
+/* ── controls ── */
+.ltp2-controls {
+  display: flex; align-items: center; gap: 14px;
+  padding: 12px 18px;
+  background: var(--panel);
+  border-top: 1px solid var(--line);
+}
+.ltp2-btn {
+  font-family: var(--font); font-size: 13px;
+  color: var(--ink); background: var(--bg4, #1d1a30);
+  border: 1px solid var(--line); border-radius: 8px;
+  padding: 8px 14px; cursor: pointer;
+  transition: border-color .15s, color .15s, transform .12s var(--ease-out, ease);
+}
+.ltp2-btn:hover { border-color: var(--teal); color: var(--teal); }
+.ltp2-btn:not(:disabled):active { transform: scale(0.97); }   /* press feedback */
+.ltp2-btn:disabled { opacity: .4; cursor: default; }
+.ltp2-btn.play { min-width: 86px; }
+.ltp2-counter { font-size: 12px; color: var(--muted); margin-left: 4px; }
+.ltp2-counter b { color: var(--ink); }
+.ltp2-dots { display: flex; gap: 6px; margin-left: auto; flex-wrap: wrap; }
+.ltp2-dot {
+  width: 9px; height: 9px; border-radius: 50%;
+  background: var(--line); border: none; padding: 0; cursor: pointer;
+  transition: background .15s, transform .15s var(--ease-out, ease);
+}
+/* hover-grow only on real hover pointers (avoids sticky state on touch taps) */
+@media (hover: hover) and (pointer: fine) { .ltp2-dot:hover { transform: scale(1.25); } }
+.ltp2-dot:active { transform: scale(0.85); }
+.ltp2-dot.chart   { box-shadow: inset 0 0 0 1px rgba(0,212,212,.5); }
+.ltp2-dot.candle  { box-shadow: inset 0 0 0 1px rgba(255,180,84,.6); }
+.ltp2-dot.on { background: var(--teal); }
+
+@media (prefers-reduced-motion: reduce) {
+  .ltp2-heading, .ltp2-panel, .ltp2-lines li, .ltp2-progress-fill { transition: none; }
+}
+
+/* ── CONCEPT beats: let the stage hug its content instead of a fixed 16:9 box
+   (kills the dead vertical space on text-only beats); add a themed left rail. ── */
+.ltp2.is-concept .ltp2-stage { aspect-ratio: auto; min-height: 0; }
+.ltp2.is-concept .ltp2-panel {
+  position: relative;            /* in flow → the stage sizes to the content */
+  opacity: 1;
+  padding: clamp(22px, 5%, 48px) clamp(20px, 6%, 60px);
+}
+
+/* ── thin per-beat progress bar ── */
+.ltp2-progress { height: 3px; background: var(--line); position: relative; overflow: hidden; }
+.ltp2-progress-fill {
+  height: 100%; width: 0;
+  background: var(--accent); border-radius: 0 2px 2px 0;
+  transition: width .35s var(--ease-out, ease);
+}
+
+/* ── Play/Pause button: icon + label, lit when playing ── */
+.ltp2-btn.play { display: inline-flex; align-items: center; gap: 7px; justify-content: center; }
+.ltp2-btn.play svg { width: 12px; height: 12px; flex: none; }
+.ltp2-btn.playing { border-color: var(--accent); color: var(--accent); }
+
+/* ── end-of-lesson completion cue (final beat) ── */
+.ltp2-done {
+  display: none; align-items: center; gap: 14px;
+  padding: 12px 18px; background: var(--bg2); border-top: 1px solid var(--line);
+}
+.ltp2-done.on { display: flex; }
+.ltp2-done-txt { font-size: 13px; font-weight: 600; color: var(--ink); }
+.ltp2-done-check { color: var(--accent); font-weight: 700; }
+.ltp2-done-btn { margin-left: auto; border-color: var(--accent); color: var(--accent); }
+.ltp2-done-btn:hover { background: var(--accent); color: var(--bg); border-color: var(--accent); }
+
+/* ── keyboard focus visibility ── */
+.ltp2-btn:focus-visible, .ltp2-dot:focus-visible {
+  outline: 2px solid var(--accent); outline-offset: 2px;
+}
+
+/* ── mobile: give charts more height, drop the cramped dot grid (the bar + counter
+   carry position), and stop a long narration from dwarfing the chart. ── */
+@media (max-width: 560px) {
+  .ltp2.is-chart .ltp2-stage, .ltp2.is-candle .ltp2-stage { aspect-ratio: 4 / 3; }
+  .ltp2-dots { display: none; }
+  /* mobile auto-shrinks captions to the smallest size for easier visibility, regardless of the setting */
+  .ltp2-caption { font-size: 11.5px; padding: 10px 14px; min-height: 44px; max-height: 40vh; overflow-y: auto; }
+  .ltp2-done { flex-wrap: wrap; }
+  .ltp2-done-btn { margin-left: 0; width: 100%; }
+}

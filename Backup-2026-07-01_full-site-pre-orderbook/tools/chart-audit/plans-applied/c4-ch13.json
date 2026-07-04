@@ -1,0 +1,24 @@
+{
+  "course": 4,
+  "chapterId": 13,
+  "title": "PAL Tool — Price Action Levels",
+  "module": "Indicator Suite",
+  "edits": [
+    {
+      "slot": "introChart",
+      "addMarkLines": [
+        { "yAxis": 99, "label": "Dynamic Resistance (Big Red Circle)", "color": "#ff2e88" }
+      ],
+      "reason": "Intro teaches PAL's DUAL purpose: it 'draws dynamic S/R levels from those formations' and is 'drawing the levels those formations create.' The def only draws the DBS support (77); no dynamic level is shown. The Big Red Circle (idx11, buyer exhaustion) sits at the ~99 peak and is exactly the formation that creates a dynamic resistance. yAxis 99 is at the band-top edge (band 77-99); pink = resistance per palette."
+    },
+    {
+      "slot": "lessonChart",
+      "addMarkLines": [
+        { "yAxis": 119, "label": "Target", "color": "#ffcc00" }
+      ],
+      "reason": "This is the worked trade. markPoints include a 'Target Achieved' EVENT pin (idx15) but the target PRICE is never drawn as a level. yAxis 119 = leg3 .to, inside band [77,119]; gold = take-profit target per palette. Entry is intentionally NOT given its own line — the long entry at idx8 fires right at the DBS Zone (77) which is already drawn, so a second line would be redundant."
+    }
+  ],
+  "alreadyGood": ["quiz.chart"],
+  "notes": "Both auditor gaps approved as-is (coordinates verified: introChart idx11=99 within band 77-99; lessonChart idx15=119 within band 77-119). No manual offsets needed. quiz.chart is correctly complete: pre-cut (cutIndex:9) shows only the DBS support level as decision context without spoiling, and the Red AP / Long Entry / Target outcome is properly routed to revealMarkPoints. revealMarkPoints supports only points (not markLines), so no target LEVEL line can be added there — the existing reveal pin is the right form. Nothing the auditor missed."
+}

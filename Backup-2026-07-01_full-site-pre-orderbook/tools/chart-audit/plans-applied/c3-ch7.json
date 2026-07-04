@@ -1,0 +1,24 @@
+{
+  "course": 3,
+  "chapterId": 7,
+  "title": "Understanding Leverage",
+  "module": "Understanding Leverage",
+  "edits": [
+    {
+      "slot": "introChart",
+      "fixes": [
+        { "find": "{ yAxis: 80, label: \"Isolated Margin Limit\", color: \"#ffcc00\" }", "replaceWith": "{ yAxis: 83, label: \"Isolated Margin Limit\", color: \"#ffcc00\" }", "reason": "Computed band is [82.46, 108.89] (legs bottom at 84 minus wick). yAxis:80 renders ~2.5 below the chart floor so the gold liquidation/margin-limit pill detaches from price. Lift to 83 — clearly inside the band and just below the Stop Loss line at 84, which correctly shows the isolated liquidation level sitting below the stop the intro teaches ('only that amount liquidated if hit')." }
+      ],
+      "reason": "Intro bullet: 'Isolated Margin: only the predefined multiplier is used per position; only that amount liquidated if hit' and 'Liquidation = forced closure when margin falls below maintenance level'. The gold limit line is the level that gets hit, so it must be visible inside the band rather than clipped off-chart."
+    },
+    {
+      "slot": "quiz.chart",
+      "fixes": [
+        { "find": "{ yAxis: 70, label: \"Isolated Limit\", color: \"#ffcc00\" }", "replaceWith": "{ yAxis: 73, label: \"Isolated Limit\", color: \"#ffcc00\" }", "reason": "Computed band is [71.68, 94.56] (legs bottom at 72/73). yAxis:70 renders below the chart floor and clips. Raise to 73 — inside the band, near the leg bottom, and well below the Stop Loss at 83. This is the decision-context level (the isolated liquidation floor) shown pre-cut; it does not reveal the cross-vs-isolated outcome, so it does not spoil the cutIndex:8 scenario." }
+      ],
+      "reason": "Quiz answer text: 'Isolated Margin — only the predefined margin amount is at risk per position; a liquidation in one does not affect capital allocated to other trades'. The isolated liquidation level must be drawn visibly so the gold line the reveal annotations point to ('Isolated: Loss Capped') has an on-chart anchor."
+    }
+  ],
+  "alreadyGood": ["lessonChart"],
+  "notes": "Re-derived all three bands by running ltCandles: intro [82.46,108.89], lesson [51.75,90.8], quiz [71.68,94.56]. Confirmed the auditor's two coordinate-clip fixes are real — both gold lines (80 in intro, 70 in quiz) clip below the chart floor. I tightened the proposed targets: intro 80->83 (auditor said 82.5, which is jammed at the 82.46 floor; 83 sits cleanly below the Stop at 84) and quiz 70->73 (auditor said 72, essentially at the 71.68 floor; 73 sits clearly inside near the leg bottom and below the Stop at 83). REJECTED the auditor's low-confidence introChart relabel 'Isolated Margin Limit' -> 'Isolated Liq Level': the existing label is text-justified by the heavy 'Isolated Margin' usage in the intro, the relabel invents terminology, and per restraint a reposition is the only genuine fix. lessonChart is complete: Entry 90 / 'Stop Should Be Here' 85 (intentionally gold = a stop that was never placed) / Liquidation Price 70 (pink) all inside band, markPoints 0/3/10 in range. No new gaps added — every locatable thing taught (entry, stop, liquidation/isolated limit) is already drawn once the clipped lines are lifted into the band."
+}

@@ -1,0 +1,27 @@
+{
+  "course": 1,
+  "chapterId": 7,
+  "title": "Timeframes",
+  "module": "Time Frame Analysis",
+  "edits": [
+    {
+      "slot": "introChart",
+      "addMarkLines": [
+        { "yAxis": 128, "label": "Daily Resistance", "color": "#ff2e88" }
+      ],
+      "reason": "Lesson bullet: 'Mark swing points and S/R zones on the Daily chart first.' Only the swing points (7 SH/SL markPoints) are drawn; the S/R side of the pair is missing. The rising swing highs (116 -> 122 -> 128/129) top out at the 128-129 cluster, so a resistance line at 128 sits at the recent-high cluster, inside the ~104-131 band (final leg .to 129 with reject 1.5). Pink = resistance, matching the chapter's existing pink-resistance convention. Intro slot = illustrate the concept (the S/R level the swing highs respect), so a single level line is appropriate restraint."
+    },
+    {
+      "slot": "lessonChart",
+      "addMarkLines": [
+        { "yAxis": 126, "label": "Stop Loss — above 4H level", "color": "#ff2e88" }
+      ],
+      "addMarkPoints": [
+        { "dataIndex": 11, "label": "Short Entry", "position": "bottom", "color": "#ff2e88" }
+      ],
+      "reason": "Lesson bullet: 'Drop to 15min for entry and stop placement at those 4H/daily levels.' Entry and Stop are explicitly taught but neither is drawn — only the 4H Resistance line and the wick/rejection events are. Short Entry at index 11: the reject leg (124.5, reject 2.0) is bars 8-9 and the drop-to-119.5 leg is bars 10-13, so index 10 is already 'Rejection!' and index 11 is the next bar where the short triggers (within range 0-13, authored like existing markPoints, no offset). Bottom + pink = short side. Stop Loss markLine at 126 sits ~0.8% above the 125 resistance and below the ~127 reject-wick top, so it reads as 'stop just above the level' without clipping; pink because it is the stop against a short. REJECTED the auditor's Target line at 119.5: chapter 7's lesson text teaches only entry and stop ('price drops cleanly' is a code comment, not taught text, and no numeric target is named) — explicit targets are taught in ch.9 (LTF Entry), so adding one here would invent a level the text does not teach."
+    }
+  ],
+  "alreadyGood": ["quiz.chart"],
+  "notes": "Verified band/index math against ltCandles in lt-chartgen.js. introChart band ~104-131 (line 128 OK). lessonChart legs 3+5+2+4=14 bars; reject:2.0 on the 124.5 bar pushes the upper wick to ~127, so stop 126 fits above 125 and below the wick top; index 11 is the second drop bar (correct entry-trigger candle). quiz.chart is correctly complete: cutIndex:10 shows only the decision-context level pre-reveal and routes the wick/rejection outcome (indices 11,12) to revealMarkPoints, so it does not spoil the answer. One adjustment to the auditor: introChart proposal relabelled 'Daily Resistance Zone' -> 'Daily Resistance' since it is a markLine (level), not a markArea (zone). Net: 1 line + 1 point on lessonChart, 1 line on introChart; auditor's lessonChart Target rejected as not-taught-in-this-chapter."
+}

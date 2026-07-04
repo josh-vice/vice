@@ -1,0 +1,19 @@
+{
+  "course": "1",
+  "file": "12_Risk_Management.js",
+  "lessonId": "course1/12_risk_management",
+  "edits": [],
+  "noAnchorGaps": [
+    {
+      "beatId": "plays-out",
+      "concept": "The 'almost stopped out' moment — price dips toward the stop but never reaches it — is the key teaching event of this beat, but it has no anchor to mark.",
+      "quote": "Price dips toward the stop but never hits it",
+      "why": "move trade_setup_long exposes only entry(L), stop(L), target(L) — all LEVEL anchors and no POINT anchor for the dip-low on the price path, so no marker can be placed on the dip"
+    }
+  ],
+  "alreadyGood": [
+    "risk-reward",
+    "plays-out"
+  ],
+  "notes": "Beat risk-reward (plan) is complete: level@entry/stop/target plus risk zone (below entry, 1R) and reward zone (above entry, 2R) cover everything the say teaches, including the 'two-to-one ratio'. Beat plays-out (play) accumulates those plan annotations and adds marker@target 'target hit = +2R'; 'target' is a valid anchor and marker accepts any anchor type, and the say 'reaches the target — a clean two-R winner' justifies it. The only unteachable reference is the dip toward the stop, correctly recorded as a noAnchorGap (trade_setup_long has no point anchor for the price path). Verified the auditor's lone gap is genuinely a noAnchor case; no missed gaps and no fixes needed."
+}

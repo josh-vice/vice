@@ -1,0 +1,25 @@
+{
+  "course": 3,
+  "chapterId": 19,
+  "title": "The Reality Behind Trading Full-Time",
+  "module": "Unlocking Your Potential",
+  "edits": [
+    {
+      "slot": "lessonChart",
+      "addMarkLines": [
+        { "yAxis": 83, "label": "Stop / Invalidation — Below DBS", "color": "#ff2e88" },
+        { "yAxis": 116, "label": "Target — Where the Move Ran", "color": "#ffcc00" }
+      ],
+      "reason": "Lesson teaches the set-and-forget discipline by name: 'On set and forget: know your invalidation, your risk, your target — then walk away.' The chart shows the trade built around the DBS zone (84-89) but draws neither the invalidation nor the target it explicitly names. Stop line at 83 sits just under the DBS zone / band wick edge (legs bottom out at 87, wicks ~85), pink because it is a stop guarding a long. Target at 116 is the final leg .to (band top), gold per the TP-magnet palette convention. Both are within the ~85-118 visible band."
+    },
+    {
+      "slot": "quiz.chart",
+      "fixes": [
+        { "find": "Target Hit — But Missed", "replaceWith": "Target ~115 Hit — But Missed", "reason": "The quiz question and explanation hinge on the analyst 'correctly identify[ing] key levels and price targets with high accuracy'; the reveal pin names the target event but not the level. Naming ~115 (the final leg .to that the move ran to) makes the correctly-identified level explicit on the chart. Kept as a reveal markPoint label edit (NOT a pre-cut markLine) so the cutIndex:8 decision is not spoiled with the upside outcome." }
+      ],
+      "reason": "Slot-fit: this is a cutIndex decision chart, so the target level is named only in the post-answer reveal, not pre-cut. No pre-cut target line is added (would give away the move). Indices unchanged and in range (15 bars, idx12 valid)."
+    }
+  ],
+  "alreadyGood": ["introChart"],
+  "notes": "introChart is a pure concept chart of the four-phase evolution arc (Big Losses -> Small Losses -> Break Even -> Profitable -> Consistent Edge); it teaches no locatable levels/zones, so its 5 markPoints are complete. lessonChart: approved both auditor gaps — stop/invalidation (83, pink) and target (116, gold) are directly named by the 'know your invalidation, your risk, your target' line and are coordinate-sane within the ~85-118 band; the existing DBS Zone area is left intact. quiz.chart: accepted the auditor's reveal-label fix (low confidence but harmless and text-justified); correctly NOT adding a pre-cut target markLine. The chapter quiz itself is conceptual (hideChart context aside, quiz.chart exists separately) and the decision context (DBS Zone) is already drawn pre-cut, so no pre-cut additions are warranted. No inventions added beyond the text; no contradictions with existing annotations."
+}

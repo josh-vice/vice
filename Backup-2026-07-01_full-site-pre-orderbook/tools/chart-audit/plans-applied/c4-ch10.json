@@ -1,0 +1,24 @@
+{
+  "course": 4,
+  "chapterId": 10,
+  "title": "Futures Basis",
+  "module": "Determining Control",
+  "edits": [
+    {
+      "slot": "introChart",
+      "addMarkLines": [
+        { "yAxis": 110, "label": "Mean-Reversion Target — Equilibrium", "color": "#ffcc00" }
+      ],
+      "reason": "Intro bullets teach 'the more extreme the basis deviation from zero, the higher the probability of a mean reversion back toward equilibrium', and markPoint 17 already says 'Target Hit — Exhaustion Play' but no equilibrium/target LEVEL is drawn. Leg 3 of ltCandles is { to: 111 }, so the recovery destination is ~111; a gold magnet-target line at yAxis 110 sits just inside the visible band (~71-113) and turns the referenced mean-reversion target into a labelled level. Gold = E2E/take-profit target per palette. Kept restrained (one line) for a concept chart."
+    },
+    {
+      "slot": "lessonChart",
+      "addMarkLines": [
+        { "yAxis": 87, "label": "Contango Reversal Target", "color": "#00d4d4" }
+      ],
+      "reason": "lessonChart is the worked SETUP, so its TARGET must be drawn. markPoint dataIndex 17 is labelled 'Contango Reversal Target' but no price line marks where that target sits. Leg 3 is { to: 87 } — the destination of the post-contango selloff — and 87 is inside the visible band (~80-117). The text teaches '...basis drops = confirmed reversal' and the $500-$800 contango-exhaustion reversal, justifying a downside target. Teal target line per palette."
+    }
+  ],
+  "alreadyGood": ["quiz.chart"],
+  "notes": "Re-derived all three slots from chapter text. KEPT (from auditor): introChart mean-reversion target line at 110 (gold) and lessonChart 'Contango Reversal Target' line at 87 (teal) — both inside band, both tied to an existing markPoint/leg destination, both the literal 'target/equilibrium' the prose references. REJECTED auditor's lessonChart 'Short Entry — Basis Normalizing' markLine at yAxis 113: an existing pink markLine already sits at exactly 113 ('SSR — Extreme Contango Here'), so a second pink line at the same yAxis is redundant and its label pill would collide; the short-entry EVENT is already covered by markPoint dataIndex 11 'Basis Normalizing — Sell'. No stop-loss proposed for lessonChart — the text teaches the reversal trigger (lower highs at SSR + basis dropping) and the target but never names a stop level, so inventing one would violate the no-invention rule; the SSR line at 113 + area 111-117 adequately mark the entry/risk zone. quiz.chart confirmed alreadyComplete: cutIndex:10 hides the outcome, the pre-cut DBS line at 73 is legitimate decision context, and the outcome (entry as basis normalizes, mean-reversion target) is correctly routed to revealMarkPoints (indices 9/10/15) rather than spoiling the cut with a pre-reveal target line."
+}

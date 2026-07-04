@@ -1,0 +1,149 @@
+/* ════════════════════════════════════════════════════════════════════════════
+   player.css — styling for the v2 lesson renderer (LAYER 3 chrome only).
+   Self-contained: every value is local, so the player can be dropped into the
+   isolated preview without pulling in the live site's stylesheet. Tokens mirror
+   the site aesthetic (#08070f bg, #00d4d4 teal, JetBrains Mono).
+   ════════════════════════════════════════════════════════════════════════════ */
+.ltp2 {
+  --bg:      #08070f;
+  --bg2:     #0d0b18;
+  --panel:   #14121f;
+  --line:    #272240;
+  --teal:    #00d4d4;
+  --bear:    #f2f2f2;
+  --ink:     #e8e8f0;
+  --muted:   #8d8aa3;
+  --red:     #cc2222;
+  --font: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
+
+  position: relative;
+  width: 100%;
+  max-width: 960px;
+  margin: 0 auto;
+  font-family: var(--font);
+  color: var(--ink);
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 20px 60px rgba(0,0,0,.45);
+}
+
+/* ── stage (chart canvas + overlays live here) ── */
+.ltp2-stage {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background:
+    radial-gradient(120% 120% at 50% 0%, rgba(0,212,212,.05), transparent 60%),
+    var(--bg);
+}
+.ltp2-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+
+/* on-chart heading (chart / candle beats) */
+.ltp2-heading {
+  position: absolute; top: 18px; left: 0; right: 0;
+  text-align: center;
+  font-size: clamp(15px, 2.4vw, 24px);
+  font-weight: 700;
+  letter-spacing: .01em;
+  color: var(--ink);
+  pointer-events: none;
+  opacity: 0; transition: opacity .35s ease;
+}
+.ltp2-heading.on { opacity: 1; }
+
+/* ── concept panel (CONCEPT beats) ── */
+.ltp2-panel {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column; justify-content: center;
+  padding: clamp(20px, 6%, 64px);
+  background:
+    radial-gradient(130% 100% at 0% 0%, rgba(0,212,212,.06), transparent 55%),
+    var(--bg);
+  opacity: 0; pointer-events: none;
+  transition: opacity .3s ease;
+}
+.ltp2-panel.on { opacity: 1; }
+.ltp2-kicker {
+  font-size: clamp(10px, 1.4vw, 13px);
+  text-transform: uppercase;
+  letter-spacing: .22em;
+  color: var(--teal);
+  margin-bottom: 14px;
+}
+.ltp2-title {
+  font-size: clamp(22px, 4.4vw, 42px);
+  font-weight: 700;
+  line-height: 1.1;
+  margin-bottom: 22px;
+}
+.ltp2-lines { list-style: none; margin: 0; padding: 0; display: grid; gap: clamp(10px, 1.8vw, 18px); }
+.ltp2-lines li {
+  position: relative;
+  padding-left: 26px;
+  font-size: clamp(13px, 2.1vw, 19px);
+  line-height: 1.4;
+  color: var(--ink);
+  opacity: 0; transform: translateY(8px);
+  transition: opacity .4s ease, transform .4s ease;
+}
+.ltp2-lines li.on { opacity: 1; transform: none; }
+.ltp2-lines li::before {
+  content: '›'; position: absolute; left: 4px; top: -1px;
+  color: var(--teal); font-weight: 700;
+}
+.ltp2-lines li em { color: var(--teal); font-style: normal; font-weight: 600; }
+.ltp2-lines li strong { color: #fff; }
+
+/* ── caption (narration `say` — the silent stand-in + future TTS sync point) ── */
+.ltp2-caption {
+  display: flex; align-items: flex-start; gap: 12px;
+  padding: 14px 18px;
+  min-height: 64px;
+  background: var(--bg2);
+  border-top: 1px solid var(--line);
+  font-size: 14px; line-height: 1.45; color: var(--ink);
+}
+.ltp2-caption .tag {
+  flex: none; margin-top: 1px;
+  font-size: 10px; letter-spacing: .12em; text-transform: uppercase;
+  color: var(--bg); background: var(--teal);
+  padding: 3px 7px; border-radius: 4px; font-weight: 700;
+}
+.ltp2-caption .tag.concept { background: #6f6cff; color: #fff; }
+.ltp2-caption .tag.candle  { background: #ffb454; color: #1a1208; }
+.ltp2-caption .say { flex: 1; }
+
+/* ── controls ── */
+.ltp2-controls {
+  display: flex; align-items: center; gap: 14px;
+  padding: 12px 18px;
+  background: var(--panel);
+  border-top: 1px solid var(--line);
+}
+.ltp2-btn {
+  font-family: var(--font); font-size: 13px;
+  color: var(--ink); background: var(--bg4, #1d1a30);
+  border: 1px solid var(--line); border-radius: 8px;
+  padding: 8px 14px; cursor: pointer; transition: border-color .15s, color .15s;
+}
+.ltp2-btn:hover { border-color: var(--teal); color: var(--teal); }
+.ltp2-btn:disabled { opacity: .4; cursor: default; }
+.ltp2-btn.play { min-width: 86px; }
+.ltp2-counter { font-size: 12px; color: var(--muted); margin-left: 4px; }
+.ltp2-counter b { color: var(--ink); }
+.ltp2-dots { display: flex; gap: 6px; margin-left: auto; flex-wrap: wrap; }
+.ltp2-dot {
+  width: 9px; height: 9px; border-radius: 50%;
+  background: var(--line); border: none; padding: 0; cursor: pointer;
+  transition: background .15s, transform .15s;
+}
+.ltp2-dot:hover { transform: scale(1.25); }
+.ltp2-dot.chart   { box-shadow: inset 0 0 0 1px rgba(0,212,212,.5); }
+.ltp2-dot.candle  { box-shadow: inset 0 0 0 1px rgba(255,180,84,.6); }
+.ltp2-dot.on { background: var(--teal); }
+
+@media (prefers-reduced-motion: reduce) {
+  .ltp2-heading, .ltp2-panel, .ltp2-lines li { transition: none; }
+}

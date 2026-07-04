@@ -1,0 +1,9 @@
+{
+  "course": 1,
+  "chapterId": 10,
+  "title": "Risk Management",
+  "module": "Risk Management",
+  "edits": [],
+  "alreadyGood": ["introChart", "lessonChart", "quiz.chart"],
+  "notes": "All three charts already draw every locatable thing the chapter teaches. The text's only concrete, locatable teachings are Entry/Stop/Target levels and the Risk=distance(entry->stop), Reward=distance(entry->target), R=2:1 relationships. introChart draws Entry $100 (teal), Stop $94 (pink), TP $112 (teal) — a clean 3-level concept illustration matching its title 'Trade Setup — Entry, Stop Loss & Target'. lessonChart additionally shades the Risk Zone (-6, pink 94-100) and Reward Zone (+12, teal 100-112) so the taught 'distance' is fully visible; this is the correct slot for the worked 2:1 trade and it is complete. quiz.chart (cutIndex:10) draws Entry $100/Stop $95/Target $110 plus Risk (-$5) and Reward (+$10) zones as decision context, with the outcome correctly routed to revealMarkPoints (index 13 'Target Hit! +$10 (2R)', in-range over the 15-bar def and post-cut) — no pre-reveal spoiler. REJECTED both auditor gaps on introChart (markArea Risk band 94-100, markArea Reward band 100-112): (1) RESTRAINT/SLOT-FIT — they duplicate exactly what lessonChart already draws; the intro slot should illustrate the concept (3 levels) which it does, not re-render the worked trade. (2) TEXT-JUSTIFICATION — both 'distance' quotes ('Risk = distance from entry to stop loss', 'Reward = distance from entry to target') come from the lesson bullets, not the intro section (intro teaches capital preservation / risk% / position-sizing, none of which is a chartable level). Coordinates were valid (band ~84-118), but the additions are redundant and not text-justified for this slot. No fixes needed: colors, labels, dataIndex, and zone bounds all match the palette and the chapter's existing convention."
+}

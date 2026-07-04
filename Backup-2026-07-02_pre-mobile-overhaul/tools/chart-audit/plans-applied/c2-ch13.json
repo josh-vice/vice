@@ -1,0 +1,24 @@
+{
+  "course": 2,
+  "chapterId": 13,
+  "title": "Oscillators",
+  "module": "Trading Tools",
+  "edits": [
+    {
+      "slot": "introChart",
+      "addMarkLines": [
+        { "yAxis": 107, "label": "Resistance — the S/R that validates the OB reversal", "color": "#ff2e88" }
+      ],
+      "reason": "Lesson teaches that an overbought reading only matters at S/R: 'watch for reversal formation at nearby resistance.' The reversal markPoint sits at idx 6, which is the top of the leg to 107 (bars 0-6). The 107 swing high is the resistance that turns 'OB alone' into a valid reversal context, but it is currently only implied, never drawn. yAxis 107 sits at the band top [80..~110] right at the swing high, won't clip. Pink = resistance per palette and chapter convention."
+    },
+    {
+      "slot": "lessonChart",
+      "addMarkLines": [
+        { "yAxis": 92, "label": "Long Entry — on reversal confirmation", "color": "#00d4d4" }
+      ],
+      "reason": "This is the worked confluence LONG, but the entry price is never drawn as a level. Text: 'Oversold ... potential long entry zone' and 'oscillator reading + S/R zone + candlestick trigger + volume = valid entry setup'. The reversal-confirmation candle is idx 10 (leg to 92, after the hammer/rejection at idx 9), so the entry-on-confirmation level is ~92 — inside band [80..113]. Teal = long entry per palette. Existing support+oversold zone (77-83) already marks where to watch; this draws the entry that the lesson references. No explicit stop/target value is taught in the text, so none invented (restraint)."
+    }
+  ],
+  "alreadyGood": ["quiz.chart"],
+  "notes": "Both auditor gaps accepted. introChart resistance (107) confirmed high-confidence: yAxis lands exactly on the idx-6 reversal/swing high, inside band, pink correct. lessonChart entry (92) accepted at med confidence: 92 is the reversal-confirmation close at idx 10, inside band, teal correct; refined label only. quiz.chart correctly left untouched — it is a cutIndex:5 decision scenario whose entire teaching point is the ABSENCE of S/R resistance, so drawing any resistance line pre- or post-reveal would contradict the lesson; pre-cut OB context points + revealMarkPoints (no-S/R, trend-continues, OB-can-last) already cover it. No stop/target added to lessonChart because the chapter text teaches no explicit stop or target value (avoiding invented levels). No fixes needed — existing markPoints/areas align with the text and palette."
+}

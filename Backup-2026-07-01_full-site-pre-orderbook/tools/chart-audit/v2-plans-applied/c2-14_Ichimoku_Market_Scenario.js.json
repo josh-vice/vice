@@ -1,0 +1,16 @@
+{
+  "course": "2",
+  "file": "14_Ichimoku_Market_Scenario.js",
+  "lessonId": "course2/14_ichimoku_market_scenario",
+  "edits": [],
+  "noAnchorGaps": [
+    {
+      "beatId": "entry",
+      "concept": "Risk/stop defined just below the cloud — the entry's invalidation level",
+      "quote": "our signal to join the move with risk defined just below the cloud",
+      "why": "move ichimoku exposes only point anchors (pullback, aboveCloud) and no level (L) anchor; a labelled stop/risk line needs a level anchor that does not exist, and neither point anchor sits 'just below the cloud' — do not invent one"
+    }
+  ],
+  "alreadyGood": ["bias", "entry"],
+  "notes": "Confirmed by re-reading the file. Move is ichimoku (point anchors only: pullback, aboveCloud). Beat 'bias': say teaches 'above a green Kumo cloud, so our bias is long' — the cloud itself is drawn by the move, and the note at aboveCloud labels the bias; complete. Beat 'entry' accumulates 'bias' show: 'pull back to the Kijun line' is covered by note at pullback ('pullback to Kijun = entry'); 'riding the meat of the trend' is covered by note at aboveCloud ('ride the trend'). The Kijun/Tenkan lines themselves are rendered by the move, not via show. The only locatable thing the say teaches that is not drawn is the stop ('risk defined just below the cloud'), and ichimoku has no level anchor for it — recorded as a noAnchorGap, agreeing with the auditor. No anchor-invalid, redundant, or missed adds found; auditor proposal upheld in full."
+}

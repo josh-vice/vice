@@ -1,0 +1,35 @@
+{
+  "course": "2",
+  "file": "07_Price_Action_Examples.js",
+  "lessonId": "course2/07_price_action_examples",
+  "edits": [
+    {
+      "beatId": "morning",
+      "beatType": "CHART",
+      "move": "morning_star",
+      "addShow": [
+        { "kind": "level", "at": "midpoint", "label": "first candle's midpoint", "side": "left" }
+      ],
+      "reason": "Say teaches 'a strong up candle that closes back past the first candle's midpoint' — the midpoint is the literal level the confirming candle must reclaim, and it is the crux of the morning-star read. morning_star exposes 'midpoint' as a (L) level anchor (valid for kind:level), it is not drawn by the move's three candles nor already in the accumulated show (only star + confirm markers). side:left keeps the label clear of the rising third candle on the right."
+    }
+  ],
+  "noAnchorGaps": [
+    {
+      "beatId": "morning",
+      "concept": "The support level the morning star forms at",
+      "quote": "Spotted at a support level, this is a high-quality reversal trigger",
+      "why": "move morning_star exposes only star, confirm, midpoint — no support-level anchor exists to mark the referenced 'support level'."
+    },
+    {
+      "beatId": "soldiers",
+      "concept": "The prior base/consolidation the soldiers launch from",
+      "quote": "After a base like this, it's a loud continuation signal",
+      "why": "move three_white_soldiers exposes only soldier1 and soldier3 — neither names the prior 'base' the say references, so there is no anchor to mark the consolidation context."
+    }
+  ],
+  "alreadyGood": [
+    "engulf-volume",
+    "soldiers"
+  ],
+  "notes": "Verified all anchors against ground truth. engulf-volume: both markers ('low-volume down day' on prior, 'engulfing on 2x volume' on engulf) present and volume sub-panel rendered by params.volume=true — fully complete. morning: one real gap (midpoint level, accepted) plus one noAnchorGap (support). soldiers: the single 'base' reference is a noAnchorGap (move has no anchor for it); the existing 'continuation up' marker on soldier3 matches the say, so the beat's show is otherwise complete. soldier1 anchor exists but is unused; it marks the first soldier, NOT the prior 'base', so it is not a substitute. No stale/mislabeled/wrong-kind existing show items found — no fixes needed. Auditor proposal accepted in full with no additions or rejections."
+}

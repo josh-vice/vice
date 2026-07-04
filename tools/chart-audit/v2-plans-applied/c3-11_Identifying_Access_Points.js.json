@@ -1,0 +1,8 @@
+{
+  "course": "3",
+  "file": "11_Identifying_Access_Points.js",
+  "lessonId": "course3/11_identifying_access_points",
+  "edits": [],
+  "alreadyGood": ["consolidation"],
+  "notes": "Only one auditable beat: 'consolidation' (CHART, consolidation_breakout, dir:up). All other beats (intro, imbalance, confluence, recap) are CONCEPT and cannot draw. The two existing show items are correct and non-redundant: level @ rangeHigh 'the access point' (valid L anchor, matches 'The edge of that range is the access point') and marker @ breakout 'imbalance tips -> entry' (valid point anchor, matches 'when the balance finally tips and price breaks out'). REJECTED the auditor's single proposed gap: level @ rangeLow 'tight risk'. rangeLow is a valid (L) anchor so it would not throw, but the quoted say ('you have a defined level, a clear direction, and tight risk') does not name the range low as the risk anchor -- 'tight risk' is a descriptor of the setup quality, not an explicit locatable reference to the lower edge. Marking it 'tight risk' is an inference (stop-placement) the voice never points to, and the beat is ABOUT the access point at the breakout edge, which is already labelled. Per the restraint rule this is over-annotation, so the beat needs nothing. No noAnchorGaps worth recording."
+}

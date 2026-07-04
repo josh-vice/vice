@@ -1,0 +1,8 @@
+{
+  "course": "3",
+  "file": "02_Order_Types.js",
+  "lessonId": "course3/02_order_types",
+  "edits": [],
+  "alreadyGood": ["placing"],
+  "notes": "Only one CHART beat: 'placing' (move trade_setup_long, anchors entry(L)/stop(L)/target(L), stages plan -> play). The accumulated show already labels all three orders the say teaches: 'a limit buy below the current price, at the level where you actually want in' -> level at entry; 'Below that sits your stop — a stop-loss order' -> level at stop; 'above, a limit sell waits at your take-profit' -> level at target. Plus a risk zone below entry and reward zone above entry, which faithfully renders the implicit risk/reward the say frames ('Three orders... define the whole trade'). Every at/of references a valid ground-truth anchor; kinds match types (level/zone on (L) anchors). No redundancy, no stale anchors, no missed references. Other beats (intro, market-limit, stops, recap) are CONCEPT (text-only, no chart) and are not auditable. Auditor's alreadyComplete=true verdict confirmed."
+}

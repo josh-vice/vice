@@ -1,0 +1,18 @@
+{
+  "course": "2",
+  "file": "18_Divergences.js",
+  "lessonId": "course2/18_divergences",
+  "edits": [
+    {
+      "beatId": "regular-bearish",
+      "beatType": "CHART",
+      "move": "rsi",
+      "addShow": [
+        { "kind": "trendline", "from": "high1", "to": "high2", "label": "price tops: rising", "style": "resistance" }
+      ],
+      "reason": "say: 'Connect tops to tops, and notice the slopes disagree — that's what makes it valid.' The beat is ABOUT the disagreeing slopes; the rising price-tops line is the core thing the voice tells the viewer to draw, and it is not rendered by the move. from/to use high1 and high2, both valid POINT anchors for rsi; trendline correctly needs point anchors. Style 'resistance' fits a line drawn across rising price peaks."
+    }
+  ],
+  "alreadyGood": [],
+  "notes": "Only one auditable beat (regular-bearish, move rsi). All other beats are CONCEPT (no chart) and skipped. ACCEPTED the trendline high1->high2: valid point anchors, directly taught by 'Connect tops to tops... slopes disagree', not drawn by the move, non-redundant with the accumulated marker(high2)+note(high1). REJECTED the second proposal — marker 'first peak' at high1: the auditor self-rated it low confidence; high1 already carries the divergence note in the accumulated show, and high2 is already marked as the higher high relative to the visible first peak, so 'the second peak is clearly above the first' is already served. Stacking a 'first peak' marker on an already-annotated anchor is over-annotation (restraint rule). No noAnchorGaps: the RSI panel's lower second peak ('its second peak is lower than the first') has no dedicated RSI-panel anchor in the rsi move (only price-panel points high1/high2/oversold), and the existing note already teaches the RSI lower-high divergence."
+}

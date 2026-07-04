@@ -1,0 +1,8 @@
+{
+  "course": "4",
+  "file": "25_Hyblock_Indicators.js",
+  "lessonId": "course4/25_hyblock_indicators",
+  "edits": [],
+  "alreadyGood": ["colored"],
+  "notes": "Only one CHART beat: 'colored' (move color_tool, anchors top/bottom/resLevel/supLevel). The say teaches three locatable things and all three are already shown and anchor-valid: 'the levels mark the liquidation magnets' -> level on resLevel ('liquidation magnet above') + level on supLevel ('magnet below') (both valid L anchors, kind/type matched); 'colour tells you the prevailing pressure' -> marker on top ('pressure shifts', valid pt anchor). 'colour-code the read' is drawn by the move itself (heuristics scheme) so needs no show. Unused anchor 'bottom' has no distinct say reference; adding it would be over-annotation. No gaps, no fixes, no noAnchorGaps. Three CONCEPT beats (intro, use, recap) are text-only and not auditable. Concur with auditor: alreadyComplete."
+}

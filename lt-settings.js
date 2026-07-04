@@ -24,7 +24,7 @@ var LT_DARK_THEME = {
   '--red':'#f23d5c','--red2':'#cc2f49','--red-dim':'rgba(242,61,92,0.14)','--red-faint':'rgba(242,61,92,0.07)',
   '--gold':'#e7b53a','--gold-dim':'rgba(231,181,58,0.13)',
   '--green':'#21d196','--green-dim':'rgba(33,209,150,0.12)',
-  '--text':'#f6f5fb','--text2':'#a8a3bb','--text3':'#716c88','--text4':'#3a3a58',
+  '--text':'#f6f5fb','--text2':'#a8a3bb','--text3':'#8b85a3','--text4':'#3a3a58',
   '--shadow':'0 16px 44px -16px rgba(0,0,0,0.72)','--shadow-sm':'0 2px 10px rgba(0,0,0,0.42)','--glow-teal':'0 0 20px rgba(0,212,212,0.28)','--glow-pink':'0 0 20px rgba(255,46,136,0.28)',
   '--discord-color':'#ffffff',
 };
@@ -43,14 +43,14 @@ var LT_LIGHT_THEME = {
   '--red':'#dc2626','--red2':'#b91c1c','--red-dim':'rgba(220,38,38,0.10)','--red-faint':'rgba(220,38,38,0.05)',
   '--gold':'#b45309','--gold-dim':'rgba(180,83,9,0.12)',
   '--green':'#16a34a','--green-dim':'rgba(22,163,74,0.10)',
-  '--text':'#0f172a','--text2':'#475569','--text3':'#64748b','--text4':'#94a3b8',
+  '--text':'#0f172a','--text2':'#475569','--text3':'#5b6470','--text4':'#94a3b8',   /* text3 darkened for AA (≥4.5:1) small-text on light --bg */
   '--shadow':'0 6px 20px rgba(48,18,76,0.10)','--shadow-sm':'0 1px 3px rgba(48,18,76,0.08)','--glow-teal':'0 0 0 3px rgba(13,148,136,0.18)','--glow-pink':'0 0 0 3px rgba(219,39,119,0.18)',
   '--discord-color':'#5865F2',
 };
 
 /* ── Apply saved settings on load ────────────────────────────────────────── */
 function ltApplySavedSettings() {
-  var theme = localStorage.getItem('lt_theme') === 'light' ? 'light' : 'dark';
+  var theme = LTStore.get('theme') === 'light' ? 'light' : 'dark';
   var vars  = theme === 'light' ? LT_LIGHT_THEME : LT_DARK_THEME;
   Object.keys(vars).forEach(function(k) {
     document.documentElement.style.setProperty(k, vars[k]);
@@ -59,16 +59,37 @@ function ltApplySavedSettings() {
 
   // Dark mode lets a chosen bullish candle colour also tint the UI accent.
   // Light mode keeps the legible deep-teal accent for contrast.
-  var color = localStorage.getItem('lt_bullish_color');
+  var color = LTStore.get('bullishColor');
   if (color && theme === 'dark') document.documentElement.style.setProperty('--teal', color);
 
-  ltApplyFont(localStorage.getItem('lt_font') || 'default');
+  // Bearish candle colour drives --bear (used by chart/glossary down-candles). Mirrors the
+  // engine's getBearishColor: default brand pink; a chosen "white" remaps to slate in light mode.
+  var bearC = LTStore.get('bearishColor') || '#ff2e88';
+  if (theme === 'light' && /^#(f2f2f2|fff|ffffff)$/i.test(bearC)) bearC = '#334155';
+  document.documentElement.style.setProperty('--bear', bearC);
+
+  ltApplyFont(LTStore.get('font') || 'default');
 }
 
 function ltApplyFont(f) {
   var html = document.documentElement;
   html.classList.remove('font-pixelify', 'font-inter');
   if (f === 'inter') html.classList.add('font-inter');
+}
+
+/* Live-apply the lesson caption size to an open lesson player (the renderer also
+   reads the setting on mount, so this just covers changing it mid-lesson). */
+function ltApplyCaptionSize(sz) {
+  sz = (sz === 'sm' || sz === 'lg') ? sz : 'md';
+  document.querySelectorAll('.ltp2').forEach(function (p) {
+    p.classList.remove('cap-sm', 'cap-md', 'cap-lg');
+    p.classList.add('cap-' + sz);
+  });
+  // the caption box height + capflow state were measured with the OLD font —
+  // re-fit the live player or long captions clip until the next window resize
+  if (typeof _v2Player !== 'undefined' && _v2Player && _v2Player._fitCaptions) {
+    try { _v2Player._fitCaptions(); _v2Player._fitConcept(); } catch (e) {}
+  }
 }
 
 /* ── EXPORT / IMPORT PROGRESS (no account needed) ─────────────────────────── */
@@ -104,8 +125,16 @@ function ltImportProgress(file) {
       return;
     }
     if (!window.confirm('Restore this backup? It will replace the progress currently saved in this browser.')) return;
+    // True replace (the dialog promises it): clear existing progress keys first so stale
+    // completions can't survive restoring a smaller backup. Appearance/display prefs are
+    // kept unless the backup itself carries them (a full export does).
+    var KEEP = ['lt_theme','lt_font','lt_caption_size','lt_narration','lt_lesson_speed','lt_lesson_volume','lt_bullish_color','lt_bearish_color','lt_sidebar_collapsed','lt_risk_dismissed'];
+    Object.keys(localStorage).forEach(function (k) {
+      if (k.indexOf('lt_') === 0 && KEEP.indexOf(k) === -1) { try { localStorage.removeItem(k); } catch (e) {} }
+    });
     Object.keys(data).forEach(function (k) {
-      if (k.indexOf('lt_') === 0) { try { localStorage.setItem(k, data[k]); } catch (e) {} }
+      // Only accept string values — a mangled backup would otherwise store "[object Object]".
+      if (k.indexOf('lt_') === 0 && typeof data[k] === 'string') { try { localStorage.setItem(k, data[k]); } catch (e) {} }
     });
     location.reload();
   };
@@ -134,12 +163,15 @@ function ltOpenSyncModal() {
   if (!link) { if (typeof showToast === 'function') showToast('Sync isn\'t ready — refresh and try again.', 3000, 'alert-triangle'); return; }
   var ov = document.createElement('div');
   ov.className = 'modal-overlay';
+  ov.setAttribute('role', 'dialog');
+  ov.setAttribute('aria-modal', 'true');
+  ov.setAttribute('aria-label', 'Sync to another device');
   ov.innerHTML =
     '<div class="modal-box" style="max-width:380px;">' +
       '<h2 style="font-size:21px;margin-bottom:6px;">Sync to another device</h2>' +
       '<p class="modal-sub" style="margin-bottom:18px;">Scan the code or open the link on your other device to copy your progress over. Everything is inside the link itself — nothing is uploaded.</p>' +
       '<div id="lt-sync-qr" style="display:flex;justify-content:center;align-items:center;background:#fff;padding:12px;border-radius:10px;margin:0 auto 16px;min-height:176px;"></div>' +
-      '<input id="lt-sync-link" readonly style="width:100%;background:var(--bg4);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text2);font-family:\'JetBrains Mono\',monospace;font-size:11px;padding:9px 11px;margin-bottom:14px;" />' +
+      '<input id="lt-sync-link" readonly style="width:100%;background:var(--bg4);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text2);font-family:\'Geist Mono\',monospace;font-size:11px;padding:9px 11px;margin-bottom:14px;" />' +
       '<div class="modal-actions">' +
         '<button class="btn-primary" id="lt-sync-copy">Copy link</button>' +
         '<button class="btn-ghost" id="lt-sync-close">Done</button>' +
@@ -167,6 +199,7 @@ function ltOpenSyncModal() {
   if (closeBtn) closeBtn.addEventListener('click', close);
   ov.addEventListener('click', function (e) { if (e.target === ov) close(); });
   document.addEventListener('keydown', function esc(e) { if (e.key === 'Escape') { close(); document.removeEventListener('keydown', esc); } });
+  if (copyBtn) copyBtn.focus();   // move keyboard focus into the dialog on open
 }
 window.ltOpenSyncModal = ltOpenSyncModal;
 
@@ -182,15 +215,26 @@ function _ltCourseChapters(n) {
 }
 
 /* Build a fully-completed progress map for a course's chapters (quiz marked
-   correct using each chapter's actual correct answer). */
-function _ltBuildCompleteProgress(chapters) {
+   correct using each chapter's actual correct answer; module quizzes on each
+   module-final chapter marked fully cleared so assessments read N/N). */
+function _ltBuildCompleteProgress(chapters, courseNum) {
   var p = {};
+  var mqByModule = (window.LT_MODULE_QUIZZES && window.LT_MODULE_QUIZZES[courseNum]) || {};
   chapters.forEach(function(chapter, i) {
     var correctAnswer = chapter.quiz && chapter.quiz.answers
       ? chapter.quiz.answers.find(function(a) { return a.correct === true; })
       : null;
     var answerId = correctAnswer ? correctAnswer.id : null;
     p[i] = { completed: true, quizAnswered: true, quizCorrect: true, quizAnswer: answerId, selectedAnswerId: answerId };
+    // Module quiz lives on the module's final chapter (next chapter = new module).
+    var next = chapters[i + 1];
+    var isModuleFinal = !next || next.module !== chapter.module;
+    var mq = chapter.module && mqByModule[chapter.module];
+    if (isModuleFinal && mq && mq.questions && mq.questions.length) {
+      var cleared = {};
+      mq.questions.forEach(function(_q, qi) { cleared[qi] = true; });
+      p[i].moduleQuiz = cleared;
+    }
   });
   return p;
 }
@@ -198,14 +242,32 @@ function _ltBuildCompleteProgress(chapters) {
 function ltMarkCourseComplete(n) {
   var ch = _ltCourseChapters(n);
   if (!ch.length) return false;
-  localStorage.setItem('lt_course' + n + '_state', JSON.stringify({
-    chapter: ch.length - 1, step: 2, progress: _ltBuildCompleteProgress(ch)
+  localStorage.setItem(_ltCourseStateKey(n), JSON.stringify({
+    chapter: ch.length - 1, step: 2, progress: _ltBuildCompleteProgress(ch, n)
   }));
+  if (typeof window.ltSidebarInvalidate === 'function') window.ltSidebarInvalidate(n);
+  // If this is the course currently loaded in the engine, its stale in-memory
+  // state.progress would overwrite what we just wrote on the next saveState()
+  // (that's the "current course won't mark complete" bug). Re-sync from storage.
+  if (typeof getActiveCourseNum === 'function' && n === getActiveCourseNum()
+      && typeof window.ltResyncActiveCourseState === 'function') window.ltResyncActiveCourseState();
   return true;
 }
 
 function ltResetCourse(n) {
-  localStorage.removeItem('lt_course' + n + '_state');
+  localStorage.removeItem(_ltCourseStateKey(n));
+  if (typeof window.ltSidebarInvalidate === 'function') window.ltSidebarInvalidate(n);
+  // Same active-course sync as mark-complete: clear the engine's in-memory progress
+  // too, so a later saveState() can't restore the just-cleared course.
+  if (typeof getActiveCourseNum === 'function' && n === getActiveCourseNum()
+      && typeof window.ltResyncActiveCourseState === 'function') window.ltResyncActiveCourseState();
+}
+
+/* Per-course state keys are owned by the engine's LT_COURSES registry
+   (courseStateKey). Delegate when the engine is up; the literal fallback only
+   exists for a settings call before the deferred engine parses. */
+function _ltCourseStateKey(n) {
+  return (typeof courseStateKey === 'function') ? courseStateKey(n) : 'lt_course' + n + '_state';
 }
 
 /* Reusable confirm dialog matching the settings .lt-confirm-* styles. */
@@ -246,7 +308,7 @@ function renderSettingsPage(containerId) {
       '  margin: 0 auto;',
       '  padding: 28px 24px 48px;',
       '  box-sizing: border-box;',
-      '  font-family: "JetBrains Mono", ui-monospace, monospace;',
+      '  font-family: "Geist Mono", ui-monospace, monospace;',
       '}',
 
       /* header */
@@ -258,9 +320,10 @@ function renderSettingsPage(containerId) {
       '}',
 
       '.lt-settings-title {',
-      '  font-family: "JetBrains Mono", monospace;',
-      '  font-size: 32px;',
-      '  font-weight: 700;',
+      '  font-family: "Geist Mono", monospace;',
+      '  font-size: 29px;',
+      '  letter-spacing: -0.8px;',
+      '  font-weight: 800;',
       '  color: var(--text);',
       '  margin: 0;',
       '  line-height: 1;',
@@ -283,12 +346,11 @@ function renderSettingsPage(containerId) {
       '}',
 
       '.lt-settings-section-label {',
-      '  font-family: "JetBrains Mono", monospace;',
-      '  font-size: 12px;',
+      '  font-family: "Geist Mono", monospace;',
+      '  font-size: 12.5px;',
       '  font-weight: 700;',
-      '  letter-spacing: 0.1em;',
-      '  text-transform: uppercase;',
-      '  color: var(--text2);',
+      '  letter-spacing: 0.3px;',
+      '  color: var(--text3);',
       '  padding: 12px 18px 11px;',
       '  border-bottom: 1px solid var(--border);',
       '}',
@@ -305,7 +367,7 @@ function renderSettingsPage(containerId) {
       '  display: flex;',
       '  align-items: center;',
       '  justify-content: space-between;',
-      '  padding: 13px 18px;',
+      '  padding: 14px 18px;',
       '  gap: 20px;',
       '}',
 
@@ -353,7 +415,7 @@ function renderSettingsPage(containerId) {
       '  font-size: 12px;',
       '  font-weight: 600;',
       '  color: var(--text2);',
-      '  font-family: "JetBrains Mono", monospace;',
+      '  font-family: "Geist Mono", monospace;',
       '  transition: border-color 0.15s, color 0.15s, background 0.15s;',
       '}',
 
@@ -428,18 +490,19 @@ function renderSettingsPage(containerId) {
       '.lt-btn-danger {',
       '  padding: 7px 15px;',
       '  background: transparent;',
-      '  border: 1.5px solid var(--red);',
+      '  border: 1.5px solid var(--border2);',
       '  border-radius: var(--radius);',
-      '  color: var(--red);',
+      '  color: #ff5f8f;',
       '  font-size: 12.5px;',
       '  font-weight: 600;',
-      '  font-family: "JetBrains Mono", monospace;',
+      '  font-family: "Geist Mono", monospace;',
       '  cursor: pointer;',
       '  transition: background 0.15s, color 0.15s;',
       '}',
 
       '.lt-btn-danger:hover {',
-      '  background: var(--red-dim);',
+      '  background: rgba(255,46,136,0.10);',
+      '  border-color: rgba(255,46,136,0.55);',
       '}',
 
       '.lt-btn-secondary {',
@@ -450,7 +513,7 @@ function renderSettingsPage(containerId) {
       '  color: var(--text2);',
       '  font-size: 12.5px;',
       '  font-weight: 600;',
-      '  font-family: "JetBrains Mono", monospace;',
+      '  font-family: "Geist Mono", monospace;',
       '  cursor: pointer;',
       '  transition: all 0.15s;',
       '}',
@@ -478,11 +541,11 @@ function renderSettingsPage(containerId) {
       '  max-width: 360px;',
       '  width: 90%;',
       '  box-sizing: border-box;',
-      '  font-family: "JetBrains Mono", monospace;',
+      '  font-family: "Geist Mono", monospace;',
       '}',
 
       '.lt-confirm-title {',
-      '  font-family: "JetBrains Mono", monospace;',
+      '  font-family: "Geist Mono", monospace;',
       '  font-size: 20px;',
       '  font-weight: 700;',
       '  color: var(--text);',
@@ -509,7 +572,7 @@ function renderSettingsPage(containerId) {
       '  border-radius: var(--radius);',
       '  color: var(--text2);',
       '  font-size: 13px;',
-      '  font-family: "JetBrains Mono", monospace;',
+      '  font-family: "Geist Mono", monospace;',
       '  cursor: pointer;',
       '  transition: color 0.15s, border-color 0.15s;',
       '}',
@@ -527,7 +590,7 @@ function renderSettingsPage(containerId) {
       '  color: #fff;',
       '  font-size: 13px;',
       '  font-weight: 600;',
-      '  font-family: "JetBrains Mono", monospace;',
+      '  font-family: "Geist Mono", monospace;',
       '  cursor: pointer;',
       '  transition: background 0.15s;',
       '}',
@@ -540,18 +603,20 @@ function renderSettingsPage(containerId) {
       '.lt-btn-teal {',
       '  padding: 7px 15px;',
       '  background: transparent;',
-      '  border: 1.5px solid var(--teal);',
+      '  border: 1.5px solid var(--border2);',
       '  border-radius: var(--radius);',
-      '  color: var(--teal);',
+      '  color: var(--text2);',
       '  font-size: 12.5px;',
       '  font-weight: 600;',
-      '  font-family: "JetBrains Mono", monospace;',
+      '  font-family: "Geist Mono", monospace;',
       '  cursor: pointer;',
       '  transition: background 0.15s;',
       '}',
 
       '.lt-btn-teal:hover {',
-      '  background: rgba(0,212,212,0.12);',
+      '  background: rgba(0,212,212,0.10);',
+      '  border-color: var(--teal);',
+      '  color: var(--teal);',
       '}',
 
       '.lt-confirm-ok--teal {',
@@ -609,10 +674,12 @@ function renderSettingsPage(containerId) {
   container.innerHTML = '';
 
   /* ── read saved prefs ─────────────────────────────────────────────────── */
-  var savedColor = localStorage.getItem('lt_bullish_color') || '#00d4d4';
-  var savedBear  = localStorage.getItem('lt_bearish_color') || '#f2f2f2';
-  var savedTheme = localStorage.getItem('lt_theme') || 'dark';
-  var savedFont  = localStorage.getItem('lt_font') || 'default';
+  var savedColor = LTStore.get('bullishColor') || '#00d4d4';
+  var savedBear  = LTStore.get('bearishColor') || '#ff2e88';
+  var savedTheme = LTStore.get('theme') || 'dark';
+  var savedFont  = LTStore.get('font') || 'default';
+  var savedCap   = LTStore.get('captionSize') || 'md';
+  var narrOn     = LTStore.get('narration') !== '0';   // narration default on
 
   /* ── sample candle SVG helper ─────────────────────────────────────────── */
   function candleSvg(color) {
@@ -643,7 +710,7 @@ function renderSettingsPage(containerId) {
           '<div class="lt-settings-row-label"><span style="color:' + accent + '">Course ' + n + '</span> · ' + name + '</div>' +
         '</div>' +
         '<div class="lt-settings-row-control lt-course-actions">' +
-          '<button class="lt-btn-teal lt-btn-sm" data-course="' + n + '" data-action="complete">Mark Complete</button>' +
+          '<button class="lt-btn-teal lt-btn-sm" data-course="' + n + '" data-action="complete">Mark complete</button>' +
           '<button class="lt-btn-danger lt-btn-sm" data-course="' + n + '" data-action="reset">Reset</button>' +
         '</div>' +
       '</div>';
@@ -652,14 +719,13 @@ function renderSettingsPage(containerId) {
   wrap.innerHTML =
 
     /* ── back button ── */
-    '<button onclick="typeof init===\'function\' ? init() : history.back()" style="display:inline-flex;align-items:center;gap:6px;background:transparent;border:none;color:var(--teal);font-family:\'JetBrains Mono\',sans-serif;font-size:13px;font-weight:600;cursor:pointer;padding:0 0 18px 0;">' +
+    '<button onclick="typeof init===\'function\' ? init() : history.back()" style="display:inline-flex;align-items:center;gap:6px;background:transparent;border:none;color:var(--teal);font-family:\'Geist Mono\',sans-serif;font-size:13px;font-weight:600;cursor:pointer;padding:0 0 18px 0;">' +
       '<i data-lucide="arrow-left" style="width:16px;height:16px;"></i>' +
       'Back to Course' +
     '</button>' +
 
     /* ── header ── */
     '<div class="lt-settings-header">' +
-      '<i data-lucide="settings" style="width:28px;height:28px;color:var(--teal);flex-shrink:0;"></i>' +
       '<h1 class="lt-settings-title">Settings</h1>' +
     '</div>' +
     '<p class="lt-settings-subtitle">Customize your learning experience</p>' +
@@ -692,7 +758,7 @@ function renderSettingsPage(containerId) {
         '</div>' +
         '<div class="lt-settings-row-control">' +
           '<div class="lt-font-opts">' +
-            '<button class="lt-font-btn' + (savedFont === 'default'  ? ' active' : '') + '" data-font="default" style="font-family:\'JetBrains Mono\',monospace;">Terminal</button>' +
+            '<button class="lt-font-btn' + (savedFont === 'default'  ? ' active' : '') + '" data-font="default" style="font-family:\'Geist Mono\',monospace;">Terminal</button>' +
             '<button class="lt-font-btn' + (savedFont === 'inter'    ? ' active' : '') + '" data-font="inter" style="font-family:\'Inter\',sans-serif;">Inter</button>' +
           '</div>' +
         '</div>' +
@@ -700,7 +766,34 @@ function renderSettingsPage(containerId) {
 
       '<div class="lt-settings-row">' +
         '<div class="lt-settings-row-info">' +
-          '<div class="lt-settings-row-label">Bullish Candle Color</div>' +
+          '<div class="lt-settings-row-label">Lesson caption size</div>' +
+          '<div class="lt-settings-row-desc">Subtitle text in animated lessons · phones always use Small</div>' +
+        '</div>' +
+        '<div class="lt-settings-row-control">' +
+          '<div class="lt-font-opts" id="lt-capsize-toggle">' +
+            '<button class="lt-font-btn' + (savedCap === 'sm' ? ' active' : '') + '" data-cap="sm">Small</button>' +
+            '<button class="lt-font-btn' + (savedCap === 'md' ? ' active' : '') + '" data-cap="md">Medium</button>' +
+            '<button class="lt-font-btn' + (savedCap === 'lg' ? ' active' : '') + '" data-cap="lg">Large</button>' +
+          '</div>' +
+        '</div>' +
+      '</div>' +
+
+      '<div class="lt-settings-row">' +
+        '<div class="lt-settings-row-info">' +
+          '<div class="lt-settings-row-label">Lesson narration</div>' +
+          '<div class="lt-settings-row-desc">Read each lesson aloud as it plays (press Play in a lesson)</div>' +
+        '</div>' +
+        '<div class="lt-settings-row-control">' +
+          '<div class="lt-font-opts" id="lt-narration-toggle">' +
+            '<button class="lt-font-btn' + (narrOn ? ' active' : '') + '" data-narr="on">On</button>' +
+            '<button class="lt-font-btn' + (!narrOn ? ' active' : '') + '" data-narr="off">Off</button>' +
+          '</div>' +
+        '</div>' +
+      '</div>' +
+
+      '<div class="lt-settings-row">' +
+        '<div class="lt-settings-row-info">' +
+          '<div class="lt-settings-row-label">Bullish candle color</div>' +
           '<div class="lt-settings-row-desc">Up candles on every chart</div>' +
         '</div>' +
         '<div class="lt-settings-row-control">' +
@@ -713,11 +806,12 @@ function renderSettingsPage(containerId) {
 
       '<div class="lt-settings-row">' +
         '<div class="lt-settings-row-info">' +
-          '<div class="lt-settings-row-label">Bearish Candle Color</div>' +
+          '<div class="lt-settings-row-label">Bearish candle color</div>' +
           '<div class="lt-settings-row-desc">Down candles on every chart</div>' +
         '</div>' +
         '<div class="lt-settings-row-control">' +
           '<div class="lt-color-toggle" id="lt-bear-toggle">' +
+            '<button class="lt-color-btn' + (savedBear === '#ff2e88' ? ' active' : '') + '" data-color="#ff2e88" id="lt-bear-pink">' + candleSvg('#ff2e88') + 'Pink</button>' +
             '<button class="lt-color-btn' + (savedBear === '#f2f2f2' ? ' active' : '') + '" data-color="#f2f2f2" id="lt-bear-white">' + candleSvg('#f2f2f2') + 'White</button>' +
             '<button class="lt-color-btn' + (savedBear === '#cc2222' ? ' active' : '') + '" data-color="#cc2222" id="lt-bear-red">' + candleSvg('#cc2222') + 'Red</button>' +
           '</div>' +
@@ -732,25 +826,11 @@ function renderSettingsPage(containerId) {
       courseRowsHtml +
       '<div class="lt-settings-row">' +
         '<div class="lt-settings-row-info">' +
-          '<div class="lt-settings-row-label">All Courses</div>' +
+          '<div class="lt-settings-row-label">All courses</div>' +
         '</div>' +
         '<div class="lt-settings-row-control lt-course-actions">' +
           '<button class="lt-btn-teal lt-btn-sm" id="lt-markall-btn">Mark All Complete</button>' +
-          '<button class="lt-btn-danger lt-btn-sm" id="lt-resetall-btn">Reset All</button>' +
-        '</div>' +
-      '</div>' +
-    '</div>' +
-
-    /* ══ STUDY TOOLS — review aids ══ */
-    '<div class="lt-settings-section" id="lt-s-study">' +
-      '<div class="lt-settings-section-label">Study Tools</div>' +
-      '<div class="lt-settings-row">' +
-        '<div class="lt-settings-row-info">' +
-          '<div class="lt-settings-row-label">Exam Answer Key</div>' +
-          '<div class="lt-settings-row-desc">Review every final-exam question and its correct answer across all four courses</div>' +
-        '</div>' +
-        '<div class="lt-settings-row-control">' +
-          '<button class="lt-btn-secondary" onclick="typeof showExamAnswerKey===\'function\' && showExamAnswerKey()">View Answer Key</button>' +
+          '<button class="lt-btn-danger lt-btn-sm" id="lt-resetall-btn">Reset all</button>' +
         '</div>' +
       '</div>' +
     '</div>' +
@@ -762,17 +842,17 @@ function renderSettingsPage(containerId) {
 
       '<div class="lt-settings-row">' +
         '<div class="lt-settings-row-info">' +
-          '<div class="lt-settings-row-label">Sync to Another Device</div>' +
+          '<div class="lt-settings-row-label">Sync to another device</div>' +
           '<div class="lt-settings-row-desc">QR code &amp; link to copy your progress to your phone or another browser</div>' +
         '</div>' +
         '<div class="lt-settings-row-control">' +
-          '<button class="lt-btn-secondary" id="lt-sync-btn">Create Sync Link</button>' +
+          '<button class="lt-btn-secondary" id="lt-sync-btn">Create sync link</button>' +
         '</div>' +
       '</div>' +
 
       '<div class="lt-settings-row">' +
         '<div class="lt-settings-row-info">' +
-          '<div class="lt-settings-row-label">Export Backup</div>' +
+          '<div class="lt-settings-row-label">Export backup</div>' +
           '<div class="lt-settings-row-desc">Download a backup file of your progress and settings</div>' +
         '</div>' +
         '<div class="lt-settings-row-control">' +
@@ -782,7 +862,7 @@ function renderSettingsPage(containerId) {
 
       '<div class="lt-settings-row">' +
         '<div class="lt-settings-row-info">' +
-          '<div class="lt-settings-row-label">Import Backup</div>' +
+          '<div class="lt-settings-row-label">Import backup</div>' +
           '<div class="lt-settings-row-desc">Restore from a backup file (replaces current progress)</div>' +
         '</div>' +
         '<div class="lt-settings-row-control">' +
@@ -824,7 +904,7 @@ function renderSettingsPage(containerId) {
 
       /* apply + persist */
       document.documentElement.style.setProperty('--teal', color);
-      localStorage.setItem('lt_bullish_color', color);
+      LTStore.set('bullishColor', color);
 
       /* sync engine TEAL and re-render charts */
       if (typeof window.TEAL !== 'undefined') window.TEAL = color;
@@ -849,9 +929,12 @@ function renderSettingsPage(containerId) {
       bearBtns.forEach(function(b) { b.classList.remove('active'); });
       btn.classList.add('active');
 
-      /* persist + sync engine BEAR + re-render charts */
-      localStorage.setItem('lt_bearish_color', color);
+      /* persist + sync engine BEAR + the --bear var (glossary/chart down-candles) + re-render */
+      LTStore.set('bearishColor', color);
       if (typeof window.BEAR !== 'undefined') window.BEAR = color;
+      var bcol = color;
+      if (document.documentElement.classList.contains('theme-light') && /^#(f2f2f2|fff|ffffff)$/i.test(bcol)) bcol = '#334155';
+      document.documentElement.style.setProperty('--bear', bcol);
       if (typeof window.ltRefreshCharts === 'function') window.ltRefreshCharts();
 
       /* re-render gallery if visible */
@@ -869,7 +952,7 @@ function renderSettingsPage(containerId) {
 
   themeToggle.addEventListener('change', function() {
     var isLight = themeToggle.checked;
-    localStorage.setItem('lt_theme', isLight ? 'light' : 'dark');  // write first so theme-aware getters read it
+    LTStore.set('theme', isLight ? 'light' : 'dark');  // write first so theme-aware getters read it
     ltApplySavedSettings();                                        // full palette + accent + font
     themeLabel.textContent = isLight ? 'Light' : 'Dark';
     // Re-render the surfaces that bake accent/candle colours at render time.
@@ -879,14 +962,37 @@ function renderSettingsPage(containerId) {
   });
 
   /* ── CONTROL: font selector (Terminal · Inter) ───────────────────────── */
-  var fontBtns = wrap.querySelectorAll('.lt-font-btn');
+  var fontBtns = wrap.querySelectorAll('.lt-font-btn[data-font]');
   fontBtns.forEach(function(btn) {
     btn.addEventListener('click', function() {
       var f = btn.getAttribute('data-font');
       ltApplyFont(f);
       fontBtns.forEach(function(b) { b.classList.remove('active'); });
       btn.classList.add('active');
-      localStorage.setItem('lt_font', f);
+      LTStore.set('font', f);
+    });
+  });
+
+  /* ── CONTROL: lesson caption size (Small · Medium · Large) ────────────── */
+  var capBtns = wrap.querySelectorAll('.lt-font-btn[data-cap]');
+  capBtns.forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var sz = btn.getAttribute('data-cap');
+      capBtns.forEach(function(b) { b.classList.remove('active'); });
+      btn.classList.add('active');
+      LTStore.set('captionSize', sz);
+      ltApplyCaptionSize(sz);   // live-apply to an open lesson
+    });
+  });
+
+  /* ── CONTROL: lesson narration on/off (takes effect on the next lesson mount) ── */
+  var narrBtns = wrap.querySelectorAll('.lt-font-btn[data-narr]');
+  narrBtns.forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var on = btn.getAttribute('data-narr') === 'on';
+      narrBtns.forEach(function(b) { b.classList.remove('active'); });
+      btn.classList.add('active');
+      LTStore.set('narration', on ? '1' : '0');
     });
   });
 
@@ -922,7 +1028,7 @@ function renderSettingsPage(containerId) {
       if (btn.getAttribute('data-action') === 'complete') {
         _ltConfirmDialog('Mark Course ' + n + ' Complete',
           'Mark every session in Course ' + n + ' (' + name + ') as complete?',
-          'Yes, Mark Complete', true, function() {
+          'Yes, mark complete', true, function() {
             ltMarkCourseComplete(n);
             if (typeof showToast === 'function') showToast('Course ' + n + ' marked complete', 3000, 'check-circle');
             setTimeout(function() { location.reload(); }, 700);
@@ -954,10 +1060,10 @@ function renderSettingsPage(containerId) {
   /* ── CONTROL: reset ALL progress (keeps appearance/display preferences) ── */
   var resetAllBtn = wrap.querySelector('#lt-resetall-btn');
   if (resetAllBtn) resetAllBtn.addEventListener('click', function() {
-    _ltConfirmDialog('Reset All Progress',
+    _ltConfirmDialog('Reset all progress',
       'Clear all progress across all courses? This cannot be undone.',
-      'Yes, Reset All', false, function() {
-        var keep = ['lt_theme', 'lt_font', 'lt_bullish_color', 'lt_bearish_color', 'lt_sidebar_collapsed'];
+      'Yes, reset all', false, function() {
+        var keep = ['lt_theme', 'lt_font', 'lt_caption_size', 'lt_narration', 'lt_lesson_speed', 'lt_lesson_volume', 'lt_bullish_color', 'lt_bearish_color', 'lt_sidebar_collapsed'];
         Object.keys(localStorage)
           .filter(function(k) { return k.indexOf('lt_') === 0 && keep.indexOf(k) === -1; })
           .forEach(function(k) { localStorage.removeItem(k); });

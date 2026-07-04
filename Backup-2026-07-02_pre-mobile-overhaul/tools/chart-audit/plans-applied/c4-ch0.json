@@ -1,0 +1,17 @@
+{
+  "course": 4,
+  "chapterId": 0,
+  "title": "Course 4 — Liquidity Theory Introduction",
+  "module": "Course Overview",
+  "edits": [
+    {
+      "slot": "lessonChart",
+      "addMarkLines": [
+        { "yAxis": 84, "label": "TA Level — where price reacts", "color": "#00d4d4" }
+      ],
+      "reason": "The bar-3 markPoint 'TA: Level Identified' pins the ~84 swing low (leg-1 .to, the band floor) as an EVENT but never draws it as a horizontal level. The lesson explicitly teaches this as a locatable thing: 'Technical analysis shows WHERE price might react'. A teal support/reaction line at 84 gives that taught level a visible, labelled location for the bar-5 squeeze confirmation and bar-7 entry to be read against. yAxis 84 sits exactly at the chart's band floor (ltCandles 88 -> [84,107,120]), so it is in-band. Teal = support/reaction/long side per palette. RESTRAINT: this is an overview/concept lesson, not a worked trade, so no Entry/Stop/Target lines are added — the text never names a specific stop or target level (bar-15 '1-2 Punch Plays Out' is narrative, not a quantified target)."
+    }
+  ],
+  "alreadyGood": ["quiz.chart"],
+  "notes": "Chapter 0 is the course overview. introChart: none defined (skip). lessonChart: conceptual TA+SA-combination illustration; the only concrete, text-taught, locatable thing is the TA reaction level at the ~84 swing low, which is currently only an event pin — the single teal markLine closes that gap. I REJECT adding any target/stop lines: the lesson is deliberately conceptual and names no specific target or stop level, so adding them would invent levels the text doesn't teach. quiz.chart is a pure module-progression concept chart (cutIndex:10, modules mapped to bars via revealMarkPoints, all teal, post-answer only) with no taught levels/zones — correctly already complete; the reveal pins do not spoil the pre-cut view and the quiz answer is about naming the five modules, not a chart decision. Auditor's single proposal is sound; I kept it (med confidence) and added nothing further."
+}

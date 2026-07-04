@@ -1,0 +1,41 @@
+{
+  "course": 3,
+  "chapterId": 12,
+  "title": "Trading Ranges",
+  "module": "Applying the Basics",
+  "edits": [
+    {
+      "slot": "introChart",
+      "fixes": [
+        {
+          "find": "{ y0: 83, y1: 88, label: \"Range Low\",  color: \"rgba(0,212,212,0.07)\" }",
+          "replaceWith": "label: \"Range Low — Demand / Support\"",
+          "reason": "Intro bullet explicitly teaches the semantic role: 'Range Low = buyers / demand zone / support.' The markArea only shows the geometric name, so the taught meaning is invisible. Relabel only (keep y0/y1/color)."
+        },
+        {
+          "find": "{ y0: 93, y1: 98, label: \"Range High\", color: \"rgba(255,46,136,0.07)\" }",
+          "replaceWith": "label: \"Range High — Supply / Resistance\"",
+          "reason": "Intro bullet: 'Range High = sellers / supply zone / resistance.' Show the taught role, not just the name. Relabel only."
+        },
+        {
+          "find": "{ yAxis: 90.5, label: \"Midpoint (Fib 50%)\", color: \"#ffcc00\" }",
+          "replaceWith": "label: \"Midpoint (Fib 50%) — Chop Zone, Avoid\"",
+          "reason": "Intro teaches 'Midpoint = ... the chop zone to avoid' and 'never trade setups here.' The current label states the math but not the actionable rule. Relabel only (keep yAxis/color)."
+        },
+        {
+          "find": "{ dataIndex:  4, label: \"Low — Touch 1\",  position: \"bottom\" }",
+          "replaceWith": "label: \"Low — Touch 1 (best entry)\"",
+          "reason": "Rule 1 ('first touch = highest hit rate; freshest orders') is taught in the intro but the chart only numbers touches without conveying that touch 1 is the prime entry. Light label clarification on the existing point — no new annotation."
+        },
+        {
+          "find": "{ dataIndex:  7, label: \"High — Touch 1\", position: \"top\"    }",
+          "replaceWith": "label: \"High — Touch 1 (best entry)\"",
+          "reason": "Same Rule 1 teaching for the Range High side: first test is the highest-probability entry. Relabel the existing markPoint only."
+        }
+      ],
+      "reason": "introChart is a concept chart; all changes are relabels of EXISTING annotations to surface the semantic roles and rules the intro text teaches (demand/support, supply/resistance, midpoint = chop zone to avoid, first test = best entry). No new lines/points/areas added."
+    }
+  ],
+  "alreadyGood": ["lessonChart", "quiz.chart"],
+  "notes": "REJECTED the auditor's lessonChart proposals. The auditor wanted to overlay a Scalp Short (Entry 95 / Stop 99 / Target 86) plus a 'Swing High — Stop Reference' markPoint. Although the lesson text does teach 'Scalp Short: enter at Range High -> stop above swing high -> target Range Low (3:1-4:1)', THIS specific chart is the Rule-of-Fives EXCEPTION: it shows the 5th touch breaking out to 107 and already carries 'Touch 5 = Breakout!' and 'Do Not Short!'. Drawing a short entry/stop/target on the very chart whose lesson is 'do NOT short here' is directly contradictory and would mislead. (Coordinates were otherwise valid: band ~84-108, so 95/99/86 fit.) The proposed swing-high markPoint at dataIndex 19 also collides with the existing 'High — Touch 4' markPoint at idx 19 — duplicate bar. Both rejected for slot-fit/contradiction, not coordinate error. The general Scalp Long/Short worked setup has no dedicated worked-trade chart in this chapter; the lessonChart is deliberately the Rule-of-Fives exception, so it is internally complete as drawn. quiz.chart correctly uses cutIndex:18 with outcome routed to revealMarkPoints and is left untouched (no pre-reveal spoiler). All introChart edits are relabels of existing annotations only, preserving y/color/position to avoid clipping or palette drift (band ~82.6-94.4; all values already in-band)."
+}

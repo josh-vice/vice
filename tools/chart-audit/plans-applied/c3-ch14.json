@@ -1,0 +1,27 @@
+{
+  "course": 3,
+  "chapterId": 14,
+  "title": "Crafting Your System",
+  "module": "Crafting Your System",
+  "edits": [
+    {
+      "slot": "introChart",
+      "addMarkLines": [
+        { "yAxis": 106, "label": "Max Acceptable Drawdown — below = revamp", "color": "#ff2e88" }
+      ],
+      "addMarkAreas": [
+        { "y0": 109, "y1": 113, "label": "Drawdown (within tolerance)", "color": "rgba(255,46,136,0.07)" }
+      ],
+      "reason": "The intro bullets teach a concrete threshold the chart never draws: 'if the drawdown has not exceeded your maximum acceptable level, the system is valid' and 'When the system exceeds its maximum acceptable drawdown level: that is the time to revamp and rebuild.' The markLine at 106 sits just below the 110 dip floor so the existing 'System: Drawdown OK' point (idx 6, ~110) reads as ABOVE tolerance = system still valid. The markArea bands the 113-peak-to-110-trough giveback so the drawdown is shown as a measured region, not a stray candle, supporting 'Trust your system during drawdowns.' Both values inside band 98-138; area sits exactly on the dip leg envelope."
+    },
+    {
+      "slot": "quiz.chart",
+      "addMarkLines": [
+        { "yAxis": 80, "label": "Max Acceptable Drawdown (predefined)", "color": "#ff2e88" }
+      ],
+      "reason": "Pre-cut DECISION CONTEXT only. The explanation/rule teach the single decision threshold: 'The only trigger for a genuine system review is if the drawdown has exceeded the predefined maximum acceptable level built into the system.' Drawing this threshold just BELOW the visible losing-streak trough (idx 7 closes ~82) frames the decision honestly ('are we still above max? yes -> trust it') without revealing the recover-vs-fail outcome, which stays in revealMarkPoints. yAxis nudged from the auditor's 78 to 80: the drop leg (100->82) bottoms with candle lows near ~80-81, so 78 risks clipping into empty bottom padding; 80 sits right at the visible floor and still below the 82 trough. Pink matches the chapter's loss/risk convention."
+    }
+  ],
+  "alreadyGood": ["lessonChart"],
+  "notes": "introChart: BOTH auditor gaps approved (markLine 106 high-confidence; markArea tightened y0 109->aligns to dip floor). quiz.chart: auditor markLine approved but yAxis modified 78->80 to avoid clipping below the ~80 band floor while staying below the idx-7 trough. lessonChart: BOTH auditor gaps REJECTED. (1) markLine 114 'Trail Stop / Swing High' CONTRADICTS the already-drawn Set & Forget 'Target (Exit Trigger)' at 110 — a fixed TP and a trailing stop above it on the same worked trade is incoherent, and the text lists trailing-stop only as ONE optional exit-trigger example among several (LTE at resistance / Kijun close / trailing stop / Set & Forget TP), not the action used here. (2) The fix relabel to 'Bullish Engulfing at DBS' over-commits: the text lists 'LTE + bullish engulfing at DBS?' as one possible trigger among options (also 'Moving average crossover?'), and the candle is just a leg reversal, not a rendered engulfing pattern — existing 'T — Trigger at DBS' + markLine 'Entry (Trigger Confirmed)' already cover Component 5 correctly. lessonChart is the worked trade with Entry/Stop/Target/DBS-zone all explicitly drawn = complete. The only non-locatable components (Markets, Time Frames) and the optional-by-design Trade Management cannot be honestly pinned without contradicting drawn levels. No additions missed."
+}

@@ -1,0 +1,8 @@
+{
+  "course": "4",
+  "file": "28_Edge_to_Edge.js",
+  "lessonId": "course4/28_edge_to_edge",
+  "edits": [],
+  "alreadyGood": ["chart"],
+  "notes": "Only one auditable beat: 'chart' (CHART, move ichimoku; intro/use/recap are CONCEPT, skipped). ichimoku exposes exactly two anchors, pullback(pt) and aboveCloud(pt), and both are already used correctly. Existing show: note at pullback 'enter at the near edge' (below) is justified by 'the near edge is the entry' / 'we enter'; note at aboveCloud 'target the far edge' (above) is justified by 'the far edge is the take-profit' / 'targeting the upper edge'. Both are kind=note on point anchors (valid type match). The cloud/kumo and its lower/upper edges are core geometry the ichimoku move already draws, and the two edges are exactly what the two notes label, so no extra annotation is needed. The 'Kijun bounce' reference lives in the CONCEPT 'use' beat (no chart) and ichimoku exposes no kijun anchor anyway. Auditor's alreadyComplete verdict confirmed; no gaps, no fixes, no noAnchorGaps."
+}

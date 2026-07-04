@@ -328,6 +328,25 @@ function _simFmtTime(d, tf) {
   return h === 0 ? mo + ' ' + day : (h < 10 ? '0' : '') + h + ':00';
 }
 
+/* ── Synthetic volume ───────────────────────────────────────────────────────
+   The generator has no order flow, so volume is derived from the candle itself:
+   range (body + wicks) drives magnitude, with seeded noise and a mild boost on
+   direction changes (real markets print volume where price fights). Units are
+   arbitrary "BTC" — only relative size matters on the chart. */
+function _volFor(rand, c, prev) {
+  const [o, cl, lo, hi] = c;
+  const range = Math.abs(hi - lo) / (o || 1);
+  const body  = Math.abs(cl - o)  / (o || 1);
+  const flip  = prev ? ((cl >= o) !== (prev[1] >= prev[0]) ? 1.25 : 1) : 1;
+  const v = (140 + range * 52000 + body * 30000) * flip * (0.65 + rand() * 0.7);
+  return +v.toFixed(1);
+}
+function buildVolumes(rand, ohlc) {
+  const out = new Array(ohlc.length);
+  for (let i = 0; i < ohlc.length; i++) out[i] = _volFor(rand, ohlc[i], i ? ohlc[i - 1] : null);
+  return out;
+}
+
 /* Generate the single source-of-truth base market (1h units, no timeframe).
    outcome: 'resolve' (setup works) | 'fail' (setup fails). Default 'resolve'.
    The setup is identical for both — only the reveal differs. */
@@ -338,8 +357,10 @@ function generateMarket(simPattern, seed, outcome) {
   outcome = outcome === 'fail' ? 'fail' : 'resolve';
   const dir = outcome === 'fail' ? -built.winDir : built.winDir;
   const reveal = buildReveal(rand, _last(built.setup), dir, REVEAL_N, 0.006, outcome === 'fail');
+  const ohlcBase = built.setup.concat(reveal);
   return {
-    ohlcBase: built.setup.concat(reveal),
+    ohlcBase,
+    volBase: buildVolumes(mulberry32((seed | 0) + 77), ohlcBase),
     cutIndexBase: built.setup.length,
     keyLevel: +built.keyLevel.toFixed(2),
     patternLabel: built.label,
@@ -350,16 +371,88 @@ function generateMarket(simPattern, seed, outcome) {
   };
 }
 
+/* ── Live-session extension ─────────────────────────────────────────────────
+   Appends n more 1h candles past the scripted reveal so a live session never
+   runs out of market. Regime machine: alternating drift/volatility legs (trend,
+   chop, squeeze) seeded off the market seed + current length → deterministic
+   per market, different every leg. */
+function extendMarket(market, n) {
+  const start = market.ohlcBase.length;
+  const rand  = mulberry32(((market.seed | 0) * 31 + start) >>> 0);
+  let prevClose = _last(market.ohlcBase);
+  let left = n;
+  const fresh = [];
+  while (left > 0) {
+    const legLen = Math.min(left, 18 + Math.floor(rand() * 30));
+    const r = rand();
+    const drift = r < 0.38 ? (rand() * 2 - 1) * 0.0022        // trend leg
+               : r < 0.75 ? (rand() * 2 - 1) * 0.0005        // chop
+               : 0;                                           // squeeze
+    const vol = r >= 0.75 ? 0.0028 : 0.005 + rand() * 0.004;  // squeeze = tight
+    const leg = baseWalk(rand, legLen, prevClose, drift, vol);
+    fresh.push(...leg);
+    prevClose = _last(leg);
+    left -= legLen;
+  }
+  market.ohlcBase = market.ohlcBase.concat(fresh);
+  const vr = mulberry32(((market.seed | 0) * 91 + start) >>> 0);
+  market.volBase = (market.volBase || []).concat(buildVolumes(vr, fresh));
+  return market;
+}
+
+/* ── Intra-candle tick path ─────────────────────────────────────────────────
+   Deterministic price path through one candle for live playback: open → first
+   extreme → second extreme → close, with seeded jitter between waypoints. Bull
+   candles sweep the low first (O→L→H→C), bear candles the high first — the
+   standard replay heuristic. Returns k prices ending exactly at close; the
+   extremes are always included so intra-candle SL/TP/liq hits are exact. */
+function synthTicks(candle, k, seed) {
+  const [o, c, lo, hi] = candle;
+  const bull = c >= o;
+  const way = bull ? [o, lo, hi, c] : [o, hi, lo, c];
+  const rand = mulberry32((seed | 0) >>> 0);
+  k = Math.max(4, k | 0);
+  const out = [];
+  const segs = way.length - 1;                     // 3 segments
+  const per = Math.max(1, Math.floor(k / segs));
+  for (let s = 0; s < segs; s++) {
+    const a = way[s], b = way[s + 1];
+    const steps = s === segs - 1 ? k - out.length : per;
+    for (let i = 1; i <= steps; i++) {
+      const t = i / steps;
+      let p = a + (b - a) * t;
+      if (i !== steps) p *= 1 + (rand() * 2 - 1) * 0.0008;   // jitter, never on waypoints
+      p = Math.min(hi, Math.max(lo, p));
+      out.push(+p.toFixed(2));
+    }
+  }
+  out[out.length - 1] = c;                          // land exactly on close
+  return out;
+}
+
+// Aggregate volumes to a higher timeframe (sum per bucket) — mirrors aggregateCandles.
+function aggregateVolumes(vols, factor) {
+  const out = [];
+  for (let i = 0; i + factor <= vols.length; i += factor) {
+    let s = 0;
+    for (let j = i; j < i + factor; j++) s += vols[j] || 0;
+    out.push(+s.toFixed(1));
+  }
+  return out;
+}
+
 // View an already-generated market at a timeframe — pure re-bucketing, no randomness.
 function viewMarket(market, timeframe) {
   const factor = _TF_FACTOR[timeframe] || 24;
   const ohlc = aggregateCandles(market.ohlcBase, factor);
+  const vols = aggregateVolumes(market.volBase || [], factor);
   const cutIndex = Math.max(1, Math.min(ohlc.length - 2, Math.floor(market.cutIndexBase / factor)));
   const stepMs   = (_TF_HOURS[timeframe] || 24) * 3600 * 1000;
   const anchorMs = Date.UTC(2024, 0, 1) + ((market.seed || 1) % 200) * 86400000;
   const labels = ohlc.map((_, i) => _simFmtTime(new Date(anchorMs + (i - cutIndex) * stepMs), timeframe));
   return {
-    ohlc, labels, cutIndex,
+    ohlc, vols, labels, cutIndex,
+    factor, stepMs, anchorMs,
     // Neutral level line — never names the pattern (that would give away the answer).
     markLines: [{ yAxis: +market.keyLevel.toFixed(2), label: 'Key Level', color: '#8a8f98' }],
     keyLevel: +market.keyLevel.toFixed(2),
@@ -380,6 +473,9 @@ function generateScenario(simPattern, seed, timeframe, outcome) {
 window.mulberry32 = mulberry32;
 window.baseWalk = baseWalk;
 window.aggregateCandles = aggregateCandles;
+window.aggregateVolumes = aggregateVolumes;
 window.generateMarket = generateMarket;
 window.viewMarket = viewMarket;
 window.generateScenario = generateScenario;
+window.extendMarket = extendMarket;
+window.synthTicks = synthTicks;

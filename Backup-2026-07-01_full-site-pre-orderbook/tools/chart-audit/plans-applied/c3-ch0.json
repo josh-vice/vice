@@ -1,0 +1,9 @@
+{
+  "course": 3,
+  "chapterId": 0,
+  "title": "Course 3 — Sharpening Your Edge",
+  "module": "Course Overview",
+  "edits": [],
+  "alreadyGood": ["lessonChart", "quiz.chart"],
+  "notes": "Pure Course-Overview chapter. No introChart exists. Both candlestick charts are CONCEPT illustrations that map the 5-module learning arc onto a generic rising trend — they are NOT worked trade setups, and the intro/lesson/quiz text teaches NO concrete, locatable trading levels (no entry, stop, target, support, resistance, zone, swing, or named indicator level). The 'thing taught' here is the five-module progression, and that IS already drawn: lessonChart markPoints (idx0 'Start — Learning Phase', idx6 'Derivatives + Leverage', idx10 'System Building', idx15 'Consistent Edge') and quiz.revealMarkPoints (idx2/5/8/11/14 = Modules 1-5). Per the restraint rule, do NOT invent price levels the text doesn't teach. VERIFIED the auditor's two 'alreadyComplete' findings: (1) lessonChart price band ~[78,108] (START 78 -> legs 86/96/108) and its 4 markPoint indices 0/6/10/15 are all in range of the 16 bars (7+4+5) — sound. (2) quiz.chart cutIndex:10 hides the back half; the conceptual quiz ('what makes a trader consistently profitable?') has no level to draw pre-cut, so leaving the pre-cut region clean is correct (no spoiler), and the Module 1-5 reveals at idx2/5/8/11/14 (band ~[80,113], single 15-bar leg) correctly route the outcome to revealMarkPoints. No coordinate, color, or slot-fit issues found. Auditor correct; no gaps to add and nothing to fix."
+}

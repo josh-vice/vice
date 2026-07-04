@@ -7,10 +7,10 @@
  */
 
 function getBullishColor() {
-  return localStorage.getItem('lt_bullish_color') || '#00d4d4';
+  return LTStore.get('bullishColor') || '#00d4d4';
 }
 function getBearishColor() {
-  return localStorage.getItem('lt_bearish_color') || '#f2f2f2';
+  return LTStore.get('bearishColor') || '#f2f2f2';
 }
 
 function renderCandlestickGallery(containerId) {
@@ -97,8 +97,8 @@ function renderCandlestickGallery(containerId) {
       id: 'doji',
       name: 'Doji',
       sentiment: 'Neutral',
-      svg: '<line x1="8" y1="40" x2="32" y2="40" stroke="#9494b0" stroke-width="2"/>' +
-           '<line x1="20" y1="8" x2="20" y2="72" stroke="#9494b0" stroke-width="1.5"/>',
+      svg: '<line x1="8" y1="40" x2="32" y2="40" style="stroke:var(--text3)" stroke-width="2"/>' +
+           '<line x1="20" y1="8" x2="20" y2="72" style="stroke:var(--text3)" stroke-width="1.5"/>',
       body:    'No body — open and close are equal (or nearly so). The market ended exactly where it started.',
       wicks:   'Upper and lower wicks of varying length. Both sides fought hard but settled at a perfect draw.',
       context: 'Most powerful after a strong trending move. At resistance after a rally = bearish. At support after a sell-off = bullish.',
@@ -128,306 +128,187 @@ function renderCandlestickGallery(containerId) {
     },
   ];
 
-  /* ── sentiment colours ──────────────────────────────────────────────── */
-  var sentimentColor = {
-    Bullish: { bg: 'var(--teal)',  border: 'var(--teal)', text: '#000000' },
-    Bearish: { bg: '#cc2222',     border: '#cc2222',      text: '#ffffff' },
-    Neutral: { bg: '#888888',     border: '#888888',      text: '#ffffff' },
+  /* ── sentiment chips + glow (app palette: teal bull / pink bear / neutral) ── */
+  var SENT = {
+    Bullish: { chipBg: 'rgba(0,212,212,0.10)',  chipBr: 'rgba(0,212,212,0.45)',  chipTx: 'var(--teal)', glow: 'rgba(0,212,212,0.55)' },
+    Bearish: { chipBg: 'rgba(255,46,136,0.10)', chipBr: 'rgba(255,46,136,0.45)', chipTx: '#ff5f8f',     glow: 'rgba(255,46,136,0.5)' },
+    Neutral: { chipBg: 'var(--bg4)',            chipBr: 'var(--border2)',        chipTx: 'var(--text2)', glow: 'rgba(180,180,200,0.4)' }
   };
 
-  /* ── inject styles once ─────────────────────────────────────────────── */
+  /* ── styles ─────────────────────────────────────────────────────────── */
   var styleId = 'lt-gallery-styles';
-  if (!document.getElementById(styleId)) {
-    var style = document.createElement('style');
-    style.id = styleId;
-    style.textContent = [
-      '@keyframes lt-fade {',
-      '  from { opacity: 0; transform: translateY(6px); }',
-      '  to   { opacity: 1; transform: translateY(0); }',
-      '}',
+  var old = document.getElementById(styleId);
+  if (old) old.remove();
+  var style = document.createElement('style');
+  style.id = styleId;
+  style.textContent = [
+    '.lt-gallery-wrap { width:100%; box-sizing:border-box; font-family:"Geist Mono", ui-monospace, "SFMono-Regular", Menlo, monospace; }',
 
-      '.lt-gallery-wrap {',
-      '  width: 100%;',
-      '  box-sizing: border-box;',
-      '  font-family: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;',
-      '}',
+    /* picker strip — snap-scrolls on narrow screens, soft edge fades */
+    '.lt-candle-row { display:flex; justify-content:space-between; align-items:flex-end; gap:6px; padding:10px 2px 6px;',
+    '  overflow-x:auto; overflow-y:hidden; -webkit-overflow-scrolling:touch; scroll-snap-type:x proximity;',
+    '  scrollbar-width:none; -webkit-mask-image:linear-gradient(to right, transparent, #000 14px, #000 calc(100% - 14px), transparent);',
+    '  mask-image:linear-gradient(to right, transparent, #000 14px, #000 calc(100% - 14px), transparent); }',
+    '.lt-candle-row::-webkit-scrollbar { display:none; }',
 
-      /* candle row */
-      '.lt-candle-row {',
-      '  display: flex;',
-      '  justify-content: space-between;',
-      '  align-items: flex-end;',
-      '  width: 100%;',
-      '  gap: 8px;',
-      '  padding: 12px 2px 8px;',
-      '  box-sizing: border-box;',
-      /* horizontal swipe when the candles outgrow the width (e.g. on phones) */
-      '  overflow-x: auto;',
-      '  overflow-y: hidden;',
-      '  -webkit-overflow-scrolling: touch;',
-      '  scroll-snap-type: x proximity;',
-      '  scrollbar-width: thin;',
-      '  scrollbar-color: var(--border3) transparent;',
-      '}',
-      '.lt-candle-row::-webkit-scrollbar { height: 5px; }',
-      '.lt-candle-row::-webkit-scrollbar-thumb { background: var(--border3); border-radius: 3px; }',
-      '.lt-candle-row::-webkit-scrollbar-track { background: transparent; }',
+    '.lt-candle-item { display:inline-flex; flex:0 0 auto; scroll-snap-align:center; flex-direction:column; align-items:center; gap:6px;',
+    '  cursor:pointer; padding:8px 7px 6px; border-radius:9px; border:1px solid transparent; background:none;',
+    '  transition:background-color .15s ease, border-color .15s ease, transform .14s cubic-bezier(0.23,1,0.32,1); user-select:none; -webkit-user-select:none; -webkit-tap-highlight-color:transparent; }',
+    '.lt-candle-item:hover { background:var(--bg4); }',
+    '.lt-candle-item:active { transform:scale(0.94); }',
+    '.lt-candle-item[aria-selected="true"] { background:var(--bg4); border-color:var(--border2); }',
+    '.lt-candle-item[aria-selected="true"] svg { filter:drop-shadow(0 0 5px var(--lt-glow, rgba(0,212,212,0.6))); }',
+    '.lt-candle-item:focus-visible { outline:2px solid var(--teal); outline-offset:2px; }',
+    '.lt-candle-item svg { display:block; transition:filter .15s ease; }',
+    '.lt-candle-label { font-size:10px; color:var(--text3); text-align:center; line-height:1.3; white-space:nowrap; transition:color .15s ease; }',
+    '.lt-candle-item:hover .lt-candle-label { color:var(--text2); }',
+    '.lt-candle-item[aria-selected="true"] .lt-candle-label { color:var(--text); font-weight:700; }',
 
-      '.lt-candle-item {',
-      '  display: inline-flex;',
-      '  flex: 0 0 auto;',              /* keep natural width so the row scrolls instead of squishing */
-      '  scroll-snap-align: center;',
-      '  flex-direction: column;',
-      '  align-items: center;',
-      '  gap: 6px;',
-      '  cursor: pointer;',
-      '  padding: 8px 6px 6px;',
-      '  border-radius: 8px;',
-      '  transition: background 0.15s ease;',
-      '  user-select: none;',
-      '  -webkit-user-select: none;',
-      '}',
+    /* detail card — big candle left, anatomy right */
+    '.lt-info-panel { margin-top:10px; padding:18px 20px 20px; background:var(--bg3); border:1px solid var(--border); border-radius:var(--radius-lg);',
+    '  box-shadow:var(--surface-hi), 0 12px 32px -22px rgba(0,0,0,0.55); }',
+    '.lt-info-top { display:flex; align-items:center; gap:10px; margin-bottom:14px; }',
+    '.lt-info-title { font-size:16.5px; font-weight:800; letter-spacing:-0.3px; color:var(--text); margin:0; }',
+    '.lt-info-badge { font-size:9.5px; font-weight:700; letter-spacing:0.07em; text-transform:uppercase; padding:2.5px 9px; border-radius:20px; border:1px solid; }',
+    '.lt-info-nav { margin-left:auto; display:flex; align-items:center; gap:6px; }',
+    '.lt-info-count { font-size:10.5px; color:var(--text3); font-variant-numeric:tabular-nums; }',
+    '.lt-info-arrow { width:26px; height:26px; display:flex; align-items:center; justify-content:center; border:1px solid var(--border2); border-radius:7px;',
+    '  background:none; color:var(--text3); cursor:pointer; transition:border-color .15s, color .15s, transform .12s; -webkit-tap-highlight-color:transparent; }',
+    '.lt-info-arrow:hover { border-color:var(--teal); color:var(--teal); }',
+    '.lt-info-arrow:active { transform:scale(0.92); }',
+    '.lt-info-arrow svg { width:13px; height:13px; }',
 
-      '.lt-candle-item:hover,',
-      '.lt-candle-item.active {',
-      '  background: rgba(0,212,212,0.07);',
-      '}',
+    '.lt-info-grid { display:grid; grid-template-columns:96px 1fr; gap:14px 18px; align-items:stretch; }',
+    '@media (max-width:560px){ .lt-info-grid { grid-template-columns:76px 1fr; gap:10px 12px; } }',
+    '.lt-info-hero { display:flex; align-items:center; justify-content:center; background:var(--bg2); border:1px solid var(--border);',
+    '  border-radius:var(--radius); position:relative; overflow:hidden; min-height:150px; }',
+    '.lt-info-hero::before { content:""; position:absolute; inset:0; opacity:.5;',
+    '  background-image:linear-gradient(rgba(255,255,255,.04) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.04) 1px, transparent 1px); background-size:15px 15px; }',
+    '.lt-info-hero svg { position:relative; filter:drop-shadow(0 0 10px var(--lt-glow, rgba(0,212,212,0.35))); }',
 
-      '.lt-candle-item svg {',
-      '  display: block;',
-      '  transition: filter 0.15s ease;',
-      '}',
+    '.lt-info-cols { display:flex; flex-direction:column; gap:10px; }',
+    '.lt-info-block { background:var(--bg4); border-radius:8px; padding:9px 13px; }',
+    '.lt-info-block-label { font-size:10px; font-weight:700; letter-spacing:0.09em; text-transform:uppercase; color:var(--teal); margin-bottom:4px; }',
+    '.lt-info-block-text { font-size:12.5px; color:var(--text2); line-height:1.6; }',
+    '.lt-info-below { margin-top:12px; display:flex; flex-direction:column; gap:10px; }',
+    '.lt-info-tip { font-size:12.5px; font-style:italic; color:var(--teal); line-height:1.6; padding:9px 13px;',
+    '  border-left:3px solid var(--teal); background:var(--teal-faint); border-radius:0 8px 8px 0; }',
+    '.lt-info-tip-icon { display:inline-flex; vertical-align:middle; margin-right:6px; }',
 
-      '.lt-candle-item:hover svg,',
-      '.lt-candle-item.active svg {',
-      '  filter: drop-shadow(0 0 4px rgba(0,212,212,0.70));',
-      '}',
+    '.lt-info-swap { transition:opacity .16s ease, transform .16s cubic-bezier(0.23,1,0.32,1); }',
+    '.lt-info-swap.out { opacity:0; transform:translateY(5px); }',
+    '@media (prefers-reduced-motion: reduce) { .lt-info-swap { transition:none; } .lt-candle-item, .lt-info-arrow { transition:none; } }'
+  ].join('\n');
+  document.head.appendChild(style);
 
-      '.lt-candle-label {',
-      '  font-size: 10px;',
-      '  color: #9494b0;',
-      '  text-align: center;',
-      '  line-height: 1.3;',
-      '  white-space: nowrap;',
-      '  transition: color 0.15s ease;',
-      '}',
-
-      '.lt-candle-item:hover .lt-candle-label,',
-      '.lt-candle-item.active .lt-candle-label {',
-      '  color: #00d4d4;',
-      '}',
-
-      /* info panel */
-      '.lt-info-panel {',
-      '  margin-top: 12px;',
-      '  padding: 18px 20px 24px;',
-      '  background: var(--bg3);',
-      '  border: 1px solid var(--border);',
-      '  border-radius: 10px;',
-      '  width: 100%;',
-      '  max-width: 100%;',
-      '  box-sizing: border-box;',
-      '}',
-
-      '.lt-info-panel.lt-fading {',
-      '  animation: lt-fade 0.2s ease;',
-      '}',
-
-      '.lt-info-header {',
-      '  display: flex;',
-      '  align-items: center;',
-      '  gap: 10px;',
-      '  margin-bottom: 14px;',
-      '  flex-wrap: wrap;',
-      '}',
-
-      '.lt-info-title {',
-      '  font-size: 17px;',
-      '  font-weight: 700;',
-      '  color: var(--text);',
-      '  margin: 0;',
-      '}',
-
-      '.lt-info-badge {',
-      '  font-size: 10px;',
-      '  font-weight: 700;',
-      '  letter-spacing: 0.07em;',
-      '  text-transform: uppercase;',
-      '  padding: 3px 9px;',
-      '  border-radius: 20px;',
-      '}',
-
-      '.lt-info-cols {',
-      '  display: grid;',
-      '  grid-template-columns: 1fr 1fr;',
-      '  gap: 10px 18px;',
-      '  margin-bottom: 12px;',
-      '}',
-
-      '@media (max-width: 520px) {',
-      '  .lt-info-cols { grid-template-columns: 1fr; }',
-      '  .lt-candle-row { gap: 4px; }',
-      '  .lt-candle-label { font-size: 9px; }',
-      '}',
-
-      '.lt-info-block {',
-      '  background: var(--bg4);',
-      '  border-radius: 7px;',
-      '  padding: 9px 13px;',
-      '}',
-
-      '.lt-info-block-label {',
-      '  font-size: 10px;',
-      '  font-weight: 700;',
-      '  letter-spacing: 0.09em;',
-      '  text-transform: uppercase;',
-      '  color: var(--teal);',
-      '  margin-bottom: 5px;',
-      '}',
-
-      '.lt-info-block-text {',
-      '  font-size: 13px;',
-      '  color: var(--text2);',
-      '  line-height: 1.55;',
-      '}',
-
-      '.lt-info-context {',
-      '  background: var(--bg4);',
-      '  border-radius: 7px;',
-      '  padding: 9px 13px;',
-      '  margin-bottom: 12px;',
-      '}',
-
-      '.lt-info-tip {',
-      '  font-size: 13px;',
-      '  font-style: italic;',
-      '  color: var(--teal);',
-      '  line-height: 1.55;',
-      '  padding: 9px 13px;',
-      '  border-left: 3px solid var(--teal);',
-      '  background: var(--teal-faint);',
-      '  border-radius: 0 7px 7px 0;',
-      '}',
-
-      '.lt-info-tip-icon { display:inline-flex; vertical-align:middle; margin-right:6px; flex-shrink:0; }',
-
-    ].join('\n');
-    document.head.appendChild(style);
-  }
-
-  /* ── find content-area and inject after the two-column layout ───────── */
-  var ca = document.getElementById('content-area');
-  if (!ca) {
-    console.error('[lt-gallery] #content-area not found.');
-    return;
-  }
-  var twoCol = ca.firstElementChild;
-
-  /* remove any previous gallery instance */
-  var existing = document.getElementById('lt-gallery-root');
-  if (existing) existing.parentNode.removeChild(existing);
-
+  /* ── mount into the container the caller gave us (the lab step widget) ── */
+  var host = document.getElementById(containerId) || document.getElementById('content-area');
+  if (!host) { console.error('[lt-gallery] mount container not found'); return; }
+  var prev = document.getElementById('lt-gallery-root');
+  if (prev) prev.remove();
   var mountPoint = document.createElement('div');
   mountPoint.id = 'lt-gallery-root';
-  mountPoint.style.cssText = 'width:100%;padding:0 24px 24px 24px;box-sizing:border-box;';
-  if (twoCol && twoCol.nextSibling) {
-    ca.insertBefore(mountPoint, twoCol.nextSibling);
-  } else {
-    ca.appendChild(mountPoint);
-  }
+  host.appendChild(mountPoint);
 
-  /* ── outer wrapper ──────────────────────────────────────────────────── */
   var wrap = document.createElement('div');
   wrap.className = 'lt-gallery-wrap';
-
-  /* ── candle row ─────────────────────────────────────────────────────── */
   var row = document.createElement('div');
   row.className = 'lt-candle-row';
-
-  /* ── info panel (always visible, default first candle) ────────────── */
+  row.setAttribute('role', 'tablist');
+  row.setAttribute('aria-label', 'Candle types');
   var panel = document.createElement('div');
   panel.className = 'lt-info-panel';
 
-  /* ── active tracking ────────────────────────────────────────────────── */
-  var activeItem = null;
+  var current = 0;
+  var reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-  /* ── helper: render panel content ──────────────────────────────────── */
-  function showCandle(candle) {
-    var sc = sentimentColor[candle.sentiment] || sentimentColor['Neutral'];
-
-    /* trigger fade animation by toggling class */
-    panel.classList.remove('lt-fading');
-    /* force reflow so animation restarts */
-    void panel.offsetWidth;
-    panel.classList.add('lt-fading');
-
-    panel.style.display = '';
-    panel.innerHTML =
-      '<div class="lt-info-header">' +
-        '<h3 class="lt-info-title">' + candle.name + '</h3>' +
-        '<span class="lt-info-badge" style="' +
-          'background:' + sc.bg + ';' +
-          'border:1px solid ' + sc.border + ';' +
-          'color:' + sc.text + ';">' +
-          candle.sentiment +
-        '</span>' +
-      '</div>' +
-
-      '<div class="lt-info-cols">' +
-        '<div class="lt-info-block">' +
-          '<div class="lt-info-block-label">Body</div>' +
-          '<div class="lt-info-block-text">' + candle.body + '</div>' +
+  function paint(idx, animate) {
+    var candle = candles[idx];
+    var sc = SENT[candle.sentiment] || SENT.Neutral;
+    var body =
+      '<div class="lt-info-swap">' +
+        '<div class="lt-info-top">' +
+          '<h3 class="lt-info-title">' + candle.name + '</h3>' +
+          '<span class="lt-info-badge" style="background:' + sc.chipBg + ';border-color:' + sc.chipBr + ';color:' + sc.chipTx + ';">' + candle.sentiment + '</span>' +
+          '<span class="lt-info-nav">' +
+            '<span class="lt-info-count">' + (idx + 1) + ' / ' + candles.length + '</span>' +
+            '<button class="lt-info-arrow" data-nav="-1" aria-label="Previous candle type"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg></button>' +
+            '<button class="lt-info-arrow" data-nav="1" aria-label="Next candle type"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></button>' +
+          '</span>' +
         '</div>' +
-        '<div class="lt-info-block">' +
-          '<div class="lt-info-block-label">Wicks</div>' +
-          '<div class="lt-info-block-text">' + candle.wicks + '</div>' +
+        '<div class="lt-info-grid" style="--lt-glow:' + sc.glow + ';">' +
+          '<div class="lt-info-hero"><svg viewBox="0 0 40 80" width="72" height="144" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">' + candle.svg + '</svg></div>' +
+          '<div class="lt-info-cols">' +
+            '<div class="lt-info-block"><div class="lt-info-block-label">Body</div><div class="lt-info-block-text">' + candle.body + '</div></div>' +
+            '<div class="lt-info-block"><div class="lt-info-block-label">Wicks</div><div class="lt-info-block-text">' + candle.wicks + '</div></div>' +
+          '</div>' +
         '</div>' +
-      '</div>' +
+        '<div class="lt-info-below">' +
+          '<div class="lt-info-block"><div class="lt-info-block-label">Context</div><div class="lt-info-block-text">' + candle.context + '</div></div>' +
+          '<div class="lt-info-tip"><i data-lucide="lightbulb" class="lt-info-tip-icon" style="width:14px;height:14px;"></i>' + candle.tip + '</div>' +
+        '</div>' +
+      '</div>';
 
-      '<div class="lt-info-context">' +
-        '<div class="lt-info-block-label">Context</div>' +
-        '<div class="lt-info-block-text">' + candle.context + '</div>' +
-      '</div>' +
+    var apply = function() {
+      panel.innerHTML = body;
+      panel.querySelectorAll('.lt-info-arrow').forEach(function(b) {
+        b.addEventListener('click', function() { select((current + parseInt(b.dataset.nav, 10) + candles.length) % candles.length, true); });
+      });
+      if (typeof lucide !== 'undefined') lucide.createIcons();
+      if (animate && !reduced) {
+        var sw = panel.querySelector('.lt-info-swap');
+        sw.classList.add('out');
+        requestAnimationFrame(function() { requestAnimationFrame(function() { sw.classList.remove('out'); }); });
+      }
+    };
 
-      '<div class="lt-info-tip"><i data-lucide="lightbulb" class="lt-info-tip-icon" style="width:14px;height:14px;"></i>' + candle.tip + '</div>';
+    if (animate && !reduced && panel.querySelector('.lt-info-swap')) {
+      var cur = panel.querySelector('.lt-info-swap');
+      cur.classList.add('out');
+      setTimeout(apply, 130);
+    } else apply();
   }
 
-  /* ── build candle items ─────────────────────────────────────────────── */
-  candles.forEach(function(candle) {
-    var item = document.createElement('div');
-    item.className = 'lt-candle-item';
-    item.setAttribute('data-id', candle.id);
-
-    item.innerHTML =
-      '<svg viewBox="0 0 40 80" width="40" height="80"' +
-      ' xmlns="http://www.w3.org/2000/svg"' +
-      ' aria-label="' + candle.name + '" role="img">' +
-      candle.svg +
-      '</svg>' +
-      '<div class="lt-candle-label">' + candle.name + '</div>';
-
-    item.addEventListener('mouseenter', function() {
-      /* highlight */
-      if (activeItem) activeItem.classList.remove('active');
-      activeItem = item;
-      item.classList.add('active');
-
-      showCandle(candle);
+  function select(idx, animate) {
+    if (idx === current && panel.innerHTML) return;
+    current = idx;
+    row.querySelectorAll('.lt-candle-item').forEach(function(it, i) {
+      var sc = SENT[candles[i].sentiment] || SENT.Neutral;
+      it.setAttribute('aria-selected', i === idx ? 'true' : 'false');
+      it.setAttribute('tabindex', i === idx ? '0' : '-1');
+      it.style.setProperty('--lt-glow', sc.glow);
     });
+    var active = row.children[idx];
+    if (active && active.scrollIntoView) active.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: reduced ? 'auto' : 'smooth' });
+    paint(idx, animate);
+  }
 
+  candles.forEach(function(candle, i) {
+    var item = document.createElement('button');
+    item.type = 'button';
+    item.className = 'lt-candle-item';
+    item.setAttribute('role', 'tab');
+    item.setAttribute('data-id', candle.id);
+    item.innerHTML =
+      '<svg viewBox="0 0 40 80" width="38" height="76" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">' + candle.svg + '</svg>' +
+      '<div class="lt-candle-label">' + candle.name + '</div>';
+    item.addEventListener('click', function() { select(i, true); item.focus({ preventScroll: true }); });
     row.appendChild(item);
+  });
+
+  /* arrow-key navigation across the strip */
+  row.addEventListener('keydown', function(e) {
+    if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+    e.preventDefault();
+    e.stopPropagation();   // the engine pages course steps on arrows at document level
+    var next = (current + (e.key === 'ArrowRight' ? 1 : -1) + candles.length) % candles.length;
+    select(next, true);
+    var it = row.children[next];
+    if (it) it.focus({ preventScroll: true });
   });
 
   wrap.appendChild(row);
   wrap.appendChild(panel);
   mountPoint.appendChild(wrap);
-
-  /* ── default: show first candle immediately ─────────────────────── */
-  var firstItem = row.querySelector('.lt-candle-item');
-  if (firstItem) {
-    firstItem.classList.add('active');
-    activeItem = firstItem;
-  }
-  showCandle(candles[0]);
-  if (typeof lucide !== 'undefined') lucide.createIcons();
+  select(0, false);
 }

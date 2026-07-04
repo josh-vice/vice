@@ -1,0 +1,27 @@
+{
+  "course": "4",
+  "file": "04_Liquidity_Structures.js",
+  "lessonId": "course4/04_liquidity_structures",
+  "edits": [
+    {
+      "beatId": "under-over",
+      "beatType": "CHART",
+      "move": "liquidity_sweep_bullish",
+      "addShow": [
+        { "kind": "marker", "at": "reversalTop", "label": "price runs — shorts' stops become fuel", "style": "reversal", "place": "above" }
+      ],
+      "reason": "Say: 'their stops become fuel, and price runs.' The accumulated show marks support, sweepLow (under) and reclaim (over), but the completed run-up after the reclaim is the locatable endpoint the voice ends on. reversalTop is a valid point anchor for liquidity_sweep_bullish and is not yet drawn; marker matches the point-anchor type. Distinct from reclaim (which teaches the over/reclaim event), this marks where price actually runs."
+    },
+    {
+      "beatId": "over-under",
+      "beatType": "CHART",
+      "move": "liquidity_sweep_bearish",
+      "addShow": [
+        { "kind": "marker", "at": "reversalBottom", "label": "move lower — longs' stops feed it", "style": "reversal", "place": "below" }
+      ],
+      "reason": "Say: 'the longs are offside, and their stops feed the move lower.' Mirror of under-over. Accumulated show marks resistance, sweepHigh (over) and reclaim (under); the completed move lower is unmarked. reversalBottom is a valid point anchor for liquidity_sweep_bearish, not yet shown; marker matches point-anchor type and the place:below keeps the label clear under the move."
+    }
+  ],
+  "alreadyGood": [],
+  "notes": "Two CONCEPT beats (intro, anatomy, recap) are text-only and skipped. Both CHART beats already label the level (support/resistance as range low/high), the sweep leg (sweepLow/sweepHigh), and the reclaim leg — those existing show items are correct and non-redundant. The only gap in each is the completed reversal endpoint (reversalTop / reversalBottom) that the say's closing clause teaches ('price runs' / 'their stops feed the move lower'). Auditor's two proposals are both anchor-valid (reversalTop and reversalBottom are real point anchors for their respective moves), correctly typed as markers, non-redundant, and say-justified; accepted with labels tightened to the say wording. No noAnchorGaps; nothing rejected."
+}

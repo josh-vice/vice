@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Liquidity Theory · v2 lesson preview — Identifying Liquidity</title>
+<!-- ISOLATED preview. Loads ONLY the v2 stack; touches nothing on the live site. -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="player.css">
+<style>
+  :root { color-scheme: dark; }
+  html, body {
+    margin: 0; padding: 0;
+    background: #050409;
+    color: #e8e8f0;
+    font-family: 'JetBrains Mono', ui-monospace, Menlo, monospace;
+  }
+  .page { max-width: 1040px; margin: 0 auto; padding: 32px 20px 80px; }
+  .ph { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; margin-bottom: 6px; }
+  .ph h1 { font-size: 18px; font-weight: 700; margin: 0; }
+  .ph .badge { font-size: 10px; letter-spacing: .16em; text-transform: uppercase;
+    color: #050409; background: #00d4d4; padding: 3px 8px; border-radius: 4px; font-weight: 700; }
+  .ph .sub { font-size: 12px; color: #8d8aa3; }
+  .note { font-size: 12px; color: #8d8aa3; margin: 0 0 22px; line-height: 1.5; }
+  .note b { color: #cfcee0; }
+  #mount { margin-top: 8px; }
+  .hint { margin-top: 16px; font-size: 12px; color: #6f6c85; text-align: center; }
+  .hint kbd { background: #14121f; border: 1px solid #272240; border-radius: 4px; padding: 1px 6px; color: #cfcee0; }
+</style>
+</head>
+<body>
+  <div class="page">
+    <div class="ph">
+      <span class="badge">v2 preview</span>
+      <h1>Identifying Liquidity</h1>
+      <span class="sub">Course 4 · Liquidity Theory — rendered from the v2 content + vocabulary + renderer</span>
+    </div>
+    <p class="note">
+      This page renders <b>one lesson file</b> (<code>lessons/Course4/03_Identifying_Liquidity.js</code>)
+      through the <b>v2 renderer</b> using the <b>chart vocabulary</b>. Silent for now —
+      narration shows in the caption bar (the future TTS cue point). Click the stage or
+      press <kbd>Play</kbd> to advance.
+    </p>
+    <div id="mount"></div>
+    <p class="hint"><kbd>←</kbd> / <kbd>→</kbd> step beats · <kbd>Space</kbd> play/pause · click the stage to advance</p>
+  </div>
+
+  <!-- v2 stack, in dependency order -->
+  <script src="chart-vocabulary.js"></script>
+  <script src="renderer.js"></script>
+  <script src="lessons/Course4/03_Identifying_Liquidity.js"></script>
+  <script>
+    (function () {
+      try {
+        window.__player = new LTRenderer(document.getElementById('mount'), window.LTLesson);
+        console.log('[v2] loaded lesson:', window.LTLesson.id, '·', window.LTLesson.beats.length, 'beats');
+      } catch (e) {
+        console.error('[v2] init failed:', e);
+        document.getElementById('mount').textContent = 'Init failed: ' + e.message;
+      }
+    })();
+  </script>
+</body>
+</html>

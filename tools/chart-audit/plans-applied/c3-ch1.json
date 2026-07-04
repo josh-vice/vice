@@ -1,0 +1,17 @@
+{
+  "course": 3,
+  "chapterId": 1,
+  "title": "Order Types",
+  "module": "Getting Started with Derivatives",
+  "edits": [
+    {
+      "slot": "introChart",
+      "addMarkLines": [
+        { "yAxis": 100, "label": "Market Price", "color": "#888888" }
+      ],
+      "reason": "Intro bullet teaches 'Limit Buy = placed BELOW market price (waits for price to fall).' The def draws the Limit Buy level at 85 but only pins 'Market Price' as a markPoint event on candle 0 — there is no horizontal level showing WHERE market sits. Adding a market-price line at 100 (the chart's start price, inside the 83-102 band) makes the 'rests below market' relationship visible as a level-vs-level gap against the Limit Buy line at 85. Gray #888888 because market price is side-neutral here, not a bullish/bearish signal."
+    }
+  ],
+  "alreadyGood": ["lessonChart", "quiz.chart"],
+  "notes": "lessonChart already draws the full SL demo trade: Entry @85 (teal) + Stop Loss @80 (pink) with event pins (Entry Long, Trade Running, Reversal Warning, SL Fires) — the lesson is a stop-loss/invalidation demo, no Take-Profit is taught (price runs to 107 then reverses into the SL), so nothing missing. quiz.chart correctly draws only DECISION context pre-cut (Planned Entry @86 + Support Zone 84-89) with cutIndex 8, and routes the OUTCOME (Limit Buy Fills / Bounce Begins / Trade Running) to revealMarkPoints — does not spoil the answer; correct. Accepted the auditor's lone introChart gap (refined label from 'Market Price (order rests below)' to plain 'Market Price' since the spatial relationship vs the Limit Buy line carries the meaning and the markLine pill stays compact). Coordinate check: yAxis 100 == ltCandles START, inside band; no clip."
+}

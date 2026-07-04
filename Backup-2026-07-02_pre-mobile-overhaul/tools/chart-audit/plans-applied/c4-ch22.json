@@ -1,0 +1,18 @@
+{
+  "course": 4,
+  "chapterId": 22,
+  "title": "Combining Sentiment Data",
+  "module": "Applying Sentiment",
+  "edits": [
+    {
+      "slot": "lessonChart",
+      "addMarkLines": [
+        { "yAxis": 101, "label": "25x Short Liq — ~$6,300", "color": "#ffcc00" },
+        { "yAxis": 103, "label": "Fib + Midpoint + Structure — $6,346", "color": "#ffcc00" }
+      ],
+      "reason": "The lesson worked example explicitly teaches three DISTINCT levels stacked just below the $6,370 short-cluster target, but the chart bundles them all into one merged pink line at 106. Bullet: 'Liquidation Levels: 25x short liquidations at ~$6,300 -> nearby cluster adds to the congestion' justifies a separate gold liq line; bullet: 'Chart: $6,346 = Fibonacci confluence + midpoint + prior structure = three TA confirmations' justifies a separate gold Fib/midpoint line. Real prices order $6,300 < $6,346 < $6,370, so the lines are ordered liq(101) < Fib(103) < existing cluster target(106). Both inside band [76-109]. Gold matches the chapter's existing liquidation/heatmap palette and keeps them visually distinct from the pink resistance target. This makes 'four data points validating the same price' (the chart's own title) actually show four locatable levels instead of one."
+    }
+  ],
+  "alreadyGood": ["introChart", "quiz.chart"],
+  "notes": "Rejected the auditor's introChart midpoint line @91: the intro is a CONCEPT illustration ('spot the blocks, plot the blocks' framework) and its body/bullets never name a midpoint level — 'midpoint' is a lesson-only concept ($6,346). The 'Midpoint Crossed' pin is a fine progress EVENT and does not require a drawn level; adding a gold line purely to back-fill a pin is an invention, so it is dropped. For the lessonChart I kept the auditor's two liq/Fib additions but CORRECTED their ordering: the auditor placed Fib (101) BELOW liq (102/103), which inverts the real prices ($6,346 Fib is above $6,300 liq). Reordered to liq=101, Fib=103, both below the existing 106 cluster target. quiz.chart confirmed alreadyGood: cutIndex:8 pre-reveal correctly shows only entry (79) and target (106) as decision context, with outcome routed to revealMarkPoints — adding the liq/Fib sub-levels there would clutter the decision and the merged target label already covers them."
+}

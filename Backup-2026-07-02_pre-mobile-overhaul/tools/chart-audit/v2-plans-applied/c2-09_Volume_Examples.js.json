@@ -1,0 +1,8 @@
+{
+  "course": "2",
+  "file": "09_Volume_Examples.js",
+  "lessonId": "course2/09_volume_examples",
+  "edits": [],
+  "alreadyGood": ["breakout", "breakdown"],
+  "notes": "Verified both CHART beats against ground-truth anchors for consolidation_breakout (rangeHigh(L), rangeLow(L), breakout(pt)). breakout beat: level@rangeHigh 'resistance' (L, valid; say 'consolidation under a resistance level'); marker@breakout 'breakout on a volume spike' (pt, valid; say 'price breaks the level, and the volume bar explodes. That spike is your confirmation'). breakdown beat: level@rangeLow 'support' (L, valid); marker@breakout 'breakdown on a volume spike' (pt, valid for dir down; say 'breaks down — and the volume bar surges'). The volume panel referenced throughout ('volume in the panel below', 'the volume bar explodes/surges') is rendered by the move via params.volume:true and exposes no separate labelable anchor — correctly NOT annotated. No gaps, no fixes, no noAnchorGaps. Auditor's alreadyComplete assessment confirmed. CONCEPT beats intro/confirm/recap skipped (no chart)."
+}

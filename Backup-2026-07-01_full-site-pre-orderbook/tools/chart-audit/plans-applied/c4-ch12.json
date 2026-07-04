@@ -1,0 +1,25 @@
+{
+  "course": 4,
+  "chapterId": 12,
+  "title": "Trend Buddy",
+  "module": "Indicator Suite",
+  "edits": [
+    {
+      "slot": "introChart",
+      "addMarkLines": [
+        { "yAxis": 110, "label": "Orange High = S/R", "color": "#ff9f1a" }
+      ],
+      "reason": "Intro bullet: 'Orange: bearish pivot — use candle high/low as S/R; take profit on longs or tighten stops.' The chart already pins the orange pivot with a markPoint at index 6, but the taught idea that the pivot HIGH becomes a horizontal S/R level is not drawn as a level. The orange pivot caps the first up-leg (to:110), so a line at 110 sits at the band top (band ~82-111, in-band) and makes the S/R concept concrete. Concept illustration only — fits the intro slot. Low confidence; keep restrained."
+    },
+    {
+      "slot": "lessonChart",
+      "addMarkLines": [
+        { "yAxis": 80, "label": "Entry — Turquoise + DBS", "color": "#00d4d4" },
+        { "yAxis": 75, "label": "Stop — below DBS", "color": "#ff2e88" }
+      ],
+      "reason": "lessonChart is the worked trade (a long taken on the turquoise color change at the DBS zone) yet only the DBS level is drawn. Lesson bullet: 'Turquoise and Magenta: trend-following entries; enter within 1-2 candles of color change with TA confirmation' justifies a visible ENTRY at the turquoise change (~80, just above the 77 DBS low; band 77-113, in-band; teal = long). Bullet 'Blue: unconfirmed reversal ... stops must be tight' justifies a STOP just under the DBS low at 75 (~2.6% below the 77 band floor, at the lower wick edge; pink = stop against a long). REJECTED the auditor's Target at 113: no Orange profit-taking candle appears on this chart (colors run gray->blue->lime->turquoise and stay turquoise) and the lesson names no target price, so labelling the band-top 113 as 'TP' invokes a signal that isn't drawn and invents a level the text doesn't teach for this trade."
+    }
+  ],
+  "alreadyGood": ["quiz.chart"],
+  "notes": "introChart: 1 of 1 auditor gap accepted (orange-high S/R line, low confidence, in-band at 110). lessonChart: 2 of 3 auditor gaps accepted (Entry teal@80, Stop pink@75); Target gold@113 REJECTED as a text-unsupported invention (no Orange profit-taking signal exists on this chart and no target price is taught). quiz.chart correctly handled by the auditor: cutIndex:9 hides the outcome, the lone DBS markLine@76 is appropriate pre-cut decision context, and the outcome (Gray/Turquoise-Enter-Long/Uptrend-Confirmed) is routed to revealMarkPoints — no pre-reveal spoiler, nothing to add. No existing-annotation fixes needed; all current labels match the text and palette (teal=DBS/long, pink available for stop, magenta=downtrend candleColors)."
+}

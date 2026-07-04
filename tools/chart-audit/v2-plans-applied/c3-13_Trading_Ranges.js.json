@@ -1,0 +1,8 @@
+{
+  "course": "3",
+  "file": "13_Trading_Ranges.js",
+  "lessonId": "course3/13_trading_ranges",
+  "edits": [],
+  "alreadyGood": ["playbook"],
+  "notes": "Single CHART beat ('playbook', move range_bound, anchors high(L)/low(L)). Existing show fully covers the say: level at high ('sell here — range high') and level at low ('buy here — range low') label both edges the say names ('a defined high acting as resistance, a defined low acting as support'; 'sell near the range high', 'buy near the range low'); zone below high ('sellers / supply') and zone above low ('buyers / demand') label the defense zones ('where sellers defend' / 'where buyers defend'). All four anchors are valid range_bound (L) anchors and kind/type match. 'target the opposite edge' and 'price ping-pongs between the two' need no new anchor — both edges are already drawn. 'the range eventually breaks' has no anchor (range_bound exposes only high/low) but is a passing mention, not the beat's teaching focus, so not even a noAnchorGap worth recording. The midpoint, fakeouts, and breakout/breakdown concepts live in the CONCEPT beats (tactics, recap) which cannot draw, and range_bound exposes no anchor for them anyway. Auditor's alreadyComplete=true is correct; nothing to add or fix."
+}

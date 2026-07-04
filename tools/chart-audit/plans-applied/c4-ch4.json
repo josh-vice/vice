@@ -1,0 +1,19 @@
+{
+  "course": 4,
+  "chapterId": 4,
+  "title": "Liquidity Scenarios — Live Examples",
+  "module": "Identifying Liquidity",
+  "edits": [
+    {
+      "slot": "introChart",
+      "addMarkLines": [
+        { "yAxis": 88, "label": "Range Low", "color": "#00d4d4" },
+        { "yAxis": 93, "label": "Range High — Target", "color": "#00d4d4" },
+        { "yAxis": 90.5, "label": "Midpoint — Conviction Gauge", "color": "#8a8f99" }
+      ],
+      "reason": "The intro literally teaches this 3-step process: 'mark Range High, Range Low, Midpoint first'. None of the three named range levels is currently drawn as a labelled level (only the 86/88 liqCluster ladder exists). Range Low 88 sits at the equal-lows / engulf level the engulf markPoint references ('Engulf Through Range Low'). Range High 93 is the highs at idx 9/14 (~92-93) and the destination of the bullish run — 'price crossing and holding above the midpoint increases confidence of Range High being reached'; band top is 105 so it is comfortably visible. Midpoint 90.5 = halfway(88,93), explicitly taught as the post-entry 'gauge' — recolored from the auditor's gold to neutral #8a8f99 (a grey already used elsewhere in this file) because gold in the palette means liq/target, and a midpoint gauge is neither. Note: Range Low 88 coincides with the top liqCluster line, so it is the weakest of the three, but the text marks Range Low as a distinct named step and the engulf event points to it, so labelling it explicitly is justified."
+    }
+  ],
+  "alreadyGood": ["lessonChart", "quiz.chart"],
+  "notes": "REJECTED auditor lessonChart gap (Range High markLine @95): in both the lesson and quiz the pre-wick ranging band is ~87-90 (legs walk 90->87 over 9 bars; Range Low drawn at 87). 95 is the post-recovery extension target, not the range ceiling — labelling 95 'Range High' would contradict the actual ranging band, and the chapter never gives a numeric range high for the pool example. The lessonChart already teaches the pool mechanic cleanly (Range Low 87 + 4 markPoints), so no edit. REJECTED auditor quiz.chart gap: the proposed relabel of revealMarkPoint idx14 to '~95 = Range High' is self-contradictory (idx14 price is ~104, leg to:104) and low-value; the reveal already says 'Pool Ran to Range High'. Pre-cut correctly stays Range-Low-only (87) to preserve the pool-vs-structure decision — adding any Range High level there would either be contradictory (no taught numeric value) or unnecessary. Quiz left as-is. ACCEPTED all three introChart gaps (with Midpoint recolor) because the intro bullet enumerates marking exactly Range High / Range Low / Midpoint, and currently none of the three is drawn as a labelled horizontal level."
+}

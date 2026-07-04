@@ -1,0 +1,26 @@
+{
+  "course": 3,
+  "chapterId": 10,
+  "title": "Identifying Access Points — Understanding Consolidation",
+  "module": "Applying the Basics",
+  "edits": [
+    {
+      "slot": "introChart",
+      "addMarkLines": [
+        { "yAxis": 82, "label": "DBS Top — Highest Open of Down Candle", "color": "#00d4d4" },
+        { "yAxis": 77, "label": "DBS Bottom — Lowest Wick", "color": "#00d4d4" }
+      ],
+      "reason": "Intro teaches the exact DBS construction: 'DBS Zone (Demand/Buyer/Support): lowest price including wicks (bottom) -> highest opening of down candle (top)'. The existing markArea (77-82) shows the band but never tells the learner WHERE its edges come from. Labelling both edges makes the taught definition explicit. Both values are the actual edges of the existing zone and sit inside the [80,120] price band (teal = demand/support per palette)."
+    },
+    {
+      "slot": "lessonChart",
+      "addMarkLines": [
+        { "yAxis": 100, "label": "SSR Bottom — Lowest Open of Up Candle", "color": "#ff2e88" },
+        { "yAxis": 80, "label": "Structure Break — Prior Low Taken", "color": "#ff2e88" }
+      ],
+      "reason": "Lesson teaches 'SSR Zone (Supply/Seller/Resistance): ... lowest opening of up candle (bottom)' and 'reversal needs a market structure break'. The 100 line labels the accurate lower boundary of the existing 100-105 SSR area so the taught bottom-boundary definition is visible. The 80 line draws the prior low (chart origin 80) that the final Lower Low (78) breaks, making the 'market structure break' that defines a reversal SSR's strength a concrete level rather than only a 'Lower Low' pin. Both sit inside the [78,111] band; pink = supply/bearish per palette. NOTE: no SSR-top line proposed — the existing area top (105) is below the candle's true highest wick (~111), so a 'highest wick' label there would be inaccurate; redrawing the area band is out of scope."
+    }
+  ],
+  "alreadyGood": ["quiz.chart"],
+  "notes": "Chapter 10 is purely definitional (what a DBS/SSR zone is + Strength/Time/Depletion); no live Entry/Stop/Target is taught here (that is chapter 11), so additions correctly label zone-construction boundaries and the reversal structure-break level rather than trade levels. Auditor's introChart top-line (82) ACCEPTED; ADDED the matching DBS bottom line (77) so the full 'lowest wick -> highest open' definition is drawn. Auditor's lessonChart structure-break (80) and SSR-bottom (100) both ACCEPTED. Auditor's confidence ratings were conservative but the levels are text-justified and in-band. quiz.chart is correctly complete: cutIndex:9 hides the decision and the generic 'Zone Formed Here' area does not spoil the answer; outcome is routed to revealMarkPoints — no pre-cut additions, which would give away the DBS answer."
+}

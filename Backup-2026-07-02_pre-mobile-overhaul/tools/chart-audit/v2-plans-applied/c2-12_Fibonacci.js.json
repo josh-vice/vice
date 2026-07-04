@@ -1,0 +1,19 @@
+{
+  "course": "2",
+  "file": "12_Fibonacci.js",
+  "lessonId": "course2/12_fibonacci",
+  "edits": [
+    {
+      "beatId": "measure",
+      "beatType": "CHART",
+      "move": "fibonacci",
+      "addShow": [
+        { "kind": "marker", "at": "swingLow", "label": "swing low", "style": "dot", "place": "below" },
+        { "kind": "marker", "at": "swingHigh", "label": "swing high", "style": "dot", "place": "above" }
+      ],
+      "reason": "Say teaches the anchoring mechanic literally: 'We anchor the tool from the swing low to the swing high of an impulse.' Both swingLow and swingHigh are valid POINT anchors for the fibonacci move; marker is the correct kind for a point anchor. Neither is currently in the accumulated show (only the four fib levels and the bounce marker are drawn), so labelling the two endpoints of the measurement closes a real gap — these are the from/to of the tool the beat is about. place below/above keeps labels clear of candles."
+    }
+  ],
+  "alreadyGood": [],
+  "notes": "Move = fibonacci; valid anchors swingLow(pt), swingHigh(pt), bounce(pt), fib382/fib500/fib618/fib786(L). Existing shows on 'measure' are all correct: the four fib levels use valid (L) anchors with labels matching the say (38.2/50/61.8/78.6, golden pocket on 0.618), and the bounce marker is justified by 'pulls back, finds the 61.8 level, and bounces.' Auditor's two proposed marker adds (swingLow, swingHigh) are ACCEPTED — valid anchors, correct kind/type, non-redundant, directly say-justified. No fixes needed. intro/golden/recap are CONCEPT beats (no chart) and are skipped. No noAnchorGaps: every locatable thing the chart beat references (swing low, swing high, the four ratios, the 61.8 bounce) maps to an exposed anchor."
+}

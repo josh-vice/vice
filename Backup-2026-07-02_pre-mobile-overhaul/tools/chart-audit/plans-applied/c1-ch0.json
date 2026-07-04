@@ -1,0 +1,24 @@
+{
+  "course": 1,
+  "chapterId": 0,
+  "title": "Understanding Price Action",
+  "module": "Price Action Foundations",
+  "edits": [
+    {
+      "slot": "introChart",
+      "addMarkPoints": [
+        { "dataIndex": 16, "label": "Inverted Hammer", "position": "top" }
+      ],
+      "fixes": [
+        {
+          "find": "{ dataIndex: 0, label: \"Marubozu\", position: \"top\" }",
+          "replaceWith": "{ dataIndex: 0, label: \"Bullish\", position: \"top\" }",
+          "reason": "idx0 candle [50,54,49,54] has a lower wick (low 49 below the 50 open/close), so it is NOT a marubozu. The lesson defines Marubozu as 'Almost no wicks.' The true no-wick marubozu is idx15 [58,64,58,64], which is already labelled 'Marubozu'. Relabelling idx0 to 'Bullish' (matching its data comment) removes the contradictory teaching point without creating a duplicate Marubozu pin."
+        }
+      ],
+      "reason": "The lesson lists eight named candle types; Inverted Hammer ('Long upper wick, small body at BOTTOM of move. Context-dependent; watch next candle.') is the only one with an authored example (idx16 [64,64,64,72], data comment 'inverted hammer') left unlabelled on the variety chart. Adding the pin completes the 'anything taught must be drawn' coverage. dataIndex 16 is within the 18-candle (0-17) range and authored like the existing markPoints; position 'top' suits a body-at-bottom / long-upper-wick candle. The idx0 fix corrects a candle that is currently taught as a Marubozu despite having a visible lower wick."
+    }
+  ],
+  "alreadyGood": ["lessonChart", "quiz.chart"],
+  "notes": "Auditor's two main findings are valid and accepted with one correction: the Inverted Hammer addition is a plain introChart markPoint, NOT a 'revealMarkPoint' (introChart has no quiz/reveal mechanism). The idx0 'Marubozu' mislabel is fixed by relabelling to 'Bullish' rather than retargeting to idx15 (which would duplicate the existing idx15 Marubozu pin). Rejected the auditor's low-confidence Spinning Top suggestion: no distinct spinning-top candle is authored, so pinning one would invent a level the chart does not contain. lessonChart ('Wicks Tell the Story') is a concept illustration of exhaustion wicks, not a trade setup, so Entry/Stop/Target are correctly absent; its two markPoints fully cover the taught events. quiz.chart correctly hides the outcome behind cutIndex:12 with the Demand Zone as the only pre-cut context and Hammer!/Bounce routed to revealMarkPoints — no pre-reveal spoiler. All proposed yAxis-free additions stay within range; no coordinate issues."
+}

@@ -1,0 +1,8 @@
+{
+  "course": "1",
+  "file": "10_HTF_Scenario.js",
+  "lessonId": "course1/10_htf_scenario",
+  "edits": [],
+  "alreadyGood": ["mark-levels", "the-flip", "defend"],
+  "notes": "Three CHART beats, all already complete and correct. mark-levels (horizontal_sr): level@level 'monthly resistance', markers @touch1/touch2/touch3 — all valid point anchors, say teaches the level + repeated rejections + 'held three or more times'; held 3× label justified. the-flip (sr_flip): level@level 'level breaks', marker@breakout, marker@reversal-style @retest 'retest = the entry' — captures 'price returns to the level, old resistance holds as new support... that retest is the high-probability long'; test1/top anchors not needed (pre-break tests covered in prior beat). defend (liquidity_sweep_bullish): level@support 'HTF level', marker@sweepLow 'wick below', marker@reclaim 'buyers defend → long' — matches 'long lower wick that dips below the level and snaps back is buyers stepping in to defend it'; reversalTop not referenced by say. All at/of anchors are valid ground-truth names for their moves; all kinds match anchor types (levels on L anchors, markers on point anchors). No redundancy, no inventions. CONCEPT beats intro/recap skipped (no chart). No gaps and no noAnchorGaps. Auditor proposal confirmed in full."
+}

@@ -1,0 +1,84 @@
+# Internal docs / agent files — never deploy publicly
+AGENTS.md
+BUILD-PLAN.md
+HEARTBEAT.md
+IDENTITY.md
+SOUL.md
+TOOLS.md
+USER.md
+course1-notes.md
+course2-notes.md
+course3-notes.md
+course4-notes.md
+HANDOFF.md
+OPENCLAW-HANDOFF.md
+
+# Legacy / prototype pages superseded by index.html + lt-index.html
+liquidity-theory-course1.html
+sim-test.html
+trading-demo.html
+trading-quiz.html
+
+# Local source-snapshot backups — internal restore points, never serve publicly.
+Backup
+Backup-*
+
+# Stray dir from a mis-expanded ~ path (internal transcripts) — never deploy.
+~
+
+# Build/source artifacts not needed at runtime
+og-card.svg        # source for og-image.png (the exported PNG is what's served)
+serve.json         # local `npx serve` config only; Vercel uses vercel.json
+
+# Rebuilt-content layer: the transcript companion was removed (engine 3.71→3.72);
+# frames/ and lt-data-rebuilt-*.js are no longer loaded at runtime — exclude them
+# to stay under Vercel's 5000-file limit. They remain on disk as offline sources.
+rebuild/pipeline
+rebuild/cleaned
+rebuild/_patch_backup
+rebuild/descriptions_cache.json
+rebuild/descriptions_failures.json
+rebuild/describe_run.log
+rebuild/integration_notes.md
+rebuild/replacement_report.md
+rebuild/_integ_backup
+rebuild/frames
+rebuild/lt-data-rebuilt-course1.js
+rebuild/lt-data-rebuilt-course2.js
+rebuild/lt-data-rebuilt-course3.js
+rebuild/lt-data-rebuilt-course4.js
+
+# Reconstruction recipes: ship only lt-recon-course{1..4}.js + lt-recon-timelines-*.js
+# + audio/, not the generators/caches/logs/intermediate caption source.
+rebuild/recon/build_all_reconstructions.py
+rebuild/recon/build_cues_all.py
+rebuild/recon/build_chart_meta.py
+rebuild/recon/gen_recipes_llm.py
+rebuild/recon/tts_all.py
+rebuild/recon/tts_all.log
+rebuild/recon/llm_cache
+rebuild/recon/caption_clean
+rebuild/recon/__pycache__
+rebuild/recon/_recon_summary.json
+rebuild/recon/recipe_run.log
+rebuild/recon/chart_audit.md
+rebuild/recon/qa_plan.md
+rebuild/recon/qa_report.md
+rebuild/recon/ticker_price_report.md
+
+# Cue-track standalone proof (dev only; the live app uses lt-recon-player.js at root)
+player
+
+# SECURITY: the Anthropic API key must never be deployed.
+rebuild/.anthropic_key
+
+# Internal reports + visual-audit artifacts (OpenClaw audit work — never serve publicly)
+audit.md
+sweep_report.md
+audit_frames
+f_*.jpg
+og-render
+
+# OS / tooling junk
+.DS_Store
+.claude

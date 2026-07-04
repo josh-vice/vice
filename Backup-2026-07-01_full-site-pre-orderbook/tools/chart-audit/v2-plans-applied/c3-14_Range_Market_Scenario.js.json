@@ -1,0 +1,18 @@
+{
+  "course": "3",
+  "file": "14_Range_Market_Scenario.js",
+  "lessonId": "course3/14_range_market_scenario",
+  "edits": [
+    {
+      "beatId": "break",
+      "beatType": "CHART",
+      "move": "consolidation_breakout",
+      "addShow": [
+        { "kind": "level", "at": "rangeLow", "label": "range low", "side": "left" }
+      ],
+      "reason": "Say: 'the buyers at the low finally overpower the sellers at the high' — the beat frames the breakout as the low edge defeating the high edge, but only the high is labelled (level at rangeHigh). consolidation_breakout exposes rangeLow as a (L) level anchor, currently undrawn, so the level kind matches and is non-redundant. side:'left' mirrors the rangeHigh label placement so the two range edges read as a pair."
+    }
+  ],
+  "alreadyGood": ["define", "deviation"],
+  "notes": "intro and recap are CONCEPT beats (no chart) — skipped. define (range_bound): high/low levels + supply/demand zones are all valid anchors and complete. deviation (liquidity_sweep_bullish, reversal): level at support + markers at sweepLow/reclaim all valid and complete; the say's 'range low' is correctly tied to the support anchor. break (consolidation_breakout, breakout): rangeHigh + breakout already shown; ACCEPTED the auditor's single proposal — add level at rangeLow 'range low'. rangeLow is a real (L) anchor for this move, the say explicitly teaches 'the buyers at the low', and it is not already drawn. No other gaps; no noAnchorGaps."
+}

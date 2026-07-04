@@ -1,0 +1,8 @@
+{
+  "course": "4",
+  "file": "15_Heuristics.js",
+  "lessonId": "course4/15_heuristics",
+  "edits": [],
+  "alreadyGood": ["chart"],
+  "notes": "Only one auditable beat: 'chart' (move color_tool, scheme heuristics). The say teaches momentum color-coding ('teal while buyers lead, pink once sellers take over'), which is drawn by the move itself. The two existing markers — top:'sellers step in' (above) and bottom:'buyers step in' (below) — use valid point anchors for color_tool (top, bottom), are say-justified (the momentum-flip points), non-redundant, and sanely placed. No support/resistance level is referenced in the say, so resLevel/supLevel are correctly left unused. CONCEPT beats (intro, use, recap) draw no chart and are skipped. Auditor's alreadyComplete verdict confirmed."
+}

@@ -78,18 +78,26 @@ const LT_CHAPTERS_4 = [
 
     lessonChart: {
       title: "TA + SA Combined — Higher Conviction at Every Level",
+      markLines: [
+        { yAxis: 84, label: "TA Level — where price reacts", color: "#00d4d4" },
+        { yAxis: 120, label: "Target — Squeeze Objective",   color: "#ffcc00" }
+      ],
       type: "candlestick",
-      labels: ["W1","W2","W3","W4","W5","W6","W7","W8","W9","W10","W11","W12","W13","W14","W15","W16"],
-      ohlc: ltCandles(88, [
-        { to: 84,  bars: 4 },
-        { to: 107, bars: 8 },
-        { to: 120, bars: 4 }
+      // TA level 84 tested twice, then swept (wick below) and reclaimed = the SA-confirmed entry
+      ohlc: ltCandles(93, [
+        { to: 84,  bars: 3 },              // first tag of the TA level
+        { to: 89,  bars: 2 },              // bounce
+        { to: 82,  bars: 1, reject: 6 },   // sweep BELOW 84 then reclaim — the entry candle
+        { to: 107, bars: 6 },              // squeeze up
+        { to: 120, bars: 4 }               // target
       ], { seed: 196, wick: 0.35 }),
+      // SA confirmation: cumulative delta red into the sweep, flips teal on the reclaim
+      subPanel: { kind: "cvd", label: "SA — Cumulative Delta (confirms squeeze)", points: [[0,-14],[3,-30],[5,-46],[6,8],[9,34],[15,52]] },
       markPoints: [
-        { dataIndex:  3, label: "TA: Level Identified",      position: "bottom" },
-        { dataIndex:  5, label: "SA: Confirms Squeeze Setup", position: "bottom" },
-        { dataIndex:  7, label: "Entry — Max Conviction",    position: "bottom" },
-        { dataIndex: 15, label: "1-2 Punch Plays Out",       position: "top"    }
+        { dataIndex:  2, label: "TA: Level Identified",   position: "bottom" },
+        { dataIndex:  5, label: "Sweep + SA Confirms",    position: "bottom" },
+        { dataIndex:  6, label: "Entry — Reclaim",        position: "top"    },
+        { dataIndex: 15, label: "1-2 Punch Plays Out",    position: "top"    }
       ]
     },
 
@@ -103,20 +111,8 @@ const LT_CHAPTERS_4 = [
         { id: "b", text: "Market Structure, Wyckoff Theory, Elliott Wave, Fibonacci Confluence, Ichimoku Cloud Basics",                               correct: false, type: "bearish" },
         { id: "c", text: "Order Types, Leverage, DBS and SSR Zones, Trading Ranges, Trader Mindset and Routines",                                    correct: false, type: "neutral" }
       ],
-      chart: {
-        title: "Course 4 — Five Module Progression",
-        type: "candlestick",
-        cutIndex: 10,
-        labels: ltLabels(15),
-        ohlc: ltCandles(80, [{ to: 113, bars: 15 }], { seed: 197, wick: 0.35 })
-      },
-      revealMarkPoints: [
-        { dataIndex:  2, label: "M1: Liquidity",   position: "bottom", color: "#00d4d4" },
-        { dataIndex:  5, label: "M2: Sentiment",   position: "bottom", color: "#00d4d4" },
-        { dataIndex:  8, label: "M3: Indicators",  position: "top",    color: "#00d4d4" },
-        { dataIndex: 11, label: "M4: Hyblock",     position: "top",    color: "#00d4d4" },
-        { dataIndex: 14, label: "M5: Ichimoku",    position: "top",    color: "#00d4d4" }
-      ],
+      // No chart — conceptual "list the modules" quiz (hideChart:true). Prior dead
+      // chart/revealMarkPoints config removed (it never rendered under hideChart).
       explanation: "Course 4's five modules are: <strong>Module 1 — Identifying Liquidity</strong> (Liquidity Theory foundations, pools, SFPs, Under Over and Over Under structures); <strong>Module 2 — Determining Control</strong> (funding rate, open interest, cumulative delta, futures basis); <strong>Module 3 — Indicator Suite</strong> (Trend Buddy, PAL, Heuristics, FSVZO, Crayons, Genie); <strong>Module 4 — Applying Sentiment</strong> (Hyblock Capital: liquidation levels, positions heatmap, trading activity); <strong>Module 5 — Ichimoku Masterclass</strong> (Kijun bounces, C-clamps, Kumo pockets, Edge to Edge).",
       rule: "Course 4 = Liquidity Theory + Sentiment Analysis. Five modules complete the Tools of the Trade curriculum. TA tells you where; SA tells you why. Together = maximum conviction setups."
     }
@@ -162,29 +158,32 @@ const LT_CHAPTERS_4 = [
     introChart: {
       title: "Price Gravitates to Highest Liquidity — Principle 4 in Action",
       type: "candlestick",
-      labels: ltLabels(16),
+      // Equal-lows shelf at ~93 forms first (2 tests) → stops pool below → price spears
+      // through the whole cluster to ~87 then reverses back up (the magnet + reversal)
       ohlc: ltCandles(104, [
-        { to: 91,  bars: 11 },
-        { to: 108, bars: 5 }
+        { to: 93,  bars: 4 },              // first tag of the equal-low shelf
+        { to: 98,  bars: 2 },              // small bounce
+        { to: 93,  bars: 2 },              // equal low #2 — shelf established
+        { to: 88,  bars: 2, reject: 5 },   // sweep spears BELOW the 88 rung (pool tapped)
+        { to: 108, bars: 6 }              // reversal — new direction up
       ], { seed: 198, wick: 0.4 }),
-      markLines: [
-        { yAxis: 91, label: "Liquidity Pool — Stop Cluster", color: "#ffcc00" }
-      ],
-      markAreas: [
-        { y0: 89, y1: 94, label: "High Liquidity Zone", color: "rgba(255,204,0,0.08)" }
-      ],
+      // Liquidity pool / stop cluster BELOW the shelf → dashed gold liq ladder (the magnet)
+      liqCluster: { lines: [88, 90, 92], label: "Liquidity Pool — Stop Cluster", color: "#ffcc00" },
       markPoints: [
-        { dataIndex:  0, label: "Price at 104",              position: "top"    },
-        { dataIndex:  8, label: "Drawn to Liquidity Pool",   position: "bottom" },
-        { dataIndex: 10, label: "Pool Tapped — Reversal",    position: "bottom" },
-        { dataIndex: 15, label: "Direction Resumed",         position: "top"    }
+        { dataIndex:  3, label: "Equal Lows — Shelf",       position: "bottom" },
+        { dataIndex:  7, label: "Equal Low #2 — Pool Below", position: "bottom" },
+        { dataIndex:  9, label: "Pool Tapped — Swept",      position: "bottom" },
+        { dataIndex: 15, label: "Reversal Confirmed — Up",  position: "top", color: "#00d4d4" }
       ]
     },
 
     lessonChart: {
       title: "Zero-Sum Game — Every Winner Has a Loser on the Other Side",
+      markLines: [
+        { yAxis: 79, label: "Max-Pain Low — Squeeze Pivot", color: "#00d4d4" },
+        { yAxis: 85, label: "Longs Entry / Breakeven",      color: "#0d9488" }
+      ],
       type: "candlestick",
-      labels: ltLabels(16),
       ohlc: ltCandles(85, [
         { to: 79,  bars: 10 },
         { to: 104, bars: 6 }
@@ -217,12 +216,11 @@ const LT_CHAPTERS_4 = [
           { to: 109, bars: 5 }
         ], { seed: 200, wick: 0.4 }),
         markLines: [
-          { yAxis: 84, label: "Swing Low",               color: "#00d4d4" },
-          { yAxis: 80, label: "Stop Cluster Below",       color: "#cc2222" }
+          { yAxis: 84, label: "Swing Low",               color: "#00d4d4" }
         ],
-        markAreas: [
-          { y0: 78, y1: 83, label: "Liquidity Pool", color: "rgba(255,204,0,0.08)" }
-        ]
+        // Stop cluster / liquidity pool below the swing low → dashed gold liq ladder
+        // (top rung dropped to 81 so its pill clears the 84 Swing-Low pill at the axis)
+        liqCluster: { lines: [77, 79, 81], label: "Stop Cluster / Liquidity Pool", color: "#ffcc00" }
       },
       revealMarkPoints: [
         { dataIndex:  9, label: "Stops Swept — Pool Tapped!",  position: "bottom", color: "#ffcc00" },
@@ -273,24 +271,23 @@ const LT_CHAPTERS_4 = [
 
     introChart: {
       title: "Engineering Long Liquidity — Sweep Below Support, Trap Shorts, Reverse",
+      markLines: [ { yAxis: 84, label: "Support — Range Low", color: "#00d4d4" } ],
       type: "candlestick",
-      labels: ltLabels(18),
-      ohlc: ltCandles(92, [
-        { to: 83, bars: 11 },
-        { to: 80, bars: 1, reject: 6 },
-        { to: 92, bars: 1 },
-        { to: 108, bars: 5 }
+      // Support at 84 is defended TWICE (two clean taps) BEFORE the deep sweep below it
+      ohlc: ltCandles(93, [
+        { to: 84, bars: 4 },              // decline into support — first tag of 84
+        { to: 90, bars: 3 },              // bounce off support
+        { to: 84, bars: 3 },              // second tag — 84 shelf established
+        { to: 80, bars: 2, reject: 6 },   // sweep BELOW support — stops triggered
+        { to: 92, bars: 1 },              // large buy — reclaim / short trap
+        { to: 108, bars: 5 }              // squeeze up — reversal
       ], { seed: 201, wick: 0.4 }),
-      markLines: [
-        { yAxis: 83, label: "Range Low — Stop Cluster Below", color: "#00d4d4" }
-      ],
-      markAreas: [
-        { y0: 80, y1: 85, label: "Long Liquidity Pool", color: "rgba(0,212,212,0.07)" }
-      ],
+      // Long liquidity pool BELOW the 84 support → dashed teal liq ladder (the swept stops)
+      liqCluster: { lines: [78, 80, 82], label: "Long Liquidity Pool — Stops Below", color: "#00d4d4" },
       markPoints: [
-        { dataIndex:  0, label: "Range — Longs, Stops at 83", position: "top"    },
+        { dataIndex:  3, label: "Support Tagged — Stops Below", position: "bottom" },
         { dataIndex: 11, label: "Sweep Below — Stops Triggered", position: "bottom" },
-        { dataIndex: 12, label: "Large Buy + Short Trap",      position: "bottom" },
+        { dataIndex: 12, label: "Large Buy + Short Trap",      position: "top"    },
         { dataIndex: 17, label: "Squeeze Up — Reversal",       position: "top"    }
       ]
     },
@@ -305,12 +302,11 @@ const LT_CHAPTERS_4 = [
         { to: 108, bars: 5, reject: 4 },
         { to: 89,  bars: 5 }
       ], { seed: 202, wick: 0.4 }),
-      markLines: [
-        { yAxis: 104, label: "Prior Swing High", color: "#cc2222" }
+      markLines: [ { yAxis: 114, label: "Stop — Above Swept Cluster (buffer)", color: "#ff2e88" },
+        { yAxis: 104, label: "Prior Swing High", color: "#ff2e88" }
       ],
-      markAreas: [
-        { y0: 102, y1: 107, label: "Short Stop Cluster", color: "rgba(204,34,34,0.07)" }
-      ],
+      // Short stop cluster above the prior swing high → dashed red liq ladder (SFP fuel)
+      liqCluster: { lines: [104.5, 106, 107.5], label: "Short Stop Cluster (SFP)", color: "#ff2e88" },
       markPoints: [
         { dataIndex:  4, label: "Prior Swing High",         position: "top"    },
         { dataIndex: 12, label: "SFP — Exceeds Swing High", position: "top"    },
@@ -340,16 +336,14 @@ const LT_CHAPTERS_4 = [
           { to: 90,  bars: 4 }
         ], { seed: 203, wick: 0.4 }),
         markLines: [
-          { yAxis: 104, label: "Prior Swing High", color: "#cc2222" }
+          { yAxis: 104, label: "Prior Swing High", color: "#ff2e88" }
         ],
-        markAreas: [
-          { y0: 102, y1: 107, label: "Short Stop Cluster", color: "rgba(204,34,34,0.07)" }
-        ]
+        liqCluster: { lines: [104.5, 106, 107.5], label: "Short Stop Cluster", color: "#ff2e88" }
       },
       revealMarkPoints: [
         { dataIndex:  4, label: "Prior Swing High",           position: "top",    color: "#ffcc00" },
-        { dataIndex: 12, label: "SFP — Stops Triggered!",     position: "top",    color: "#cc2222" },
-        { dataIndex: 14, label: "Reversal — Large Short",     position: "top",    color: "#cc2222" },
+        { dataIndex: 12, label: "SFP — Stops Triggered!",     position: "top",    color: "#ff2e88" },
+        { dataIndex: 14, label: "Reversal — Large Short",     position: "top",    color: "#ff2e88" },
         { dataIndex: 16, label: "HTF Reversal Confirmed",     position: "bottom", color: "#00d4d4" }
       ],
       explanation: "This is a <strong>Bearish Swing Failure Pattern (SFP)</strong>. The prior swing high had a dense cluster of short stop losses and breakout buy orders just above it. Price exceeded that high by a small margin — sufficient to trigger those stops and trap new breakout longs — then reversed sharply. A large seller used the forced short closures and new eager longs to fill their massive short position. The multiple-day gap between the first swing high and this SFP is the key differentiator from an LTF liquidity pool.",
@@ -374,8 +368,8 @@ const LT_CHAPTERS_4 = [
       bullets: [
         "Liquidity Structure = multi-candle trap; takes time; includes a fake break, reversal, and retest of the reclaimed level",
         "Liquidity Pool = single candle or wick trap; quick and sharp; instant recovery; no retest needed",
-        "Bullish Under Over: breaks below range low trapping longs and attracting breakdown shorts, reversal UP, retest of reclaimed range low as support = long entry",
-        "Bearish Over Under: breaks above range high trapping shorts and attracting breakout longs, reversal DOWN, retest of reclaimed range high as resistance = short entry",
+        "Bullish Under Over: breaks below range low stopping out longs and trapping breakdown shorts, reversal UP, retest of reclaimed range low as support = long entry",
+        "Bearish Over Under: breaks above range high stopping out shorts and trapping breakout longs, reversal DOWN, retest of reclaimed range high as resistance = short entry",
         "Victims of Under Over: aggressive breakdown short sellers who sold the fake break",
         "Victims of Over Under: aggressive breakout buyers who bought the fake breakout above range high"
       ]
@@ -398,27 +392,29 @@ const LT_CHAPTERS_4 = [
     introChart: {
       title: "Bullish Under Over — Fake Breakdown, Reversal, Retest Entry",
       type: "candlestick",
-      labels: ltLabels(20),
+      // Range 85–93 established (low tagged twice, high tagged) BEFORE the fake breakdown;
+      // reversal is a real multi-bar up-leg; price pulls back to TAG 85 = the retest entry
       ohlc: ltCandles(92, [
-        { to: 85, bars: 9 },
-        { to: 93, bars: 1 },
-        { to: 88, bars: 1 },
-        { to: 81, bars: 3 },
-        { to: 92, bars: 1 },
-        { to: 89, bars: 3 },
-        { to: 105, bars: 2 }
+        { to: 85, bars: 4 },              // decline to range low — first tag
+        { to: 93, bars: 3 },              // rally to range high
+        { to: 85, bars: 3 },              // back to range low — range confirmed
+        { to: 81, bars: 2, reject: 4 },   // fake breakdown below 85 — stops hit
+        { to: 93, bars: 3 },              // sharp reversal UP — reclaim range low
+        { to: 85, bars: 2 },              // pullback retests 85 from above (S/R flip)
+        { to: 106, bars: 3 }              // markup — higher high confirmed
       ], { seed: 204, wick: 0.4 }),
-      markLines: [
-        { yAxis: 85, label: "Range Low", color: "#00d4d4" }
+      markLines: [ { yAxis: 75, label: "Stop — Below Swing Low", color: "#ff2e88" },
+        { yAxis: 85, label: "Range Low → Support (S/R Flip)", color: "#00d4d4" },
+        { yAxis: 93, label: "Range High", color: "#00d4d4" }
       ],
       markAreas: [
-        { y0: 83, y1: 88, label: "Under Over Zone", color: "rgba(0,212,212,0.07)" }
+        { y0: 85, y1: 93, label: "Range", color: "rgba(0,212,212,0.06)" }
       ],
       markPoints: [
-        { dataIndex:  0, label: "Range — Stops Below 85",      position: "top"    },
+        { dataIndex:  3, label: "Range Low — Stops Below",     position: "bottom" },
         { dataIndex: 11, label: "Fake Breakdown — Stops Hit",  position: "bottom" },
-        { dataIndex: 12, label: "Sharp Reversal UP",           position: "bottom" },
-        { dataIndex: 15, label: "Retest — Optimal Long Entry", position: "bottom" },
+        { dataIndex: 14, label: "Sharp Reversal UP",           position: "top"    },
+        { dataIndex: 16, label: "Retest — Optimal Long Entry", position: "bottom" },
         { dataIndex: 19, label: "Higher High — Confirmed",     position: "top"    }
       ]
     },
@@ -426,25 +422,29 @@ const LT_CHAPTERS_4 = [
     lessonChart: {
       title: "Bearish Over Under — Fake Breakout, Reversal, Retest Short Entry",
       type: "candlestick",
-      labels: ltLabels(20),
+      // Range 92–100 established (high tagged twice) BEFORE the fake breakout above 100;
+      // reversal is a real down-leg; price pulls back to TAG 100 = the retest short entry
       ohlc: ltCandles(88, [
-        { to: 100, bars: 8 },
-        { to: 107, bars: 3, reject: 4 },
-        { to: 96,  bars: 1 },
-        { to: 100, bars: 3 },
-        { to: 87,  bars: 5 }
+        { to: 100, bars: 4 },             // rally to range high — first tag
+        { to: 92,  bars: 3 },             // pull back to range low
+        { to: 100, bars: 3 },             // back to range high — range confirmed
+        { to: 108, bars: 2, reject: 4 },  // fake breakout above 100 — short stops hit (wick ~112)
+        { to: 92,  bars: 3 },             // sharp reversal DOWN — reclaim below range high
+        { to: 100, bars: 2 },             // pullback retests 100 from below (S/R flip)
+        { to: 84,  bars: 3 }              // breakdown — lower low confirmed
       ], { seed: 205, wick: 0.4 }),
-      markLines: [
-        { yAxis: 100, label: "Range High", color: "#cc2222" }
+      markLines: [ { yAxis: 115, label: "Stop — Above Fake-Breakout Wick", color: "#ff2e88" },
+        { yAxis: 100, label: "Range High → Resistance (S/R Flip)", color: "#ff2e88" },
+        { yAxis: 92, label: "Range Low", color: "#ff2e88" }
       ],
       markAreas: [
-        { y0: 98, y1: 103, label: "Over Under Zone", color: "rgba(204,34,34,0.07)" }
+        { y0: 92, y1: 100, label: "Range", color: "rgba(255,46,136,0.06)" }
       ],
       markPoints: [
-        { dataIndex:  0, label: "Range — Stops Above 100",        position: "bottom" },
+        { dataIndex:  3, label: "Range High — Stops Above",       position: "top"    },
         { dataIndex: 11, label: "Fake Breakout — Short Stops Hit", position: "top"    },
-        { dataIndex: 12, label: "Sharp Reversal DOWN",             position: "top"    },
-        { dataIndex: 15, label: "Retest — Optimal Short Entry",    position: "top"    },
+        { dataIndex: 14, label: "Sharp Reversal DOWN",             position: "bottom" },
+        { dataIndex: 16, label: "Retest — Optimal Short Entry",    position: "top"    },
         { dataIndex: 19, label: "Lower Low — Confirmed",           position: "bottom" }
       ]
     },
@@ -461,28 +461,29 @@ const LT_CHAPTERS_4 = [
       chart: {
         title: "Range Low Reclaimed After Fake Breakdown — Under Over Complete",
         type: "candlestick",
-        cutIndex: 13,
-        labels: ltLabels(18),
+        // Cut just after the swing-low sweep so the retest + completion is the HIDDEN outcome
+        cutIndex: 8,
         ohlc: ltCandles(92, [
-          { to: 85, bars: 8 },
-          { to: 80, bars: 2 },
-          { to: 80, bars: 1, reject: 8 },
-          { to: 93, bars: 1 },
-          { to: 89, bars: 3 },
-          { to: 104, bars: 3 }
+          { to: 85, bars: 4 },              // decline to range low
+          { to: 93, bars: 2 },              // bounce inside the range
+          { to: 81, bars: 2, reject: 8 },   // fake breakdown — swing low swept (wick ~73)
+          { to: 93, bars: 2 },              // reversal — reclaim range low
+          { to: 85, bars: 2 },              // retest 85 from above (hidden)
+          { to: 104, bars: 3 }             // markup through the $100 range high (hidden)
         ], { seed: 206, wick: 0.4 }),
         markLines: [
-          { yAxis: 85, label: "Range Low — Reclaimed", color: "#00d4d4" }
+          { yAxis: 85, label: "Range Low — Reclaimed", color: "#00d4d4" },
+          { yAxis: 100, label: "Target — Range High $100", color: "#ffcc00" }
         ],
         markAreas: [
-          { y0: 83, y1: 88, label: "Under Over Zone", color: "rgba(0,212,212,0.07)" }
+          { y0: 85, y1: 100, label: "Range", color: "rgba(0,212,212,0.06)" }
         ]
       },
       revealMarkPoints: [
-        { dataIndex:  9, label: "Fake Breakdown — Stops Hit",      position: "bottom", color: "#ffcc00" },
-        { dataIndex: 10, label: "Reversal — Under Over!",          position: "bottom", color: "#00d4d4" },
-        { dataIndex: 13, label: "Retest from Above — Long Entry!", position: "bottom", color: "#00d4d4" },
-        { dataIndex: 17, label: "Higher High Confirmed",           position: "top",    color: "#00d4d4" }
+        { dataIndex:  7, label: "Fake Breakdown — Stops Hit",      position: "bottom", color: "#ffcc00" },
+        { dataIndex:  9, label: "Reversal — Under Over!",          position: "top",    color: "#00d4d4" },
+        { dataIndex: 11, label: "Retest from Above — Long Entry!", position: "bottom", color: "#00d4d4" },
+        { dataIndex: 14, label: "Target — Range High $100",        position: "top",    color: "#ffcc00" }
       ],
       explanation: "A completed <strong>Bullish Under Over</strong> liquidity structure. The sequence: range low at $85 → fake breakdown (triggers long stops + attracts breakdown shorts) → decisive reversal above $85 → retest from above. Long on the retest is the optimal entry because: the S/R flip is fresh, trapped breakdown shorts are being squeezed upward creating momentum, and the stop below the swing low of the fake breakdown has a clear and logical invalidation. Target: Range High at $100 or next key resistance.",
       rule: "Bullish Under Over = fake breakdown below Range Low + reversal above + retest from above. Long on retest. Stop below swing low with buffer. Bearish Over Under = fake breakout above Range High + reversal below + retest from below. Short on retest."
@@ -528,8 +529,9 @@ const LT_CHAPTERS_4 = [
 
     introChart: {
       title: "Live Under Over — Equal Lows Mark Stop Cluster, Engineering Sequence",
+      // Range Low anchored by the liqCluster band below (no duplicate 88 markLine)
+      markLines: [ { yAxis: 93, label: "Range High — Target", color: "#00d4d4" }, { yAxis: 90.5, label: "Midpoint — Conviction Gauge", color: "#8a8f99" } ],
       type: "candlestick",
-      labels: ltLabels(20),
       ohlc: ltCandles(95, [
         { to: 88, bars: 9 },
         { to: 93, bars: 1 },
@@ -539,34 +541,34 @@ const LT_CHAPTERS_4 = [
         { to: 89, bars: 3 },
         { to: 105, bars: 2 }
       ], { seed: 207, wick: 0.4 }),
-      markLines: [
-        { yAxis: 88, label: "Range Low — Equal Lows (Stop Cluster)", color: "#00d4d4" }
-      ],
-      markAreas: [
-        { y0: 86, y1: 91, label: "Under Over Zone", color: "rgba(0,212,212,0.07)" }
-      ],
+      // Equal-lows stop cluster AT/BELOW the range low → dashed teal liq ladder (the magnet + range low)
+      liqCluster: { lines: [86, 88], label: "Range Low — Equal-Low Stops", color: "#00d4d4" },
       markPoints: [
-        { dataIndex:  8, label: "Equal Low #1 — X",         position: "bottom" },
-        { dataIndex: 10, label: "Equal Low #2 — X",         position: "bottom" },
-        { dataIndex: 13, label: "Engineering — Drop Below", position: "bottom" },
-        { dataIndex: 14, label: "Engulf Through Range Low", position: "bottom" },
-        { dataIndex: 17, label: "Retest — Long Entry",      position: "bottom" },
-        { dataIndex: 19, label: "Higher High Confirmed",    position: "top"    }
+        { dataIndex:  8, label: "Equal Low #1",           position: "bottom" },
+        { dataIndex: 10, label: "Equal Low #2",           position: "bottom" },
+        { dataIndex: 13, label: "Drop Below — Engineered", position: "bottom" },
+        { dataIndex: 14, label: "Engulf Through Low",      position: "bottom" },
+        { dataIndex: 17, label: "Retest — Long Entry",     position: "bottom" },
+        { dataIndex: 19, label: "Higher High Confirmed",   position: "top"    }
       ]
     },
 
     lessonChart: {
       title: "Liquidity Pool — Single Wick Below Range Low, Instant Recovery",
       type: "candlestick",
-      labels: ltLabels(16),
+      // Pool candle: small DOWN-leg (89→88) so the reject wick points DOWN through the
+      // Range Low (87), closing back above it — a clean wick-and-reclaim (reject follows leg direction)
+      // Pool candle: small DOWN-leg (89→88) so the reject wick points DOWN through the
+      // Range Low (87), closing back above it — a clean wick-and-reclaim (reject follows leg direction)
       ohlc: ltCandles(90, [
-        { to: 87, bars: 9 },
-        { to: 85, bars: 1, reject: 8 },
+        { to: 89, bars: 9 },
+        { to: 88, bars: 1, reject: 8 },
         { to: 95, bars: 1 },
         { to: 108, bars: 5 }
-      ], { seed: 208, wick: 0.35 }),
+      ], { seed: 393, wick: 0.35 }),   // seed scanned: pool candle is the ONLY low below 87
       markLines: [
-        { yAxis: 87, label: "Range Low", color: "#00d4d4" }
+        { yAxis: 87, label: "Range Low", color: "#00d4d4" },
+        { yAxis: 107, label: "Range High — Target", color: "#ffcc00" }
       ],
       markPoints: [
         { dataIndex:  8, label: "Approaching Range Low",     position: "bottom" },
@@ -588,23 +590,30 @@ const LT_CHAPTERS_4 = [
       chart: {
         title: "Single Wick Below Range Low — Pool or Under Over Structure?",
         type: "candlestick",
-        cutIndex: 10,
-        labels: ltLabels(15),
-        ohlc: ltCandles(90, [
-          { to: 87, bars: 9 },
-          { to: 85, bars: 1, reject: 8 },
-          { to: 95, bars: 1 },
-          { to: 104, bars: 4 }
-        ], { seed: 209, wick: 0.35 }),
+        cutIndex: 13,
+        // Range shown FIRST — price oscillates between Range Low (90) and Range High (104)
+        // so both levels are earned; the single pool wick then punches below Range Low and
+        // instantly recovers (cut here — recovery hidden). Seed 24: the pool candle (idx12)
+        // is the ONLY low below 90; every range bounce holds above it (harness-verified).
+        ohlc: ltCandles(97, [
+          { to: 104, bars: 3 },
+          { to: 92,  bars: 3 },
+          { to: 104, bars: 3 },
+          { to: 92,  bars: 3 },
+          { to: 91,  bars: 1, reject: 9 },  // down-leg → reject wick points DOWN through Range Low
+          { to: 98,  bars: 1 },
+          { to: 104, bars: 3 }
+        ], { seed: 24, wick: 0.18 }),
         markLines: [
-          { yAxis: 87, label: "Range Low", color: "#00d4d4" }
+          { yAxis: 90,  label: "Range Low", color: "#00d4d4" },
+          { yAxis: 104, label: "Range High", color: "#ffcc00" }
         ]
       },
       revealMarkPoints: [
-        { dataIndex:  8, label: "Approaching Range Low",    position: "bottom", color: "#ffcc00" },
-        { dataIndex:  9, label: "POOL! Single Wick",        position: "bottom", color: "#00d4d4" },
-        { dataIndex: 10, label: "Entry Here — No Retest",   position: "top",    color: "#00d4d4" },
-        { dataIndex: 14, label: "Pool Ran to Range High",   position: "top",    color: "#00d4d4" }
+        { dataIndex: 11, label: "Approaching Range Low",    position: "bottom", color: "#ffcc00" },
+        { dataIndex: 12, label: "POOL! Single Wick",        position: "bottom", color: "#00d4d4" },
+        { dataIndex: 13, label: "Entry Here — No Retest",   position: "top",    color: "#00d4d4" },
+        { dataIndex: 16, label: "Pool Ran to Range High",   position: "top",    color: "#00d4d4" }
       ],
       explanation: "This is a <strong>Liquidity Pool</strong>. Defining characteristics: (1) a single wick below Range Low, (2) immediate recovery within 1 candle, (3) no extended time below the level, and (4) no retest of Range Low from above. The entry for a pool is on the reversal candle itself — not on a subsequent retest. A full <strong>Liquidity Structure (Under Over)</strong> spends multiple candles below Range Low, then requires a retest of the reclaimed level from above before entry. Same underlying mechanic; completely different execution.",
       rule: "Liquidity Pool = single wick, instant recovery, entry on reversal candle, no retest needed. Liquidity Structure (Under Over) = multiple candles below level, retest from above required before entry. Both are tradeable; execution differs completely."
@@ -641,7 +650,7 @@ const LT_CHAPTERS_4 = [
       bullets: [
         "TA signal alone: high probability based on chart structure — solid but incomplete",
         "TA plus SA aligned: TA says reversal likely at this level AND SA says shorts overextended with extreme negative funding = maximum confluence",
-        "SA data often leads TA: exhaustion appears in funding and delta data before it shows up on the price chart",
+        "SA can lead price: exhaustion sometimes appears in funding and delta data before it becomes obvious on the price chart",
         "Example: price approaching DBS zone with extreme negative funding + rising OI = textbook high-conviction long before the chart even confirms",
         "The 1-2 punch: TA delivers the setup level; SA delivers the conviction and the why behind it",
         "Critical order: always mark TA levels first, then layer in SA confirmation — SA never replaces TA, it amplifies it"
@@ -651,37 +660,45 @@ const LT_CHAPTERS_4 = [
     introChart: {
       title: "TA Level + SA Confirmation — Inflection Point Determined Early",
       type: "candlestick",
-      labels: ltLabels(16),
+      chartHeight: 460,
+      // Runup wicks capped (wick 0.3) so no candle overshoots the 110 squeeze target
       ohlc: ltCandles(100, [
         { to: 79,  bars: 8 },
         { to: 110, bars: 8 }
-      ], { seed: 210, wick: 0.4 }),
-      markLines: [
+      ], { seed: 210, wick: 0.3 }),
+      markLines: [ { yAxis: 110, label: "Squeeze Target", color: "#ffcc00" },
         { yAxis: 79, label: "DBS Zone — TA Level", color: "#00d4d4" }
       ],
       markAreas: [
         { y0: 77, y1: 82, label: "DBS + SA Confluence Zone", color: "rgba(0,212,212,0.08)" }
       ],
+      // Authored cumulative delta: RED (negative) as sellers press into the DBS, crosses
+      // ABOVE zero and turns TEAL on the squeeze — so the "Δ flips teal" story is real
+      subPanel: { kind: "cvd", label: "Cum Δ — Who's in Control", points: [[0,-12],[3,-40],[7,-58],[9,-18],[11,10],[15,46]] },
       markPoints: [
-        { dataIndex:  1, label: "SA: Shorts Building",            position: "top"    },
+        { dataIndex:  1, label: "Cum Δ Red — Shorts Aggressive",  position: "top"    },
         { dataIndex:  7, label: "TA: DBS Zone Approached",        position: "bottom" },
         { dataIndex:  9, label: "TA + SA: Entry — Max Conviction",position: "bottom" },
-        { dataIndex: 15, label: "Squeeze + TA Target Hit",        position: "top"    }
+        { dataIndex: 15, label: "Δ Flips Teal — Squeeze Target",  position: "top"    }
       ]
     },
 
     lessonChart: {
       title: "SA Leads TA — Exhaustion in Data Before Price Reverses",
+      markAreas: [ { y0: 75, y1: 80, label: "DBS + SA Confluence", color: "rgba(0,212,212,0.08)" } ],
+      markLines: [ { yAxis: 77, label: "DBS Zone — TA Level", color: "#00d4d4" }, { yAxis: 107, label: "Target — Conviction Played Out", color: "#ffcc00" } ],
       type: "candlestick",
-      labels: ltLabels(16),
+      chartHeight: 460,
       ohlc: ltCandles(95, [
         { to: 77,  bars: 8 },
         { to: 107, bars: 8 }
-      ], { seed: 211, wick: 0.4 }),
+      ], { seed: 211, wick: 0.35 }),
+      // Cum Δ bottoms at idx6 — BEFORE the price low at idx7 — then crosses zero into teal
+      // by idx9 as the bounce begins: the sub-panel leads the candles, and the flip is genuine
+      subPanel: { kind: "cvd", label: "Cum Δ — Leads the Reversal", points: [[0,-16],[6,-56],[7,-30],[9,8],[11,24],[15,48]] },
       markPoints: [
-        { dataIndex:  5, label: "SA: Funding Extreme Neg",      position: "bottom" },
-        { dataIndex:  6, label: "SA: OI Falling + Delta Red",   position: "bottom" },
-        { dataIndex:  9, label: "TA: DBS Bounce — SA Led This!",position: "bottom" },
+        { dataIndex:  6, label: "Cum Δ Red Exhausts First",     position: "bottom" },
+        { dataIndex:  9, label: "Δ Teal — SA Leads Bounce",     position: "top"    },
         { dataIndex: 15, label: "High Conviction Played Out",   position: "top"    }
       ]
     },
@@ -691,17 +708,17 @@ const LT_CHAPTERS_4 = [
       hint: "What does extreme negative funding indicate about which side is paying? What does rising OI with falling price tell you about who is adding aggressively?",
       style: "choice",
       answers: [
-        { id: "a", text: "Very high conviction long setup — TA provides the DBS level; extreme negative funding means shorts are paying a heavy unsustainable cost; rising OI with falling price confirms shorts are aggressively adding; all three independently point to a short squeeze at this DBS zone",  correct: true,  type: "bullish" },
+        { id: "a", text: "Very high conviction long setup — TA provides the DBS level; extreme negative funding means shorts are paying a heavy unsustainable cost; rising OI with falling price shows shorts aggressively adding (bearish on its own, but INTO a key DBS with extreme funding it marks a crowded short side); all three together point to a short squeeze at this DBS zone",  correct: true,  type: "bullish" },
         { id: "b", text: "High conviction short continuation — rising OI with falling price is the dominant bearish signal and overrides both the DBS zone and the negative funding; follow the OI trend",  correct: false, type: "bearish" },
         { id: "c", text: "No conclusion — funding and OI are lagging indicators unsuitable for supplementing TA signals; only price action and chart structure are relevant to trade conviction",  correct: false, type: "neutral" }
       ],
       chart: {
         title: "DBS Zone + Extreme Negative Funding + Rising OI — How Convicted?",
         type: "candlestick",
+        chartHeight: 460,
         cutIndex: 9,
-        labels: ltLabels(15),
         ohlc: ltCandles(100, [
-          { to: 74,  bars: 9 },
+          { to: 74,  bars: 9, reject: 5 },
           { to: 106, bars: 6 }
         ], { seed: 212, wick: 0.4 }),
         markLines: [
@@ -709,14 +726,16 @@ const LT_CHAPTERS_4 = [
         ],
         markAreas: [
           { y0: 72, y1: 78, label: "DBS + SA Confluence", color: "rgba(0,212,212,0.08)" }
-        ]
+        ],
+        // Authored Cum Δ: dives to its trough on the sweep bar, then crosses into teal on the reclaim
+        subPanel: { kind: "cvd", label: "Cum Δ — Who's in Control", points: [[0,-14],[6,-46],[8,-60],[10,4],[14,42]] }
       },
       revealMarkPoints: [
-        { dataIndex:  8, label: "TA: DBS | SA: Ext Neg Funding + Rising OI", position: "bottom", color: "#00d4d4" },
-        { dataIndex:  9, label: "Entry — Three-Way Confluence",               position: "bottom", color: "#00d4d4" },
-        { dataIndex: 14, label: "Short Squeeze + TA Target",                  position: "top",    color: "#00d4d4" }
+        { dataIndex:  8, label: "TA: DBS Swept | SA: Δ Trough",   position: "bottom", color: "#00d4d4" },
+        { dataIndex:  9, label: "Reclaim — Short Squeeze Begins", position: "bottom", color: "#00d4d4" },
+        { dataIndex: 14, label: "Δ Teal — TA Target Hit",         position: "top",    color: "#ffcc00" }
       ],
-      explanation: "This is a <strong>maximum confluence setup</strong>. Three independent signals agree: TA (DBS zone — high probability reversal by chart structure), extreme negative funding (shorts are paying a heavy and unsustainable periodic cost), and rising OI with falling price (new shorts are aggressively entering — the most vulnerable position). When three independent variables from different analytical frameworks all point to the same outcome, conviction is at its highest. This is the 1-2 punch framework.",
+      explanation: "This is a <strong>maximum confluence setup</strong>. Three independent signals agree: TA (DBS zone — high probability reversal by chart structure), extreme negative funding (shorts are paying a heavy and unsustainable periodic cost), and rising OI with falling price (new shorts aggressively entering — a bearish signal in isolation, but combined with the funding extreme at a key DBS it marks the most crowded, vulnerable position). When three independent variables from different analytical frameworks all point to the same outcome, conviction is at its highest. This is the 1-2 punch framework.",
       rule: "TA level + SA confirmation = maximum conviction. The more independent SA variables that align with the TA level, the higher the conviction. Always mark TA levels first, then layer SA. SA amplifies TA — it never replaces it."
     }
   },
@@ -753,75 +772,87 @@ const LT_CHAPTERS_4 = [
         "OI alone: tells you whether positions are growing or shrinking; needs price direction for meaningful interpretation",
         "Cumulative Delta alone: shows who is more aggressive right now; can be noise without TA context",
         "Futures Basis alone: shows drift from equilibrium; needs trend context to be useful",
-        "All four bearish: funding positive (longs paying), OI rising as price rises then stalls (longs adding), delta very green at resistance (longs aggressive at wrong level), contango extreme (market stretched) = maximum conviction short at SSR",
-        "All four bullish: funding negative (shorts paying), OI rising as price falls (shorts adding), delta very red at support (shorts at wrong level), backwardation extreme = maximum conviction long at DBS"
+        "All four bearish: funding positive (longs paying), OI rising as price rises then stalls (longs crowding in), delta very green at resistance (longs aggressive at wrong level), contango extreme (market stretched) = maximum conviction short at SSR",
+        "All four bullish: funding negative (shorts paying), OI rising as price falls (shorts crowding in — the squeeze fuel when it happens INTO a key DBS), delta very red at support (shorts at wrong level), backwardation extreme = maximum conviction long at DBS"
       ]
     },
 
     introChart: {
-      title: "All Four SA Variables Aligning Bullishly at Key DBS Level",
+      title: "SA Variables Aligning Bullishly at Key DBS Level (Cum Δ shown)",
+      markLines: [ { yAxis: 79, label: "DBS Support — SA Aligned", color: "#00d4d4" }, { yAxis: 117, label: "Max Confluence Target", color: "#ffcc00" } ],
       type: "candlestick",
-      labels: ltLabels(16),
+      chartHeight: 460,
       ohlc: ltCandles(102, [
         { to: 79,  bars: 9 },
         { to: 117, bars: 7 }
-      ], { seed: 213, wick: 0.4 }),
+      ], { seed: 213, wick: 0.35 }),
+      // Cum Δ (Variable 3) is the one series the engine can draw here — authored so it goes
+      // extreme RED into the DBS then crosses to TEAL on the squeeze. The chapter's four
+      // variables are taught individually in Ch8–11; only Cum Δ is plotted so no undrawn
+      // variable is pinned on a bare candle (funding/OI/basis pins removed).
+      subPanel: { kind: "cvd", label: "Var 3 — Cumulative Delta", points: [[0,-12],[4,-38],[8,-58],[10,6],[15,46]] },
       markPoints: [
-        { dataIndex:  2, label: "Var 1: Funding Extreme Neg",  position: "bottom" },
-        { dataIndex:  4, label: "Var 2: OI Rising vs Fall",    position: "bottom" },
-        { dataIndex:  6, label: "Var 3: Delta Very Red",       position: "bottom" },
-        { dataIndex:  7, label: "Var 4: Backwardation",        position: "bottom" },
-        { dataIndex:  8, label: "All 4 Aligned — Max Long!",  position: "bottom" },
-        { dataIndex: 15, label: "Max Confluence Target Hit",   position: "top"    }
+        { dataIndex:  8, label: "SA Aligned at DBS — Max Long", position: "bottom" },
+        { dataIndex: 15, label: "Max Confluence Target Hit",    position: "top"    }
       ]
     },
 
     lessonChart: {
-      title: "Mixed SA Signals — Lower Conviction, Smaller Position Size",
+      title: "Mixed SA Signals — Lower Conviction Setup",
       type: "candlestick",
-      labels: ltLabels(16),
+      chartHeight: 460,
+      // Choppy range 89–97: small long off the range low, modest win up to the range high
       ohlc: ltCandles(90, [
         { to: 93, bars: 4 },
         { to: 89, bars: 4 },
         { to: 97, bars: 4 },
         { to: 92, bars: 4 }
       ], { seed: 214, wick: 0.4 }),
+      markLines: [
+        { yAxis: 89, label: "Range Low — Entry", color: "#00d4d4" },
+        { yAxis: 97, label: "Range High — Modest Target", color: "#ffcc00" }
+      ],
+      // Choppy Cum Δ — oscillates around zero = the "mixed signals" the lesson warns about
+      subPanel: { kind: "cvd", label: "Cum Δ — Choppy / Mixed", points: [[0,6],[3,-8],[5,-14],[7,-4],[9,10],[11,16],[13,-2],[15,-8]] },
       markPoints: [
-        { dataIndex:  3, label: "SA: Mixed — Only 2/4 Signal",  position: "top"    },
-        { dataIndex:  8, label: "Smaller Size — Less Clarity",  position: "top"    },
-        { dataIndex: 13, label: "Win — But Not Max Size",       position: "bottom" }
+        { dataIndex:  7, label: "Only 2/4 SA — Low Conviction", position: "bottom" },
+        { dataIndex: 11, label: "Win — Modest Target",          position: "top"    }
       ]
     },
 
     quiz: {
-      question: "A trader sees all four sentiment variables at extreme readings and all pointing bullishly at a key DBS support zone. Funding is extreme negative, OI rising with falling price, cumulative delta extreme red, and the futures basis is deep backwardation. Compared to a setup where only one SA variable is mildly elevated, how should position sizing differ?",
-      hint: "What does the number and strength of aligned SA signals say about the probability of this setup working? How does conviction translate to position size?",
+      question: "A trader sees all four sentiment variables at extreme readings and all pointing bullishly at a key DBS support zone. Funding is extreme negative, OI rising with falling price, cumulative delta extreme red, and the futures basis is deep backwardation. Compared to a setup where only one SA variable is mildly elevated, how should the trader's conviction differ?",
+      hint: "What does the number and strength of aligned SA signals say about the probability of this setup working?",
       style: "choice",
       answers: [
-        { id: "a", text: "Maximum position size on the four-variable alignment — all four independently agree with the TA setup; this represents the highest possible conviction within the framework; size should reflect that; mildly elevated single-variable setups warrant significantly reduced size",  correct: true,  type: "bullish" },
-        { id: "b", text: "Same position size for both — position size should always be fixed and determined only by the TA setup; SA variable count does not change the risk-to-reward ratio and therefore should not affect size",  correct: false, type: "bearish" },
-        { id: "c", text: "Smaller position size on the four-variable alignment — too many variables pointing the same way is a contrarian indicator; when everyone and every indicator agrees the market will do the opposite",  correct: false, type: "neutral" }
+        { id: "a", text: "Maximum conviction on the four-variable alignment — all four independently agree with the TA setup; this represents the highest possible conviction within the framework; a mildly elevated single-variable setup is still valid but warrants significantly lower conviction and more caution",  correct: true,  type: "bullish" },
+        { id: "b", text: "Same conviction for both — confidence should be determined only by the TA setup; the SA variable count does not change the probability of the trade working and therefore should not affect conviction",  correct: false, type: "bearish" },
+        { id: "c", text: "Lower conviction on the four-variable alignment — too many variables pointing the same way is a contrarian indicator; when everyone and every indicator agrees the market will do the opposite",  correct: false, type: "neutral" }
       ],
       chart: {
-        title: "One SA Variable Mild vs All Four Extreme — Position Size Impact?",
+        title: "One SA Variable Mild vs All Four Extreme — Conviction Impact?",
         type: "candlestick",
-        cutIndex: 8,
-        labels: ltLabels(15),
+        chartHeight: 460,
+        // Cut AT the DBS tag (idx8) so the support hold is the last visible pre-reveal bar
+        cutIndex: 9,
         ohlc: ltCandles(100, [
           { to: 74,  bars: 9 },
           { to: 113, bars: 6 }
         ], { seed: 215, wick: 0.4 }),
         markLines: [
-          { yAxis: 74, label: "DBS Zone — All 4 SA Aligned", color: "#00d4d4" }
-        ]
+          { yAxis: 74, label: "DBS Zone — SA Aligned", color: "#00d4d4" },
+          { yAxis: 101, label: "Prior High — Squeeze Target", color: "#ff2e88" }
+        ],
+        // Cum Δ (Var 3): extreme red into the DBS, crosses teal on the squeeze
+        subPanel: { kind: "cvd", label: "Var 3 — Cumulative Delta", points: [[0,-10],[4,-40],[8,-58],[10,4],[14,44]] }
       },
       revealMarkPoints: [
-        { dataIndex:  8, label: "4/4 SA + TA = Max Conviction", position: "bottom", color: "#00d4d4" },
-        { dataIndex:  9, label: "Max Size Entry Here",          position: "bottom", color: "#00d4d4" },
-        { dataIndex: 14, label: "Explosive Short Squeeze",      position: "top",    color: "#00d4d4" }
+        { dataIndex:  8, label: "SA Aligned at DBS — Max Conviction", position: "bottom", color: "#00d4d4" },
+        { dataIndex:  9, label: "Max Conviction Entry Here",          position: "bottom", color: "#00d4d4" },
+        { dataIndex: 14, label: "Explosive Short Squeeze",            position: "top",    color: "#00d4d4" }
       ],
-      explanation: "Position size should be <strong>scaled to conviction, and conviction scales to the number and strength of aligned SA variables</strong>. When all four SA variables are at extremes and all point in the same direction as the TA setup, the probability of success is at its maximum within the framework. That justifies maximum position size. A single mild SA variable with a TA setup is still a valid trade — but at significantly reduced size. Scaling size to conviction is a core component of capital management within this framework.",
-      rule: "SA conviction scales to: number of variables aligned + extremity of each reading. All 4 extreme + TA level = maximum size. Single mild SA = reduced size. Always scale position size to conviction level — not just to TA alone."
+      explanation: "<strong>Conviction scales to the number and strength of aligned SA variables</strong>. When all four SA variables are at extremes and all point in the same direction as the TA setup, the probability of success is at its maximum within the framework — the highest-conviction trade it produces. A single mild SA variable with a TA setup is still a valid trade — but it warrants significantly lower conviction and more caution. Weighing conviction by confluence is a core component of the framework.",
+      rule: "SA conviction scales to: number of variables aligned + extremity of each reading. All 4 extreme + TA level = maximum conviction. Single mild SA = lower conviction. Always weigh conviction by confluence — never by TA alone."
     }
   },
 
@@ -865,47 +896,56 @@ const LT_CHAPTERS_4 = [
     introChart: {
       title: "Extreme Negative Funding at Support — Short Squeeze Setup",
       type: "candlestick",
-      labels: ltLabels(18),
+      chartHeight: 460,
+      // Base prints two HIGHER lows (80 then 82) at the DBS before the squeeze fires
       ohlc: ltCandles(100, [
-        { to: 80,  bars: 10 },
-        { to: 78,  bars: 3  },
-        { to: 116, bars: 5  }
+        { to: 80,  bars: 8 },             // first low into the DBS
+        { to: 88,  bars: 3 },             // bounce
+        { to: 82,  bars: 3 },             // HIGHER low (82 > 80) — structure turning
+        { to: 116, bars: 4 }             // short squeeze up
       ], { seed: 216, wick: 0.4 }),
-      markLines: [
-        { yAxis: 79, label: "DBS Support Zone (TA)", color: "#00d4d4" }
+      markLines: [ { yAxis: 116, label: "Squeeze Target", color: "#ffcc00" },
+        { yAxis: 80, label: "DBS Support Zone (TA)", color: "#00d4d4" }
       ],
       markAreas: [
-        { y0: 77, y1: 83, label: "DBS + Extreme Neg Funding", color: "rgba(0,212,212,0.08)" }
+        { y0: 78, y1: 84, label: "DBS + Extreme Neg Funding", color: "rgba(0,212,212,0.08)" }
       ],
+      // THE funding-rate tool — deep red (shorts paying) into the lows, STILL negative through the
+      // higher-low pin (idx13) and crossing zero exactly at the "Short Squeeze Ignites" bar (idx14)
+      subPanel: { kind: "funding", label: "Funding Rate", points: [[0,-0.02],[5,-0.082],[9,-0.085],[13,-0.03],[14,0],[17,0.025]] },
       markPoints: [
-        { dataIndex:  5, label: "Funding: Extreme Negative",     position: "bottom" },
-        { dataIndex:  7, label: "Higher Low Forming",            position: "bottom" },
-        { dataIndex:  9, label: "Funding Still Extreme — Hold",  position: "bottom" },
-        { dataIndex: 12, label: "Short Squeeze Ignites",         position: "bottom" },
-        { dataIndex: 17, label: "Squeeze Target Reached",        position: "top"    }
+        { dataIndex:  7, label: "First Low — Funding Extreme Neg", position: "bottom" },
+        { dataIndex: 13, label: "Higher Low Forming",             position: "bottom" },
+        { dataIndex: 14, label: "Short Squeeze Ignites",          position: "top"    },
+        { dataIndex: 17, label: "Squeeze Target Reached",         position: "top"    }
       ]
     },
 
     lessonChart: {
       title: "Extreme Positive Funding at Resistance — Long Squeeze Setup",
       type: "candlestick",
-      labels: ltLabels(18),
+      chartHeight: 460,
+      // Two highs printed at the SSR with the SECOND one LOWER (108 then 106) before the collapse
       ohlc: ltCandles(82, [
-        { to: 108, bars: 9 },
-        { to: 104, bars: 3 },
-        { to: 76,  bars: 6 }
+        { to: 108, bars: 8 },             // first high into the SSR
+        { to: 100, bars: 3 },             // dip
+        { to: 106, bars: 3 },             // LOWER high (106 < 108) — structure rolling over
+        { to: 76,  bars: 4 }             // long squeeze down
       ], { seed: 217, wick: 0.4 }),
-      markLines: [
-        { yAxis: 105, label: "SSR Resistance Zone (TA)", color: "#cc2222" }
+      markLines: [ { yAxis: 76, label: "Long Squeeze Target", color: "#ffcc00" },
+        { yAxis: 108, label: "SSR Resistance Zone (TA)", color: "#ff2e88" }
       ],
       markAreas: [
-        { y0: 103, y1: 109, label: "SSR + Extreme Pos Funding", color: "rgba(204,34,34,0.07)" }
+        { y0: 106, y1: 112, label: "SSR + Extreme Pos Funding", color: "rgba(255,46,136,0.07)" }
       ],
+      // Funding green/extreme positive (longs paying) at the top — holds ≥+0.03 through the
+      // lower-high pin (idx13), crosses zero at the "Longs Squeezed" bar (idx14), then negative
+      subPanel: { kind: "funding", label: "Funding Rate", points: [[0,0.02],[6,0.085],[8,0.08],[13,0.03],[14,0],[17,-0.03]] },
       markPoints: [
-        { dataIndex:  6, label: "Funding: Extreme Positive",   position: "top"    },
-        { dataIndex:  8, label: "Lower High Forming",          position: "top"    },
-        { dataIndex: 10, label: "Longs Squeezed — Down",       position: "top"    },
-        { dataIndex: 17, label: "Long Squeeze Target Hit",     position: "bottom" }
+        { dataIndex:  7, label: "First High — Funding Extreme Pos", position: "top"    },
+        { dataIndex: 13, label: "Lower High Forming",              position: "top"    },
+        { dataIndex: 14, label: "Longs Squeezed — Down",           position: "bottom" },
+        { dataIndex: 17, label: "Long Squeeze Target Hit",         position: "bottom" }
       ]
     },
 
@@ -921,26 +961,30 @@ const LT_CHAPTERS_4 = [
       chart: {
         title: "Extreme Negative Funding + Higher Lows at DBS — Signal?",
         type: "candlestick",
+        chartHeight: 460,
+        // A genuine higher low (80 > 78) prints, then the cut — the squeeze is the hidden outcome
         cutIndex: 10,
-        labels: ltLabels(16),
         ohlc: ltCandles(100, [
-          { to: 78,  bars: 9 },
-          { to: 113, bars: 7 }
+          { to: 78,  bars: 6 },             // first low into the DBS
+          { to: 86,  bars: 2 },             // bounce
+          { to: 80,  bars: 2 },             // HIGHER low (80 > 78) — last visible pre-reveal bar
+          { to: 113, bars: 6 }             // short squeeze (hidden)
         ], { seed: 218, wick: 0.4 }),
         markLines: [
           { yAxis: 78, label: "DBS Zone", color: "#00d4d4" }
         ],
         markAreas: [
           { y0: 76, y1: 82, label: "DBS + Extreme Neg Funding", color: "rgba(0,212,212,0.08)" }
-        ]
+        ],
+        subPanel: { kind: "funding", label: "Funding Rate", points: [[0,-0.025],[5,-0.085],[9,-0.06],[11,0],[15,0.02]] }
       },
       revealMarkPoints: [
-        { dataIndex:  6, label: "Funding: Extreme Negative",  position: "bottom", color: "#ffcc00" },
-        { dataIndex:  8, label: "Higher Low — SA + TA",       position: "bottom", color: "#00d4d4" },
-        { dataIndex: 10, label: "Entry — Short Squeeze",      position: "bottom", color: "#00d4d4" },
+        { dataIndex:  5, label: "Funding: Extreme Negative",  position: "bottom", color: "#00d4d4" },
+        { dataIndex:  9, label: "Higher Low — SA + TA",       position: "bottom", color: "#00d4d4" },
+        { dataIndex: 10, label: "Entry — Short Squeeze",      position: "top",    color: "#00d4d4" },
         { dataIndex: 15, label: "Squeeze Target Reached",     position: "top",    color: "#00d4d4" }
       ],
-      explanation: "Extreme negative funding means <strong>short holders are paying roughly -0.15% of their position notional every 8 hours</strong> — approximately -0.45% per day. This is financially unsustainable. Combined with higher lows forming at a TA DBS zone, the setup is a textbook short squeeze: shorts are overextended, paying heavily to hold, and positioned against a key support. When forced closures begin, their buy orders compound into explosive upward momentum.",
+      explanation: "Extreme negative funding means <strong>short holders are paying roughly -0.085% of their position notional every 8 hours</strong> — approximately -0.26% per day. This is financially unsustainable. Combined with higher lows forming at a TA DBS zone, the setup is a textbook short squeeze: shorts are overextended, paying heavily to hold, and positioned against a key support. When forced closures begin, their buy orders compound into explosive upward momentum.",
       rule: "Extreme negative funding at DBS + higher lows = high probability short squeeze. The cost is unsustainable; TA provides the trigger. Do not use funding alone — always pair with TA level and direction structure before entering."
     }
   },
@@ -964,8 +1008,8 @@ const LT_CHAPTERS_4 = [
         "OI Decreasing = existing positions are being closed (longs OR shorts exiting the market)",
         "Price Rising + OI Rising = strong bullish trend; new money confirms the move upward",
         "Price Rising + OI Falling = weakening trend; participants are closing into strength; momentum is leaving",
-        "Price Falling + OI Rising = strongest bearish signal; new shorts are aggressively entering as price drops",
-        "Price Falling + OI Falling = capitulation pattern; weak hands washing out; potential reversal forming"
+        "Price Falling + OI Rising = strongest bearish signal (the video's slide labels this quadrant a 'Weak Trend' — a divergence that can flag a coming reversal point); new shorts are aggressively entering as price drops",
+        "Price Falling + OI Falling = capitulation pattern (slide label: 'Strengthening Trend' — positions closing out until participants return at an inflection point); weak hands washing out; potential reversal forming"
       ]
     },
 
@@ -985,32 +1029,44 @@ const LT_CHAPTERS_4 = [
     introChart: {
       title: "Price Falling + OI Rising — Strongest Bearish Signal, Respect the Trend",
       type: "candlestick",
-      labels: ltLabels(16),
-      ohlc: ltCandles(105, [{ to: 41, bars: 16 }], { seed: 219, wick: 0.4 }),
+      chartHeight: 460,
+      // Lower-high staircase (98 → 88 → 78) so the downtrend has readable structure, not a bare bleed
+      ohlc: ltCandles(105, [
+        { to: 90, bars: 4 },
+        { to: 98, bars: 2 },
+        { to: 80, bars: 4 },
+        { to: 88, bars: 2 },
+        { to: 62, bars: 4 }
+      ], { seed: 219, wick: 0.4 }),
+      markLines: [
+        { yAxis: 104, label: "Prior Swing High — Respect the Trend", color: "#ff2e88" }
+      ],
+      // Open Interest climbing as price falls — new shorts entering with conviction (the bearish read)
+      subPanel: { kind: "oi", label: "Open Interest ▲", points: [[0,100],[15,300]] },
       markPoints: [
-        { dataIndex:  0, label: "OI Rising as Price Falls",   position: "top"    },
-        { dataIndex:  5, label: "OI Still Rising — Respect",  position: "top"    },
-        { dataIndex: 10, label: "New Shorts Active — Trend",  position: "top"    },
-        { dataIndex: 15, label: "Trend Sustained by OI",      position: "top"    }
+        { dataIndex: 15, label: "New Shorts Entering — OI +200%", position: "top" }
       ]
     },
 
     lessonChart: {
       title: "Price Falling + OI Falling — Capitulation; Potential Bottom at DBS",
       type: "candlestick",
+      chartHeight: 460,
       labels: ltLabels(16),
       ohlc: ltCandles(100, [
         { to: 71,  bars: 9 },
         { to: 101, bars: 7 }
       ], { seed: 220, wick: 0.4 }),
       markLines: [
-        { yAxis: 71, label: "DBS Zone — OI Falling = Capitulation", color: "#00d4d4" }
+        { yAxis: 71, label: "DBS 71", color: "#00d4d4" }
       ],
+      // OI bleeding lower into the DBS and STAYING low through the reversal — positions closing,
+      // weak hands washing out (capitulation); the flat tail avoids reading as new longs
+      subPanel: { kind: "oi", label: "Open Interest ▼", points: [[0,300],[9,120],[15,118]] },
       markPoints: [
-        { dataIndex:  4, label: "OI Falling + Price Falling",  position: "bottom" },
-        { dataIndex:  8, label: "OI at Lows — Weak Hands Out", position: "bottom" },
-        { dataIndex:  9, label: "Reversal — Capitulation Done",position: "bottom" },
-        { dataIndex: 15, label: "New Uptrend",                 position: "top"    }
+        { dataIndex:  4, label: "OI Falling + Price Falling",     position: "bottom" },
+        { dataIndex:  9, label: "OI at Lows — Capitulation Done", position: "bottom" },
+        { dataIndex: 15, label: "New Uptrend",                    position: "top"    }
       ]
     },
 
@@ -1019,25 +1075,34 @@ const LT_CHAPTERS_4 = [
       hint: "Rising OI with falling price means new positions are being opened. Which side is opening new positions as price falls?",
       style: "choice",
       answers: [
-        { id: "a", text: "Strong warning — new shorts are aggressively entering as price falls; rising OI with falling price is the strongest bearish confirmation; a counter-trend long fights a trend backed by real new participants with real conviction; wait for OI to start falling before considering a reversal",  correct: true,  type: "bearish" },
+        { id: "a", text: "Strong warning — new shorts are aggressively entering as price falls; rising OI with falling price is the strongest bearish confirmation; a counter-trend long fights a trend backed by real new participants with real conviction; without further confluence, wait for OI to start falling before considering a reversal",  correct: true,  type: "bearish" },
         { id: "b", text: "Bullish signal — rising OI means growing market participation which confirms the next directional move will be explosive; counter-trend longs have the best risk-reward when OI is highest",  correct: false, type: "bullish" },
         { id: "c", text: "Neutral signal — rising OI with falling price simply means futures activity is high; it provides no directional information because OI counts both new longs and new shorts equally",  correct: false, type: "neutral" }
       ],
       chart: {
         title: "Falling Price + Rising OI — Counter-Trend Long Safe Here?",
         type: "candlestick",
+        chartHeight: 460,
+        // Decision AT the DBS the counter-long would fade; OI still rising = the "no"
         cutIndex: 12,
-        labels: ltLabels(16),
-        ohlc: ltCandles(105, [{ to: 54, bars: 16 }], { seed: 221, wick: 0.4 })
+        ohlc: ltCandles(105, [
+          { to: 88, bars: 4 },
+          { to: 94, bars: 2 },
+          { to: 72, bars: 4 },
+          { to: 78, bars: 2 },
+          { to: 56, bars: 4 }
+        ], { seed: 221, wick: 0.4 }),
+        markLines: [
+          { yAxis: 56, label: "DBS / Support — Fade Target?", color: "#00d4d4" }
+        ],
+        subPanel: { kind: "oi", label: "Open Interest ▲", points: [[0,120],[15,310]] }
       },
       revealMarkPoints: [
-        { dataIndex:  3, label: "OI Rising + Price Falling",    position: "top",    color: "#cc2222" },
-        { dataIndex:  7, label: "New Shorts — Real Conviction", position: "top",    color: "#cc2222" },
-        { dataIndex: 12, label: "OI Still Up — Trend Strong",   position: "top",    color: "#cc2222" },
-        { dataIndex: 15, label: "Counter Long = High Risk",     position: "bottom", color: "#ffcc00" }
+        { dataIndex:  7, label: "New Shorts — OI Still Rising",  position: "top",    color: "#ff2e88" },
+        { dataIndex: 15, label: "Counter Long = High Risk",      position: "bottom", color: "#ffcc00" }
       ],
-      explanation: "Price Falling + OI Rising is the <strong>most bearish OI signal</strong>. New participants are actively opening short positions as price falls — this is real conviction backed by new capital. Taking a counter-trend long fights a trend with growing participant backing. The correct approach is to <strong>wait for OI to begin declining</strong> (existing positions closing, weak hands washing out) before looking for a reversal long — especially at a key DBS zone where the capitulation signal carries the most weight.",
-      rule: "Price falling + OI rising = strongest bearish signal. New shorts entering with conviction. Do not counter-trend long here. Wait for OI to fall (capitulation / position closing) before reversals become high probability. Respect OI trends."
+      explanation: "Price Falling + OI Rising is the <strong>most bearish OI signal</strong>. New participants are actively opening short positions as price falls — this is real conviction backed by new capital. Taking a counter-trend long fights a trend with growing participant backing. On OI alone, the correct approach is to <strong>wait for OI to begin declining</strong> (existing positions closing, weak hands washing out) before looking for a reversal long. The one exception is full confluence: when the decline lands ON a key DBS zone AND funding is at an extreme negative — crowded shorts paying to stay in — the same rising OI becomes squeeze fuel and supports a maximum-conviction reversal long. OI by itself never justifies the counter-trend long.",
+      rule: "Price falling + OI rising = strongest bearish signal — never counter-trend long on OI alone. Wait for OI to fall (capitulation / position closing), OR for full confluence — key DBS zone + extreme negative funding — where the crowded shorts become the fuel for a squeeze long. Respect OI trends."
     }
   },
 
@@ -1081,45 +1146,55 @@ const LT_CHAPTERS_4 = [
     introChart: {
       title: "Very Red Cumulative Delta at DBS Support — Shorts Are Off-Sides",
       type: "candlestick",
-      labels: ltLabels(16),
+      chartHeight: 460,
+      // DBS at 78 is EARNED: first tag → pullback → second deeper test (reject) → squeeze
       ohlc: ltCandles(100, [
-        { to: 78,  bars: 8 },
-        { to: 78,  bars: 2 },
-        { to: 115, bars: 6 }
+        { to: 78,  bars: 5 },             // first tag of the DBS
+        { to: 85,  bars: 3 },             // pullback / bounce
+        { to: 78,  bars: 2, reject: 4 },  // second test — deeper, wick rejects the low
+        { to: 115, bars: 6 }             // short squeeze up
       ], { seed: 222, wick: 0.4 }),
-      markLines: [
+      markLines: [ { yAxis: 115, label: "Squeeze Target", color: "#ffcc00" },
         { yAxis: 78, label: "DBS Support (TA)", color: "#00d4d4" }
       ],
       markAreas: [
         { y0: 76, y1: 81, label: "DBS + Red Delta Zone", color: "rgba(0,212,212,0.08)" }
       ],
+      // Authored cumulative delta — deep RED into the DBS, crosses zero to TEAL on the squeeze
+      subPanel: { kind: "cvd", label: "Cumulative Delta", points: [[0,-12],[4,-40],[9,-56],[11,8],[15,44]] },
       markPoints: [
-        { dataIndex:  6, label: "Delta: Very Red — Shorts Aggressive", position: "bottom" },
-        { dataIndex:  7, label: "Delta: Extreme — Shorts at DBS!",     position: "bottom" },
-        { dataIndex:  9, label: "Shorts Off-Sides — Squeeze Begins",   position: "bottom" },
-        { dataIndex: 15, label: "Short Squeeze Complete",              position: "top"    }
+        { dataIndex:  9, label: "Δ Extreme Red — Shorts at DBS", position: "bottom" },
+        { dataIndex: 10, label: "Shorts Off-Sides — Squeeze",    position: "top"    },
+        { dataIndex: 15, label: "Short Squeeze Complete",        position: "top"    }
       ]
     },
 
     lessonChart: {
       title: "Very Green Delta at Resistance — Longs Are Off-Sides",
       type: "candlestick",
-      labels: ltLabels(16),
+      chartHeight: 460,
+      // Price prints two highs: 103 then a MARGINALLY higher 105 — but authored CVD makes a
+      // LOWER high on the second push = the bearish divergence the lesson teaches, then dumps
       ohlc: ltCandles(82, [
-        { to: 105, bars: 9 },
-        { to: 81,  bars: 7 }
+        { to: 103, bars: 6 },             // first high into the SSR
+        { to: 98,  bars: 3 },             // pullback
+        { to: 105, bars: 3 },             // marginally HIGHER high (price HH)
+        { to: 81,  bars: 4 }             // long squeeze down
       ], { seed: 223, wick: 0.4 }),
-      markLines: [
-        { yAxis: 103, label: "SSR Resistance (TA)", color: "#cc2222" }
+      markLines: [ { yAxis: 81, label: "Squeeze-Down Target", color: "#ffcc00" },
+        { yAxis: 105, label: "SSR Resistance (TA)", color: "#ff2e88" }
       ],
       markAreas: [
-        { y0: 101, y1: 107, label: "SSR + Green Delta Zone", color: "rgba(204,34,34,0.07)" }
+        { y0: 103, y1: 109, label: "SSR + Green Delta Zone", color: "rgba(255,46,136,0.07)" }
       ],
+      // Authored CVD: peaks on the FIRST high (idx5), then a LOWER peak on the second price high
+      // (idx11) = bearish divergence, then rolls negative as longs are squeezed out
+      subPanel: { kind: "cvd", label: "Cumulative Delta", points: [[0,10],[5,52],[8,30],[11,38],[13,-8],[15,-30]] },
       markPoints: [
-        { dataIndex:  7, label: "Delta: Very Green — Longs Aggressive",position: "top"    },
-        { dataIndex:  8, label: "Delta: Extreme — Longs at SSR!",      position: "top"    },
-        { dataIndex: 10, label: "Longs Off-Sides — Squeeze Down",      position: "top"    },
-        { dataIndex: 15, label: "Long Squeeze Complete",               position: "bottom" }
+        { dataIndex:  5, label: "Δ Very Green — Longs Aggressive", position: "top"    },
+        { dataIndex: 11, label: "Bearish Divergence — Price HH / Δ Lower High", position: "top" },
+        { dataIndex: 12, label: "Longs Off-Sides — Squeeze Down",  position: "bottom" },
+        { dataIndex: 15, label: "Long Squeeze Complete",           position: "bottom" }
       ]
     },
 
@@ -1135,21 +1210,27 @@ const LT_CHAPTERS_4 = [
       chart: {
         title: "Extreme Red Delta + Extreme Negative Funding at DBS — Next Move?",
         type: "candlestick",
+        chartHeight: 460,
+        // 75 DBS earned pre-cut (tag → bounce → deeper test w/ reject); squeeze hidden
         cutIndex: 9,
-        labels: ltLabels(16),
         ohlc: ltCandles(100, [
-          { to: 75,  bars: 9 },
-          { to: 111, bars: 7 }
+          { to: 75,  bars: 5 },             // first tag of the DBS
+          { to: 82,  bars: 2 },             // bounce
+          { to: 75,  bars: 2, reject: 4 },  // second, deeper test — last visible pre-reveal bar
+          { to: 111, bars: 7 }             // short squeeze (hidden)
         ], { seed: 224, wick: 0.4 }),
         markLines: [
           { yAxis: 75, label: "DBS Zone", color: "#00d4d4" }
         ],
         markAreas: [
-          { y0: 72, y1: 78, label: "DBS + Extreme Red Delta + Extreme Neg Funding", color: "rgba(0,212,212,0.08)" }
-        ]
+          { y0: 72, y1: 78, label: "DBS + Red Delta", color: "rgba(0,212,212,0.08)" }
+        ],
+        // Cumulative Delta authored deep-red into the DBS, crossing teal on the squeeze.
+        // (Funding is referenced in the prompt too but the engine draws one sub-panel — Cum Δ.)
+        subPanel: { kind: "cvd", label: "Cumulative Delta", points: [[0,-12],[4,-42],[8,-58],[10,6],[15,42]] }
       },
       revealMarkPoints: [
-        { dataIndex:  7, label: "Delta: Extreme Red at DBS", position: "bottom", color: "#ffcc00" },
+        { dataIndex:  8, label: "Δ Extreme Red at DBS",     position: "bottom", color: "#00d4d4" },
         { dataIndex:  9, label: "Shorts Off-Sides — Squeeze!",position: "bottom", color: "#00d4d4" },
         { dataIndex: 15, label: "Short Squeeze Complete",    position: "top",    color: "#00d4d4" }
       ],
@@ -1198,46 +1279,51 @@ const LT_CHAPTERS_4 = [
     introChart: {
       title: "Deep Backwardation After Sharp Dump — Bearish Exhaustion Signal",
       type: "candlestick",
+      chartHeight: 460,
       labels: ltLabels(18),
       ohlc: ltCandles(110, [
         { to: 73,  bars: 11 },
         { to: 79,  bars: 2  },
         { to: 111, bars: 5  }
       ], { seed: 225, wick: 0.4 }),
-      markLines: [
+      markLines: [ { yAxis: 110, label: "Mean-Reversion Target — Equilibrium", color: "#ffcc00" },
         { yAxis: 73, label: "DBS Zone — Deep Backwardation Here", color: "#00d4d4" }
       ],
       markAreas: [
         { y0: 71, y1: 76, label: "DBS + Extreme Backwardation", color: "rgba(0,212,212,0.08)" }
       ],
+      // Futures basis — red plunge into deep backwardation (futures far below spot), then normalizes up
+      subPanel: { kind: "basis", label: "Futures Basis ($)", points: [[0,-50],[7,-400],[10,-700],[12,-300],[17,60]] },
       markPoints: [
-        { dataIndex:  7, label: "Basis: Entering Backwardation",  position: "bottom" },
-        { dataIndex: 10, label: "Basis: Deep Backwardation!",     position: "bottom" },
-        { dataIndex: 12, label: "Basis Normalizing — Reversal",   position: "bottom" },
-        { dataIndex: 17, label: "Target Hit — Exhaustion Play",   position: "top"    }
+        { dataIndex: 10, label: "Deep Backwardation — DBS",     position: "bottom" },
+        { dataIndex: 17, label: "Target Hit — Exhaustion Play", position: "top"    }
       ]
     },
 
     lessonChart: {
       title: "Extreme Contango at Top of Uptrend — Bullish Exhaustion Signal",
       type: "candlestick",
-      labels: ltLabels(18),
+      chartHeight: 460,
+      // Two highs at the SSR: 115 then a genuine LOWER high (112) after a dip, then reversal down
       ohlc: ltCandles(82, [
-        { to: 115, bars: 9 },
-        { to: 113, bars: 3 },
-        { to: 87,  bars: 6 }
+        { to: 115, bars: 8 },             // first high — extreme contango
+        { to: 109, bars: 2 },             // dip
+        { to: 112, bars: 2 },             // LOWER high (112 < 115) — exhaustion
+        { to: 87,  bars: 6 }             // reversal down
       ], { seed: 226, wick: 0.4 }),
-      markLines: [
-        { yAxis: 113, label: "SSR — Extreme Contango Here", color: "#cc2222" }
+      markLines: [ { yAxis: 87, label: "Contango Reversal Target", color: "#00d4d4" },
+        { yAxis: 115, label: "SSR — Extreme Contango Here", color: "#ff2e88" }
       ],
       markAreas: [
-        { y0: 111, y1: 117, label: "SSR + Extreme Contango", color: "rgba(204,34,34,0.07)" }
+        { y0: 114, y1: 118, label: "SSR + Extreme Contango", color: "rgba(255,46,136,0.07)" }
       ],
+      // Basis spikes green into extreme contango (futures far above spot) at the top, then reverts negative
+      subPanel: { kind: "basis", label: "Futures Basis ($)", points: [[0,60],[7,650],[11,300],[13,120],[17,-90]] },
       markPoints: [
-        { dataIndex:  8, label: "Basis: Extreme Contango!",  position: "top"    },
-        { dataIndex: 10, label: "Lower High — Exhaustion",   position: "top"    },
-        { dataIndex: 11, label: "Basis Normalizing — Sell",  position: "top"    },
-        { dataIndex: 17, label: "Contango Reversal Target",  position: "bottom" }
+        { dataIndex:  7, label: "Basis: Extreme Contango!", position: "top"    },
+        { dataIndex: 11, label: "Lower High — Exhaustion",  position: "top"    },
+        { dataIndex: 12, label: "Basis Normalizing — Sell", position: "bottom" },
+        { dataIndex: 17, label: "Contango Reversal Target", position: "bottom" }
       ]
     },
 
@@ -1253,6 +1339,7 @@ const LT_CHAPTERS_4 = [
       chart: {
         title: "Deep Backwardation After Dump + DBS Zone — Directional Signal?",
         type: "candlestick",
+        chartHeight: 460,
         cutIndex: 10,
         labels: ltLabels(16),
         ohlc: ltCandles(110, [
@@ -1264,7 +1351,8 @@ const LT_CHAPTERS_4 = [
         ],
         markAreas: [
           { y0: 71, y1: 77, label: "DBS + Backwardation Zone", color: "rgba(0,212,212,0.08)" }
-        ]
+        ],
+        subPanel: { kind: "basis", label: "Futures Basis ($)", points: [[0,-60],[9,-700],[10,-350],[15,60]] }
       },
       revealMarkPoints: [
         { dataIndex:  9, label: "DBS + Deep Backwardation",  position: "bottom", color: "#00d4d4" },
@@ -1302,7 +1390,7 @@ const LT_CHAPTERS_4 = [
 
     lesson: {
       heading: "Combining All Tools — The Complete Decision Framework",
-      body: "The complete framework is a layered process: start with HTF TA to identify the macro context, identify the specific key level, then run all four SA variables to assess conviction. When all four SA variables align bullishly or bearishly at a key TA level, you have the highest-probability setup the framework produces. Trade it at maximum size within your risk parameters.",
+      body: "The complete framework is a layered process: start with HTF TA to identify the macro context, identify the specific key level, then run all four SA variables to assess conviction. When all four SA variables align bullishly or bearishly at a key TA level, you have the highest-probability setup the framework produces — the maximum-conviction trade in the framework.",
       bullets: [
         "HTF context first: is the daily in an uptrend or downtrend? Where are the weekly DBS and SSR zones?",
         "Specific level: mark the exact DBS or SSR zone where price is likely to react",
@@ -1310,45 +1398,67 @@ const LT_CHAPTERS_4 = [
         "SA check 2 — OI: is OI rising or falling relative to price direction? Does it confirm the squeeze thesis?",
         "SA check 3 — Cumulative Delta: who is being aggressive at this level? Are they on the right or wrong side?",
         "SA check 4 — Futures Basis: is contango or backwardation extreme? Does it signal exhaustion at this level?",
-        "Final call: how many of the four SA variables agree with the TA setup? Scale position size proportionally to that count"
+        "Final call: how many of the four SA variables agree with the TA setup? The more that agree, the higher your conviction in the trade"
       ]
     },
 
     introChart: {
       title: "Full Framework — HTF TA Level + All 4 SA Variables Aligned",
       type: "candlestick",
-      labels: ltLabels(16),
+      chartHeight: 560,
+      // HTF DBS at 78 EARNED (tag → pullback → deeper test w/ reject) before the squeeze
       ohlc: ltCandles(105, [
-        { to: 78,  bars: 10 },
-        { to: 122, bars: 6  }
+        { to: 78,  bars: 6 },             // first tag of the HTF DBS
+        { to: 86,  bars: 2 },             // pullback
+        { to: 78,  bars: 2, reject: 5 },  // deeper test — wick rejects the DBS
+        { to: 122, bars: 6 }             // full squeeze up
       ], { seed: 228, wick: 0.4 }),
-      markLines: [
+      markLines: [ { yAxis: 122, label: "Squeeze Target", color: "#ffcc00" },
         { yAxis: 78, label: "HTF DBS Zone", color: "#00d4d4" }
       ],
       markAreas: [
-        { y0: 76, y1: 81, label: "4/4 SA + TA Confluence", color: "rgba(0,212,212,0.08)" }
+        { y0: 76, y1: 81, label: "HTF DBS — all 4 SA aligned here", color: "rgba(0,212,212,0.08)" }
+      ],
+      // The confluence board: every SA variable DRAWN, not named. Into the DBS test all four
+      // read the bearish extreme (shorts crowded & paying, OI stacked, delta deeply negative,
+      // basis in backwardation) — the fuel for a long squeeze; on the squeeze all four flip
+      // (funding → positive, OI unwinds, delta → buyers, basis → contango). 4/4 aligned.
+      subPanels: [
+        { kind: "funding", label: "Funding",       points: [[0,-0.02],[7,-0.085],[9,-0.07],[11,0],[15,0.024]] },
+        { kind: "oi",      label: "Open Interest",  points: [[0,40],[7,70],[9,80],[11,58],[15,40]] },
+        { kind: "cvd",     label: "Cum. Delta",     points: [[0,0],[7,-34],[9,-22],[11,10],[15,48]] },
+        { kind: "basis",   label: "Basis",          points: [[0,-6],[7,-27],[9,-16],[11,2],[15,18]] }
       ],
       markPoints: [
-        { dataIndex:  6, label: "SA Check 1: Funding Extreme Neg",  position: "bottom" },
-        { dataIndex:  7, label: "SA Check 2: OI Rising vs Fall",    position: "bottom" },
-        { dataIndex:  8, label: "SA 3+4: Delta Red + Backwardation",position: "bottom" },
-        { dataIndex:  9, label: "All 4 + TA = Max Conviction Entry",position: "bottom" },
-        { dataIndex: 15, label: "Full Squeeze — Target Achieved",   position: "top"    }
+        { dataIndex:  9, label: "4/4 SA + TA — Max Conviction Entry", position: "bottom" },
+        { dataIndex: 15, label: "Full Squeeze — Target Achieved",     position: "top"    }
       ]
     },
 
     lessonChart: {
-      title: "Two SA Variables vs Four — How Conviction and Size Scale",
+      title: "Two SA Variables vs Four — How Conviction Scales",
+      markLines: [ { yAxis: 83, label: "DBS Zone — TA Level", color: "#00d4d4" }, { yAxis: 117, label: "Target", color: "#ffcc00" } ],
       type: "candlestick",
-      labels: ltLabels(16),
+      chartHeight: 460,
+      // DBS earned at 83 (tag → pullback → test) before the squeeze
       ohlc: ltCandles(100, [
-        { to: 83,  bars: 8 },
-        { to: 117, bars: 8 }
+        { to: 83,  bars: 5 },
+        { to: 90,  bars: 2 },
+        { to: 83,  bars: 2 },
+        { to: 117, bars: 7 }
       ], { seed: 229, wick: 0.4 }),
+      // Scorecard shows the count that scales CONVICTION: only 2 of 4 SA aligned = lower conviction.
+      // Both aligned variables render as sub-panels (funding + delta, mildly aligned); OI/basis conflict-or-flat.
+      markAreas: [
+        { y0: 81, y1: 85, label: "2/4 SA: Funding ✓ Δ ✓ · OI ✗ Basis ✗ → lower conviction", color: "rgba(0,212,212,0.06)" }
+      ],
+      subPanels: [
+        { kind: "funding", label: "Funding (mild)",    points: [[0,-0.01],[6,-0.045],[9,-0.03],[11,0],[15,0.012]] },
+        { kind: "cvd",     label: "Cum. Delta (mild)", points: [[0,0],[6,-18],[9,-10],[11,6],[15,22]] }
+      ],
       markPoints: [
-        { dataIndex:  7, label: "2/4 SA: Half Size Entry",    position: "bottom" },
-        { dataIndex:  8, label: "Still Works — But Smaller",  position: "bottom" },
-        { dataIndex: 15, label: "Target Hit — 2R vs 4R Size", position: "top"    }
+        { dataIndex:  8, label: "Only 2/4 SA — Lower-Conviction Entry", position: "bottom" },
+        { dataIndex: 15, label: "Target Hit — Setup Still Valid",   position: "top"    }
       ]
     },
 
@@ -1362,24 +1472,9 @@ const LT_CHAPTERS_4 = [
         { id: "b", text: "SA provides more accurate price targets than TA — it calculates the exact distance of the expected squeeze move based on the size of the imbalance, which TA Fibonacci levels cannot do with the same precision",  correct: false, type: "bearish" },
         { id: "c", text: "SA replaces TA in determining key price levels — sentiment data from funding and OI creates more reliable support and resistance levels than technical chart analysis",  correct: false, type: "neutral" }
       ],
-      chart: {
-        title: "TA Level — What Does SA Add That TA Cannot Provide?",
-        type: "candlestick",
-        cutIndex: 9,
-        labels: ltLabels(15),
-        ohlc: ltCandles(100, [
-          { to: 74,  bars: 9 },
-          { to: 113, bars: 6 }
-        ], { seed: 230, wick: 0.4 }),
-        markLines: [
-          { yAxis: 74, label: "DBS Zone — TA Level", color: "#00d4d4" }
-        ]
-      },
-      revealMarkPoints: [
-        { dataIndex:  8, label: "TA: DBS Level — SA: Shorts Off-Sides + Funding Extreme", position: "bottom", color: "#00d4d4" },
-        { dataIndex:  9, label: "1-2 Punch Entry",    position: "bottom", color: "#00d4d4" },
-        { dataIndex: 14, label: "WHY It Worked: SA",  position: "top",    color: "#ffcc00" }
-      ],
+      // No chart — conceptual "what does SA add" question (hideChart:true). The prior chart
+      // drew only a TA level with no SA panel behind its "WHY: SA" pins, so it is removed
+      // rather than left as dead half-story config.
       explanation: "TA identifies the <strong>WHERE</strong> — the DBS zone where price has a structural reason to react. SA fills the critical gap by revealing the <strong>WHO</strong> and the <strong>WHY NOW</strong>: which side is overextended at this specific level, how much financial pressure they are under (funding cost, OI commitment), and why the resulting squeeze will be explosive when they are forced out. TA alone says 'price might react here.' TA plus SA says 'price will likely squeeze upward here because shorts are off-sides, paying heavily, and aggressively adding at the wrong level.'",
       rule: "TA tells you WHERE. SA tells you WHO is off-sides and WHY the move fires now. Neither replaces the other. The 1-2 punch is always: TA level first, then SA confirmation layered on top. Maximum conviction = all four SA variables aligned with TA."
     }
@@ -1405,8 +1500,10 @@ const LT_CHAPTERS_4 = [
         "Magenta: downtrend detected — enter short within 1-2 candle closes of the color change",
         "Gray: no discernible trend — do not trade directionally; wait for color resolution",
         "Blue: unconfirmed bullish reversal — high risk/reward potential; higher risk than Lime Green",
-        "Lime Green: confirmed bullish reversal — higher probability long entry than Blue",
+        "Lime Green: confirmed bullish reversal — higher probability long entry than Blue; Red: canceled reversal — never mind, the trend needs more time",
+        "Green: RECONFIRMED reversal — after a canceled reversal, buyers are still clearly pushing; the uptrend may be starting again",
         "Orange: bearish pivot — use candle high/low as S/R; take profit on longs or tighten stops",
+        "Yellow: bearish breakdown + pivot COMBO — combines the Orange pivot and Purple breakdown; candle high = resistance, low = support",
         "Purple: bearish breakdown in one candle; Dark Green: bullish breakout in one candle — high momentum"
       ]
     },
@@ -1427,12 +1524,17 @@ const LT_CHAPTERS_4 = [
 
     introChart: {
       title: "Trend Buddy Color Sequence — Uptrend, Pivot, Gray, Reversal",
+      markLines: [ { yAxis: 110, label: "Orange High = S/R", color: "#ff9f1a" } ],
       type: "candlestick",
-      labels: ltLabels(18),
+      // Legs match the colors: turquoise RUN up → orange STALL at the top (small down bodies)
+      // → gray SIDEWAYS box (oscillates flat) → blue/lime reversal → turquoise new uptrend
       ohlc: ltCandles(82, [
-        { to: 110, bars: 8 },
-        { to: 103, bars: 5 },
-        { to: 111, bars: 5 }
+        { to: 110, bars: 6 },             // turquoise uptrend
+        { to: 108, bars: 2 },             // orange — stall/pivot at the top (small down)
+        { to: 107, bars: 5 },             // gray — sideways box (near-flat oscillation)
+        { to: 105, bars: 2 },             // blue — unconfirmed reversal dip
+        { to: 108, bars: 1 },             // lime — confirmed reversal
+        { to: 114, bars: 2 }             // turquoise — new uptrend
       ], { seed: 231, wick: 0.35 }),
       // Trend Buddy colour system: turquoise=uptrend · orange=bearish pivot · gray=no trend
       // · blue=unconfirmed reversal · lime green=confirmed reversal · turquoise=new uptrend
@@ -1445,12 +1547,10 @@ const LT_CHAPTERS_4 = [
         "#1fd8c8","#1fd8c8"
       ],
       markPoints: [
-        { dataIndex:  0, label: "Turquoise — Uptrend",    position: "bottom" },
-        { dataIndex:  6, label: "Orange — Pivot; TP Long",position: "top"    },
-        { dataIndex:  9, label: "Gray — No Trend",        position: "top"    },
-        { dataIndex: 13, label: "Blue — Unconf Reversal", position: "bottom" },
-        { dataIndex: 15, label: "Lime Green — Confirmed", position: "bottom" },
-        { dataIndex: 17, label: "Turquoise — New Trend",  position: "top"    }
+        { dataIndex:  6, label: "Orange — Pivot; TP Long",  position: "top"    },
+        { dataIndex: 10, label: "Gray — No Trend / Sideways",position: "top"    },
+        { dataIndex: 15, label: "Lime Green — Confirmed",   position: "bottom" },
+        { dataIndex: 17, label: "Turquoise — New Trend",    position: "top"    }
       ]
     },
 
@@ -1470,15 +1570,15 @@ const LT_CHAPTERS_4 = [
         "#9be84f",
         "#1fd8c8","#1fd8c8","#1fd8c8","#1fd8c8","#1fd8c8","#1fd8c8"
       ],
-      markLines: [
-        { yAxis: 77, label: "DBS Zone (TA)", color: "#00d4d4" }
+      // DBS collapsed into ONE shaded band; only the pink Stop line remains as a hairline so
+      // the lower-left quadrant (where the lesson happens) stays legible
+      markLines: [ { yAxis: 74, label: "Stop — below DBS", color: "#ff2e88" } ],
+      markAreas: [
+        { y0: 75, y1: 79, label: "DBS Zone (TA) — Entry", color: "rgba(0,212,212,0.08)" }
       ],
       markPoints: [
-        { dataIndex:  6, label: "Gray — Approaching DBS",   position: "bottom" },
-        { dataIndex:  8, label: "Blue — Unconf Reversal",   position: "bottom" },
-        { dataIndex:  9, label: "Lime Green — Confirmed!",  position: "bottom" },
-        { dataIndex: 10, label: "Turquoise — Trend UP",     position: "bottom" },
-        { dataIndex: 15, label: "Turquoise Confirmed",      position: "top"    }
+        { dataIndex:  9, label: "Lime — Confirmed Reversal at DBS", position: "bottom" },
+        { dataIndex: 15, label: "Turquoise — Trend Up Confirmed",   position: "top"    }
       ]
     },
 
@@ -1538,8 +1638,8 @@ const LT_CHAPTERS_4 = [
         "Big Red Circle: bullish exhaustion — buyers are drying up; watch for potential reversal down",
         "Big Green Circle: bearish exhaustion — sellers are drying up; watch for potential reversal up",
         "Small Green Circles: bullish pushes — buyers still present despite bearish structure",
-        "Red AP: bullish absorption — a large buyer is absorbing all incoming sell orders at this level",
-        "Green AP: bearish absorption — a large seller is absorbing all incoming buy orders at this level",
+        "Green AP: bullish absorption — a large buyer is absorbing all incoming sell orders at this level",
+        "Red AP: bearish absorption — a large seller is absorbing all incoming buy orders at this level",
         "F (Outside Bar Failure): potential reversal at the candle high or low",
         "Turquoise Triangles: confirmed bullish reversals; X markers: canceled reversal signals"
       ]
@@ -1547,10 +1647,10 @@ const LT_CHAPTERS_4 = [
 
     lesson: {
       heading: "Using PAL Signals as LTE Triggers and Dynamic S/R",
-      body: "PAL signals are most powerful when they appear at pre-identified S/R levels from your TA analysis. A Big Green Circle (bearish exhaustion) at an SSR zone is a high-probability short trigger. A Red AP (bullish absorption) at a DBS zone signals a large buyer is defending — this is a potential long entry trigger in the LTE framework.",
+      body: "PAL signals are most powerful when they appear at pre-identified S/R levels from your TA analysis. A Big Green Circle (bearish exhaustion) at an SSR zone is a high-probability short trigger. A Green AP (bullish absorption) at a DBS zone signals a large buyer is defending — this is a potential long entry trigger in the LTE framework.",
       bullets: [
-        "Red AP at DBS zone: a large buyer absorbs all sells — this IS the large player filling their long position; high conviction long signal",
-        "Green AP at SSR zone: a large seller absorbs all buys — large player filling short; high conviction short signal",
+        "Green AP at DBS zone: a large buyer absorbs all sells — this IS the large player filling their long position; high conviction long signal",
+        "Red AP at SSR zone: a large seller absorbs all buys — large player filling short; high conviction short signal",
         "Big Red Circle at key resistance: buyer exhaustion at the top — potential short entry or profit taking signal",
         "Big Green Circle at key support: seller exhaustion at the bottom — potential long entry or reversal watch",
         "Turquoise Triangles: confirmed reversal entries; pair with S/R for highest probability",
@@ -1568,19 +1668,19 @@ const LT_CHAPTERS_4 = [
         { to: 99,  bars: 4 },
         { to: 94,  bars: 4 }
       ], { seed: 234, wick: 0.4 }),
-      markLines: [
+      markLines: [ { yAxis: 99, label: "Dynamic Resistance (Big Red Circle)", color: "#ff2e88" },
         { yAxis: 77, label: "DBS Zone (TA)", color: "#00d4d4" }
       ],
       markPoints: [
         { dataIndex:  3, label: "Big Green Circle — Sellers Drying Up",  position: "bottom" },
-        { dataIndex:  6, label: "Red AP — Large Buyer Absorbing Sells",  position: "bottom" },
+        { dataIndex:  6, label: "Green AP — Large Buyer Absorbing Sells",  position: "bottom" },
         { dataIndex:  7, label: "Turquoise Triangle — Confirmed Reversal",position: "bottom" },
         { dataIndex: 11, label: "Big Red Circle — Buyers Drying Up",     position: "top"    }
       ]
     },
 
     lessonChart: {
-      title: "Red AP (Bullish Absorption) at DBS — Large Buyer Identified",
+      title: "Green AP (Bullish Absorption) at DBS — Large Buyer Identified",
       type: "candlestick",
       labels: ltLabels(16),
       ohlc: ltCandles(100, [
@@ -1588,28 +1688,28 @@ const LT_CHAPTERS_4 = [
         { to: 77,  bars: 2 },
         { to: 119, bars: 6 }
       ], { seed: 235, wick: 0.4 }),
-      markLines: [
+      markLines: [ { yAxis: 119, label: "Target", color: "#ffcc00" },
         { yAxis: 77, label: "DBS Zone", color: "#00d4d4" }
       ],
       markPoints: [
         { dataIndex:  6, label: "Approaching DBS",         position: "bottom" },
-        { dataIndex:  7, label: "Red AP — Large Buyer Here!",position: "bottom" },
+        { dataIndex:  7, label: "Green AP — Large Buyer Here!",position: "bottom" },
         { dataIndex:  8, label: "Long Entry — Large Player Confirmed",position: "bottom" },
         { dataIndex: 15, label: "Target Achieved",         position: "top"    }
       ]
     },
 
     quiz: {
-      question: "At a key DBS support zone, the PAL tool displays a Red AP signal. What does a Red AP signal specifically indicate and why is it particularly significant at a DBS zone?",
-      hint: "AP stands for Absorption. Red or Green specifies which direction the absorption is happening. Who is absorbing what at a Red AP?",
+      question: "At a key DBS support zone, the PAL tool displays a Green AP signal. What does a Green AP signal specifically indicate and why is it particularly significant at a DBS zone?",
+      hint: "AP stands for Absorption. Red or Green specifies which direction the absorption is happening. Who is absorbing what at a Green AP?",
       style: "choice",
       answers: [
-        { id: "a", text: "Red AP = Bullish Absorption — a large buyer is absorbing all incoming sell orders at this price level; at a DBS zone this confirms that the large player the Liquidity Theory framework predicts should be buying here is actually present and filling a long position",  correct: true,  type: "bullish" },
-        { id: "b", text: "Red AP = Bearish Absorption — a large seller is absorbing all buy orders; appearing at a DBS zone it confirms sellers are defending this level aggressively and price will continue lower",  correct: false, type: "bearish" },
-        { id: "c", text: "Red AP = Rejection at Price — the AP marker simply flags that price was rejected at that candle's high; it has no specific buyer or seller implication at any level",  correct: false, type: "neutral" }
+        { id: "a", text: "Green AP = Bullish Absorption — a large buyer is absorbing all incoming sell orders at this price level; at a DBS zone this confirms that the large player the Liquidity Theory framework predicts should be buying here is actually present and filling a long position",  correct: true,  type: "bullish" },
+        { id: "b", text: "Green AP = Bearish Absorption — a large seller is absorbing all buy orders; appearing at a DBS zone it confirms sellers are defending this level aggressively and price will continue lower",  correct: false, type: "bearish" },
+        { id: "c", text: "Green AP = Rejection at Price — the AP marker simply flags that price was rejected at that candle's high; it has no specific buyer or seller implication at any level",  correct: false, type: "neutral" }
       ],
       chart: {
-        title: "Red AP at DBS Zone — What Does It Signal?",
+        title: "Green AP at DBS Zone — What Does It Signal?",
         type: "candlestick",
         cutIndex: 9,
         labels: ltLabels(15),
@@ -1623,12 +1723,12 @@ const LT_CHAPTERS_4 = [
         ]
       },
       revealMarkPoints: [
-        { dataIndex:  7, label: "Red AP — Large Buyer Absorbing!", position: "bottom", color: "#00d4d4" },
+        { dataIndex:  7, label: "Green AP — Large Buyer Absorbing!", position: "bottom", color: "#00d4d4" },
         { dataIndex:  8, label: "Long Entry Confirmed",            position: "bottom", color: "#00d4d4" },
         { dataIndex: 14, label: "Target — Large Player Won",       position: "top",    color: "#00d4d4" }
       ],
-      explanation: "A <strong>Red AP (Bullish Absorption)</strong> means a large buyer is actively absorbing every incoming sell order at this price — they are willing to buy every unit being sold at this level. At a DBS zone this is the most direct confirmation possible that the large player predicted by Liquidity Theory is actually present and filling their long position. It is the PAL tool's most powerful signal for a long entry when it appears at a pre-identified DBS zone.",
-      rule: "Red AP at DBS = large buyer absorbing sells; highest-conviction long trigger in the PAL system. Green AP at SSR = large seller absorbing buys; highest-conviction short trigger. AP signals confirm the Liquidity Theory mechanic in real time."
+      explanation: "A <strong>Green AP (Bullish Absorption)</strong> means a large buyer is actively absorbing every incoming sell order at this price — they are willing to buy every unit being sold at this level. At a DBS zone this is the most direct confirmation possible that the large player predicted by Liquidity Theory is actually present and filling their long position. It is the PAL tool's most powerful signal for a long entry when it appears at a pre-identified DBS zone.",
+      rule: "Green AP at DBS = large buyer absorbing sells; highest-conviction long trigger in the PAL system. Red AP at SSR = large seller absorbing buys; highest-conviction short trigger. AP signals confirm the Liquidity Theory mechanic in real time."
     }
   },
 
@@ -1650,8 +1750,8 @@ const LT_CHAPTERS_4 = [
         "Trending Channel: built from a moving average (EMA, HMA, or EHMA); adjustable lookback (default 36)",
         "Above channel: bullish environment — bias longs only; Heuristics confirms uptrend context",
         "Below channel: bearish environment — bias shorts only; Heuristics confirms downtrend context",
-        "Green Dots: seller exhaustion signal — potential long entry or addition to existing long",
-        "Red Dots: buyer exhaustion signal — potential short entry or addition to existing short",
+        "Green Dots: seller exhaustion signal — potential long entry, addition to an existing long, or take-profit on shorts",
+        "Red Dots: buyer exhaustion signal — potential short entry, addition to an existing short, or take-profit on longs",
         "Smoothed version available: reduces false positives at the cost of slightly later signals",
         "Designed to catch the MEAT of a trend — not tops and bottoms"
       ]
@@ -1673,47 +1773,47 @@ const LT_CHAPTERS_4 = [
 
     introChart: {
       title: "Heuristics — MA Channel with Green Exhaustion Dot at Pullback",
+      // The Heuristics channel is drawn as the labelled zone below; entry co-located with the dot.
+      // (No rsi_zones — that renders an RSI oscillator, not the MA channel this chapter teaches.)
+      markLines: [ { yAxis: 96, label: "Long Entry — Green Dot", color: "#00d4d4" } ],
       type: "candlestick",
-      indicator: "rsi_zones",
       chartHeight: 480,
-      labels: ltLabels(18),
-      ohlc: ltCandles(82, [
-        { to: 100, bars: 8 },
-        { to: 95,  bars: 3 },
-        { to: 126, bars: 7 }
+      // Price starts ABOVE the 90–98 channel (bullish bias), pulls back INTO it, then rips
+      ohlc: ltCandles(104, [
+        { to: 108, bars: 4 },             // above channel — bullish bias, small push up
+        { to: 96,  bars: 4 },             // pullback INTO the channel top
+        { to: 126, bars: 8 }             // resume uptrend to target
       ], { seed: 237, wick: 0.4 }),
       markAreas: [
-        { y0: 92, y1: 100, label: "Heuristics Channel", color: "rgba(0,212,212,0.07)" }
+        { y0: 90, y1: 98, label: "Heuristics Channel (MA)", color: "rgba(0,212,212,0.07)" }
       ],
       markPoints: [
-        { dataIndex:  0, label: "Above Channel — Bullish Bias",  position: "bottom" },
-        { dataIndex:  6, label: "Pullback into Channel",         position: "bottom" },
-        { dataIndex:  7, label: "Green Dot — Seller Exhaustion", position: "bottom" },
-        { dataIndex:  8, label: "Entry — Continue Uptrend",      position: "bottom" },
-        { dataIndex: 17, label: "Trend Target Achieved",         position: "top"    }
+        { dataIndex:  3, label: "Above Channel — Bullish Bias",  position: "top"    },
+        { dataIndex:  7, label: "Green Dot — Seller Exhaustion", position: "bottom", color: "#00d4d4" },
+        { dataIndex: 15, label: "Trend Target Achieved",         position: "top"    }
       ]
     },
 
     lessonChart: {
       title: "Heuristics — HTF Bias Bearish; Red Dot at Channel for Short Entry",
+      // Heuristics channel drawn as the labelled zone; entry co-located with the red dot.
+      // (No rsi_zones — this chapter is the MA channel, not an RSI oscillator.)
+      markLines: [ { yAxis: 100, label: "Short Entry — Red Dot", color: "#ff2e88" }, { yAxis: 72, label: "Short Target", color: "#ff2e88" } ],
       type: "candlestick",
-      indicator: "rsi_zones",
       chartHeight: 480,
-      labels: ltLabels(16),
-      ohlc: ltCandles(108, [
-        { to: 97,  bars: 5 },
-        { to: 100, bars: 3 },
-        { to: 72,  bars: 8 }
+      // Price starts BELOW the 92–100 channel (bearish bias), rallies INTO it, then collapses
+      ohlc: ltCandles(88, [
+        { to: 85,  bars: 4 },             // below channel — bearish bias
+        { to: 100, bars: 4 },             // counter-trend rally INTO the channel top
+        { to: 72,  bars: 8 }             // resume downtrend to target
       ], { seed: 238, wick: 0.4 }),
       markAreas: [
-        { y0: 94, y1: 100, label: "Heuristics Channel", color: "rgba(204,34,34,0.07)" }
+        { y0: 92, y1: 100, label: "Heuristics Channel (MA)", color: "rgba(255,46,136,0.07)" }
       ],
       markPoints: [
-        { dataIndex:  0, label: "Below Channel — Bearish Bias",  position: "top"    },
-        { dataIndex:  5, label: "Rally into Channel",            position: "top"    },
-        { dataIndex:  6, label: "Red Dot — Buyer Exhaustion",    position: "top"    },
-        { dataIndex:  7, label: "Short Entry — With Trend",      position: "top"    },
-        { dataIndex: 15, label: "Trend Target Achieved",         position: "bottom" }
+        { dataIndex:  3, label: "Below Channel — Bearish Bias", position: "bottom" },
+        { dataIndex:  7, label: "Red Dot — Buyer Exhaustion",   position: "top", color: "#ff2e88" },
+        { dataIndex: 15, label: "Trend Target Achieved",        position: "bottom" }
       ]
     },
 
@@ -1729,21 +1829,23 @@ const LT_CHAPTERS_4 = [
       chart: {
         title: "Below Channel on Daily + Red Dot on 4H — What Is the Trade?",
         type: "candlestick",
+        // Setup starts BELOW the 92–100 channel (bearish bias), rallies INTO it, then decides
         cutIndex: 8,
-        labels: ltLabels(16),
-        ohlc: ltCandles(105, [
-          { to: 97,  bars: 5 },
-          { to: 102, bars: 3 },
-          { to: 66,  bars: 8 }
+        ohlc: ltCandles(90, [
+          { to: 86,  bars: 4 },             // below the channel — bearish HTF bias
+          { to: 100, bars: 4 },             // counter-trend rally into channel top (decision)
+          { to: 66,  bars: 8 }             // downtrend resumes (hidden)
         ], { seed: 239, wick: 0.4 }),
+        markLines: [
+          { yAxis: 66, label: "Short Target", color: "#ff2e88" }
+        ],
         markAreas: [
-          { y0: 96, y1: 103, label: "Heuristics Channel", color: "rgba(204,34,34,0.07)" }
+          { y0: 92, y1: 100, label: "Heuristics Channel (MA)", color: "rgba(255,46,136,0.07)" }
         ]
       },
       revealMarkPoints: [
-        { dataIndex:  6, label: "Rally into Channel",        position: "top",    color: "#ffcc00" },
-        { dataIndex:  7, label: "Red Dot — Short Entry!",   position: "top",    color: "#cc2222" },
-        { dataIndex: 14, label: "Bearish Target Reached",   position: "bottom", color: "#cc2222" }
+        { dataIndex:  7, label: "Red Dot — Short Entry!",  position: "top",    color: "#ff2e88" },
+        { dataIndex: 15, label: "Bearish Target Reached",  position: "bottom", color: "#ff2e88" }
       ],
       explanation: "The daily chart below the Heuristics channel establishes a <strong>bearish HTF bias</strong>. The 4H rally into the channel is a counter-trend move, not a trend change. When the red dot (buyer exhaustion) appears at the channel, it signals that the buyers pushing the counter-trend rally are running out of momentum — exactly when a short entry in the direction of the bearish HTF bias is justified. Never trade exhaustion dots against the established channel direction.",
       rule: "Heuristics: above channel = bullish bias + green dots = long entries. Below channel = bearish bias + red dots = short entries. Never trade dots against the channel direction. HTF channel = bias; LTF dot = entry trigger."
@@ -1759,14 +1861,14 @@ const LT_CHAPTERS_4 = [
     title: "FSVZO — Volume Zone Oscillator",
     tag: "Module 3 · Session 4",
     module: "Indicator Suite",
-    videoUrl: "https://www.youtube.com/embed/Ioxmip6tjsQ",
+    videoUrl: "https://www.youtube.com/embed/IoxmIP6tjsQ",
 
     intro: {
       heading: "FSVZO — The Oscillator That Paints Divergences Directly on the Chart",
       body: "FSVZO (Volume Zone Oscillator) is a volume-based oscillator with one key advantage over traditional oscillators: it paints divergence signals directly on the price candle as it forms, eliminating the need for manual divergence identification. Regular divergences signal reversals; hidden divergences signal trend continuations.",
       bullets: [
         "Oscillates between overbought (+80) and oversold (-80) thresholds — both adjustable",
-        "White Moving Average crosses the band boundaries to generate signals",
+        "Signals come from the bands' positioning relative to the overbought/oversold thresholds — NOT from the bands crossing the white moving average",
         "Red X's on candles: overbought signal (oscillator above +80) — watch for bearish reversal",
         "Green Arrows on candles: oversold signal (oscillator below -80) — watch for bullish reversal",
         "R painted on candle: Regular divergence — reversal signal",
@@ -1791,6 +1893,7 @@ const LT_CHAPTERS_4 = [
 
     introChart: {
       title: "FSVZO — Regular Bearish Divergence (R) at Price High",
+      markLines: [ { yAxis: 108, label: "Price HH — Momentum Fades", color: "#ff2e88" }, { yAxis: 87, label: "Divergence Target", color: "#00d4d4" } ],
       type: "candlestick",
       indicator: "volume",
       chartHeight: 480,
@@ -1809,6 +1912,7 @@ const LT_CHAPTERS_4 = [
 
     lessonChart: {
       title: "FSVZO — Hidden Bullish Divergence (H) During Uptrend Pullback",
+      markLines: [ { yAxis: 94, label: "Continuation Entry", color: "#00d4d4" }, { yAxis: 91, label: "Stop — Below HL", color: "#ff2e88" }, { yAxis: 130, label: "Continuation Target", color: "#ffcc00" } ],
       type: "candlestick",
       indicator: "volume",
       chartHeight: 480,
@@ -1832,7 +1936,7 @@ const LT_CHAPTERS_4 = [
       style: "choice",
       answers: [
         { id: "a", text: "Regular Bearish Divergence — price higher high with oscillator lower high signals momentum is fading even as price rises; the R label confirms a potential reversal downward is forming and longs should be cautious or begin taking profit",  correct: true,  type: "bearish" },
-        { id: "b", text: "Hidden Bearish Divergence — price higher high with oscillator lower high is a hidden divergence signaling the downtrend will continue; the H label would appear instead of R if this were a reversal signal",  correct: false, type: "bullish" },
+        { id: "b", text: "Hidden Bearish Divergence — price higher high with oscillator lower high is a hidden divergence, so it signals continuation rather than reversal; the H label would appear instead of R if this were a reversal signal",  correct: false, type: "bullish" },
         { id: "c", text: "Regular Bullish Divergence — any divergence at a price high is bullish because it shows the oscillator is leading price and price will continue to rise to match the oscillator's reading",  correct: false, type: "neutral" }
       ],
       chart: {
@@ -1847,8 +1951,8 @@ const LT_CHAPTERS_4 = [
       },
       revealMarkPoints: [
         { dataIndex:  4, label: "Prior High — Oscillator Peak",    position: "top",    color: "#ffcc00" },
-        { dataIndex:  8, label: "R: Price HH / Osc LH = Reg Bear Div", position: "top", color: "#cc2222" },
-        { dataIndex:  9, label: "Reversal Down Begins",            position: "top",    color: "#cc2222" },
+        { dataIndex:  8, label: "R: Price HH / Osc LH = Reg Bear Div", position: "top", color: "#ff2e88" },
+        { dataIndex:  9, label: "Reversal Down Begins",            position: "top",    color: "#ff2e88" },
         { dataIndex: 14, label: "Divergence Target Reached",       position: "bottom", color: "#00d4d4" }
       ],
       explanation: "Price making a <strong>higher high while the oscillator makes a lower high</strong> is the textbook definition of a <strong>Regular Bearish Divergence</strong>. The FSVZO confirms this with the <strong>R label</strong> painted directly on the candle — no manual calculation required. This signals that buying momentum is weakening even as price rises, and a reversal downward is probable. Regular divergences signal reversals. Hidden divergences (H label) signal continuations.",
@@ -1869,7 +1973,7 @@ const LT_CHAPTERS_4 = [
 
     intro: {
       heading: "Crayons — The Best of Trend Buddy and PAL in One Indicator",
-      body: "Crayons is a hybrid indicator that combines the candle color system of Trend Buddy with the price action signal capability of the PAL Tool. It simultaneously identifies trend state via candle colors AND generates price action signals (W, H, B markers) while drawing dynamic S/R levels. It is the most information-dense single indicator in the suite.",
+      body: "Crayons is a hybrid indicator taking the best of both worlds: the candle color trend system of Trend Buddy plus the dynamic S/R pivot levels of the PAL Tool. On top of those it generates its own price action signals (W, H, B markers). It is the most information-dense single indicator in the suite.",
       bullets: [
         "Lime Green: strong uptrend detected — enter long with the trend",
         "Red: strong downtrend detected — enter short with the trend",
@@ -1897,6 +2001,7 @@ const LT_CHAPTERS_4 = [
 
     introChart: {
       title: "Crayons Color Sequence — Lime Green Trend to Orange Pivot to Gray",
+      markLines: [ { yAxis: 109, label: "Orange Pivot High — S/R", color: "#ff9f1a" } ],
       type: "candlestick",
       labels: ltLabels(18),
       ohlc: ltCandles(80, [
@@ -1941,7 +2046,7 @@ const LT_CHAPTERS_4 = [
         "#1f9d3a",
         "#9be84f","#9be84f","#9be84f","#9be84f","#9be84f","#9be84f","#9be84f"
       ],
-      markLines: [
+      markLines: [ { yAxis: 82, label: "Entry — B Signal Long", color: "#00d4d4" }, { yAxis: 120, label: "Target", color: "#ffcc00" },
         { yAxis: 78, label: "DBS Zone (TA)", color: "#00d4d4" }
       ],
       markPoints: [
@@ -1979,13 +2084,13 @@ const LT_CHAPTERS_4 = [
           "#8a8f99","#8a8f99","#8a8f99","#8a8f99","#8a8f99","#8a8f99","#8a8f99"
         ]
       },
-      revealMarkPoints: [
+      revealMarkPoints: [ { dataIndex: 8, label: "Orange High = S/R / Stop", position: "bottom", color: "#ff9f1a" },
         { dataIndex:  0, label: "Lime Green Uptrend",      position: "bottom", color: "#9be84f" },
         { dataIndex:  7, label: "Orange Pivot — TP Longs!", position: "top",   color: "#ff9f1a" },
         { dataIndex:  9, label: "Gray — Trend Weakening",  position: "top",    color: "#8a8f99" }
       ],
       explanation: "An Orange candle on Crayons is a <strong>Bearish Pivot signal</strong>. It means the current upward trend is showing pivot behavior — not necessarily a full reversal, but enough of a warning to take profit, tighten trailing stops, or reduce long exposure. The candle's high and low become key S/R levels for stop placement. This is explicitly a profit-taking signal on existing longs, not an entry signal for either direction.",
-      rule: "Crayons Orange = Bearish Pivot. Take profit on longs, tighten stops. Crayons Fuchsia = Bullish Pivot. Take profit on shorts, tighten stops. These are not reversal entry signals — they are position management signals."
+      rule: "Crayons Orange = Bearish Pivot. Take profit on longs, tighten stops; the candle's high/low become intra-bar S/R. It is not a reversal entry signal — it is a position management signal."
     }
   },
 
@@ -2002,7 +2107,7 @@ const LT_CHAPTERS_4 = [
 
     intro: {
       heading: "Genie — Local Top and Bottom Identifier for Scalping",
-      body: "Genie is designed to identify potential local tops and bottoms and generate momentum entry signals. It is the scalping specialist of the indicator suite — best suited for low timeframe momentum trades rather than swing entries. Red hues signal potential local tops; green hues signal potential local bottoms; colored arrows provide the entry trigger.",
+      body: "Genie is designed to identify potential local tops and bottoms and generate momentum entry signals. It is the scalping specialist of the indicator suite — a low-timeframe momentum tool that can also be used on higher timeframes to estimate potential local tops and bottoms. Red hues signal potential local tops; green hues signal potential local bottoms; colored arrows provide the entry trigger.",
       bullets: [
         "Red Hues: potential local top signal — watch for reversal or profit-taking from long positions",
         "Green Hues: potential local bottom signal — watch for reversal or entry opportunity for longs",
@@ -2024,7 +2129,7 @@ const LT_CHAPTERS_4 = [
         "Combine with Crayons: Crayons Turquoise (seller exhaustion) + Genie green hue at DBS = three-indicator confluence",
         "Momentum direction: large lime green Genie bars during a move confirm buyers are dominant; large red bars confirm sellers",
         "Adaptive filtering: Genie adjusts its sensitivity based on recent volatility; it naturally reduces noise in choppy conditions",
-        "Not for swing trades: Genie signals are short-lived; use them for scalps with defined 1–3 candle holding periods"
+        "Primarily an LTF scalping and momentum tool — though zoomed out it also works as a high-timeframe look for estimating potential local tops and bottoms"
       ]
     },
 
@@ -2042,7 +2147,7 @@ const LT_CHAPTERS_4 = [
         "#6fd99a","#6fd99a","#6fd99a","#6fd99a",
         "#9be84f","#9be84f","#9be84f","#9be84f","#9be84f","#9be84f","#9be84f","#9be84f"
       ],
-      markLines: [
+      markLines: [ { yAxis: 78, label: "Stop — Below Swing Low", color: "#ff2e88" }, { yAxis: 115, label: "Scalp Target", color: "#ffcc00" },
         { yAxis: 80, label: "DBS Support Zone", color: "#00d4d4" }
       ],
       markPoints: [
@@ -2068,8 +2173,8 @@ const LT_CHAPTERS_4 = [
         "#f08a8a","#f08a8a",
         "#e23b3b","#e23b3b","#e23b3b","#e23b3b","#e23b3b","#e23b3b","#e23b3b","#e23b3b"
       ],
-      markLines: [
-        { yAxis: 103, label: "SSR Resistance Zone", color: "#cc2222" }
+      markLines: [ { yAxis: 106, label: "Stop — Above Swing High", color: "#ff2e88" }, { yAxis: 72, label: "Scalp Short Target", color: "#00d4d4" },
+        { yAxis: 103, label: "SSR Resistance Zone", color: "#ff2e88" }
       ],
       markPoints: [
         { dataIndex:  6, label: "Red Hues — Local Top",        position: "top"    },
@@ -2084,7 +2189,7 @@ const LT_CHAPTERS_4 = [
       hint: "What do red hues signal about price location relative to a potential local top? What does the arrow add to the red hues?",
       style: "direction",
       answers: [
-        { id: "a", text: "Bearish — red hues indicate a potential local top forming at the SSR resistance; the red arrow fires as the early entry trigger; the appropriate action is a scalp short entry at the SSR with stop above the swing high and a short 1-3 candle holding target",  correct: true,  type: "bearish" },
+        { id: "a", text: "Bearish — red hues indicate a potential local top forming at the SSR resistance; the red arrow fires as the early entry trigger; the appropriate action is a scalp short entry at the SSR with stop above the swing high",  correct: true,  type: "bearish" },
         { id: "b", text: "Bullish — red hues and red arrows at resistance signal that buyers are aggressively pushing into resistance; this aggression is bullish and signals a breakout is forming above SSR",  correct: false, type: "bullish" },
         { id: "c", text: "Neutral — Genie hues alone are not sufficient to determine direction; a red hue can appear in both trending and ranging conditions and must be combined with Heuristics channel data before any trade can be considered",  correct: false, type: "neutral" }
       ],
@@ -2104,10 +2209,10 @@ const LT_CHAPTERS_4 = [
           "#e23b3b","#e23b3b","#e23b3b","#e23b3b","#e23b3b","#e23b3b","#e23b3b","#e23b3b"
         ],
         markLines: [
-          { yAxis: 103, label: "SSR Zone", color: "#cc2222" }
+          { yAxis: 103, label: "SSR Zone", color: "#ff2e88" }
         ]
       },
-      revealMarkPoints: [
+      revealMarkPoints: [ { dataIndex: 5, label: "Stop — Above Swing High", position: "top", color: "#ff2e88" },
         { dataIndex:  6, label: "Red Hues — Local Top Warning",  position: "top",    color: "#f08a8a" },
         { dataIndex:  7, label: "Red Arrow — Short Entry!",      position: "top",    color: "#e23b3b" },
         { dataIndex: 14, label: "Scalp Short Target Reached",    position: "bottom", color: "#00d4d4" }
@@ -2130,21 +2235,22 @@ const LT_CHAPTERS_4 = [
 
     intro: {
       heading: "Hyblock Capital — Sentiment Analytics for Derivatives Traders",
-      body: "Hyblock Capital is a specialized sentiment analytics platform for cryptocurrency derivatives traders. It aggregates real-time data from multiple major exchanges and presents it in five distinct tools, each revealing a different dimension of participant positioning. Integrated with TradingView, it allows chart analysis and sentiment data on the same screen simultaneously.",
+      body: "Hyblock Capital is a specialized sentiment analytics platform for cryptocurrency derivatives traders. It aggregates real-time data from multiple major exchanges and presents it in six distinct tools, each revealing a different dimension of participant positioning. Integrated with TradingView, it allows chart analysis and sentiment data on the same screen simultaneously.",
       bullets: [
         "TradingView integration: full charting with Hyblock sentiment indicators overlaid on the same screen",
         "Multi-exchange data: combines BitMEX price data with Binance sentiment data for broader market view",
         "Tab 1 — Chart: TradingView charts with Hyblock proprietary indicators available as overlays",
         "Tab 2 — Trading Activity: funding rate, open interest, cumulative delta displayed over time",
-        "Tab 3 — Liquidation Levels: predictive model of WHERE leveraged positions will be liquidated",
-        "Tab 4 — Net Positions Heatmap: visual clusters of where longs and shorts entered and exited",
-        "Tab 5 — Order Book Depth Analysis: real-time order book visualization"
+        "Tab 3 — Market Depth Heatmap: resting order-book liquidity visualized as a heatmap across price over time",
+        "Tab 4 — Liquidation Levels: predictive model of WHERE leveraged positions will be liquidated",
+        "Tab 5 — Net Positions Heatmap: visual clusters of where longs and shorts entered and exited",
+        "Tab 6 — Order Book Depth Analysis: real-time order book visualization"
       ]
     },
 
     lesson: {
-      heading: "Five Tabs — Each Revealing a Different Layer of Market Structure",
-      body: "The five Hyblock tabs collectively answer the core questions of Liquidity Theory and Sentiment Analysis: WHERE will price likely go next (Liquidation Levels), WHO is positioned there (Positions Heatmap), and HOW extreme is the imbalance (Trading Activity + Chart Indicators). Used together, they provide the most complete sentiment picture available for crypto derivatives traders.",
+      heading: "Six Tabs — Each Revealing a Different Layer of Market Structure",
+      body: "The six Hyblock tabs collectively answer the core questions of Liquidity Theory and Sentiment Analysis: WHERE will price likely go next (Liquidation Levels), WHO is positioned there (Positions Heatmap), and HOW extreme is the imbalance (Trading Activity + Chart Indicators). Used together, they provide the most complete sentiment picture available for crypto derivatives traders.",
       bullets: [
         "Chart tab: apply Hyblock's proprietary indicators (CVD, Net Longs/Shorts, Cumulative Delta) on TradingView candles",
         "Trading Activity tab: select instrument + lookback period; overlay funding, OI, and delta simultaneously",
@@ -2157,27 +2263,33 @@ const LT_CHAPTERS_4 = [
     },
 
     introChart: {
-      title: "Hyblock Platform — Five Tabs Working Together at a Key Level",
+      title: "Hyblock Platform — Three Tools Working Together at a Key Level",
       type: "candlestick",
+      chartHeight: 460,
       labels: ltLabels(16),
       ohlc: ltCandles(100, [
         { to: 81,  bars: 9 },
         { to: 118, bars: 7 }
       ], { seed: 249, wick: 0.4 }),
-      markLines: [
-        { yAxis: 81, label: "Hyblock: Liq Cluster + Heatmap + TA DBS", color: "#00d4d4" }
+      markLines: [ { yAxis: 118, label: "Target — Full Confluence", color: "#ffcc00" },
+        { yAxis: 81, label: "DBS", color: "#00d4d4" }
       ],
+      // Liq Levels: long-liquidation cluster just below the DBS (the swept magnet)
+      liqCluster: { lines: [74, 77], label: "50x Long Liq Cluster", color: "#ffcc00" },
+      // Heatmap: bright LONG cluster (green) — dense longs defending the DBS
+      heatmap: [{ center: 84, halfHeight: 5, color: "255,190,40", peak: 0.55, cells: 7, label: "Heatmap: Bright Long Cluster" }],
+      // Trading Activity: cumulative-delta sub-panel (all 4 SA bullish → delta turns up)
+      tradingActivity: true,
+      activityLabel: "Trading Activity — Cum Δ",
       markPoints: [
-        { dataIndex:  6, label: "Liq Levels: 50x Long Cluster Here",   position: "bottom" },
-        { dataIndex:  7, label: "Heatmap: Bright Long Cluster Here",    position: "bottom" },
-        { dataIndex:  8, label: "Trading Activity: All 4 SA Bullish",   position: "bottom" },
-        { dataIndex:  9, label: "TA DBS + Three Hyblock Tools = Entry", position: "bottom" },
+        { dataIndex:  9, label: "TA DBS + Three Hyblock Tools = Entry", position: "bottom", color: "#00d4d4" },
         { dataIndex: 15, label: "Full Confluence — Target Hit",         position: "top"    }
       ]
     },
 
     lessonChart: {
       title: "Hyblock Workflow — Liquidation Levels → Heatmap → Trading Activity",
+      markLines: [ { yAxis: 82, label: "DBS Zone (TA)", color: "#00d4d4" } ],
       type: "candlestick",
       labels: ltLabels(16),
       ohlc: ltCandles(98, [
@@ -2189,7 +2301,7 @@ const LT_CHAPTERS_4 = [
         { dataIndex:  6, label: "Step 2: Heatmap — WHO",         position: "bottom" },
         { dataIndex:  7, label: "Step 3: Trading Activity — HOW",position: "bottom" },
         { dataIndex:  8, label: "Step 4: TA Cross-Reference",    position: "bottom" },
-        { dataIndex:  9, label: "Step 5: Execute Trade",         position: "bottom" }
+        { dataIndex:  9, label: "Step 5: Execute Trade",         position: "bottom", color: "#00d4d4" }
       ]
     },
 
@@ -2242,12 +2354,13 @@ const LT_CHAPTERS_4 = [
       body: "The Liquidation Levels tool on Hyblock Capital displays the exact price levels where leveraged positions at different leverage multiples will be forcibly closed by the exchange. These liquidation clusters are price magnets — larger players intentionally engineer price moves to reach them, using the forced buy or sell orders as the liquidity they need to fill their own positions.",
       bullets: [
         "Liquidation price calculated from: entry price + position size + leverage multiple",
+        "Higher position size = higher hit rate — the larger the positions at a level, the more likely price reaches their liquidation price",
         "Bubble colors by leverage: 25x, 50x, and 100x each displayed in different colors",
         "Red dot = Short Entry Price (shorts entered here); bubble ABOVE = their liquidation price",
         "Green dot = Long Entry Price (longs entered here); bubble BELOW = their liquidation price",
         "Larger bubble = larger position size at that leverage = more significant liquidity pool at that level",
         "Higher leverage = liquidation price is CLOSER to the entry price = easier to reach",
-        "Example: short entered at $6,800; 25x liquidation = ~$7,790; 50x liquidation = ~$7,711"
+        "Example: from one short entry cluster — 25x liquidates at ~$7,955; 50x at ~$7,790; 100x at ~$7,711 (higher leverage = closer to entry)"
       ]
     },
 
@@ -2274,12 +2387,8 @@ const LT_CHAPTERS_4 = [
         { to: 79,  bars: 2  },
         { to: 112, bars: 4  }
       ], { seed: 252, wick: 0.4 }),
-      markLines: [
-        { yAxis: 76, label: "50x Long Liquidation Cluster", color: "#ffcc00" }
-      ],
-      markAreas: [
-        { y0: 74, y1: 79, label: "50x Long Liq Zone + DBS", color: "rgba(255,204,0,0.08)" }
-      ],
+      // Liquidation Levels tool: a dashed 50x long-liq ladder (the swept magnet below price)
+      liqCluster: { lines: [74, 76, 78], label: "50x Long Liq Cluster", color: "#ffcc00" },
       markPoints: [
         { dataIndex:  0, label: "Price Above Liq Level",        position: "top"    },
         { dataIndex:  9, label: "Approaching Liq Cluster",      position: "bottom" },
@@ -2298,10 +2407,11 @@ const LT_CHAPTERS_4 = [
         { to: 78,  bars: 1 },
         { to: 120, bars: 7 }
       ], { seed: 253, wick: 0.4 }),
-      markLines: [
-        { yAxis: 78, label: "DBS Zone (TA)", color: "#00d4d4" },
-        { yAxis: 76, label: "50x Liq Level (Hyblock)", color: "#ffcc00" }
+      markLines: [ { yAxis: 118, label: "Target / TP", color: "#00d4d4" },
+        { yAxis: 78, label: "DBS Zone (TA)", color: "#00d4d4" }
       ],
+      // Gold flat line upgraded to a dashed 50x liq ladder, sitting just under the teal DBS
+      liqCluster: { lines: [74, 76, 78], label: "50x Liq Cluster (Hyblock)", color: "#ffcc00" },
       markPoints: [
         { dataIndex:  6, label: "DBS + 50x Liq Level — Alignment!", position: "bottom" },
         { dataIndex:  7, label: "Double Confluence — Max Target",    position: "bottom" },
@@ -2315,7 +2425,7 @@ const LT_CHAPTERS_4 = [
       hint: "What does the liquidation cluster represent in terms of liquidity? What does the DBS zone alignment add to the setup? What is the expected directional outcome when price reaches both levels simultaneously?",
       style: "choice",
       answers: [
-        { id: "a", text: "Mark the liquidation level on the TradingView chart; when price sweeps down to the 50x long liquidation zone and reaches the DBS zone simultaneously, look for a long entry — the forced closures from liquidated longs create buying pressure that larger players use, and the TA DBS zone confirms structural support at the same level",  correct: true,  type: "bullish" },
+        { id: "a", text: "Mark the liquidation level on the TradingView chart; when price sweeps down to the 50x long liquidation zone and reaches the DBS zone simultaneously, look for a long entry — liquidated longs are forcibly closed as sell orders, and a larger buyer absorbs that forced selling to fill their position, while the TA DBS zone confirms structural support at the same level",  correct: true,  type: "bullish" },
         { id: "b", text: "The liquidation bubble below price is exclusively bearish — it means shorts are positioned there and the liquidation event will cause downward selling pressure when price reaches it",  correct: false, type: "bearish" },
         { id: "c", text: "Liquidation levels are only useful as stop loss placement guides; they should not be used as entry targets because price reaching a liquidation level signals that the losing side was correct all along",  correct: false, type: "neutral" }
       ],
@@ -2329,9 +2439,9 @@ const LT_CHAPTERS_4 = [
           { to: 107, bars: 6 }
         ], { seed: 254, wick: 0.4 }),
         markLines: [
-          { yAxis: 78, label: "DBS Zone (TA)", color: "#00d4d4" },
-          { yAxis: 76, label: "50x Long Liq Cluster (Hyblock)", color: "#ffcc00" }
-        ]
+          { yAxis: 78, label: "DBS Zone (TA)", color: "#00d4d4" }
+        ],
+        liqCluster: { lines: [74, 76, 78], label: "50x Long Liq Cluster", color: "#ffcc00" }
       },
       revealMarkPoints: [
         { dataIndex:  8, label: "DBS + 50x Liq = Sweep Zone",    position: "bottom", color: "#ffcc00" },
@@ -2364,7 +2474,7 @@ const LT_CHAPTERS_4 = [
         "Step 3: Draw those exact levels on TradingView as horizontal lines",
         "Step 4: Cross-reference with TA — do they align with DBS, SSR, range extremes, or Fibonacci levels?",
         "Step 5: When price approaches those levels, watch for direction signal and execute accordingly",
-        "Real example: 50x long liq at $6,307; 25x long liq at $6,180; short clusters at $6,346 = complete liquidity map"
+        "Real example: 50x long liq at $6,307; 25x long liq at $6,180; short clusters entered between ~$6,600 and $6,800 = complete liquidity map"
       ]
     },
 
@@ -2374,7 +2484,7 @@ const LT_CHAPTERS_4 = [
       bullets: [
         "Price ran below Range Low (deviation/liquidity pool) → hit 50x long liquidation zone → immediate bounce",
         "Then hit 25x long liquidation zone → another bounce from DBS zone alignment",
-        "Then short cluster at $6,346 was squeezed → price ran back to SSR/breakdown zone",
+        "Then the shorts entered off ~$6,600–6,800 were squeezed → price ran back to SSR/breakdown zone",
         "Key insight: the trade was not just TA — it was understanding WHY price bounced at each exact level",
         "Rule of Fives triggered at Range Low before the move → anticipated the deviation before plotting liquidation levels",
         "Post-trade analysis: every reaction point had a Hyblock explanation — the framework provides the WHY that TA alone cannot",
@@ -2394,11 +2504,12 @@ const LT_CHAPTERS_4 = [
         { to: 91,  bars: 3 },
         { to: 105, bars: 4 }
       ], { seed: 255, wick: 0.4 }),
-      markLines: [
+      markLines: [ { yAxis: 84, label: "25x Long Liq Level", color: "#ffcc00" },
         { yAxis: 85, label: "Range Low / DBS Zone", color: "#00d4d4" },
-        { yAxis: 83, label: "50x Long Liq Level",   color: "#ffcc00" },
-        { yAxis: 98, label: "SSR / Short Cluster",  color: "#cc2222" }
+        { yAxis: 98, label: "SSR / Short Cluster",  color: "#ff2e88" }
       ],
+      // 50x long-liq ladder (dashed gold) just under the range low — the deviation magnet
+      liqCluster: { lines: [81, 83], label: "50x Long Liq Level", color: "#ffcc00" },
       markPoints: [
         { dataIndex:  7, label: "Rule of Fives at Range Low",     position: "bottom" },
         { dataIndex:  9, label: "Deviation — 50x Liq Hit",        position: "bottom" },
@@ -2418,10 +2529,11 @@ const LT_CHAPTERS_4 = [
         { to: 95,  bars: 4 },
         { to: 113, bars: 4 }
       ], { seed: 256, wick: 0.4 }),
-      markLines: [
-        { yAxis: 83, label: "50x Long Liq + DBS", color: "#ffcc00" },
-        { yAxis: 95, label: "25x Short Liq + SSR",color: "#cc2222" }
+      markLines: [ { yAxis: 85, label: "Range Low (Liquidity Pool)", color: "#00d4d4" },
+        { yAxis: 95, label: "25x Short Liq + SSR",color: "#ff2e88" }
       ],
+      // Dashed 50x long-liq ladder at the DBS bounce level
+      liqCluster: { lines: [81, 83], label: "50x Long Liq + DBS", color: "#ffcc00" },
       markPoints: [
         { dataIndex:  6, label: "50x Liq + DBS: Bounce WHY!",  position: "bottom" },
         { dataIndex:  7, label: "Large Buy Fills at Liq Level", position: "bottom" },
@@ -2450,9 +2562,9 @@ const LT_CHAPTERS_4 = [
           { to: 117, bars: 5 }
         ], { seed: 257, wick: 0.4 }),
         markLines: [
-          { yAxis: 85, label: "Range Low", color: "#00d4d4" },
-          { yAxis: 81, label: "50x Long Liq Cluster", color: "#ffcc00" }
-        ]
+          { yAxis: 85, label: "Range Low", color: "#00d4d4" }
+        ],
+        liqCluster: { lines: [79, 81], label: "50x Long Liq Cluster", color: "#ffcc00" }
       },
       revealMarkPoints: [
         { dataIndex:  8, label: "Approaching Liq Zone",         position: "bottom", color: "#ffcc00" },
@@ -2506,22 +2618,20 @@ const LT_CHAPTERS_4 = [
 
     introChart: {
       title: "Bright Long Cluster Below Current Price — Liquidity Target Identified",
+      markLines: [ { yAxis: 84, label: "Long Cluster — Support / Sweep Target", color: "#00d4d4" } ],
       type: "candlestick",
+      chartHeight: 400,
       labels: ltLabels(16),
       ohlc: ltCandles(100, [
         { to: 84,  bars: 8 },
         { to: 84,  bars: 2 },
         { to: 114, bars: 6 }
       ], { seed: 258, wick: 0.4 }),
-      markLines: [
-        { yAxis: 84, label: "Heatmap: Bright Long Cluster (Entry Zone)", color: "#ffcc00" }
-      ],
-      markAreas: [
-        { y0: 82, y1: 87, label: "Long Position Cluster = Liquidity Target", color: "rgba(255,204,0,0.08)" }
-      ],
+      // Positions Heatmap: a real gradient heatmap — bright LONG cluster (green) below
+      // price = the liquidity target price gets drawn back to.
+      heatmap: [{ center: 84, halfHeight: 6, color: "255,190,40", peak: 0.62, cells: 9, label: "Heatmap: Bright Long Cluster" }],
       markPoints: [
         { dataIndex:  0, label: "Current Price Above Cluster",    position: "top"    },
-        { dataIndex:  6, label: "Price Approaching Cluster",      position: "bottom" },
         { dataIndex:  8, label: "Cluster: Longs Squeezed/Stopped",position: "bottom" },
         { dataIndex:  9, label: "Reversal — Large Buy Fills",     position: "bottom" },
         { dataIndex: 15, label: "Trade Completes",               position: "top"    }
@@ -2537,8 +2647,8 @@ const LT_CHAPTERS_4 = [
         { to: 82,  bars: 1 },
         { to: 122, bars: 7 }
       ], { seed: 259, wick: 0.4 }),
-      markLines: [
-        { yAxis: 82, label: "Heatmap Short Cluster (Plotted on TradingView)", color: "#cc2222" }
+      markLines: [ { yAxis: 122, label: "Squeeze Target — Trade the Reaction", color: "#ffcc00" },
+        { yAxis: 82, label: "Heatmap Short Cluster (Plotted on TradingView)", color: "#ff2e88" }
       ],
       markPoints: [
         { dataIndex:  6, label: "Step 1: Spot — Bright Short Cluster", position: "bottom" },
@@ -2560,6 +2670,7 @@ const LT_CHAPTERS_4 = [
       chart: {
         title: "Bright Short Cluster Above Price on Heatmap — Trade Implication?",
         type: "candlestick",
+        chartHeight: 400,
         cutIndex: 8,
         labels: ltLabels(15),
         ohlc: ltCandles(82, [
@@ -2568,13 +2679,14 @@ const LT_CHAPTERS_4 = [
           { to: 119, bars: 3 }
         ], { seed: 260, wick: 0.35 }),
         markLines: [
-          { yAxis: 110, label: "Bright Short Cluster (Heatmap)", color: "#cc2222" }
-        ]
+          { yAxis: 110, label: "Bright Short Cluster (Heatmap)", color: "#ff2e88" }
+        ],
+        heatmap: [{ center: 110, halfHeight: 4, color: "255,190,40", peak: 0.6, cells: 7, label: "Heatmap: Bright Short Cluster" }]
       },
       revealMarkPoints: [
         { dataIndex:  7, label: "Price Below Short Cluster",      position: "top",    color: "#ffcc00" },
         { dataIndex: 10, label: "Approaching Short Cluster",      position: "top",    color: "#ffcc00" },
-        { dataIndex: 12, label: "Short Cluster: Shorts Squeezed!",position: "top",    color: "#cc2222" },
+        { dataIndex: 12, label: "Short Cluster: Shorts Squeezed!",position: "top",    color: "#ff2e88" },
         { dataIndex: 14, label: "Long Continuation — Post Squeeze",position: "top",   color: "#00d4d4" }
       ],
       explanation: "A bright yellow cluster on the <strong>Net Aggressive Short Positions sub-heatmap</strong> specifically indicates that short sellers entered heavily at that price level. When price rises to that cluster, those short positions face potential forced closure (if near liquidation) or stop-loss triggers. The resulting buy orders from those forced closures create upward momentum — the classic short squeeze. This heatmap cluster is the visual confirmation of a liquidity pool that the Liquidation Levels tool and Liquidity Theory both predict.",
@@ -2608,20 +2720,20 @@ const LT_CHAPTERS_4 = [
 
     lesson: {
       heading: "Live Example — Short Squeeze Setup with Full Three-Tool Confluence",
-      body: "A real example demonstrates the power of full combination: a bright short cluster on the heatmap at $6,370 + 25x short liquidation levels at approximately $6,300 + Fibonacci retracement + prior structure all aligned at the same price zone. The result was a textbook short squeeze from that level that validated all four data points simultaneously.",
+      body: "A real example demonstrates the power of full combination: a bright short cluster on the heatmap at $6,370 + 25x short liquidation levels at approximately $6,300 + the range midpoint at $6,346 + prior structure all aligned at the same price zone. The result was a textbook short squeeze through that zone — and the squeeze ran back to the point of breakdown, where a key Fibonacci zone (swing high to swing low) marked the upside resistance target.",
       bullets: [
         "Heatmap: bright short cluster at $6,370 (shorts entered here) → potential squeeze target",
         "Liquidation Levels: 25x short liquidations at ~$6,300 → nearby cluster adds to the congestion",
-        "Chart: $6,346 = Fibonacci confluence + midpoint + prior structure = three TA confirmations",
+        "Chart: $6,346 = range midpoint + prior structure = TA confirmations of the same zone",
         "Entry: long from DBS zone below (range low deviation) with target at $6,370 short cluster",
         "Result: price traveled from DBS deviation zone straight to the short cluster and squeezed through it",
-        "Post-analysis: the Fibonacci, the heatmap cluster, and the liquidation level all explained WHY price went exactly to that level",
+        "Post-analysis: the midpoint, the heatmap cluster, and the liquidation level explained WHY price reacted at that exact level; the Fibonacci (swing high → swing low) marked the upside resistance at the point of breakdown",
         "This is the complete framework: TA tells you where, Hyblock tells you who and why, SA tells you when"
       ]
     },
 
     introChart: {
-      title: "Triple Confluence — Short Cluster + Liq Level + Fibonacci All at Same Price",
+      title: "Triple Confluence — Short Cluster + Liq Level + Midpoint All at Same Price",
       type: "candlestick",
       labels: ltLabels(16),
       ohlc: ltCandles(85, [
@@ -2632,8 +2744,10 @@ const LT_CHAPTERS_4 = [
       ], { seed: 261, wick: 0.4 }),
       markLines: [
         { yAxis: 79, label: "DBS Zone — Entry (Range Low Dev)", color: "#00d4d4" },
-        { yAxis: 104, label: "Short Cluster + 25x Liq + Fib = Target", color: "#cc2222" }
+        { yAxis: 104, label: "Short Cluster + 25x Liq + Midpoint = Target", color: "#ff2e88" }
       ],
+      // Positions Heatmap: the bright short cluster at the target — what price gets pulled toward
+      heatmap: [{ center: 104, halfHeight: 4, color: "255,190,40", peak: 0.6, cells: 7, label: "Heatmap: Short Cluster" }],
       markPoints: [
         { dataIndex:  3, label: "DBS Entry — All Tools Say Long",  position: "bottom" },
         { dataIndex:  7, label: "Progress — Midpoint Crossed",     position: "top"    },
@@ -2652,9 +2766,14 @@ const LT_CHAPTERS_4 = [
         { to: 107, bars: 3 },
         { to: 93,  bars: 4 }
       ], { seed: 262, wick: 0.4 }),
-      markLines: [
+      markLines: [ { yAxis: 101, label: "25x Short Liq — ~$6,300", color: "#ffcc00" }, { yAxis: 103, label: "Midpoint + Structure — $6,346", color: "#ffcc00" },
         { yAxis: 78, label: "Entry: DBS + Heatmap Long Cluster", color: "#00d4d4" },
-        { yAxis: 106, label: "Target: Short Cluster + Liq + Fib + SSR", color: "#cc2222" }
+        { yAxis: 106, label: "Target: Short Cluster + SSR (Fib zone)", color: "#ff2e88" }
+      ],
+      // Two bright heatmap blocks: the long-cluster entry below + the short-cluster target above
+      heatmap: [
+        { center: 78,  halfHeight: 3.5, color: "255,190,40", peak: 0.55, cells: 6, label: "Long Cluster" },
+        { center: 106, halfHeight: 3.5, color: "255,190,40", peak: 0.6,  cells: 6, label: "Short Cluster" }
       ],
       markPoints: [
         { dataIndex:  3, label: "Step 1: DBS + Long Block = Entry",  position: "bottom" },
@@ -2664,11 +2783,11 @@ const LT_CHAPTERS_4 = [
     },
 
     quiz: {
-      question: "A bright short cluster on the heatmap at $6,370, 25x short liquidation levels at $6,300, and Fibonacci retracement all converge at the same price zone. Price is currently at $6,000 at a DBS zone. What is the complete trade setup using the full Hyblock framework?",
+      question: "A bright short cluster on the heatmap at $6,370, 25x short liquidation levels at $6,300, and the range midpoint at $6,346 all converge at the same price zone. Price is currently at $6,000 at a DBS zone. What is the complete trade setup using the full Hyblock framework?",
       hint: "What is the entry level, what is the target level, and what provides conviction for each? Who will be squeezed as price moves from entry to target?",
       style: "direction",
       answers: [
-        { id: "a", text: "Long from the DBS zone at $6,000 with target at the short cluster convergence zone around $6,300-$6,370; the TA provides the entry (DBS zone), the heatmap provides the target (short cluster), the liquidation levels add precision, and the Fibonacci confirms the zone; the shorts at $6,370 will be squeezed fueling momentum to target",  correct: true,  type: "bullish" },
+        { id: "a", text: "Long from the DBS zone at $6,000 with target at the short cluster convergence zone around $6,300-$6,370; the TA provides the entry (DBS zone), the heatmap provides the target (short cluster), the liquidation levels add precision, and the range midpoint confirms the zone; the shorts at $6,370 will be squeezed fueling momentum to target",  correct: true,  type: "bullish" },
         { id: "b", text: "Short from the $6,370 short cluster targeting the $6,000 DBS zone; the bright short cluster is resistance and the convergence of multiple tools there confirms sellers are defending that level strongly",  correct: false, type: "bearish" },
         { id: "c", text: "No trade — too many tools pointing to the same level creates false confidence; the highest probability setup requires conflicting data to filter out the signal",  correct: false, type: "neutral" }
       ],
@@ -2683,16 +2802,17 @@ const LT_CHAPTERS_4 = [
         ], { seed: 263, wick: 0.4 }),
         markLines: [
           { yAxis: 79, label: "DBS Zone — Entry", color: "#00d4d4" },
-          { yAxis: 106, label: "Short Cluster + Liq + Fib — Target", color: "#cc2222" }
-        ]
+          { yAxis: 106, label: "Short Cluster + Liq + Midpoint — Target", color: "#ff2e88" }
+        ],
+        heatmap: [{ center: 106, halfHeight: 4, color: "255,190,40", peak: 0.6, cells: 7, label: "Heatmap: Short Cluster" }]
       },
       revealMarkPoints: [
         { dataIndex:  7, label: "Long Entry at DBS",             position: "bottom", color: "#00d4d4" },
         { dataIndex:  9, label: "Midpoint Crossed — Confident",  position: "top",    color: "#ffcc00" },
         { dataIndex: 14, label: "Target: Short Cluster Squeezed!",position: "top",   color: "#00d4d4" }
       ],
-      explanation: "The complete Hyblock framework setup: <strong>Entry at DBS zone</strong> ($6,000) — TA provides structural support. <strong>Target at short cluster convergence</strong> ($6,300-$6,370) — heatmap bright short cluster + 25x short liquidation level + Fibonacci all independently identify the same zone as the destination. The trade logic: longs enter at the DBS where structural demand exists, price travels to the short cluster zone, the shorts there are squeezed driving further upward momentum, and the liquidations from the 25x short positions provide additional fuel.",
-      rule: "Spot the blocks (heatmap clusters + liquidation levels). Plot the blocks (draw on TradingView). Trade the reaction (entry at TA level, target at block convergence). Maximum confluence = heatmap + liq levels + Fibonacci + TA structure all at same price."
+      explanation: "The complete Hyblock framework setup: <strong>Entry at DBS zone</strong> ($6,000) — TA provides structural support. <strong>Target at short cluster convergence</strong> ($6,300-$6,370) — heatmap bright short cluster + 25x short liquidation level + range midpoint ($6,346) all independently identify the same zone as the destination. The trade logic: longs enter at the DBS where structural demand exists, price travels to the short cluster zone, the shorts there are squeezed driving further upward momentum, and the liquidations from the 25x short positions provide additional fuel.",
+      rule: "Spot the blocks (heatmap clusters + liquidation levels). Plot the blocks (draw on TradingView). Trade the reaction (entry at TA level, target at block convergence). Maximum confluence = heatmap + liq levels + midpoint + TA structure all at same price; Fibonacci (swing high → swing low) frames the further upside target at the point of breakdown."
     }
   },
 
@@ -2729,37 +2849,44 @@ const LT_CHAPTERS_4 = [
         "Positions Heatmap: WHO — which side (longs or shorts) is concentrated at that level and vulnerable to being swept",
         "Trading Activity: HOW EXTREME — funding, OI, and delta readings confirming the imbalance magnitude",
         "Example maximum conviction: very red delta + rising shorts in cumulative curves + extreme negative funding + DBS zone = short squeeze at maximum conviction",
-        "Trading Activity lookback tip: use 24-hour lookback for day trading setups; 72-hour for swing trades",
+        "Trading Activity lookback: choose the hours lookback that matches your trading timeframe — there is no single prescribed setting",
         "Most powerful signal: all four SA variables on Trading Activity tab aligning in the same direction at the same time as a key TA level is approached",
-        "Do not enter unless at least two of the three Hyblock tools confirm — single-tool confirmation reduces conviction to normal TA levels"
+        "The more Hyblock tools that independently confirm, the higher the conviction — a single tool adds far less than full three-tool confluence"
       ]
     },
 
     introChart: {
       title: "Three-Tool Confluence — Very Red Delta + Shorts Rising + Neg Funding at DBS",
       type: "candlestick",
+      chartHeight: 460,
       labels: ltLabels(16),
       ohlc: ltCandles(100, [
         { to: 75,  bars: 10 },
         { to: 118, bars: 6 }
       ], { seed: 264, wick: 0.4 }),
       markLines: [
-        { yAxis: 75, label: "DBS Zone — All Three Tools Agree", color: "#00d4d4" }
+        { yAxis: 75, label: "DBS Zone", color: "#00d4d4" }
       ],
       markAreas: [
-        { y0: 72, y1: 78, label: "Max Conviction Zone", color: "rgba(0,212,212,0.08)" }
+        { y0: 72, y1: 78, label: "Max Conviction (DBS)", color: "rgba(0,212,212,0.08)" }
       ],
+      // Tool 1 — Liq Levels: short-liquidation cluster above price = the squeeze magnet
+      liqCluster: { lines: [104, 109, 114], label: "50x Short Liq Cluster", color: "#ffcc00" },
+      // Tool 2 — Heatmap: a bright block of resting short orders the squeeze runs through
+      heatmap: [{ center: 92, halfHeight: 6, color: "255,190,40", peak: 0.6, cells: 8, label: "Heatmap: Bright Short Block" }],
+      // Tool 3 — Trading Activity: cumulative-delta sub-panel (very red, flips on the squeeze)
+      tradingActivity: true,
+      activityLabel: "Trading Activity — Cum Δ",
       markPoints: [
-        { dataIndex:  5, label: "Liq Levels: 50x Liq Cluster Here",   position: "bottom" },
-        { dataIndex:  6, label: "Heatmap: Bright Short Block Here",    position: "bottom" },
-        { dataIndex:  7, label: "Trading Activity: Red Delta + Neg Fund",position: "bottom" },
-        { dataIndex:  9, label: "All Three + TA = Maximum Conviction", position: "bottom" },
-        { dataIndex: 15, label: "Short Squeeze — All Tools Confirmed", position: "top"    }
+        { dataIndex:  9, label: "All Three Tools Agree at DBS",  position: "bottom", color: "#00d4d4" },
+        { dataIndex: 15, label: "Short Squeeze — Liqs Cascade",  position: "top"    }
       ]
     },
 
     lessonChart: {
       title: "Trading Activity — Very Red Delta + Shorts Rising = Shorts Off-Sides",
+      markAreas: [ { y0: 76, y1: 80, label: "DBS Support Zone", color: "rgba(0,212,212,0.07)" } ],
+      markLines: [ { yAxis: 78, label: "Entry — Long (Shorts Off-Sides)", color: "#00d4d4" }, { yAxis: 127, label: "Squeeze Target (TP)", color: "#ffcc00" } ],
       type: "candlestick",
       labels: ltLabels(16),
       ohlc: ltCandles(98, [
@@ -2781,7 +2908,7 @@ const LT_CHAPTERS_4 = [
       style: "direction",
       answers: [
         { id: "a", text: "Long — all three Trading Activity indicators confirm shorts are aggressively loading at a TA DBS zone; the extreme negative funding adds financial pressure on those shorts; when they are forced to close the resulting short squeeze will be explosive; this is maximum conviction long territory",  correct: true,  type: "bullish" },
-        { id: "b", text: "Short — very red delta and rising shorts confirm sellers are dominant; the funding being negative confirms short-sellers are the paid side which incentivizes more shorts to enter; join the dominant selling flow",  correct: false, type: "bearish" },
+        { id: "b", text: "Short — very red delta and rising shorts confirm sellers are dominant and committed; joining the dominant selling flow is the highest probability trade because the DBS zone is unlikely to hold under this much pressure",  correct: false, type: "bearish" },
         { id: "c", text: "Neutral — three indicators all agreeing is a contrarian signal; when everyone is bearish the market tends to surprise to the upside, but the TA DBS zone provides insufficient reason to act against the sentiment consensus",  correct: false, type: "neutral" }
       ],
       chart: {
@@ -2803,7 +2930,7 @@ const LT_CHAPTERS_4 = [
         { dataIndex: 15, label: "Short Squeeze — All Confirmed",position: "top",    color: "#00d4d4" }
       ],
       explanation: "Very red cumulative delta + rising short curve + extreme negative funding is the <strong>maximum bearish SA imbalance reading</strong> — all three independently confirm shorts are aggressively off-sides. At a TA DBS zone, this creates the framework's highest conviction long: TA says structural support, the three Trading Activity variables say shorts are overextended and paying unsustainably. When forced to close, the resulting buy orders will be explosive. This is exactly the 1-2 punch at full strength.",
-      rule: "Max conviction long = very red delta + rising short curve + extreme negative funding + TA DBS zone. All three Trading Activity variables aligned with TA = enter at maximum size. The squeeze is coming — position ahead of it, not into it."
+      rule: "Max conviction long = very red delta + rising short curve + extreme negative funding + TA DBS zone. All three Trading Activity variables aligned with TA = maximum conviction. The squeeze is coming — position ahead of it, not into it."
     }
   },
 
@@ -2840,7 +2967,7 @@ const LT_CHAPTERS_4 = [
         "Retail bearish + whales bullish = accumulation; larger players are buying from retail sellers = likely price rise",
         "The divergence between the two curves is the signal; the wider the divergence, the stronger the signal",
         "CVD peaks: Cumulative Volume Delta peaks often align with price local tops — CVD spike = potential shorting opportunity",
-        "Using CVD: draw vertical lines at CVD peaks; these vertical lines often mark exact local tops; watch for RSI or oscillator divergence at the same time",
+        "Using CVD: draw vertical lines at CVD peaks; these vertical lines often mark exact local tops",
         "Combining retail-whale divergence with TA: retail 80% long + whales net short at SSR zone = maximum conviction short",
         "Combining retail-whale divergence with liquidation levels: whale short + retail long + 25x long liq below = large player will sweep those longs"
       ]
@@ -2848,6 +2975,7 @@ const LT_CHAPTERS_4 = [
 
     introChart: {
       title: "Retail Bullish + Whales Bearish = Distribution Signal",
+      markAreas: [ { y0: 104, y1: 108, label: "Distribution Zone — Whales Sell to Retail", color: "rgba(255,46,136,0.07)" } ],
       type: "candlestick",
       labels: ltLabels(18),
       ohlc: ltCandles(82, [
@@ -2865,6 +2993,7 @@ const LT_CHAPTERS_4 = [
 
     lessonChart: {
       title: "Retail Bearish + Whales Bullish = Accumulation Signal",
+      markAreas: [ { y0: 77, y1: 82, label: "Accumulation Zone — Whales Buy from Retail", color: "rgba(0,212,212,0.07)" } ],
       type: "candlestick",
       labels: ltLabels(18),
       ohlc: ltCandles(100, [
@@ -2899,13 +3028,13 @@ const LT_CHAPTERS_4 = [
           { to: 86,  bars: 6 }
         ], { seed: 269, wick: 0.4 }),
         markLines: [
-          { yAxis: 107, label: "SSR Zone", color: "#cc2222" }
+          { yAxis: 107, label: "SSR Zone", color: "#ff2e88" }
         ]
       },
       revealMarkPoints: [
         { dataIndex:  7, label: "80% Retail Long — Whales Short",  position: "top",    color: "#ffcc00" },
-        { dataIndex:  8, label: "Distribution at SSR",             position: "top",    color: "#cc2222" },
-        { dataIndex:  9, label: "Retail Long Squeeze Begins",      position: "top",    color: "#cc2222" },
+        { dataIndex:  8, label: "Distribution at SSR",             position: "top",    color: "#ff2e88" },
+        { dataIndex:  9, label: "Retail Long Squeeze Begins",      position: "top",    color: "#ff2e88" },
         { dataIndex: 14, label: "Whales Correct — Retail Rekt",    position: "bottom", color: "#00d4d4" }
       ],
       explanation: "Retail at 80% long while whales are net short at an SSR zone is the clearest <strong>distribution signal</strong> the Hyblock framework offers. Whales (top 20% of accounts by size) are selling to retail buyers who are eagerly going long at resistance. When the retail buying demand runs out, there is no one left to push price higher. The whales' short positions then begin to squeeze those retail longs, causing a cascading drop. The SSR zone TA confirms where the structural resistance is; the retail-whale divergence explains WHY this visit will fail.",
@@ -2985,7 +3114,7 @@ const LT_CHAPTERS_4 = [
         { to: 97, bars: 3 },
         { to: 71, bars: 8 }
       ], { seed: 271, wick: 0.4 }),
-      markLines: [
+      markLines: [ { yAxis: 99, label: "Stop — above rally swing high", color: "#ff2e88" }, { yAxis: 73, label: "Target — prior support (2+R)", color: "#00d4d4" },
         { yAxis: 95, label: "Kijun-sen — Rejection Level in Downtrend", color: "#ffcc00" }
       ],
       markPoints: [
@@ -3072,28 +3201,35 @@ const LT_CHAPTERS_4 = [
       title: "C-Clamp — Tenkan Below Kijun; Gap Starts Closing; Counter-Trend Entry",
       type: "candlestick",
       indicator: "ichimoku",
+      boldCloud: true,   // thicker/defined Kumo (owner-selected chart)
       chartHeight: 520,
-      labels: ltLabels(18),
-      ohlc: ltCandles(110, [
-        { to: 80,  bars: 7 },
-        { to: 84,  bars: 3 },
-        { to: 110, bars: 8 }
+      // Pronounced C-clamp: a brief top rides the Kijun high, then a SHARP deep drop tears
+      // the fast Tenkan far below the lagging Kijun (~24-pt gap at i12 — the wide "C"), which
+      // then closes as price mean-reverts back up to the Kijun. Ichimoku(conv4/base8)
+      // harness-verified: Kijun holds ~94 while the Tenkan bottoms ~70.
+      labels: ltLabels(20),
+      ohlc: ltCandles(116, [
+        { to: 120, bars: 4 },   // brief top — Kijun rides high
+        { to: 68,  bars: 6 },   // SHARP DROP — Tenkan tears far below the Kijun (the wide "C")
+        { to: 74,  bars: 3 },   // gap starts closing — resolution begins
+        { to: 114, bars: 7 }    // mean-reversion back up to the Kijun
       ], { seed: 273, wick: 0.4 }),
-      markLines: [
-        { yAxis: 95, label: "Kijun-sen", color: "#ffcc00" },
-        { yAxis: 80, label: "Tenkan-sen (C-Clamp Diverged)", color: "#cc2222" }
+      markLines: [ { yAxis: 76, label: "Entry — Resolution Begins", color: "#00d4d4" },
+        { yAxis: 94, label: "Kijun-sen", color: "#ffcc00" },
+        { yAxis: 70, label: "Tenkan — Min Target (Diverged)", color: "#ff2e88" }
       ],
       markPoints: [
-        { dataIndex:  0, label: "C-Clamp Forming — T Below K",    position: "top"    },
-        { dataIndex:  6, label: "Maximum Divergence — Wait!",     position: "bottom" },
-        { dataIndex:  9, label: "C-Clamp Resolving — T Rising",   position: "bottom" },
-        { dataIndex: 10, label: "Counter-Trend Long Entry",       position: "bottom" },
-        { dataIndex: 17, label: "Kijun Target Achieved",          position: "top"    }
+        { dataIndex:  9, label: "C-Clamp Forming — T Below K",    position: "top"    },
+        { dataIndex: 12, label: "Maximum Divergence — Wait!",     position: "bottom" },
+        { dataIndex: 14, label: "C-Clamp Resolving — T Rising",   position: "bottom" },
+        { dataIndex: 16, label: "Counter-Trend Long Entry",       position: "bottom" },
+        { dataIndex: 19, label: "Kijun Target Achieved",          position: "top"    }
       ]
     },
 
     lessonChart: {
       title: "Kumo Pocket — First Test at Pocket Zone, Strongest Rejection",
+      markLines: [ { yAxis: 104, label: "Stop — Above Pocket + Swing High", color: "#ff2e88" }, { yAxis: 100, label: "Short Entry — Pocket Asks", color: "#ff2e88" }, { yAxis: 76, label: "Target — Next S/R Below", color: "#00d4d4" } ],
       type: "candlestick",
       indicator: "ichimoku",
       chartHeight: 520,
@@ -3104,7 +3240,7 @@ const LT_CHAPTERS_4 = [
         { to: 76,  bars: 6 }
       ], { seed: 274, wick: 0.4 }),
       markAreas: [
-        { y0: 97, y1: 103, label: "Kumo Pocket Zone (First Test!)", color: "rgba(204,34,34,0.08)" }
+        { y0: 97, y1: 103, label: "Kumo Pocket Zone (First Test!)", color: "rgba(255,46,136,0.08)" }
       ],
       markPoints: [
         { dataIndex:  0, label: "Downtrend Established",           position: "top"    },
@@ -3134,7 +3270,7 @@ const LT_CHAPTERS_4 = [
           { to: 83,  bars: 3 },
           { to: 110, bars: 8 }
         ], { seed: 275, wick: 0.4 }),
-        markLines: [
+        markLines: [ { yAxis: 89, label: "Tenkan — Min Target", color: "#ffcc00" },
           { yAxis: 95, label: "Kijun-sen (Target)", color: "#ffcc00" }
         ]
       },
@@ -3191,27 +3327,28 @@ const LT_CHAPTERS_4 = [
       title: "E2E Prerequisites Met — Close Inside Cloud, Price Targets Opposite Edge",
       type: "candlestick",
       indicator: "ichimoku",
+      boldCloud: true,   // thicker/defined Kumo (owner-selected chart)
       chartHeight: 520,
       labels: ltLabels(20),
-      ohlc: ltCandles(68, [
-        { to: 80,  bars: 7  },
-        { to: 99,  bars: 12 },
-        { to: 121, bars: 1  }
+      // Rally → consolidate → PULLBACK that closes inside the (computed) Kumo → rally to the
+      // opposite edge. Verified: price actually closes inside the cloud at the entry bar.
+      ohlc: ltCandles(70, [
+        { to: 90,  bars: 6 },
+        { to: 88,  bars: 6 },
+        { to: 80,  bars: 3 },
+        { to: 108, bars: 5 }
       ], { seed: 276, wick: 0.35 }),
-      markAreas: [
-        { y0: 82, y1: 98, label: "Kumo Cloud (Bottom to Top Edge)", color: "rgba(0,212,212,0.07)" }
-      ],
       markLines: [
-        { yAxis: 82, label: "Cloud Bottom Edge (E2E Entry)", color: "#00d4d4" },
-        { yAxis: 98, label: "Cloud Top Edge (E2E Target)",   color: "#ffcc00" }
+        { yAxis: 78, label: "Cloud Bottom Edge (E2E Entry)", color: "#00d4d4" },
+        { yAxis: 88, label: "Cloud Top Edge (E2E Target)",   color: "#ffcc00" }
       ],
       markPoints: [
-        { dataIndex:  6, label: "Prereq 1: TK Crossover",    position: "bottom" },
-        { dataIndex:  7, label: "Prereq 2: Chikou Above",     position: "bottom" },
-        { dataIndex:  8, label: "Prereq 3: Close IN Cloud!",  position: "bottom" },
-        { dataIndex:  9, label: "E2E Activated — Long Entry", position: "bottom" },
-        { dataIndex: 13, label: "Midway Through Cloud",       position: "top"    },
-        { dataIndex: 17, label: "Opposite Edge Hit!",         position: "top"    }
+        { dataIndex: 11, label: "Prereq 1: TK Crossover",       position: "bottom" },
+        { dataIndex: 12, label: "Prereq 2: Chikou Above",        position: "bottom" },
+        { dataIndex: 14, label: "Prereq 3: Close INSIDE Cloud",  position: "bottom" },
+        { dataIndex: 15, label: "E2E Long — Entry",              position: "bottom" },
+        { dataIndex: 17, label: "Traveling to Opposite Edge",    position: "top"    },
+        { dataIndex: 19, label: "Opposite Edge — Target Hit",    position: "top"    }
       ]
     },
 
@@ -3221,22 +3358,23 @@ const LT_CHAPTERS_4 = [
       indicator: "ichimoku",
       chartHeight: 520,
       labels: ltLabels(18),
-      ohlc: ltCandles(68, [
-        { to: 80,  bars: 7  },
-        { to: 122, bars: 11 }
+      // Same E2E geometry: pullback closes inside the computed cloud, then travels to the
+      // opposite edge. Stop sits below the cloud (the E2E invalidation).
+      ohlc: ltCandles(70, [
+        { to: 88,  bars: 6 },
+        { to: 86,  bars: 5 },
+        { to: 79,  bars: 3 },
+        { to: 112, bars: 6 }
       ], { seed: 277, wick: 0.35 }),
       markLines: [
-        { yAxis: 60, label: "Stop Loss — Below Cloud",        color: "#cc2222" },
-        { yAxis: 80, label: "E2E Entry — Close Inside Cloud", color: "#00d4d4" },
-        { yAxis: 120, label: "E2E Target — Opposite Edge",    color: "#ffcc00" }
-      ],
-      markAreas: [
-        { y0: 78, y1: 98, label: "Kumo Cloud", color: "rgba(0,212,212,0.07)" }
+        { yAxis: 72, label: "Stop Loss — Below Cloud",        color: "#ff2e88" },
+        { yAxis: 78, label: "E2E Entry — Close Inside Cloud", color: "#00d4d4" },
+        { yAxis: 90, label: "E2E Target — Opposite Edge",     color: "#ffcc00" }
       ],
       markPoints: [
-        { dataIndex:  6, label: "E2E Activated — Stop Below Cloud",position: "bottom" },
-        { dataIndex:  7, label: "Entry — Long",                    position: "bottom" },
-        { dataIndex: 17, label: "Opposite Edge — E2E Complete",    position: "top"    }
+        { dataIndex: 13, label: "E2E Activated — Close Inside Cloud", position: "bottom" },
+        { dataIndex: 14, label: "Entry — Long (stop below cloud)",    position: "bottom" },
+        { dataIndex: 19, label: "Opposite Edge — E2E Complete",       position: "top"    }
       ]
     },
 
@@ -3252,24 +3390,27 @@ const LT_CHAPTERS_4 = [
       chart: {
         title: "E2E Activated — All 3 Prerequisites Met. Where Is the Target?",
         type: "candlestick",
-        cutIndex: 9,
-        labels: ltLabels(18),
-        ohlc: ltCandles(68, [
-          { to: 82,  bars: 8  },
-          { to: 121, bars: 10 }
+        indicator: "ichimoku",
+        boldCloud: true,   // thicker/defined Kumo (owner-selected chart)
+        chartHeight: 520,
+        cutIndex: 15,
+        labels: ltLabels(20),
+        // pullback closes inside the computed cloud (decision point), reveal = travel to edge
+        ohlc: ltCandles(70, [
+          { to: 90,  bars: 6 },
+          { to: 88,  bars: 5 },
+          { to: 77,  bars: 4 },
+          { to: 110, bars: 5 }
         ], { seed: 278, wick: 0.35 }),
-        markAreas: [
-          { y0: 80, y1: 116, label: "Kumo Cloud", color: "rgba(0,212,212,0.07)" }
-        ],
         markLines: [
-          { yAxis: 80, label: "Bottom Edge — E2E Entry", color: "#00d4d4" },
-          { yAxis: 116, label: "Top Edge — E2E Target",  color: "#ffcc00" }
+          { yAxis: 74, label: "Bottom Edge — E2E Entry", color: "#00d4d4" },
+          { yAxis: 86, label: "Top Edge of Kumo Cloud",  color: "#ffcc00" }
         ]
       },
       revealMarkPoints: [
-        { dataIndex:  7, label: "Prereqs Met — Close in Cloud",  position: "bottom", color: "#00d4d4" },
-        { dataIndex:  8, label: "E2E Entry",                     position: "bottom", color: "#00d4d4" },
-        { dataIndex: 17, label: "Opposite Edge — E2E Complete!", position: "top",    color: "#ffcc00" }
+        { dataIndex: 14, label: "Prereqs Met — Close in Cloud",  position: "bottom", color: "#00d4d4" },
+        { dataIndex: 15, label: "E2E Entry",                     position: "bottom", color: "#00d4d4" },
+        { dataIndex: 19, label: "Opposite Edge — E2E Complete!", position: "top",    color: "#ffcc00" }
       ],
       explanation: "The E2E setup is named for exactly what it does: price travels from one <strong>Edge to the opposite Edge</strong> of the Kumo cloud. Once all three prerequisites are met and price closes inside the cloud at the bottom edge (bullish E2E), the target is the top edge of the cloud. The cloud width determines the R multiple — on daily and weekly charts this cloud is often hundreds of dollars wide, producing 4–6+ R setups. Stop loss is placed below the cloud (bullish) or above it (bearish).",
       rule: "E2E: 3 prerequisites required — (1) TK crossover, (2) Chikou above/below price, (3) strong close inside cloud. Target = opposite edge of cloud. Stop = beyond cloud. Highest R setup in Ichimoku. Works best on higher timeframes (daily, 2D, weekly)."
@@ -3289,10 +3430,10 @@ const LT_CHAPTERS_4 = [
 
     intro: {
       heading: "Live Application — BTC Bottom E2E, Kijun Bounce, and Kumo Pocket Short",
-      body: "Theory becomes skill through live application. This chapter walks through three real Ichimoku setups on historical BTC charts: the 2018–2019 BTC bottom E2E from $3,800 to $5,500, a Kijun bounce mean reversion trade, and a weekly Kumo pocket short that produced a Head and Shoulders pattern confirming the rejection. Each demonstrates the framework applied in real conditions.",
+      body: "Theory becomes skill through live application. This chapter walks through three real Ichimoku setups on historical BTC charts: the 2018–2019 BTC bottom E2E from ~$3,900 to the $4,900 cloud top (extended to $5,500–5,800 by a later 2-day E2E), a Kijun bounce mean reversion trade, and a weekly Kumo pocket short that produced a Head and Shoulders pattern confirming the rejection. Each demonstrates the framework applied in real conditions.",
       bullets: [
-        "BTC 3,000 bottom E2E: identified cloud top at $5,500 as target; all three prerequisites met Feb 28; entry at $3,950 via LTE; R = 3.55:1",
-        "Then 2-day E2E also activated → rode to $5,500+; full Kumo breakout followed on the larger timeframe",
+        "BTC 3,000 bottom E2E: identified cloud top at $4,900 as target; all three prerequisites met Feb 28; entry at $3,950 via LTE; R = 3.55:1",
+        "Then 2-day E2E also activated → its edges sat at $5,500 and $5,800; full Kumo breakout followed on the larger timeframe",
         "Kijun Bounce live: large dump → Kijun flattened at $7,260 → price reverted to $7,260 → short entry → mean reversion play",
         "Kumo Pocket live: weekly Kumo pocket at $9,200–$9,500 → first test → H&S pattern formed at exact pocket level",
         "H&S target from Kumo Pocket short: $8,500 → hit perfectly → then set bids at Kijun for long (C-clamp + DBS alignment)",
@@ -3302,11 +3443,11 @@ const LT_CHAPTERS_4 = [
 
     lesson: {
       heading: "Multi-Framework Confirmation — When All Tools Agree",
-      body: "The live examples demonstrate that the most successful setups occur when multiple independent frameworks confirm the same trade. The BTC bottom E2E was confirmed by the 2-day chart E2E simultaneously. The Kumo Pocket short was confirmed by an H&S pattern forming at the exact pocket level. The Kijun bounce was confirmed by the DBS zone below. No tool works in isolation — combined they create certainty.",
+      body: "The live examples demonstrate that the most successful setups occur when multiple independent frameworks confirm the same trade. The BTC bottom E2E on the daily was followed by a 2-day chart E2E that activated as the first trade completed, extending the move. The Kumo Pocket short was confirmed by an H&S pattern forming at the exact pocket level. The Kijun bounce was confirmed by the DBS zone below. No tool works in isolation — combined they create certainty.",
       bullets: [
-        "BTC E2E lesson: when the daily E2E activates and the 2-day E2E activates simultaneously = maximum macro conviction",
+        "BTC E2E lesson: when the daily E2E completes and a 2-day E2E then activates in the same direction = maximum macro conviction",
         "Three Inside Up formation as additional confirmation on the BTC bottom E2E → three independent signals all firing at once",
-        "Kumo Pocket lesson: weekly pockets are the most powerful; first test depletion factor is highest on weekly timeframe",
+        "Kumo Pocket lesson: the HTF (weekly) pocket provides context for LTF trades; the first test carries the full depletion-factor edge",
         "H&S at Kumo Pocket: the classical chart pattern (H&S) formed at EXACTLY the Kumo pocket zone = TA and Ichimoku confirming same level",
         "Kijun bounce lesson: after a fast sharp move the Kijun often flattens at a round number level, creating a high-visibility mean reversion target",
         "After Kumo Pocket short: set bids at Kijun below for long; C-Clamp was forming simultaneously; DBS zone also there = three-way confluence long",
@@ -3315,28 +3456,32 @@ const LT_CHAPTERS_4 = [
     },
 
     introChart: {
-      title: "BTC Bottom E2E — Entry at $3,950, Target Cloud Top Edge at $5,500",
+      title: "BTC Bottom E2E — Entry at $3,950, Target Cloud Top Edge at $4,900",
       type: "candlestick",
       indicator: "ichimoku",
+      boldCloud: true,   // thicker/defined Kumo (owner-selected chart)
       chartHeight: 520,
       labels: ltLabels(20),
-      ohlc: ltCandles(65, [
-        { to: 78,  bars: 8  },
-        { to: 122, bars: 12 }
-      ], { seed: 279, wick: 0.35 }),
-      markAreas: [
-        { y0: 78, y1: 100, label: "Kumo Cloud — E2E Range", color: "rgba(0,212,212,0.07)" }
-      ],
-      markLines: [
-        { yAxis: 78, label: "Cloud Bottom ($3,800) — Entry Zone", color: "#00d4d4" },
-        { yAxis: 100, label: "Cloud Top ($5,500) — E2E Target",   color: "#ffcc00" }
+      // Bottom E2E: downtrend into a bottom that sits BELOW the (computed) Kumo → rally that
+      // closes INSIDE the cloud (entry) → travels edge-to-edge and exits the top edge (target).
+      // Verified against the live cloud: close is inside the Kumo at the entry bar (body idx 12)
+      // and clears the top edge by the target. (Mirrors the ch27 E2E redesign.)
+      ohlc: ltCandles(100, [
+        { to: 72,  bars: 6 },
+        { to: 74,  bars: 4 },
+        { to: 90,  bars: 5 },
+        { to: 102, bars: 5 }
+      ], { seed: 301, wick: 0.35 }),
+      markLines: [ { yAxis: 89, label: "LTE Entry $3,950 — Close Inside Cloud", color: "#00d4d4" },
+        { yAxis: 87, label: "Cloud Bottom Edge ($3,800) — E2E Entry", color: "#00d4d4" },
+        { yAxis: 96, label: "Cloud Top Edge ($4,900) — E2E Target",   color: "#ffcc00" }
       ],
       markPoints: [
-        { dataIndex:  0, label: "C-Clamp Forming at Bottom",      position: "bottom" },
-        { dataIndex:  7, label: "E2E Prereqs Met Feb 28",         position: "bottom" },
-        { dataIndex:  8, label: "LTE Entry: Bull Engulf + 3IU",   position: "bottom" },
-        { dataIndex: 14, label: "Midway — 2D E2E Also Active",    position: "top"    },
-        { dataIndex: 18, label: "E2E Target Hit! $5,500",         position: "top"    }
+        { dataIndex:  5, label: "C-Clamp Forming at Bottom",      position: "bottom" },
+        { dataIndex: 11, label: "E2E Prereqs Met Feb 28",         position: "bottom" },
+        { dataIndex: 12, label: "LTE Entry: Close INSIDE Cloud",  position: "bottom" },
+        { dataIndex: 15, label: "Midway — 2D E2E Also Active",    position: "top"    },
+        { dataIndex: 19, label: "E2E Target Hit! $4,900",         position: "top"    }
       ]
     },
 
@@ -3352,10 +3497,10 @@ const LT_CHAPTERS_4 = [
         { to: 80,  bars: 7 }
       ], { seed: 280, wick: 0.4 }),
       markAreas: [
-        { y0: 97, y1: 102, label: "Weekly Kumo Pocket — First Test!", color: "rgba(204,34,34,0.08)" }
+        { y0: 97, y1: 102, label: "Weekly Kumo Pocket — First Test!", color: "rgba(255,46,136,0.08)" }
       ],
-      markLines: [
-        { yAxis: 84, label: "H&S Target + Kijun Bid Zone", color: "#00d4d4" }
+      markLines: [ { yAxis: 96, label: "H&S Neckline — Short Entry on Break", color: "#ff2e88" },
+        { yAxis: 84, label: "H&S Target $8,500 + Kijun + DBS Bid (3-way long)", color: "#00d4d4" }
       ],
       markPoints: [
         { dataIndex:  6, label: "Approaching Weekly Pocket",       position: "top"    },
@@ -3387,12 +3532,12 @@ const LT_CHAPTERS_4 = [
           { to: 75,  bars: 7 }
         ], { seed: 281, wick: 0.4 }),
         markAreas: [
-          { y0: 96, y1: 102, label: "Weekly Kumo Pocket — First Test", color: "rgba(204,34,34,0.08)" }
+          { y0: 96, y1: 102, label: "Weekly Kumo Pocket — First Test", color: "rgba(255,46,136,0.08)" }
         ]
       },
       revealMarkPoints: [
-        { dataIndex:  8, label: "First Test — Max Depletion Factor", position: "top",    color: "#cc2222" },
-        { dataIndex:  9, label: "Strongest Rejection — Short Entry", position: "top",    color: "#cc2222" },
+        { dataIndex:  8, label: "First Test — Max Depletion Factor", position: "top",    color: "#ff2e88" },
+        { dataIndex:  9, label: "Strongest Rejection — Short Entry", position: "top",    color: "#ff2e88" },
         { dataIndex: 15, label: "First Test Rejection Confirmed",    position: "bottom", color: "#00d4d4" }
       ],
       explanation: "The <strong>depletion factor</strong> states that the first test of any liquidity area or key level carries the maximum order density — the orders at that level have never been consumed by a prior test. At a weekly Kumo pocket, this principle applies with maximum force: the pocket's resistance is at its strongest on the very first visit. Each subsequent test depletes the orders further, producing progressively weaker rejections until the level finally breaks. Trading the first test is always the highest probability trade at any Kumo pocket.",
@@ -3457,7 +3602,7 @@ const LT_CHAPTERS_4 = [
         { to: 75,  bars: 10 },
         { to: 125, bars: 6  }
       ], { seed: 282, wick: 0.4 }),
-      markLines: [
+      markLines: [ { yAxis: 125, label: "Target — Framework Wins (~125)", color: "#ffcc00" },
         { yAxis: 75, label: "DBS + Kijun + Liq Level + 4x SA = One Trade", color: "#00d4d4" }
       ],
       markPoints: [
@@ -3511,193 +3656,3 @@ const LT_CHAPTERS_4 = [
 ];
 
 const COURSE4_META = { id: "course4", title: "Course 4: Liquidity Theory", subtitle: "Liquidity Theory", chapterCount: 30 };
-
-/* Final-exam question POOL — authored separately from chapter quizzes.
-   Engine samples EXAM_LENGTH at random per attempt and shuffles options. */
-const LT_EXAM_QUESTIONS_4 = [
-  { chapterTitle: 'Principles of Liquidity', question: 'A core principle of Liquidity Theory is that price tends to:',
-    answers: [
-      { id:'a', text:'Gravitate toward areas of highest liquidity', correct:true },
-      { id:'b', text:'Avoid liquidity at all costs', correct:false },
-      { id:'c', text:'Move randomly with no relationship to liquidity', correct:false },
-      { id:'d', text:'Always trend in one direction forever', correct:false } ] },
-  { chapterTitle: 'Zero-Sum Game', question: 'Describing leveraged derivatives as a "zero-sum game" means:',
-    answers: [
-      { id:'a', text:'For every winner there is a loser on the other side of the trade', correct:true },
-      { id:'b', text:'Everyone can win at the same time', correct:false },
-      { id:'c', text:'The exchange always loses', correct:false },
-      { id:'d', text:'Outcomes are decided purely by luck', correct:false } ] },
-  { chapterTitle: 'Stops as Liquidity', question: 'Why does a cluster of stop losses just below an obvious swing low matter?',
-    answers: [
-      { id:'a', text:'Those stops are resting liquidity that larger players may target', correct:true },
-      { id:'b', text:'Stops below support are always perfectly safe', correct:false },
-      { id:'c', text:'Stops have no effect on price', correct:false },
-      { id:'d', text:'It guarantees the level will hold', correct:false } ] },
-  { chapterTitle: 'Swing Failure Pattern', question: 'A Swing Failure Pattern (SFP) occurs when price:',
-    answers: [
-      { id:'a', text:'Briefly exceeds a prior swing high/low to grab liquidity, then reverses back', correct:true },
-      { id:'b', text:'Closes far beyond the level and continues trending', correct:false },
-      { id:'c', text:'Consolidates exactly at the level for weeks', correct:false },
-      { id:'d', text:'Gaps away from the level and never returns', correct:false } ] },
-  { chapterTitle: 'Liquidity Engineering', question: 'A sharp sweep below an obvious support that immediately reverses upward is best read as:',
-    answers: [
-      { id:'a', text:'Liquidity being grabbed below the level before price moves the other way', correct:true },
-      { id:'b', text:'A confirmed breakdown to short into', correct:false },
-      { id:'c', text:'A meaningless wick to ignore', correct:false },
-      { id:'d', text:'Proof support is permanently broken', correct:false } ] },
-  { chapterTitle: 'Under / Over', question: 'A bullish "Under-Over" plays out as:',
-    answers: [
-      { id:'a', text:'A fake breakdown below a level, reclaimed, then a retest entry from above', correct:true },
-      { id:'b', text:'A clean breakout that never looks back', correct:false },
-      { id:'c', text:'A slow grind with no level interaction', correct:false },
-      { id:'d', text:'A pattern that only forms on the monthly chart', correct:false } ] },
-  { chapterTitle: 'Pools vs SFPs', question: 'What mainly distinguishes a low-timeframe liquidity pool from a higher-timeframe SFP?',
-    answers: [
-      { id:'a', text:'Timeframe and duration — a pool is a single wick; an SFP develops over more time', correct:true },
-      { id:'b', text:'One is bullish and the other is always bearish', correct:false },
-      { id:'c', text:'They are exactly the same thing', correct:false },
-      { id:'d', text:'Pools only happen in stocks, SFPs only in crypto', correct:false } ] },
-  { chapterTitle: 'Sentiment — Funding', question: 'Extremely negative funding into a key support suggests crowded shorts and sets up a:',
-    answers: [
-      { id:'a', text:'Potential short squeeze (upside)', correct:true },
-      { id:'b', text:'Guaranteed breakdown lower', correct:false },
-      { id:'c', text:'Long squeeze (downside)', correct:false },
-      { id:'d', text:'Neutral market with no edge', correct:false } ] },
-  { chapterTitle: 'Conviction & Sizing', question: 'In this framework, when all sentiment variables align with a technical level you should:',
-    answers: [
-      { id:'a', text:'Treat it as higher-conviction — size accordingly versus mixed signals', correct:true },
-      { id:'b', text:'Always use identical size regardless of confluence', correct:false },
-      { id:'c', text:'Take the trade with maximum leverage every time', correct:false },
-      { id:'d', text:'Ignore the level since sentiment overrides it', correct:false } ] },
-  { chapterTitle: 'Using the Indicator Suite', question: 'The indicator suite (Trend Buddy, PAL, Crayons, etc.) is best used as:',
-    answers: [
-      { id:'a', text:'Confluence alongside S/R and structure — not standalone buy/sell signals', correct:true },
-      { id:'b', text:'Standalone signals to trade blindly', correct:false },
-      { id:'c', text:'A replacement for risk management', correct:false },
-      { id:'d', text:'A guarantee of profitable trades', correct:false } ] },
-  { chapterTitle: 'TA + SA Together', question: 'Why combine Technical Analysis with Sentiment Analysis?',
-    answers: [
-      { id:'a', text:'SA can flag exhaustion in the data before price confirms — higher-conviction reads', correct:true },
-      { id:'b', text:'So you can stop using stop losses', correct:false },
-      { id:'c', text:'Because TA alone never works', correct:false },
-      { id:'d', text:'To trade more often regardless of quality', correct:false } ] },
-  { chapterTitle: 'Ichimoku — Edge to Edge', question: 'The Ichimoku "edge-to-edge" idea refers to:',
-    answers: [
-      { id:'a', text:'Price entering the cloud (Kumo) and travelling to its opposite edge', correct:true },
-      { id:'b', text:'Trading only when price is far from the cloud', correct:false },
-      { id:'c', text:'Ignoring the cloud entirely', correct:false },
-      { id:'d', text:'A pattern unrelated to Ichimoku', correct:false } ] },
-
-  /* ── Chart-reading questions (engine guarantees a quota of these per attempt) ── */
-  { chapterTitle: 'Liquidity Engineering',
-    question: 'Price wicked sharply below the obvious support (marked) and closed back above it on the same candle. This is best read as:',
-    chart: { type:'candlestick', labels: ltLabels(10),
-      ohlc: ltCandles(110, [{ to:94, bars:5 }, { to:98, bars:2 }, { to:94, bars:2 }], { seed: 361, wick: 0.4 }).concat([[94, 95, 87, 96]]),
-      markLines: [{ yAxis: 94, label: 'Support', color: '#cc2222' }] },
-    answers: [
-      { id:'a', text:'A liquidity grab / swing failure — stops swept, bias flips long', correct:true },
-      { id:'b', text:'A confirmed breakdown to short into', correct:false },
-      { id:'c', text:'A meaningless wick to ignore', correct:false },
-      { id:'d', text:'Proof that support is permanently broken', correct:false } ] },
-
-  { chapterTitle: 'Swing Failure Pattern',
-    question: 'Price spiked above the prior swing high (marked) on a long upper wick, then closed back below it. This Swing Failure Pattern suggests:',
-    chart: { type:'candlestick', labels: ltLabels(11),
-      ohlc: ltCandles(86, [{ to:104, bars:4 }, { to:96, bars:3 }, { to:104, bars:3 }], { seed: 363, wick: 0.4 }).concat([[104, 103, 103, 111]]),
-      markLines: [{ yAxis: 104, label: 'Prior Swing High', color: '#cc2222' }] },
-    answers: [
-      { id:'a', text:'Liquidity above was grabbed — bias flips short', correct:true },
-      { id:'b', text:'A confirmed breakout to long', correct:false },
-      { id:'c', text:'Nothing actionable', correct:false },
-      { id:'d', text:'The high will be exceeded again immediately', correct:false } ] },
-
-  { chapterTitle: 'Stops as Liquidity',
-    question: 'Price has tapped the same high twice, leaving equal highs (marked). In Liquidity Theory these most likely represent:',
-    chart: { type:'candlestick', labels: ltLabels(11),
-      ohlc: ltCandles(90, [{ to:100, bars:3 }, { to:92, bars:3 }, { to:100, bars:3 }, { to:94, bars:2 }], { seed: 364, wick: 0.4 }),
-      markLines: [{ yAxis: 100, label: 'Equal Highs', color: '#cc2222' }] },
-    answers: [
-      { id:'a', text:'Resting liquidity above — a pool of stops/orders that may be targeted', correct:true },
-      { id:'b', text:'Permanent resistance that will never break', correct:false },
-      { id:'c', text:'A meaningless coincidence', correct:false },
-      { id:'d', text:'A signal to short with no stop', correct:false } ] },
-
-  { chapterTitle: 'Under / Over',
-    question: 'Price broke below the level (marked), reclaimed it, and is now retesting it from above. This bullish Under-Over sets up:',
-    chart: { type:'candlestick', labels: ltLabels(10),
-      ohlc: ltCandles(102, [{ to:96, bars:3 }, { to:91, bars:2 }, { to:100, bars:3 }, { to:97, bars:2 }], { seed: 366, wick: 0.4 }),
-      markLines: [{ yAxis: 96, label: 'Reclaimed Level', color: '#00d4d4' }] },
-    answers: [
-      { id:'a', text:'A long on the reclaim/retest — the breakdown was a liquidity grab', correct:true },
-      { id:'b', text:'A short — the level is broken for good', correct:false },
-      { id:'c', text:'Nothing — wait for a new low', correct:false },
-      { id:'d', text:'A breakout short below the level', correct:false } ] },
-
-  { chapterTitle: 'Market Structure Shift',
-    question: 'In a downtrend, price has now broken above the most recent lower high (marked). This change of character signals:',
-    chart: { type:'candlestick', labels: ltLabels(11),
-      ohlc: ltCandles(112, [{ to:98, bars:3 }, { to:104, bars:2 }, { to:92, bars:3 }, { to:106, bars:3 }], { seed: 367, wick: 0.4 }),
-      markLines: [{ yAxis: 104, label: 'Last Lower High', color: '#00d4d4' }] },
-    answers: [
-      { id:'a', text:'A potential shift from bearish to bullish structure', correct:true },
-      { id:'b', text:'Trend continuation lower', correct:false },
-      { id:'c', text:'Nothing — downtrends never shift', correct:false },
-      { id:'d', text:'A guaranteed top is in', correct:false } ] },
-
-  /* ── Additional concept questions (broaden the pool beyond the original 12) ── */
-  { chapterTitle: 'Open Interest',
-    question: 'Price is falling while open interest rises sharply. This most likely reflects:',
-    answers: [
-      { id:'a', text:'Aggressive new shorts opening — fuel for a squeeze if price reverses', correct:true },
-      { id:'b', text:'Longs quietly taking profit', correct:false },
-      { id:'c', text:'Nothing — OI and price are unrelated', correct:false },
-      { id:'d', text:'A guaranteed crash', correct:false } ] },
-
-  { chapterTitle: 'Cumulative Delta',
-    question: 'Price makes a new high but cumulative delta does not. This divergence suggests:',
-    answers: [
-      { id:'a', text:'The new high lacks aggressive buying behind it — possible exhaustion', correct:true },
-      { id:'b', text:'Very strong buying conviction', correct:false },
-      { id:'c', text:'A data error to ignore', correct:false },
-      { id:'d', text:'Guaranteed continuation higher', correct:false } ] },
-
-  { chapterTitle: 'Futures Basis',
-    question: 'A large positive futures basis (futures trading well above spot) reflects:',
-    answers: [
-      { id:'a', text:'Crowded, leveraged long positioning — a potential reversal risk', correct:true },
-      { id:'b', text:'Heavily bearish positioning', correct:false },
-      { id:'c', text:'No useful information', correct:false },
-      { id:'d', text:'That spot is about to be delisted', correct:false } ] },
-
-  { chapterTitle: 'Liquidation Levels',
-    question: 'Clusters of leveraged longs share similar liquidation prices below. Price is often drawn toward them because:',
-    answers: [
-      { id:'a', text:'Those liquidations are resting liquidity that can trigger in a cascade', correct:true },
-      { id:'b', text:'Liquidations repel price away from them', correct:false },
-      { id:'c', text:'They are completely irrelevant to price', correct:false },
-      { id:'d', text:'Exchanges keep them perfectly hidden', correct:false } ] },
-
-  { chapterTitle: 'Combining Sentiment Data',
-    question: 'The strongest Liquidity Theory setups tend to occur when:',
-    answers: [
-      { id:'a', text:'A technical level, liquidity, and several sentiment variables all align', correct:true },
-      { id:'b', text:'A single indicator flashes a signal', correct:false },
-      { id:'c', text:'Funding alone is at an extreme', correct:false },
-      { id:'d', text:'Price is far from any meaningful level', correct:false } ] },
-
-  { chapterTitle: 'Course 4 in Context',
-    question: 'The Course 4 framework is best understood as:',
-    answers: [
-      { id:'a', text:'An advanced, optional lens built on the fundamentals of Courses 1–3', correct:true },
-      { id:'b', text:'A replacement for risk management', correct:false },
-      { id:'c', text:'A guaranteed-profit system', correct:false },
-      { id:'d', text:'The only valid way to trade', correct:false } ] },
-
-  { chapterTitle: 'Applying Sentiment',
-    question: 'Positioning data (funding, open interest, liquidations) is most useful for:',
-    answers: [
-      { id:'a', text:'Gauging crowd positioning and where it may unwind — context, not a standalone trigger', correct:true },
-      { id:'b', text:'Predicting exact price targets', correct:false },
-      { id:'c', text:'Replacing the chart entirely', correct:false },
-      { id:'d', text:'Timing entries to the exact second', correct:false } ] }
-];

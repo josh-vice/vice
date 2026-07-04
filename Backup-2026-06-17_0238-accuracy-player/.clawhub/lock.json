@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "skills": {
+    "youtube-watcher": {
+      "version": "1.0.0",
+      "installedAt": 1780013315609
+    },
+    "frontend": {
+      "version": "1.0.2",
+      "installedAt": 1780013428559
+    },
+    "vercel": {
+      "version": "1.0.1",
+      "installedAt": 1780013443696
+    },
+    "exa-search": {
+      "version": "1.0.0",
+      "installedAt": 1780013460399
+    }
+  }
+}

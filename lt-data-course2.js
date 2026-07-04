@@ -52,7 +52,7 @@ const LT_CHAPTERS_2 = [
       heading: "What Kind of Trader Are You?",
       body: "Before you can build a system, you need to know who you are as a trader. Your trading style determines your timeframe, your tools, your risk parameters, and your lifestyle. There is no universally 'best' style — only the one that fits your personality, schedule, and goals. Getting this right is step one of building your edge.",
       bullets: [
-        "Position Trading — months to years; catch macro trend inflection points on daily/weekly charts",
+        "Position Trading — months to years; catch macro trend inflection points on weekly/monthly charts",
         "Swing Trading — days to weeks; focused on key swing points on daily/weekly timeframes",
         "Day Trading — hours; open and close positions within market hours; no overnight exposure",
         "Scalping — minutes to hours; range-bound markets; tight entries between DBS and SSR zones",
@@ -78,32 +78,34 @@ const LT_CHAPTERS_2 = [
     introChart: {
       title: "Macro Uptrend — Position & Swing Trade Opportunities",
       type: "candlestick",
-      labels: ["W1","W2","W3","W4","W5","W6","W7","W8","W9","W10","W11","W12","W13","W14","W15","W16","W17","W18","W19","W20"],
+      tf: "1w",
+      // Generic labels + weekly tf → the engine fills the axis with a CONTINUOUS weekly
+      // date axis across the context-expanded range (a hand-typed W1..W20 array leaves the
+      // +10 lead-context bars blank and bunches the labels on the right).
+      labels: ltLabels(20),
       ohlc: ltCandles(78, [
         { to: 96,  bars: 3 },
-        { to: 110, bars: 4 },
+        { to: 110, bars: 4, reject: 3 },
         { to: 104, bars: 1 },
         { to: 117, bars: 3 },
         { to: 111, bars: 1 },
-        { to: 122, bars: 3 },
+        { to: 122, bars: 3, reject: 2 },
         { to: 116, bars: 1 },
-        { to: 125, bars: 4 }
-      ], { seed: 85, wick: 0.35 }),
+        { to: 125, bars: 4, reject: 4 }
+      ], { seed: 85, wick: 0.15 }),
       markPoints: [
         { dataIndex:  0, label: "Position Entry", position: "bottom" },
-        { dataIndex:  2, label: "HL",             position: "bottom" },
+        { dataIndex:  1, label: "Swing Low",      position: "bottom" },
         { dataIndex:  6, label: "HH",             position: "top"    },
         { dataIndex:  7, label: "HL",             position: "bottom" },
-        { dataIndex: 10, label: "HH",             position: "top"    },
-        { dataIndex: 11, label: "HL",             position: "bottom" },
         { dataIndex: 14, label: "HH",             position: "top"    },
-        { dataIndex: 15, label: "HL",             position: "bottom" },
         { dataIndex: 19, label: "HH",             position: "top"    }
       ]
     },
 
     lessonChart: {
       title: "Scalping — Range-Bound Market with DBS & SSR",
+      markLines: [ { yAxis: 80.5, label: "Stop — below swing low", color: "#ff2e88" }, { yAxis: 93, label: "Target — exit at SSR", color: "#ffcc00" } ],
       type: "candlestick",
       labels: ltLabels(18),
       ohlc: ltCandles(93, [
@@ -116,14 +118,13 @@ const LT_CHAPTERS_2 = [
       ], { seed: 86, wick: 0.4 }),
       markAreas: [
         { y0: 82, y1: 87, label: "DBS — Demand Buyer Support", color: "rgba(0,212,212,0.07)"  },
-        { y0: 91, y1: 96, label: "SSR — Seller Supply Resist.", color: "rgba(204,34,34,0.07)" }
+        { y0: 91, y1: 96, label: "SSR — Seller Supply Resist.", color: "rgba(255,46,136,0.07)" }
       ],
       markPoints: [
-        { dataIndex:  3, label: "DBS Bounce",  position: "bottom" },
-        { dataIndex:  6, label: "SSR Reject",  position: "top"    },
-        { dataIndex:  9, label: "DBS Bounce",  position: "bottom" },
-        { dataIndex: 12, label: "SSR Reject",  position: "top"    },
-        { dataIndex: 15, label: "DBS Bounce",  position: "bottom" }
+        { dataIndex:  2, label: "DBS Bounce",  position: "bottom" },
+        { dataIndex:  5, label: "SSR Reject",  position: "top"    },
+        { dataIndex:  8, label: "DBS Bounce",  position: "bottom" },
+        { dataIndex: 11, label: "SSR Reject",  position: "top"    }
       ]
     },
 
@@ -142,21 +143,25 @@ const LT_CHAPTERS_2 = [
         cutIndex: 10,
         labels: ltLabels(15),
         ohlc: ltCandles(93, [
-          { to: 84, bars: 3 },
+          { to: 84, bars: 2 },
           { to: 93, bars: 3 },
           { to: 84, bars: 3 },
-          { to: 84, bars: 1 },
-          { to: 84, bars: 1 },
-          { to: 93, bars: 4 }
+          { to: 93, bars: 2 },
+          { to: 85, bars: 1 },
+          { to: 84, bars: 1, reject: 1.2 },
+          { to: 93, bars: 3 }
         ], { seed: 87, wick: 0.35 }),
+        markLines: [
+          { yAxis: 80.5, label: "Stop — below swing low", color: "#ff2e88" }
+        ],
         markAreas: [
           { y0: 81, y1: 86, label: "DBS Zone", color: "rgba(0,212,212,0.07)"  },
-          { y0: 91, y1: 96, label: "SSR Zone", color: "rgba(204,34,34,0.07)" }
+          { y0: 91, y1: 96, label: "SSR Zone", color: "rgba(255,46,136,0.07)" }
         ]
       },
-      revealMarkPoints: [
-        { dataIndex: 10, label: "Scalp Entry!", position: "bottom", color: "#00d4d4" },
-        { dataIndex: 11, label: "Bounce",       position: "top",    color: "#00d4d4" }
+      revealMarkPoints: [ { dataIndex: 14, label: "Target — SSR", position: "top", color: "#ffcc00" },
+        { dataIndex: 11, label: "Scalp Entry!", position: "bottom", color: "#00d4d4" },
+        { dataIndex: 12, label: "Bounce",       position: "top",    color: "#00d4d4" }
       ],
       explanation: "This is a range-bound (consolidating) market — price is repeatedly bouncing between the DBS and SSR zones without making a new trend high or low. <strong>Scalping</strong> is specifically designed for this environment: enter at DBS on the first sign of buyers, stop below the swing low (invalidation), target SSR. Position or day trading into a macro trend would be the wrong approach here — there is no trend to trade.",
       rule: "Scalping = range-bound markets. Enter at DBS, target SSR, stop below swing low. Never force a trend trade in a ranging market."
@@ -183,6 +188,7 @@ const LT_CHAPTERS_2 = [
         "Scalp: identify range (DBS + SSR) → enter at range low on first sign of buyers → stop below swing low → exit at SSR",
         "Use TradingView's trade setup tool to define entry, stop, and target visually before every trade",
         "Trailing stops lock in profit as the trade moves in your favor — essential for swing and position trades",
+        "Scale out with partial take-profits (TP1/TP2) at key levels on the way to your final target",
         "Always define Entry, Stop Loss (invalidation), and Target BEFORE entering any position"
       ]
     },
@@ -206,46 +212,50 @@ const LT_CHAPTERS_2 = [
       labels: ltLabels(18),
       ohlc: ltCandles(84, [
         { to: 100, bars: 5 },
-        { to: 110, bars: 7 },
-        { to: 100, bars: 3 },
-        { to: 111, bars: 3 }
+        { to: 110, bars: 6 },
+        { to: 100, bars: 3, reject: 3 },
+        { to: 116, bars: 4 }
       ], { seed: 88, wick: 0.4 }),
-      markLines: [
-        { yAxis: 100, label: "Sr Flip Level", color: "#00d4d4" }
+      markLines: [ { yAxis: 96, label: "Stop — below swing low", color: "#ff2e88" },
+        { yAxis: 100, label: "Sr Flip Level = Entry", color: "#00d4d4" }
+      ],
+      markAreas: [
+        { y0: 115, y1: 118, label: "Target — next resistance", color: "rgba(255,204,0,0.08)" }
       ],
       markPoints: [
         { dataIndex:  4, label: "Resistance",    position: "top"    },
-        { dataIndex: 11, label: "Breakout",      position: "top"    },
-        { dataIndex: 14, label: "Retest Entry",  position: "bottom" },
-        { dataIndex: 15, label: "Confirmed",     position: "bottom" }
+        { dataIndex:  5, label: "Breakout",      position: "top"    },
+        { dataIndex: 10, label: "Prior High",    position: "top"    },
+        { dataIndex: 13, label: "Retest Entry",  position: "bottom" },
+        { dataIndex: 14, label: "Confirmed",     position: "bottom" }
       ]
     },
 
     lessonChart: {
       title: "Scalp Trade Setup — DBS + SSR Range",
+      markLines: [ { yAxis: 81.5, label: "Stop — below swing low", color: "#ff2e88" } ],
       type: "candlestick",
-      labels: ltLabels(16),
+      labels: ltLabels(12),
       ohlc: ltCandles(93, [
-        { to: 84, bars: 4 },
-        { to: 93, bars: 4 },
         { to: 84, bars: 3 },
-        { to: 93, bars: 4 },
-        { to: 84, bars: 1 }
-      ], { seed: 89, wick: 0.4 }),
+        { to: 93, bars: 3 },
+        { to: 84, bars: 3 },
+        { to: 93, bars: 3 }
+      ], { seed: 89, wick: 0.2 }),
       markAreas: [
         { y0: 81, y1: 86, label: "DBS Zone", color: "rgba(0,212,212,0.07)"  },
-        { y0: 92, y1: 97, label: "SSR Zone", color: "rgba(204,34,34,0.07)" }
+        { y0: 92, y1: 97, label: "SSR Zone", color: "rgba(255,46,136,0.07)" }
       ],
       markPoints: [
-        { dataIndex:  4, label: "DBS Entry",  position: "bottom" },
-        { dataIndex:  8, label: "SSR Exit",   position: "top"    },
-        { dataIndex: 11, label: "DBS Entry",  position: "bottom" },
-        { dataIndex: 15, label: "SSR Exit",   position: "top"    }
+        { dataIndex:  2, label: "DBS Entry",  position: "bottom" },
+        { dataIndex:  5, label: "SSR Exit",   position: "top"    },
+        { dataIndex:  8, label: "DBS Entry",  position: "bottom" },
+        { dataIndex: 11, label: "SSR Exit",   position: "top"    }
       ]
     },
 
     quiz: {
-      question: "Price is in a confirmed daily uptrend (Higher Highs + Higher Lows). It has pulled back to a prior resistance level that was broken two weeks ago. A candle touching that level has a long lower wick. What is the correct trade setup action?",
+      question: "Price is in a confirmed daily uptrend (Higher Highs + Higher Lows). It has pulled back to a prior resistance level that was broken earlier in the trend. A candle touching that level has a long lower wick. What is the correct trade setup action?",
       hint: "What happens to resistance once it has been convincingly broken? What is the correct swing trade entry action at this level?",
       style: "direction",
       answers: [
@@ -261,16 +271,20 @@ const LT_CHAPTERS_2 = [
         ohlc: ltCandles(86, [
           { to: 100, bars: 5 },
           { to: 110, bars: 4 },
-          { to: 100, bars: 3 },
+          { to: 100, bars: 3, reject: 3 },
           { to: 102, bars: 1 },
           { to: 115, bars: 3 }
         ], { seed: 90, wick: 0.4 }),
         markLines: [
           { yAxis: 100, label: "Sr Flip Level", color: "#00d4d4" }
+        ],
+        markAreas: [
+          { y0: 113, y1: 116, label: "Next Resistance — Target", color: "rgba(255,204,0,0.08)" }
         ]
       },
-      revealMarkPoints: [
-        { dataIndex:  8, label: "Breakout",     position: "top",    color: "#00d4d4" },
+      revealMarkPoints: [ { dataIndex: 15, label: "Target — next resistance", position: "top", color: "#ffcc00" },
+        { dataIndex:  5, label: "Breakout",     position: "top",    color: "#00d4d4" },
+        { dataIndex:  8, label: "Prior High",   position: "top",    color: "#00d4d4" },
         { dataIndex: 11, label: "Retest Entry", position: "bottom", color: "#00d4d4" },
         { dataIndex: 12, label: "Holds!",       position: "top",    color: "#00d4d4" }
       ],
@@ -298,7 +312,7 @@ const LT_CHAPTERS_2 = [
         "Level = the predefined S/R zone you watch and observe (a zone, not a precise line)",
         "Trigger = an obvious price action reaction AT the level — confirmation the level may hold",
         "Entry = the predefined order type placed only AFTER a successful trigger fires",
-        "⚠️ Critical Rule: Triggers CAN be entries. Entries CANNOT be triggers — order matters",
+        "<span class='lt-ico-warn' aria-hidden='true'></span> Critical Rule: Triggers CAN be entries. Entries CANNOT be triggers — order matters",
         "Bias must be established FIRST — your directional view (bullish or bearish) before any LTE setup"
       ]
     },
@@ -322,20 +336,16 @@ const LT_CHAPTERS_2 = [
       type: "candlestick",
       labels: ltLabels(16),
       ohlc: ltCandles(110, [
-        { to: 87, bars: 7 },
-        { to: 85, bars: 1, reject: 3 },
+        { to: 84, bars: 7, reject: 1.5 },
+        { to: 86, bars: 1 },
         { to: 92, bars: 1 },
         { to: 89, bars: 1 },
         { to: 110, bars: 6 }
-      ], { seed: 91, wick: 0.4 }),
-      markLines: [
-        { yAxis: 85, label: "Level — Support Zone", color: "#00d4d4" }
-      ],
+      ], { seed: 97, wick: 0.4 }),
       markAreas: [
-        { y0: 83, y1: 88, label: "Level Zone", color: "rgba(0,212,212,0.06)" }
+        { y0: 83, y1: 88, label: "L — Level (Support Zone)", color: "rgba(0,212,212,0.06)" }
       ],
       markPoints: [
-        { dataIndex:  6, label: "L — Level",         position: "bottom" },
         { dataIndex:  7, label: "T — Trigger",        position: "bottom" },
         { dataIndex:  9, label: "E — Entry (HL)",     position: "bottom" }
       ]
@@ -346,25 +356,26 @@ const LT_CHAPTERS_2 = [
       type: "candlestick",
       labels: ltLabels(17),
       ohlc: ltCandles(88, [
-        { to: 105, bars: 5 },
-        { to: 111, bars: 3 },
-        { to: 105, bars: 3 },
-        { to: 107, bars: 1 },
+        { to: 105, bars: 4 },
+        { to: 99,  bars: 2 },
+        { to: 105, bars: 2 },
+        { to: 111, bars: 2 },
+        { to: 105, bars: 2 },
         { to: 123, bars: 5 }
-      ], { seed: 92, wick: 0.4 }),
-      markLines: [
+      ], { seed: 85, wick: 0.4 }),
+      markLines: [ { yAxis: 102, label: "Invalidation / Stop — below flip", color: "#ff2e88" }, { yAxis: 111, label: "First Barrier (FB) — peak", color: "#ff2e88" },
         { yAxis: 105, label: "Sr Flip Level", color: "#00d4d4" }
       ],
       markPoints: [
-        { dataIndex:  4, label: "Resistance",      position: "top"    },
-        { dataIndex:  7, label: "Break Above",     position: "top"    },
-        { dataIndex: 10, label: "Retest of Flip",  position: "bottom" },
-        { dataIndex: 11, label: "Sr Flip Entry",   position: "bottom" }
+        { dataIndex:  3, label: "Resistance",      position: "top"    },
+        { dataIndex:  9, label: "Break Above",     position: "top"    },
+        { dataIndex: 11, label: "Retest of Flip",  position: "bottom" },
+        { dataIndex: 12, label: "Sr Flip Entry",   position: "bottom" }
       ]
     },
 
     quiz: {
-      question: "A support zone has been identified at the bottom of a downtrend. Price drops into that zone and prints a candle with a long lower wick showing strong buyer presence. Price then pulls back slightly and forms a higher low just above the zone. Which LTE step does each event represent?",
+      question: "A support zone has been identified at the bottom of a downtrend. Price drops into that zone and prints a candle with a long lower wick showing strong buyer presence. Price then pulls back slightly and forms a higher low above the trigger low. Which LTE step does each event represent?",
       hint: "Map each event to the LTE framework in sequence: what was the Level, what was the Trigger, and what is happening with the higher low?",
       style: "choice",
       answers: [
@@ -384,11 +395,8 @@ const LT_CHAPTERS_2 = [
           { to: 82, bars: 1 },
           { to: 99, bars: 3 }
         ], { seed: 93, wick: 0.4 }),
-        markLines: [
-          { yAxis: 79, label: "Support Zone", color: "#00d4d4" }
-        ],
         markAreas: [
-          { y0: 77, y1: 83, label: "Level Zone", color: "rgba(0,212,212,0.06)" }
+          { y0: 77, y1: 83, label: "L — Level (Support Zone)", color: "rgba(0,212,212,0.06)" }
         ]
       },
       revealMarkPoints: [
@@ -431,7 +439,7 @@ const LT_CHAPTERS_2 = [
         "<strong>Set and Forget (SNF):</strong> predefine entry + TP + SL → input all orders before the trade → wait; best for newer traders; forces realistic target setting; builds analytical discipline over time; avoids cutting winners early and holding losers long",
         "<strong>Trailing Stop Loss:</strong> move stop loss into profit as price makes new Sr flip levels; types: fixed dollar trail, fixed percentage trail, or move stop to each new Sr level (preferred); allows larger R multiples by riding the full trend",
         "<strong>Partial Take-Profit (PTP):</strong> reduce position by a fixed percentage at predefined Sr levels (first barriers); example — 3 levels, close 33% at each; accounts for opportunity cost; lets you lock in wins while maintaining trend exposure",
-        "Trailing Stop example: entered short after a higher high set → used trailing stop → stopped out $1,600 above the original fixed target, capturing far more of the move",
+        "Trailing Stop example: in a long trade, once price broke out to a new higher high, a $500 trailing sell-stop replaced the fixed target — price ran from the $9,100 target to $11,200 and the trail exited at $10,700, $1,600 above the original target",
         "Partial TP example: 3 predefined levels → reduce 33% at each → guaranteed wins at each level while running the remainder of the position",
         "Newer traders: be LESS involved during a trade — more involvement equals cutting winners early and holding losers too long",
         "Let your <strong>journal data</strong> dictate which exit strategy to use — not emotion in the moment of a live trade"
@@ -445,20 +453,24 @@ const LT_CHAPTERS_2 = [
       ohlc: ltCandles(85, [
         { to: 98,  bars: 5 },
         { to: 107, bars: 4 },
-        { to: 115, bars: 4 },
+        { to: 116, bars: 4 },
         { to: 118, bars: 3 },
-        { to: 112, bars: 2 }
+        { to: 108, bars: 2 }
       ], { seed: 94, wick: 0.4 }),
       markLines: [
-        { yAxis: 85, label: "Entry",        color: "#00d4d4" },
-        { yAxis: 82, label: "Initial Stop", color: "#cc2222" }
+        { yAxis: 85,  label: "Entry",             color: "#00d4d4" },
+        { yAxis: 82,  label: "Initial Stop",      color: "#ff2e88" },
+        { yAxis: 94,  label: "Trail Stop 1",      color: "#ff2e88" },
+        { yAxis: 103, label: "Trail Stop 2",      color: "#ff2e88" },
+        { yAxis: 110, label: "Final Trail Stop",  color: "#ff2e88" },
+        { yAxis: 104, label: "Original Fixed TP",  color: "#ffcc00" }
       ],
       markPoints: [
-        { dataIndex:  0, label: "Entry",         position: "bottom" },
-        { dataIndex:  4, label: "Trail Stop ↑",  position: "bottom" },
-        { dataIndex:  8, label: "Trail Stop ↑",  position: "bottom" },
-        { dataIndex: 12, label: "Trail Stop ↑",  position: "bottom" },
-        { dataIndex: 17, label: "Stopped Out",   position: "bottom" }
+        { dataIndex:  0, label: "Entry",       position: "bottom" },
+        { dataIndex:  4, label: "Stop → 94",   position: "top" },
+        { dataIndex:  8, label: "Stop → 103",  position: "top" },
+        { dataIndex: 12, label: "Stop → 110",  position: "top" },
+        { dataIndex: 17, label: "Stopped Out", position: "bottom" }
       ]
     },
 
@@ -471,20 +483,20 @@ const LT_CHAPTERS_2 = [
         { to: 92,  bars: 1 },
         { to: 105, bars: 4 },
         { to: 103, bars: 1 },
-        { to: 116, bars: 4 }
+        { to: 114, bars: 4 }
       ], { seed: 95, wick: 0.4 }),
       markLines: [
         { yAxis: 82,  label: "Entry",       color: "#00d4d4" },
         { yAxis: 94,  label: "TP 1 (33%)",  color: "#ffcc00" },
         { yAxis: 104, label: "TP 2 (33%)",  color: "#ffcc00" },
         { yAxis: 113, label: "TP 3 (33%)",  color: "#ffcc00" },
-        { yAxis: 78,  label: "Stop Loss",   color: "#cc2222" }
+        { yAxis: 78,  label: "Stop Loss",   color: "#ff2e88" }
       ],
       markPoints: [
         { dataIndex:  0, label: "Entry",    position: "bottom" },
         { dataIndex:  5, label: "TP1 Hit",  position: "top"    },
         { dataIndex: 10, label: "TP2 Hit",  position: "top"    },
-        { dataIndex: 14, label: "TP3 Hit",  position: "top"    }
+        { dataIndex: 15, label: "TP3 Hit",  position: "top"    }
       ]
     },
 
@@ -514,7 +526,7 @@ const LT_CHAPTERS_2 = [
           { yAxis: 94,  label: "TP 1",      color: "#ffcc00" },
           { yAxis: 104, label: "TP 2",      color: "#ffcc00" },
           { yAxis: 113, label: "TP 3",      color: "#ffcc00" },
-          { yAxis: 78,  label: "Stop Loss", color: "#cc2222" }
+          { yAxis: 78,  label: "Stop Loss", color: "#ff2e88" }
         ]
       },
       revealMarkPoints: [
@@ -546,7 +558,7 @@ const LT_CHAPTERS_2 = [
         "Multi-candle formations = stronger confluence than single candle signals alone",
         "Two-candle: Bullish Engulfing, Bearish Engulfing, Tweezer Tops, Tweezer Bottoms",
         "Three-candle: Morning Star, Evening Star, Three Inside Up/Down, Three White Soldiers, Three Black Crows",
-        "⚠️ Always wait for candle CLOSE before acting — never trade a formation mid-candle",
+        "<span class='lt-ico-warn' aria-hidden='true'></span> Always wait for candle CLOSE before acting — never trade a formation mid-candle",
         "Combine formations with key S/R levels — formation at S/R = highest probability LTE trigger",
         "Volume should confirm formations — a volume spike on the confirmation candle = stronger signal"
       ]
@@ -570,24 +582,27 @@ const LT_CHAPTERS_2 = [
     introChart: {
       title: "Bullish & Bearish Engulfing at S/R Levels",
       type: "candlestick",
-      labels: ltLabels(20),
-      ohlc: ltCandles(82, [
-        { to: 100, bars: 5 },
-        { to: 82,  bars: 4 },
-        { to: 100, bars: 6 },
-        { to: 82,  bars: 2 },
-        { to: 86,  bars: 3 }
+      labels: ltLabels(18),
+      ohlc: ltCandles(84, [
+        { to: 100, bars: 4 },
+        { to: 88,  bars: 3 },
+        { to: 100, bars: 3 },
+        { to: 101, bars: 1 },
+        { to: 90,  bars: 1 },
+        { to: 84,  bars: 2 },
+        { to: 83,  bars: 1 },
+        { to: 93,  bars: 1 },
+        { to: 98,  bars: 2 }
       ], { seed: 97, wick: 0.4 }),
       markAreas: [
-        { y0: 80, y1: 85, label: "Support Zone",    color: "rgba(0,212,212,0.07)"  },
-        { y0: 98, y1: 103,label: "Resistance Zone", color: "rgba(204,34,34,0.07)"  }
+        { y0: 82, y1: 86,  label: "Support Zone",    color: "rgba(0,212,212,0.07)"  },
+        { y0: 98, y1: 102, label: "Resistance Zone", color: "rgba(255,46,136,0.07)"  }
       ],
       markPoints: [
-        { dataIndex:  4, label: "Pre-Engulf",       position: "top"    },
-        { dataIndex:  5, label: "Bearish Engulfing",position: "top"    },
-        { dataIndex:  9, label: "Bullish Engulfing",position: "bottom" },
-        { dataIndex: 14, label: "Pre-Engulf",       position: "top"    },
-        { dataIndex: 15, label: "Bearish Engulfing",position: "top"    }
+        { dataIndex: 10, label: "Pre-Engulf",        position: "top"    },
+        { dataIndex: 11, label: "Bearish Engulfing", position: "top"    },
+        { dataIndex: 14, label: "Pre-Engulf",        position: "bottom" },
+        { dataIndex: 15, label: "Bullish Engulfing", position: "bottom" }
       ]
     },
 
@@ -596,25 +611,27 @@ const LT_CHAPTERS_2 = [
       type: "candlestick",
       labels: ltLabels(18),
       ohlc: ltCandles(105, [
-        { to: 84,  bars: 6 },
-        { to: 84,  bars: 1 },
-        { to: 95,  bars: 1 },
-        { to: 99,  bars: 4 },
-        { to: 91,  bars: 1 },
-        { to: 96,  bars: 1 },
-        { to: 103, bars: 1 },
-        { to: 114, bars: 3 }
-      ], { seed: 98, wick: 0.35 }),
+        { to: 88,   bars: 5 },
+        { to: 83.5, bars: 1 },
+        { to: 84,   bars: 1 },
+        { to: 95,   bars: 1 },
+        { to: 99,   bars: 4 },
+        { to: 90,   bars: 1 },
+        { to: 95.5, bars: 1 },
+        { to: 106.5,bars: 1 },
+        { to: 114,  bars: 3 }
+      ], { seed: 138, wick: 0.35 }),
       markPoints: [
-        { dataIndex:  5, label: "MS Candle 1",      position: "top"    },
-        { dataIndex:  6, label: "MS Candle 2 (Doji)",position: "bottom" },
-        { dataIndex:  7, label: "MS Candle 3 ✓",   position: "top"    },
-        { dataIndex: 12, label: "3IU Candle 1",     position: "top"    },
-        { dataIndex: 13, label: "3IU Candle 2",     position: "top"    },
-        { dataIndex: 14, label: "3IU Candle 3 ✓",  position: "top"    }
+        { dataIndex:  5, label: "MS Candle 1",         position: "top"    },
+        { dataIndex:  6, label: "MS Candle 2 (Doji)",  position: "bottom" },
+        { dataIndex:  7, label: "MS Candle 3 ✓",      position: "top"    },
+        { dataIndex: 12, label: "3IU Candle 1",        position: "top"    },
+        { dataIndex: 13, label: "3IU Candle 2 (inside)",position: "bottom" },
+        { dataIndex: 14, label: "3IU Candle 3 ✓",     position: "top"    }
       ],
       markAreas: [
-        { y0: 81, y1: 87, label: "Support Zone", color: "rgba(0,212,212,0.06)" }
+        { y0: 81, y1: 87, label: "Support Zone", color: "rgba(0,212,212,0.06)" },
+        { y0: 89, y1: 91, label: "3IU Base", color: "rgba(0,212,212,0.05)" }
       ]
     },
 
@@ -633,22 +650,22 @@ const LT_CHAPTERS_2 = [
         cutIndex: 10,
         labels: ltLabels(15),
         ohlc: ltCandles(110, [
-          { to: 86, bars: 8 },
+          { to: 92, bars: 8 },
           { to: 84, bars: 1 },
-          { to: 87, bars: 1 },
-          { to: 92, bars: 1 },
+          { to: 89, bars: 1 },
           { to: 97, bars: 1 },
+          { to: 101, bars: 1 },
           { to: 108, bars: 3 }
-        ], { seed: 99, wick: 0.4 }),
+        ], { seed: 100, wick: 0.4 }),
         markAreas: [
           { y0: 82, y1: 88, label: "Support Zone", color: "rgba(0,212,212,0.06)" }
         ]
       },
       revealMarkPoints: [
-        { dataIndex:  8, label: "Candle 1",          position: "top",    color: "#00d4d4" },
-        { dataIndex:  9, label: "Candle 2",          position: "top",    color: "#00d4d4" },
-        { dataIndex: 10, label: "Three Inside Up!",  position: "top",    color: "#00d4d4" },
-        { dataIndex: 11, label: "Confirmed Bounce",  position: "top",    color: "#00d4d4" }
+        { dataIndex:  8, label: "Candle 1 (strong bear)", position: "top",    color: "#00d4d4" },
+        { dataIndex:  9, label: "Candle 2 (inside)",      position: "bottom", color: "#00d4d4" },
+        { dataIndex: 10, label: "Three Inside Up!",       position: "top",    color: "#00d4d4" },
+        { dataIndex: 11, label: "Confirmed Bounce",       position: "top",    color: "#00d4d4" }
       ],
       explanation: "This is the <strong>Three Inside Up</strong> formation. Candle 1 is the final bearish candle of the downtrend. Candle 2 closes bullish, past the midpoint of Candle 1 — showing buyers are pushing back. Candle 3 closes above Candle 1's open and high — buyers have completely taken over. This formation has one of the highest hit rates as an LTE trigger at a support level, and can serve as both the trigger AND the entry simultaneously.",
       rule: "Three Inside Up at support = bullish reversal signal. Always wait for candle 3 to CLOSE before entering. Combine with volume confirmation and a key S/R level."
@@ -671,10 +688,10 @@ const LT_CHAPTERS_2 = [
       body: "Learning formation names is the first step. The real skill is recognising them in live charts where price is noisy, the structure isn't always clean, and the temptation to jump the gun is strongest. In real trading, formations only matter when they appear at a key S/R level and are confirmed by volume. Context is everything.",
       bullets: [
         "Formations only carry weight at predefined S/R levels — not in the middle of nowhere",
-        "Volume confirmation doubles the validity of any formation — always check the volume bar",
+        "A formation printed on roughly twice the average volume is confirmed — always check the volume bar",
         "Candle close is non-negotiable — never act on a pattern mid-candle",
         "Bullish engulfing + volume spike at support = high-probability LTE trigger",
-        "Evening Star at resistance + declining volume = high-probability short trigger",
+        "Evening Star at resistance — volume fading into the top, then a spike on the reversal candle = high-probability short trigger",
         "Three Inside Up/Down = personal favourite — works as trigger AND entry simultaneously"
       ]
     },
@@ -696,21 +713,23 @@ const LT_CHAPTERS_2 = [
     introChart: {
       title: "Bullish Engulfing at Support — Volume Confirmed",
       type: "candlestick",
-      labels: ltLabels(18),
+      labels: ltLabels(17),
+      volume: { spikes: { 17: 2.0 } },
       ohlc: ltCandles(108, [
-        { to: 83, bars: 7 },
-        { to: 92, bars: 1 },
-        { to: 90, bars: 1 },
+        { to: 84, bars: 6 },
+        { to: 83, bars: 1 },
+        { to: 93, bars: 1 },
+        { to: 94, bars: 1 },
         { to: 101, bars: 2 },
-        { to: 110, bars: 7 }
+        { to: 110, bars: 6 }
       ], { seed: 100, wick: 0.4 }),
       markAreas: [
         { y0: 80, y1: 86, label: "Support Zone", color: "rgba(0,212,212,0.07)" }
       ],
       markPoints: [
-        { dataIndex:  6, label: "Pre-Engulf",        position: "bottom" },
-        { dataIndex:  7, label: "Bullish Engulfing ✓",position: "bottom" },
-        { dataIndex:  9, label: "Confirmation",      position: "top"    }
+        { dataIndex:  6, label: "Pre-Engulf",         position: "bottom" },
+        { dataIndex:  7, label: "Bullish Engulfing ✓", position: "bottom" },
+        { dataIndex:  9, label: "Confirmation",        position: "top"    }
       ]
     },
 
@@ -718,19 +737,23 @@ const LT_CHAPTERS_2 = [
       title: "Evening Star at Resistance — Bearish Reversal",
       type: "candlestick",
       labels: ltLabels(16),
+      volume: { profile: "declining", spikes: { 18: 2.2 } },
       ohlc: ltCandles(82, [
         { to: 107, bars: 7 },
-        { to: 107, bars: 1 },
+        { to: 108, bars: 1 },
         { to: 97,  bars: 1 },
         { to: 83,  bars: 7 }
       ], { seed: 101, wick: 0.35 }),
+      markLines: [
+        { yAxis: 97, label: "Short Entry Trigger", color: "#ff2e88" }
+      ],
       markAreas: [
-        { y0: 104, y1: 110, label: "Resistance Zone", color: "rgba(204,34,34,0.07)" }
+        { y0: 104, y1: 110, label: "Resistance Zone", color: "rgba(255,46,136,0.07)" }
       ],
       markPoints: [
-        { dataIndex:  6, label: "ES Candle 1",       position: "top"    },
-        { dataIndex:  7, label: "ES Candle 2 (Doji)",position: "top"    },
-        { dataIndex:  8, label: "Evening Star ✓",    position: "top"    }
+        { dataIndex:  6, label: "ES Candle 1",        position: "top"    },
+        { dataIndex:  7, label: "ES Candle 2 (Doji)", position: "top"    },
+        { dataIndex:  8, label: "Evening Star ✓",     position: "bottom" }
       ]
     },
 
@@ -746,8 +769,9 @@ const LT_CHAPTERS_2 = [
       chart: {
         title: "Identify the Three-Candle Formation",
         type: "candlestick",
-        cutIndex: 9,
+        cutIndex: 10,
         labels: ltLabels(14),
+        volume: { spikes: { 19: 2.0 } },
         ohlc: ltCandles(105, [
           { to: 84, bars: 7 },
           { to: 80, bars: 1 },
@@ -764,7 +788,7 @@ const LT_CHAPTERS_2 = [
         { dataIndex:  7, label: "Candle 1 (Down)",   position: "bottom", color: "#00d4d4" },
         { dataIndex:  8, label: "Candle 2 (Doji)",   position: "bottom", color: "#00d4d4" },
         { dataIndex:  9, label: "Morning Star! ✓",   position: "top",    color: "#00d4d4" },
-        { dataIndex: 10, label: "Confirmed Bounce",  position: "top",    color: "#00d4d4" }
+        { dataIndex: 11, label: "Confirmed Bounce",  position: "top",    color: "#00d4d4" }
       ],
       explanation: "This is the <strong>Morning Star</strong> — the three-candle bullish reversal. Candle 1 (bearish) shows sellers still in control. Candle 2 (doji) shows complete indecision — neither side winning. Candle 3 (strong bullish closing well past the midpoint of Candle 1) shows buyers have decisively taken over. Found at a support level with volume confirmation, this is a high-probability LTE trigger.",
       rule: "Morning Star at support = bullish reversal trigger. Three candles: down → indecision → strong up. Wait for candle 3 to CLOSE before acting."
@@ -781,6 +805,21 @@ const LT_CHAPTERS_2 = [
     tag: "Module 3 · Session 3",
     module: "Price Action Concepts",
     videoUrl: "https://www.youtube.com/embed/_e_IdqS3Fc0",
+    // Bespoke interactive section (its own step after the Introduction) — the
+    // Volume Interpreter drill (lt-volreader.js). Charts untouched.
+    demo: {
+      kind: "volreader",
+      label: "Volume Interpreter",
+      after: "intro",
+      heading: "Call the Volume Read",
+      body: "One chart at a time: price on top, volume underneath. Decide who is in control and pick the read. Every answer quotes the exact rule that applies — get it wrong and you still walk away with the rule.",
+      bullets: [
+        "There are only four combinations of price direction × volume direction — every chart here maps to one of them",
+        "Rising volume <em>with</em> the move = conviction; falling volume <em>against</em> the move's direction of travel = exhaustion brewing",
+        "Watch for the breakout charts — the whole call comes down to whether the breakout candle printed a volume spike",
+        "The streak chip keeps score — run the deck until the four scenarios are reflex, not recall"
+      ]
+    },
 
     intro: {
       heading: "Volume — The Market's Lie Detector",
@@ -799,10 +838,10 @@ const LT_CHAPTERS_2 = [
       heading: "The Four Volume Scenarios — Who Is in Control?",
       body: "There are only four combinations of price direction and volume direction. Each one tells a specific story about the health of a move and whether it is likely to continue or reverse. Memorise these four scenarios — they are the foundation of all volume analysis.",
       bullets: [
-        "<strong>Price Rising + Volume Rising:</strong> ✅ Strong buying — buyers are in full control; trend continuation expected",
-        "<strong>Price Rising + Volume Declining:</strong> ⚠️ Weak buying — buyers losing conviction; potential trend exhaustion and reversal ahead",
-        "<strong>Price Declining + Volume Rising:</strong> ✅ Strong selling — sellers are in full control; downtrend continuation expected",
-        "<strong>Price Declining + Volume Declining:</strong> ⚠️ Weak selling — sellers losing conviction; potential exhaustion and reversal ahead",
+        "<strong>Price Rising + Volume Rising:</strong> <span class='lt-ico-ok' aria-hidden='true'></span> Strong buying — buyers are in full control; trend continuation expected",
+        "<strong>Price Rising + Volume Declining:</strong> <span class='lt-ico-warn' aria-hidden='true'></span> Weak buying — buyers losing conviction; potential trend exhaustion and reversal ahead",
+        "<strong>Price Declining + Volume Rising:</strong> <span class='lt-ico-ok' aria-hidden='true'></span> Strong selling — sellers are in full control; downtrend continuation expected",
+        "<strong>Price Declining + Volume Declining:</strong> <span class='lt-ico-warn' aria-hidden='true'></span> Weak selling — sellers losing conviction; potential exhaustion and reversal ahead",
         "Look for big volume spikes at S/R flips, breakouts, and breakdowns — that is institutional money moving",
         "Combine volume analysis with S/R levels AND candlestick formations for highest probability setups",
         "Volume works on ALL timeframes — from 5-minute scalp charts to weekly position trade charts"
@@ -812,6 +851,8 @@ const LT_CHAPTERS_2 = [
     introChart: {
       title: "Four Volume Scenarios — Rising Then Weakening Trend",
       type: "candlestick",
+      chartHeight: 440,
+      volume: { spikes: { 11: 1.8, 12: 1.9, 16: 0.5, 17: 0.4, 18: 2.0, 19: 1.9, 23: 0.5, 24: 0.4 } },
       labels: ltLabels(20),
       ohlc: ltCandles(80, [
         { to: 108, bars: 8 },
@@ -819,19 +860,23 @@ const LT_CHAPTERS_2 = [
         { to: 84,  bars: 3 },
         { to: 88,  bars: 2 }
       ], { seed: 103, wick: 0.4 }),
+      markLines: [
+        { yAxis: 108, label: "Resistance", color: "#ff2e88" },
+        { yAxis: 76,  label: "Support",    color: "#00d4d4" }
+      ],
       markPoints: [
-        { dataIndex:  1, label: "Rising Vol ✅",       position: "top"    },
-        { dataIndex:  5, label: "Declining Vol ⚠️",   position: "top"    },
-        { dataIndex:  7, label: "Potential Reversal", position: "top"    },
-        { dataIndex: 10, label: "Strong Sell Vol ✅",  position: "bottom" },
-        { dataIndex: 14, label: "Declining Sell ⚠️",  position: "bottom" },
-        { dataIndex: 17, label: "Buyers Return",      position: "bottom" }
+        { dataIndex:  1, label: "Rising Vol",     position: "bottom", icon: "ok"   },
+        { dataIndex:  7, label: "Weak Buying",    position: "top",    icon: "warn" },
+        { dataIndex:  9, label: "Strong Sell Vol",position: "top",    icon: "ok"   },
+        { dataIndex: 13, label: "Weak Selling",   position: "bottom", icon: "warn" }
       ]
     },
 
     lessonChart: {
       title: "Volume Spike Confirms the Breakout",
       type: "candlestick",
+      chartHeight: 440,
+      volume: { spikes: { 14: 0.75, 15: 0.38, 16: 0.65, 17: 0.5, 18: 0.36, 19: 0.39, 20: 0.62, 21: 0.33, 22: 0.25, 23: 0.4, 24: 2.6 } },
       labels: ltLabels(18),
       ohlc: ltCandles(87, [
         { to: 90, bars: 4 },
@@ -846,11 +891,11 @@ const LT_CHAPTERS_2 = [
         { yAxis: 92, label: "Breakout Level", color: "#00d4d4" }
       ],
       markAreas: [
-        { y0: 83, y1: 87, label: "Support Zone", color: "rgba(0,212,212,0.06)" }
+        { y0: 84, y1: 91, label: "Coil 84–91", color: "rgba(0,212,212,0.07)" }
       ],
-      markPoints: [
-        { dataIndex: 13, label: "Vol Declining — Coil",    position: "bottom" },
-        { dataIndex: 14, label: "VOLUME SPIKE! Breakout ✓",position: "top"    }
+      markPoints: [ { dataIndex: 17, label: "Trend Continues ✓", position: "top" },
+        { dataIndex: 13, label: "Low-Vol Coil",             position: "bottom" },
+        { dataIndex: 14, label: "VOLUME SPIKE! Breakout ✓", position: "top"    }
       ]
     },
 
@@ -866,7 +911,9 @@ const LT_CHAPTERS_2 = [
       chart: {
         title: "Rising Price — What Does the Volume Pattern Say?",
         type: "candlestick",
-        cutIndex: 5,
+        chartHeight: 440,
+        volume: { spikes: { 10: 1.5, 11: 1.18, 12: 0.74, 13: 0.71, 14: 0.5, 15: 0.33 } },
+        cutIndex: 6,
         labels: ltLabels(14),
         ohlc: ltCandles(80, [
           { to: 100, bars: 5 },
@@ -876,9 +923,9 @@ const LT_CHAPTERS_2 = [
         ], { seed: 105, wick: 0.35 })
       },
       revealMarkPoints: [
-        { dataIndex:  4, label: "Low Volume ⚠️",      position: "top",    color: "#ffcc00" },
-        { dataIndex:  5, label: "Tiny Body — Exhaustion",position: "top",  color: "#cc2222" },
-        { dataIndex:  6, label: "Reversal Begins",    position: "top",    color: "#cc2222" }
+        { dataIndex:  4, label: "Low Volume",           position: "top",    icon: "warn" },
+        { dataIndex:  5, label: "Tiny Body — Exhaustion", position: "top",   color: "#ff2e88" },
+        { dataIndex:  6, label: "Reversal Begins",       position: "top",    color: "#ff2e88" }
       ],
       explanation: "<strong>Rising price + declining volume</strong> is one of the four volume scenarios — and it is a warning sign, not a green light. When buyers are pushing price higher but doing so with progressively less participation, the move is losing conviction. The tiny-body final candle on almost zero volume is a classic exhaustion signal. The subsequent reversal confirmed what the volume was already telegraphing.",
       rule: "Rising price + declining volume = buyer exhaustion warning. Tighten stops, reduce size, or wait for confirmation before adding to longs."
@@ -918,14 +965,17 @@ const LT_CHAPTERS_2 = [
         "<strong>Tesla Weekly:</strong> highest ever volume bar = confirmation of the major bull run beginning",
         "<strong>ETH 4H:</strong> identify range (supply at top + demand at bottom); high volume candles at resistance = sellers controlling; long lower wicks at support + buying volume = buyers defending",
         "<strong>ETH 4H:</strong> volume spike on bullish engulfing at demand zone → Sr flip above = confirmed breakout → rising price + rising volume = trend confirmed",
-        "Key rule: volume must SPIKE on the breakout candle itself — not the candle before or after",
+        "Look for the volume spike on the breakout candle itself — that is the confirmation you are waiting for",
         "Without the volume spike, the breakout is suspect — treat it as a potential fake-out until volume confirms"
       ]
     },
 
     introChart: {
       title: "Volume Surge on Breakout — Confirmed Move",
+      markAreas: [ { y0: 85, y1: 91, label: "Low-Vol Consolidation", color: "rgba(0,212,212,0.07)" } ],
       type: "candlestick",
+      chartHeight: 440,
+      volume: { spikes: { 20: 0.8, 21: 0.6, 22: 0.35, 23: 2.6, 24: 1.2, 25: 0.68, 26: 0.66, 27: 1.95 } },
       labels: ltLabels(18),
       ohlc: ltCandles(86, [
         { to: 91, bars: 4 },
@@ -938,32 +988,35 @@ const LT_CHAPTERS_2 = [
       markLines: [
         { yAxis: 92, label: "Breakout Level", color: "#00d4d4" }
       ],
-      markPoints: [
-        { dataIndex:  5, label: "Resistance",            position: "top"    },
-        { dataIndex: 12, label: "Vol Declining — Coil",  position: "bottom" },
-        { dataIndex: 13, label: "Volume Surge — Breakout ✓",position: "top" }
+      markPoints: [ { dataIndex: 17, label: "Price ↑ + Vol ↑ = Trend", position: "top" },
+        { dataIndex:  3, label: "Resistance",               position: "top"    },
+        { dataIndex: 12, label: "Vol Declining — Coil",     position: "bottom" },
+        { dataIndex: 13, label: "Volume Surge — Breakout ✓",position: "top"    }
       ]
     },
 
     lessonChart: {
       title: "Selling Volume Exhaustion — Reversal Setup",
       type: "candlestick",
+      chartHeight: 440,
+      volume: { spikes: { 11: 1.9, 12: 1.7, 18: 1.6, 19: 1.8, 20: 2.2 } },
       labels: ltLabels(16),
       ohlc: ltCandles(108, [
         { to: 82, bars: 7 },
-        { to: 79, bars: 1 },
+        { to: 81.5, bars: 1 },
         { to: 85, bars: 1 },
         { to: 91, bars: 1 },
         { to: 103, bars: 6 }
-      ], { seed: 107, wick: 0.4 }),
+      ], { seed: 87, wick: 0.4 }),
       markAreas: [
-        { y0: 75, y1: 80, label: "Support / Demand Zone", color: "rgba(0,212,212,0.07)" }
+        { y0: 78, y1: 82, label: "Support / Demand Zone", color: "rgba(0,212,212,0.07)" }
       ],
       markPoints: [
-        { dataIndex:  2, label: "Strong Sell Vol",       position: "bottom" },
-        { dataIndex:  6, label: "Declining Sell Vol ⚠️", position: "bottom" },
-        { dataIndex:  8, label: "Buyers Step In!",       position: "bottom" },
-        { dataIndex:  9, label: "Reversal Confirmed",    position: "top"    }
+        { dataIndex:  2, label: "Strong Sell Vol",     position: "bottom" },
+        { dataIndex:  6, label: "MS 1 (Down)",         position: "bottom" },
+        { dataIndex:  7, label: "MS 2 (Doji)",         position: "bottom" },
+        { dataIndex:  8, label: "MS 3 — Buyers Step In",position: "top"   },
+        { dataIndex:  9, label: "Vol Recovery ✓",      position: "top"    }
       ]
     },
 
@@ -979,6 +1032,8 @@ const LT_CHAPTERS_2 = [
       chart: {
         title: "Volume Spike on Breakout — What Does It Mean?",
         type: "candlestick",
+        chartHeight: 440,
+        volume: { spikes: { 10: 1.43, 11: 1.06, 12: 0.87, 13: 1.14, 14: 0.46, 15: 0.89, 16: 0.41, 17: 0.49, 18: 0.76, 19: 0.33, 20: 2.6 } },
         cutIndex: 10,
         labels: ltLabels(15),
         ohlc: ltCandles(87, [
@@ -1016,6 +1071,21 @@ const LT_CHAPTERS_2 = [
     tag: "Module 3 · Session 5",
     module: "Price Action Concepts",
     videoUrl: "https://www.youtube.com/embed/j1aBq0tLg2o",
+    // Bespoke interactive section (its own step after the Introduction) — a browse/hover
+    // library of the classical patterns (lt-patternlib.js). Does NOT touch this chapter's charts.
+    demo: {
+      kind: "patternlib",
+      label: "Pattern Library",
+      after: "intro",
+      heading: "The Classical Chart Pattern Library",
+      body: "The formations that repeat across every market and timeframe. Hover any pattern to see how it forms and the exact trade it hands you — the breakout, where the stop belongs, and the measured-move target.",
+      bullets: [
+        "Continuation patterns (flags, triangles) pause a trend before it resumes; reversal patterns (tops/bottoms, head &amp; shoulders) end it; wedges can do either, depending on where they form",
+        "Every pattern gives a predefined entry, stop and target — that is the whole point of trading them",
+        "Trade a pattern only AFTER it completes (the breakout / neckline break) — never anticipate it",
+        "The dot on each card marks the outcome: teal = bullish, pink = bearish"
+      ]
+    },
 
     intro: {
       heading: "Patterns Provide Structure — Not Predictions",
@@ -1036,32 +1106,43 @@ const LT_CHAPTERS_2 = [
       bullets: [
         "<strong>Bull Flag:</strong> bullish continuation; only trade in uptrends; descending channel after a sharp pole; volume declines in flag then spikes on breakout; target = height of pole from breakout point",
         "<strong>Bear Flag:</strong> bearish continuation; only in downtrends; ascending channel after a sharp downward pole; volume declines in flag then spikes on breakdown; target = height of pole from breakdown",
-        "<strong>Rising Wedge:</strong> bearish; higher highs outpace higher lows; volume declines into wedge → spike on breakdown",
+        "<strong>Rising Wedge:</strong> bearish; higher lows outpace higher highs — the two rising lines converge; volume declines into wedge → spike on breakdown",
         "<strong>Falling Wedge:</strong> bullish; lower highs outpace lower lows; volume declines into wedge → spike on breakout",
         "<strong>Head & Shoulders (H&S):</strong> bearish reversal at TOP of trend; left shoulder → head (highest) → right shoulder (lower than head) → neckline break; target = head-to-neckline distance",
         "<strong>Inverse H&S:</strong> bullish reversal at BOTTOM of trend; same structure inverted; neckline breakout is the entry",
         "<strong>Ascending Triangle:</strong> higher lows + flat top resistance; bullish bias; target = height of triangle from breakout",
-        "<strong>Descending Triangle:</strong> lower highs + flat bottom support; bearish bias; target = height of triangle from breakdown"
+        "<strong>Descending Triangle:</strong> lower highs + flat bottom support; bearish bias; target = height of triangle from breakdown",
+        "<strong>Symmetrical Triangle:</strong> lower highs AND higher lows converging; no directional bias — trade the confirmed break; target = height of the triangle",
+        "<strong>Pennant:</strong> a small symmetrical triangle after a sharp pole; continuation pattern; target = the pole height from the break"
       ]
     },
 
     introChart: {
       title: "Bull Flag — Continuation Pattern Structure",
+      markLines: [ { yAxis: 123, label: "Target = pole height from flag low (123)", color: "#ffcc00" },
+        { yAxis: 100, label: "Flag Resistance (broken)", color: "#00d4d4" }
+      ],
       type: "candlestick",
+      volume: { spikes: { 21: 2.4 } },
       chartHeight: 480,
       labels: ltLabels(18),
       ohlc: ltCandles(70, [
-        { to: 102, bars: 7 },
-        { to: 92,  bars: 7 },
-        { to: 108, bars: 1 },
-        { to: 112, bars: 3 }
+        { to: 100, bars: 6 },
+        { to: 96,  bars: 2 },
+        { to: 93,  bars: 3 },
+        { to: 104, bars: 2 },
+        { to: 100, bars: 1 },
+        { to: 123, bars: 4 }
       ], { seed: 109, wick: 0.4 }),
+      markAreas: [
+        { y0: 93, y1: 100, label: "Flag — Descending Channel", color: "rgba(0,212,212,0.06)" }
+      ],
       markPoints: [
         { dataIndex:  0, label: "Pole Start",    position: "bottom" },
-        { dataIndex:  6, label: "Pole Top",      position: "top"    },
-        { dataIndex:  7, label: "Flag Begins",   position: "top"    },
-        { dataIndex: 13, label: "Vol Declining", position: "bottom" },
-        { dataIndex: 14, label: "BREAKOUT ↑",    position: "top"    },
+        { dataIndex:  5, label: "Pole Top",      position: "top"    },
+        { dataIndex:  8, label: "Flag (LH/LL)",  position: "bottom" },
+        { dataIndex: 11, label: "BREAKOUT ↑",    position: "top"    },
+        { dataIndex: 13, label: "Retest Entry",  position: "bottom" },
         { dataIndex: 17, label: "Target",        position: "top"    }
       ]
     },
@@ -1069,28 +1150,28 @@ const LT_CHAPTERS_2 = [
     lessonChart: {
       title: "Head & Shoulders — Bearish Reversal at Trend Top",
       type: "candlestick",
+      volume: { profile: "pattern" },
       chartHeight: 480,
       labels: ltLabels(20),
       ohlc: ltCandles(76, [
-        { to: 88, bars: 2 },
-        { to: 82, bars: 2 },
-        { to: 98, bars: 3 },
-        { to: 82, bars: 4 },
-        { to: 89, bars: 1 },
-        { to: 78, bars: 3 },
-        { to: 82, bars: 2 },
-        { to: 65, bars: 3 }
-      ], { seed: 110, wick: 0.4 }),
-      markLines: [
+        { to: 88,   bars: 3 },
+        { to: 81.5, bars: 2 },
+        { to: 98,   bars: 3 },
+        { to: 82.5, bars: 3 },
+        { to: 89,   bars: 3 },
+        { to: 78,   bars: 2 },
+        { to: 82,   bars: 1 },
+        { to: 65,   bars: 3 }
+      ], { seed: 641, wick: 0.3 }),
+      markLines: [ { yAxis: 66, label: "Target = Head→Neckline (66)", color: "#00d4d4" }, { yAxis: 90, label: "Stop — above Right Shoulder", color: "#ff2e88" },
         { yAxis: 82, label: "Neckline", color: "#ffcc00" }
       ],
       markPoints: [
-        { dataIndex:  1, label: "Left Shoulder",      position: "top"    },
-        { dataIndex:  6, label: "Head (Highest)",     position: "top"    },
-        { dataIndex: 11, label: "Right Shoulder",     position: "top"    },
-        { dataIndex: 14, label: "Neckline Break",     position: "bottom" },
-        { dataIndex: 16, label: "Retest (Entry)",     position: "top"    },
-        { dataIndex: 17, label: "Short Confirmed",    position: "top"    }
+        { dataIndex:  2, label: "Left Shoulder",  position: "top"    },
+        { dataIndex:  7, label: "Head (Highest)", position: "top"    },
+        { dataIndex: 13, label: "Right Shoulder", position: "top"    },
+        { dataIndex: 15, label: "Neckline Break", position: "bottom" },
+        { dataIndex: 16, label: "Retest (Entry)", position: "top"    }
       ]
     },
 
@@ -1106,20 +1187,30 @@ const LT_CHAPTERS_2 = [
       chart: {
         title: "Identify the Pattern — What Comes Next?",
         type: "candlestick",
-        cutIndex: 12,
-        labels: ltLabels(15),
+        chartHeight: 440,
+        volume: { spikes: { 23: 2.4 } },
+        cutIndex: 13,
+        labels: ltLabels(16),
         ohlc: ltCandles(110, [
-          { to: 82, bars: 7 },
-          { to: 92, bars: 5 },
-          { to: 91, bars: 1 },
-          { to: 76, bars: 2 }
-        ], { seed: 111, wick: 0.4 })
+          { to: 84, bars: 7 },
+          { to: 92, bars: 4 },
+          { to: 89, bars: 1 },
+          { to: 92, bars: 1 },
+          { to: 62, bars: 3 }
+        ], { seed: 98, wick: 0.3 }),
+        markLines: [
+          { yAxis: 88, label: "Flag Support (lower channel)", color: "#ff2e88" }
+        ],
+        markAreas: [
+          { y0: 88, y1: 92, label: "Ascending Flag (channel)", color: "rgba(255,46,136,0.06)" }
+        ]
       },
       revealMarkPoints: [
-        { dataIndex:  6, label: "Pole Bottom",          position: "bottom", color: "#cc2222" },
-        { dataIndex:  7, label: "Flag Begins",          position: "bottom", color: "#ffcc00" },
-        { dataIndex: 12, label: "Flag Top — Level",     position: "top",    color: "#ffcc00" },
-        { dataIndex: 13, label: "Breakdown! ↓",         position: "bottom", color: "#cc2222" }
+        { dataIndex:  6, label: "Pole Bottom",       position: "bottom", color: "#ff2e88" },
+        { dataIndex:  7, label: "Flag Begins",       position: "bottom", color: "#ffcc00" },
+        { dataIndex: 12, label: "Flag Top — Level",  position: "top",    color: "#ffcc00" },
+        { dataIndex: 13, label: "Breakdown! ↓",      position: "bottom", color: "#ff2e88" },
+        { dataIndex: 15, label: "Target = pole height (62)", position: "bottom", color: "#ffcc00" }
       ],
       explanation: "This is a <strong>Bear Flag</strong> — a bearish continuation pattern. The sharp downward pole confirms the sellers are in control. The ascending channel (the flag) is simply the market retracing against the trend with weak buying on declining volume. When price breaks down through the lower channel boundary, the downtrend resumes and the target is measured as the height of the pole from the breakdown point.",
       rule: "Bear Flag = ascending channel within a downtrend. Volume declines inside the flag. Spike on breakdown confirms. Target = height of the pole."
@@ -1154,8 +1245,8 @@ const LT_CHAPTERS_2 = [
       heading: "Live Examples — Bear Flag, Bull Flag, and Triangles",
       body: "Real pattern trading requires waiting. After the initial breakout or breakdown from a pattern, it is tempting to chase. The experienced trader waits for the retest of the broken channel wall — that retest is the actual LTE entry. The pattern's pole or height measurement gives a predefined target with no guessing required.",
       bullets: [
-        "<strong>Bear Flag execution:</strong> identify downtrend → wait for flag channel to form → Level = upper channel resistance → Trigger = rejection candle at resistance (hanging man) → Entry = breakdown of lower channel support → Stop above flag high → Target = pole distance below breakdown",
-        "<strong>Bull Flag execution:</strong> identify uptrend → wait for flag pullback → Level = lower channel support as Sr flip → Trigger = indecision candle → Entry = breakout above upper channel → Stop below flag low → Target = pole distance above breakout",
+        "<strong>Bear Flag execution:</strong> identify downtrend → wait for flag channel to form → Level = flag resistance (the Sr flip of the broken support) → Trigger = hanging-man rejection at that level → Entry = short at the level once the trigger confirms → Stop above flag high → Target = pole distance below the level",
+        "<strong>Bull Flag execution:</strong> identify uptrend → wait for flag pullback → Level = flag support at the Sr flip → Trigger = indecision candle at the level → Entry = long at the level once the trigger confirms → Stop below flag low → Target = pole distance above the level",
         "<strong>Descending Triangle:</strong> lower highs + flat bottom → breakdown below flat support → Entry = retest of flat bottom from below (old support now resistance) → Target = height of triangle",
         "<strong>Ascending Triangle:</strong> higher lows + flat top resistance → breakout above flat resistance → Entry = retest of flat top from above (old resistance now support) → Target = height of triangle",
         "Daily timeframe patterns take weeks to months to fully play out — patience is mandatory",
@@ -1166,61 +1257,63 @@ const LT_CHAPTERS_2 = [
     introChart: {
       title: "Bear Flag — LTE Execution with Entry, Stop, Target",
       type: "candlestick",
+      volume: { spikes: { 23: 2.4 } },
       chartHeight: 480,
       labels: ltLabels(18),
       ohlc: ltCandles(108, [
         { to: 82, bars: 7 },
-        { to: 99, bars: 5 },
-        { to: 98, bars: 1, reject: 4 },
-        { to: 83, bars: 4 },
-        { to: 78, bars: 1 }
-      ], { seed: 112, wick: 0.4 }),
-      markLines: [
-        { yAxis: 99, label: "Flag Resistance (Level)", color: "#cc2222" }
-      ],
-      markAreas: [
-        { y0: 97, y1: 102, label: "Level Zone", color: "rgba(204,34,34,0.06)" }
+        { to: 93, bars: 3 },
+        { to: 89, bars: 1 },
+        { to: 93.5, bars: 1 },
+        { to: 93, bars: 1, reject: 2.5 },
+        { to: 88, bars: 1 },
+        { to: 67, bars: 4 }
+      ], { seed: 164, wick: 0.4 }),
+      markLines: [ { yAxis: 95, label: "Stop — Above Flag High", color: "#ff2e88" }, { yAxis: 67, label: "Target — Pole Distance", color: "#ffcc00" },
+        { yAxis: 93, label: "Flag Resistance (Level)", color: "#ff2e88" },
+        { yAxis: 89, label: "Flag Support (lower channel)", color: "#00d4d4" }
       ],
       markPoints: [
-        { dataIndex:  6, label: "Pole Bottom",         position: "bottom" },
-        { dataIndex:  7, label: "Flag Begins",         position: "bottom" },
-        { dataIndex: 11, label: "Level (Sr Resist.)",  position: "top"    },
-        { dataIndex: 12, label: "Trigger (Hanging Man)",position: "top"   },
-        { dataIndex: 13, label: "Entry — Breakdown",   position: "bottom" },
-        { dataIndex: 17, label: "Target Hit",          position: "bottom" }
+        { dataIndex:  6, label: "Pole Bottom",          position: "bottom" },
+        { dataIndex:  7, label: "Flag Begins",          position: "bottom" },
+        { dataIndex: 12, label: "Level + Trigger (Hanging Man)", position: "top" },
+        { dataIndex: 13, label: "Entry — Short at Level", position: "bottom" },
+        { dataIndex: 17, label: "Target Hit",           position: "bottom" }
       ]
     },
 
     lessonChart: {
       title: "Ascending Triangle — Higher Lows + Flat Top → Breakout",
       type: "candlestick",
+      volume: { spikes: { 21: 2.4 } },
       chartHeight: 480,
-      labels: ltLabels(18),
+      labels: ltLabels(17),
       ohlc: ltCandles(76, [
         { to: 80, bars: 2 },
         { to: 92, bars: 3 },
         { to: 86, bars: 2 },
         { to: 92, bars: 2 },
         { to: 88, bars: 2 },
-        { to: 98, bars: 3 },
-        { to: 114, bars: 4 }
-      ], { seed: 113, wick: 0.4 }),
-      markLines: [
+        { to: 95, bars: 2 },
+        { to: 92, bars: 1 },
+        { to: 108, bars: 3 }
+      ], { seed: 444, wick: 0.4 }),
+      markLines: [ { yAxis: 108, label: "Target — Triangle Height", color: "#ffcc00" },
         { yAxis: 92, label: "Flat Top Resistance", color: "#00d4d4" }
       ],
       markPoints: [
-        { dataIndex:  1, label: "Low 1",            position: "bottom" },
-        { dataIndex:  4, label: "Resistance Touch 1",position: "top"   },
-        { dataIndex:  6, label: "Higher Low",       position: "bottom" },
-        { dataIndex:  8, label: "Resistance Touch 2",position: "top"   },
-        { dataIndex: 10, label: "Higher Low 2",     position: "bottom" },
-        { dataIndex: 13, label: "BREAKOUT ↑",       position: "top"    },
-        { dataIndex: 17, label: "Target",           position: "top"    }
+        { dataIndex:  4, label: "Resistance Touch 1", position: "top"    },
+        { dataIndex:  6, label: "Higher Low",         position: "bottom" },
+        { dataIndex:  8, label: "Resistance Touch 2", position: "top"    },
+        { dataIndex: 10, label: "Higher Low 2",       position: "bottom" },
+        { dataIndex: 11, label: "BREAKOUT ↑",         position: "top"    },
+        { dataIndex: 13, label: "Entry — Retest",     position: "bottom" },
+        { dataIndex: 16, label: "Target",             position: "top"    }
       ]
     },
 
     quiz: {
-      question: "Price is making lower highs on every rally while repeatedly bouncing off the same flat support level — touching it three times without breaking lower. The pattern has now formed a fourth lower high. What pattern is this, and what should you expect next?",
+      question: "Price is making lower highs on every rally while repeatedly bouncing off the same flat support level — touching it four times without breaking lower. The pattern has now formed a third lower high. What pattern is this, and what should you expect next?",
       hint: "Lower highs converging on flat support = a specific triangle pattern with a strong directional bias. What is it called, and which direction does it typically resolve?",
       style: "direction",
       answers: [
@@ -1231,28 +1324,30 @@ const LT_CHAPTERS_2 = [
       chart: {
         title: "Lower Highs + Flat Support — What Is This Pattern?",
         type: "candlestick",
-        cutIndex: 11,
+        chartHeight: 440,
+        volume: { spikes: { 22: 2.4 } },
+        cutIndex: 12,
         labels: ltLabels(15),
         ohlc: ltCandles(98, [
-          { to: 84, bars: 2 },
+          { to: 84, bars: 2, reject: 0.8 },
           { to: 95, bars: 1 },
-          { to: 84, bars: 3 },
+          { to: 84, bars: 3, reject: 0.8 },
           { to: 91, bars: 1 },
-          { to: 84, bars: 2 },
+          { to: 84, bars: 2, reject: 0.8 },
           { to: 88, bars: 1 },
-          { to: 84, bars: 2 },
+          { to: 84, bars: 2, reject: 0.8 },
           { to: 73, bars: 3 }
-        ], { seed: 114, wick: 0.4 }),
+        ], { seed: 94, wick: 0.15 }),
         markLines: [
           { yAxis: 84, label: "Flat Support", color: "#ffcc00" }
         ]
       },
-      revealMarkPoints: [
-        { dataIndex:  2, label: "LH 1",            position: "top",    color: "#cc2222" },
-        { dataIndex:  6, label: "LH 2",            position: "top",    color: "#cc2222" },
-        { dataIndex:  9, label: "LH 3",            position: "top",    color: "#cc2222" },
+      revealMarkPoints: [ { dataIndex: 14, label: "Target — Triangle Height", position: "bottom", color: "#ffcc00" },
+        { dataIndex:  2, label: "LH 1",            position: "top",    color: "#ff2e88" },
+        { dataIndex:  6, label: "LH 2",            position: "top",    color: "#ff2e88" },
+        { dataIndex:  9, label: "LH 3",            position: "top",    color: "#ff2e88" },
         { dataIndex: 11, label: "Setup Complete",  position: "top",    color: "#ffcc00" },
-        { dataIndex: 12, label: "Breakdown! ↓",    position: "bottom", color: "#cc2222" }
+        { dataIndex: 12, label: "Breakdown! ↓",    position: "bottom", color: "#ff2e88" }
       ],
       explanation: "This is a <strong>Descending Triangle</strong> — lower highs converging on flat support. Each successive rally is weaker than the last; sellers are gaining the upper hand. The flat support level has been tested multiple times, progressively weakening it (Rule of Fives). When price finally breaks below the flat support — especially on a volume spike — the measured target is the height of the triangle projected downward from the breakdown point.",
       rule: "Descending Triangle = lower highs + flat support. Bearish bias. Entry on retest of broken flat support from below. Target = triangle height."
@@ -1269,6 +1364,21 @@ const LT_CHAPTERS_2 = [
     tag: "Module 4 · Session 1",
     module: "Trading Tools",
     videoUrl: "https://www.youtube.com/embed/RZjYkrjOqt0",
+    // Bespoke interactive section (its own step after the Introduction) — the animated
+    // Fibonacci retracement demo (lt-fib.js). Charts untouched.
+    demo: {
+      kind: "fib",
+      label: "Fib in Motion",
+      after: "intro",
+      heading: "Watch a Retracement Find the Golden Pocket",
+      body: "Fibonacci measures a pullback against the impulse that came before it. Watch the levels fan out across a move, then price retrace into the 0.618–0.65 <strong>golden pocket</strong> — the most-watched entry zone — and bounce.",
+      bullets: [
+        "Anchor the tool from the swing high to the swing low of the leg you're measuring — the levels fan out between the two anchors",
+        "The <strong>0.618–0.65</strong> golden pocket is where the highest-probability entries cluster",
+        "Fibonacci is a <em>confluence</em> tool — it's strongest when a level lines up with S/R or a zone, not used alone",
+        "Enter on a reaction AT the level (a trigger), never on the level touching alone"
+      ]
+    },
 
     intro: {
       heading: "The Golden Ratio in Markets",
@@ -1312,8 +1422,12 @@ const LT_CHAPTERS_2 = [
       indicator: "fibonacci",
       fibHigh: 120,
       fibLow: 80,
-      fibLevels: [0, 0.236, 0.382, 0.5, 0.618, 0.786, 1],
-      markLines: [],
+      fibLevels: [0, 0.5, 0.618, 1],
+      markLines: [
+        { yAxis: 95,  label: "Entry — 61.8%", color: "#00d4d4" },
+        { yAxis: 78,  label: "Stop — below swing low", color: "#ff2e88" },
+        { yAxis: 118, label: "Target — new highs", color: "#ffcc00" }
+      ],
       markAreas: [
         { y0: 93, y1: 97, label: "61.8% Support Zone", color: "rgba(0,212,212,0.07)" }
       ],
@@ -1340,10 +1454,10 @@ const LT_CHAPTERS_2 = [
       fibHigh: 120,
       fibLow: 80,
       fibDirection: "up",
-      fibLevels: [0, 0.236, 0.382, 0.5, 0.618, 0.786, 1],
-      markLines: [],
+      fibLevels: [0, 0.5, 0.618, 1],
+      markLines: [ { yAxis: 122, label: "Stop — above swing high", color: "#ff2e88" }, { yAxis: 83, label: "Target — swing low / support", color: "#00d4d4" },],
       markAreas: [
-        { y0: 103, y1: 107, label: "61.8% Resistance Zone", color: "rgba(204,34,34,0.07)" }
+        { y0: 103, y1: 107, label: "61.8% Resistance Zone", color: "rgba(255,46,136,0.07)" }
       ],
       markPoints: [
         { dataIndex:  0, label: "Swing High",             position: "top"    },
@@ -1365,18 +1479,17 @@ const LT_CHAPTERS_2 = [
       chart: {
         title: "Sr Flip + 61.8% Fib — High-Probability Confluence Zone",
         type: "candlestick",
-        cutIndex: 11,
+        cutIndex: 12,
         labels: ltLabels(15),
         ohlc: ltCandles(80, [
-          { to: 91,  bars: 2 },
-          { to: 95,  bars: 1 },
-          { to: 111, bars: 8 },
-          { to: 92,  bars: 1 },
-          { to: 99,  bars: 1 },
-          { to: 111, bars: 2 }
+          { to: 92,  bars: 3 },
+          { to: 86,  bars: 2 },
+          { to: 92,  bars: 2 },
+          { to: 111, bars: 3 },
+          { to: 92,  bars: 2, reject: 3 },
+          { to: 111, bars: 3 }
         ], { seed: 117, wick: 0.4 }),
         markLines: [
-          { yAxis: 99.2, label: "38.2% Fib",        color: "#888888" },
           { yAxis: 95.5, label: "50% Fib",          color: "#ffcc00" },
           { yAxis: 92,   label: "61.8% + Sr Flip",  color: "#00d4d4" }
         ],
@@ -1385,11 +1498,12 @@ const LT_CHAPTERS_2 = [
         ]
       },
       revealMarkPoints: [
-        { dataIndex:  2, label: "Sr Flip Level",          position: "top",    color: "#00d4d4" },
-        { dataIndex: 11, label: "61.8% + Sr Flip ✓",     position: "bottom", color: "#00d4d4" },
-        { dataIndex: 12, label: "Bounce Confirmed",       position: "top",    color: "#00d4d4" }
+        { dataIndex:  2, label: "Resistance (92)",     position: "top",    color: "#ff2e88" },
+        { dataIndex:  6, label: "Sr Flip Level",       position: "top",    color: "#00d4d4" },
+        { dataIndex: 11, label: "61.8% + Sr Flip ✓",  position: "bottom", color: "#00d4d4" },
+        { dataIndex: 12, label: "Bounce Confirmed",    position: "top",    color: "#00d4d4" }
       ],
-      explanation: "The <strong>Sr flip</strong> at 92 (old resistance broken in D3, now acting as support) and the <strong>61.8% Fibonacci retracement</strong> of the full swing both point to the same price zone. This is <strong>confluence</strong> — two independent technical tools agreeing on the same level. The long lower wick at that zone shows buyers defending it. This is the highest-probability LTE level you can find: a predefined S/R zone amplified by a Fibonacci level.",
+      explanation: "The <strong>Sr flip</strong> at 92 (old resistance broken early in the move, now acting as support) and the <strong>61.8% Fibonacci retracement</strong> of the full swing both point to the same price zone. This is <strong>confluence</strong> — two independent technical tools agreeing on the same level. The long lower wick at that zone shows buyers defending it. This is the highest-probability LTE level you can find: a predefined S/R zone amplified by a Fibonacci level.",
       rule: "S/R levels come FIRST. Fibonacci adds precision and confluence. When 61.8% aligns with a Sr flip, treat that zone as a high-priority LTE Level."
     }
   },
@@ -1404,6 +1518,21 @@ const LT_CHAPTERS_2 = [
     tag: "Module 4 · Session 2",
     module: "Trading Tools",
     videoUrl: "https://www.youtube.com/embed/DwSbAuSXYS4",
+    // Bespoke interactive section (its own step after the Introduction) — the Ichimoku
+    // Cloud Explorer (lt-ichimoku.js): toggle each component on/off. Charts untouched.
+    demo: {
+      kind: "ichimoku",
+      label: "Cloud Explorer",
+      after: "intro",
+      heading: "Build the Ichimoku Cloud, One Line at a Time",
+      body: "Ichimoku looks intimidating because it draws five things at once. Toggle each component on and off — or hover a chip to isolate it — to see exactly what each line adds and how they combine into a single one-glance read of trend, momentum and support/resistance.",
+      bullets: [
+        "<strong>Tenkan</strong> (fast) and <strong>Kijun</strong> (slow) are momentum lines — their cross is a trigger, and price tends to snap back to them",
+        "The <strong>Kumo</strong> (cloud) is projected forward: price above it is bullish, below is bearish; thicker = stronger",
+        "The <strong>Chikou</strong> is the close plotted back in time — clear space around it confirms the trend",
+        "You rarely trade one line alone — the edge is in the confluence of all five agreeing"
+      ]
+    },
 
     intro: {
       heading: "Equilibrium at One Glance",
@@ -1424,9 +1553,9 @@ const LT_CHAPTERS_2 = [
       bullets: [
         "<strong>Tenkan-sen (Conversion Line):</strong> fast moving average (avg of high+low over short period); most responsive to recent price action",
         "<strong>Kijun-sen (Baseline):</strong> slow moving average (avg of high+low over longer period); the most important component; price above = bullish, below = bearish; used as trailing stop",
-        "<strong>Senkou Span A:</strong> average of Tenkan + Kijun; forms one boundary of the Cloud; plotted 26 periods ahead",
-        "<strong>Senkou Span B:</strong> avg of high+low over longest lookback; forms the other boundary; plotted 26 periods ahead",
-        "<strong>Chikou Span (Lagging Span):</strong> current price plotted 26 periods back; above past price = bullish, below = bearish",
+        "<strong>Senkou Span A:</strong> average of Tenkan + Kijun; forms one boundary of the Cloud; plotted ahead by the displacement (30 with these settings)",
+        "<strong>Senkou Span B:</strong> avg of high+low over longest lookback; forms the other boundary; plotted the same displacement ahead",
+        "<strong>Chikou Span (Lagging Span):</strong> current price plotted the displacement back; above past price = bullish, below = bearish",
         "<strong>Bullish Kumo:</strong> Senkou Span A above B = green cloud = support zone ahead",
         "<strong>Bearish Kumo:</strong> Senkou Span B above A = red cloud = resistance zone ahead",
         "<strong>Kumo Twist:</strong> Span A crosses Span B — signal of a potential trend change; look for this ahead of price"
@@ -1453,9 +1582,8 @@ const LT_CHAPTERS_2 = [
       markLines: [],
       markAreas: [],
       markPoints: [
-        { dataIndex:  1, label: "Tenkan Retest",          position: "bottom" },
         { dataIndex:  3, label: "Above All — Bullish ✓",  position: "top"    },
-        { dataIndex: 10, label: "Kijun = Dynamic Support",position: "bottom" },
+        { dataIndex: 10, label: "Holds Above Kijun",       position: "bottom" },
         { dataIndex: 19, label: "Trend Intact",           position: "top"    }
       ]
     },
@@ -1465,27 +1593,20 @@ const LT_CHAPTERS_2 = [
       type: "candlestick",
       chartHeight: 520,
       labels: ltLabels(18),
-      ohlc: ltCandles(82, [
-        { to: 80, bars: 3 },
-        { to: 82, bars: 4 },
-        { to: 83, bars: 1 },
-        { to: 88, bars: 2 },
-        { to: 94, bars: 1 },
-        { to: 97, bars: 1 },
-        { to: 116, bars: 6 }
+      ohlc: ltCandles(108, [
+        { to: 78, bars: 9 },
+        { to: 80, bars: 2 },
+        { to: 120, bars: 7 }
       ], { seed: 119, wick: 0.35 }),
       indicator: "ichimoku",
-      tenkan: [79,78,77,78,80,81,82,85,88,90,91,94,97,100,103,106,109,113],
-      kijun:  [81,80,79,79,80,80,81,83,85,87,88,90,92,95,98,101,104,107],
-      spanA:  [80,79,78,78.5,80,80.5,81.5,84,86.5,88.5,89.5,92,94.5,97.5,100.5,103.5,106.5,110],
-      spanB:  [88,87,87,86,86,85,85,87,89,91,88,87,88,90,93,96,99,102],
+      ichiLookback: false,
       markLines: [],
       markAreas: [],
       markPoints: [
-        { dataIndex:  2, label: "Below Cloud (Bearish)", position: "bottom" },
-        { dataIndex:  7, label: "Entering Cloud",        position: "bottom" },
-        { dataIndex: 10, label: "Kumo Twist → Bullish",  position: "top"    },
-        { dataIndex: 11, label: "Above Cloud ✓",         position: "top"    }
+        { dataIndex:  5, label: "Below Cloud (Bearish)", position: "bottom" },
+        { dataIndex: 14, label: "Price Reclaims Cloud",  position: "bottom" },
+        { dataIndex: 23, label: "Kumo Twist → Bullish",  position: "top"    },
+        { dataIndex: 16, label: "Above Cloud ✓",         position: "top"    }
       ]
     },
 
@@ -1509,12 +1630,8 @@ const LT_CHAPTERS_2 = [
           { to: 103, bars: 1 },
           { to: 114, bars: 4 }
         ], { seed: 120, wick: 0.35 }),
-        markLines: [
-          { yAxis: 85, label: "Kijun-sen", color: "#cc2222" }
-        ],
-        markAreas: [
-          { y0: 78, y1: 86, label: "Kumo (Bullish Cloud)", color: "rgba(0,180,80,0.08)" }
-        ]
+        markLines: [],
+        markAreas: []
       },
       revealMarkPoints: [
         { dataIndex:  0, label: "Above Cloud ✓",   position: "top",    color: "#00d4d4" },
@@ -1540,7 +1657,7 @@ const LT_CHAPTERS_2 = [
 
     intro: {
       heading: "The Kumo Breakout — Four Prerequisites, One Entry",
-      body: "Ichimoku's power comes from requiring ALL four prerequisites to align before entering a Kumo Breakout trade. This checklist eliminates low-quality signals and keeps you out of choppy markets. The Live ETH example shows how a trade entered at 640 with all four prerequisites confirmed rode to 1,035+ using only the Kijun as a trailing stop — capturing the full meat of the trend.",
+      body: "Ichimoku's power comes from requiring ALL four prerequisites to align before entering a Kumo Breakout trade. This checklist eliminates low-quality signals and keeps you out of choppy markets. The live BTCUSD example shows how a trade entered at 640 with all four prerequisites confirmed rode to 1,035+ using only the Kijun as a trailing stop — capturing the full meat of the trend.",
       bullets: [
         "P1: Price closing ABOVE the Kumo (for longs) / BELOW the Kumo (for shorts)",
         "P2: Price closing ABOVE the Kijun-sen (for longs) / BELOW Kijun (for shorts)",
@@ -1559,7 +1676,7 @@ const LT_CHAPTERS_2 = [
         "<strong>Entry Option 2 (Tenkan Retest):</strong> wait for price to pull back to the Tenkan-sen after prerequisites are met; place bids at Tenkan; cleaner entry, slightly lower risk",
         "<strong>Entry Option 3 (Sr Flip LTE):</strong> wait for a retest of a key Sr flip level using the full LTE framework; most conservative and highest probability entry",
         "<strong>Exit — Kijun Trailing Stop:</strong> move stop to below Kijun as each new higher high is set; Kijun dynamically follows the trend; when price CLOSES below Kijun = exit signal",
-        "<strong>ETH Live Example:</strong> all 4 prerequisites met at 640 → enter at Tenkan retest → stop at Kijun (603) → rode from 640 to 1,035+ → exited at 890 on Kijun close = massive win",
+        "<strong>BTCUSD Live Example:</strong> all 4 prerequisites met → the Tenkan bid was front-run (price never came back to it) → the actual entry was the S/R-flip retest at 640 → stop at Kijun (603) → rode from 640 to 1,035+ → exited at 890 on Kijun close = massive win",
         "Fake-outs exist — always wait for the candle to CLOSE below Kijun before exiting; do not react mid-candle",
         "Partial profits at key swing levels are also valid inside an Ichimoku trend trade"
       ]
@@ -1569,30 +1686,25 @@ const LT_CHAPTERS_2 = [
       title: "Kumo Breakout — All Four Prerequisites Met",
       type: "candlestick",
       chartHeight: 520,
-      labels: ltLabels(16),
-      ohlc: ltCandles(84, [
-        { to: 87, bars: 5 },
-        { to: 91, bars: 1 },
-        { to: 90, bars: 1 },
-        { to: 91, bars: 1 },
-        { to: 97, bars: 1 },
-        { to: 101, bars: 1 },
-        { to: 104, bars: 1 },
-        { to: 120, bars: 5 }
+      labels: ltLabels(20),
+      indicator: "ichimoku",
+      ichiLookback: false,
+      ichi: { disp: 4 },
+      ohlc: ltCandles(100, [
+        { to: 82, bars: 7 },
+        { to: 84, bars: 2 },
+        { to: 120, bars: 7 },
+        { to: 126, bars: 4 }
       ], { seed: 121, wick: 0.35 }),
-      markLines: [
-        { yAxis: 86, label: "Kijun-sen", color: "#cc2222" }
-      ],
-      markAreas: [
-        { y0: 82, y1: 88, label: "Kumo", color: "rgba(0,180,80,0.07)" }
-      ],
+      markLines: [],
+      markAreas: [],
       markPoints: [
-        { dataIndex:  4, label: "Entering Cloud",     position: "bottom" },
-        { dataIndex:  5, label: "P1: Above Cloud ✓",  position: "top"    },
-        { dataIndex:  7, label: "P2: Above Kijun ✓",  position: "bottom" },
-        { dataIndex:  8, label: "P3: Kumo Twist ✓",   position: "top"    },
-        { dataIndex:  9, label: "P4: Chikou Above ✓", position: "top"    },
-        { dataIndex: 10, label: "ENTRY ✔",            position: "top"    }
+        { dataIndex:  4, label: "Below Cloud (Bearish)", position: "bottom" },
+        { dataIndex: 16, label: "P3: Kumo Twist ✓",      position: "top"    },
+        { dataIndex: 17, label: "P1: Above Cloud ✓",     position: "top"    },
+        { dataIndex: 17, label: "P2: Above Kijun ✓",     position: "bottom" },
+        { dataIndex: 18, label: "P4: Chikou Above ✓",    position: "top"    },
+        { dataIndex: 19, label: "ENTRY ✔",               position: "top"    }
       ]
     },
 
@@ -1604,19 +1716,22 @@ const LT_CHAPTERS_2 = [
       ohlc: ltCandles(85, [
         { to: 98,  bars: 5 },
         { to: 107, bars: 4 },
-        { to: 115, bars: 4 },
+        { to: 116, bars: 4 },
         { to: 118, bars: 3 },
-        { to: 112, bars: 2 }
+        { to: 108, bars: 2 }
       ], { seed: 122, wick: 0.4 }),
       markLines: [
-        { yAxis: 85, label: "Entry",        color: "#00d4d4" },
-        { yAxis: 82, label: "Initial Stop", color: "#cc2222" }
+        { yAxis: 85,  label: "Entry",                    color: "#00d4d4" },
+        { yAxis: 82,  label: "Initial Stop",             color: "#ff2e88" },
+        { yAxis: 94,  label: "Kijun Trail 1",            color: "#ff2e88" },
+        { yAxis: 103, label: "Kijun Trail 2",            color: "#ff2e88" },
+        { yAxis: 110, label: "Final Kijun (trailing stop)", color: "#ff2e88" }
       ],
       markPoints: [
         { dataIndex:  0, label: "Entry",              position: "bottom" },
-        { dataIndex:  4, label: "Trail Kijun ↑",      position: "bottom" },
-        { dataIndex:  8, label: "Trail Kijun ↑",      position: "bottom" },
-        { dataIndex: 12, label: "Trail Kijun ↑",      position: "bottom" },
+        { dataIndex:  4, label: "Kijun → 94",         position: "top"    },
+        { dataIndex:  8, label: "Kijun → 103",        position: "top"    },
+        { dataIndex: 12, label: "Kijun → 110",        position: "top"    },
         { dataIndex: 17, label: "Close < Kijun EXIT", position: "bottom" }
       ]
     },
@@ -1634,20 +1749,16 @@ const LT_CHAPTERS_2 = [
         title: "All 4 Prerequisites Met — Tenkan Pullback. What Now?",
         type: "candlestick",
         indicator: "ichimoku",
-        cutIndex: 10,
+        cutIndex: 11,
         labels: ltLabels(14),
         ohlc: ltCandles(90, [
           { to: 107, bars: 10 },
-          { to: 100, bars: 1 },
+          { to: 103.5, bars: 1 },
           { to: 107, bars: 1 },
           { to: 113, bars: 2 }
-        ], { seed: 123, wick: 0.35 }),
-        markLines: [
-          { yAxis: 88, label: "Kijun-sen",  color: "#cc2222" },
-          { yAxis: 100, label: "Tenkan-sen", color: "#00d4d4" }
-        ],
+        ], { seed: 94, wick: 0.35 }),
         markAreas: [
-          { y0: 80, y1: 88, label: "Kumo", color: "rgba(0,180,80,0.06)" }
+          { y0: 80, y1: 88, label: "Bullish Kumo pocket", color: "rgba(40,200,120,0.06)" }
         ]
       },
       revealMarkPoints: [
@@ -1700,24 +1811,30 @@ const LT_CHAPTERS_2 = [
 
     introChart: {
       title: "RSI Overbought — Caution Zone, Not a Standalone Short",
+      markLines: [ { yAxis: 107, label: "Resistance — the S/R that validates the OB reversal", color: "#ff2e88" } ],
       type: "candlestick",
       chartHeight: 480,
       labels: ltLabels(18),
       ohlc: ltCandles(80, [
+        { to: 76,  bars: 2 },
         { to: 107, bars: 7 },
-        { to: 85,  bars: 8 },
+        { to: 85,  bars: 6 },
         { to: 90,  bars: 3 }
-      ], { seed: 124, wick: 0.4 }),
-      indicator: "rsi_zones",
+      ], { seed: 199, wick: 0.4 }),
+      indicator: "rsi",
+      rsiPeriod: 6,
       markPoints: [
-        { dataIndex:  3, label: "RSI Entering OB ↑",         position: "top"    },
-        { dataIndex:  5, label: "RSI Deeply OB — Caution ⚠️",position: "top"    },
-        { dataIndex:  6, label: "Reversal (Not OB Alone!)",   position: "top"    }
+        { dataIndex:  4, label: "RSI Entering OB ↑",          position: "top"    },
+        { dataIndex:  8, label: "RSI Deeply OB — Caution", position: "top", icon: "warn" },
+        { dataIndex:  9, label: "Reversal (Not OB Alone!)",   position: "top", color: "#ff2e88" }
       ]
     },
 
     lessonChart: {
       title: "Oversold at Support — Confluence = High-Probability Long",
+      markLines: [ { yAxis: 92, label: "Long Entry — on reversal confirmation", color: "#00d4d4" },
+        { yAxis: 71.5, label: "Stop — below support", color: "#ff2e88" }
+      ],
       type: "candlestick",
       chartHeight: 480,
       labels: ltLabels(18),
@@ -1725,18 +1842,18 @@ const LT_CHAPTERS_2 = [
         { to: 84, bars: 6 },
         { to: 80, bars: 1 },
         { to: 82, bars: 2 },
-        { to: 80, bars: 1, reject: 5 },
+        { to: 80, bars: 1, reject: 4 },
         { to: 92, bars: 1 },
         { to: 113, bars: 7 }
       ], { seed: 125, wick: 0.4 }),
-      indicator: "rsi_zones",
-      oversoldLevel: 83,
+      indicator: "rsi",
+      rsiPeriod: 6,
       markAreas: [
-        { y0: 77, y1: 83, label: "Support + Oversold Zone", color: "rgba(0,212,212,0.07)" }
+        { y0: 74, y1: 82, label: "Support + Oversold Zone", color: "rgba(0,212,212,0.07)" }
       ],
       markPoints: [
         { dataIndex:  5, label: "RSI Oversold ↓",             position: "bottom" },
-        { dataIndex:  6, label: "Deeply Oversold ⚠️",         position: "bottom" },
+        { dataIndex:  6, label: "Deeply Oversold",           position: "bottom", icon: "warn" },
         { dataIndex:  9, label: "Hammer + OS = Confluence",   position: "bottom" },
         { dataIndex: 10, label: "Reversal Confirmed",         position: "top"    }
       ]
@@ -1754,6 +1871,8 @@ const LT_CHAPTERS_2 = [
       chart: {
         title: "RSI Overbought — Standalone Short Signal?",
         type: "candlestick",
+        indicator: "rsi",
+        rsiPeriod: 6,
         cutIndex: 5,
         labels: ltLabels(12),
         ohlc: ltCandles(82, [
@@ -1783,6 +1902,21 @@ const LT_CHAPTERS_2 = [
     title: "Divergences",
     tag: "Module 4 · Session 5",
     module: "Trading Tools",
+    // Bespoke interactive section (its own step after the Introduction) — the
+    // Divergence Trainer drill (lt-divtrainer.js). Charts untouched.
+    demo: {
+      kind: "divtrainer",
+      label: "Divergence Trainer",
+      after: "intro",
+      heading: "Spot the Divergence — or Prove There Isn't One",
+      body: "Price on top, RSI(6) beneath — computed live from the candles you're looking at. Make the call: regular, hidden, bullish, bearish… or nothing at all. After you answer, the lab draws the two swings on <strong>both</strong> panels and shows the exact numbers that agree or disagree.",
+      bullets: [
+        "Connect tops to tops and bottoms to bottoms, then compare slopes — a divergence exists only when they <em>disagree</em>",
+        "Regular = price makes the more extreme high/low (reversal signal); Hidden = the oscillator does (continuation signal)",
+        "Two of the decks are controls with no divergence at all — calling 'nothing' correctly is half the skill",
+        "Build a streak: the goal is to read the disagreement in seconds, before the annotation appears"
+      ]
+    },
 
     intro: {
       heading: "When Price and the Oscillator Disagree",
@@ -1816,20 +1950,29 @@ const LT_CHAPTERS_2 = [
       type: "candlestick",
       chartHeight: 480,
       labels: ltLabels(16),
-      ohlc: ltCandles(102, [
-        { to: 80, bars: 6 },
+      ohlc: ltCandles(92, [
+        { to: 102, bars: 3 },
+        { to: 80, bars: 4 },
         { to: 84, bars: 2 },
-        { to: 77, bars: 4 },
+        { to: 77, bars: 3 },
         { to: 86, bars: 1 },
         { to: 97, bars: 3 }
-      ], { seed: 127, wick: 0.4 }),
+      ], { seed: 614, wick: 0.4 }),
+      indicator: "rsi",
+      rsiPeriod: 6,
       markAreas: [
         { y0: 75, y1: 81, label: "Support Zone", color: "rgba(0,212,212,0.07)" }
       ],
       markPoints: [
-        { dataIndex:  5, label: "Price LL1 | Osc. Low 1",                          position: "bottom" },
-        { dataIndex: 11, label: "Price LL2 (Lower) | Osc. Low 2 (HIGHER) ← Div!", position: "bottom" },
-        { dataIndex: 12, label: "Reversal Begins",                                  position: "top"    }
+        { dataIndex:  6, label: "Price LL1",         position: "bottom" },
+        { dataIndex: 11, label: "Price LL2 — Lower", position: "bottom" },
+        { dataIndex: 12, label: "Reversal Begins",   position: "top"    }
+      ],
+      // Annotate the OSCILLATOR itself so the divergence is visible on the RSI line:
+      // price makes a lower low while the oscillator makes a HIGHER low.
+      rsiMarkPoints: [
+        { dataIndex:  6, label: "Osc Low 1",          position: "bottom", color: "#00d4d4" },
+        { dataIndex: 11, label: "Osc Low 2 — Higher", position: "top",    color: "#00d4d4" }
       ]
     },
 
@@ -1845,13 +1988,15 @@ const LT_CHAPTERS_2 = [
         { to: 96,  bars: 1 },
         { to: 87,  bars: 3 }
       ], { seed: 128, wick: 0.4 }),
+      indicator: "rsi",
+      rsiPeriod: 6,
       markAreas: [
-        { y0: 101, y1: 108, label: "Resistance Zone", color: "rgba(204,34,34,0.07)" }
+        { y0: 101, y1: 108, label: "Resistance Zone", color: "rgba(255,46,136,0.07)" }
       ],
       markPoints: [
         { dataIndex:  5, label: "Price HH1 | Osc. High 1",                          position: "top" },
         { dataIndex: 11, label: "Price HH2 (Higher) | Osc. High 2 (LOWER) ← Div!", position: "top" },
-        { dataIndex: 12, label: "Reversal Down",                                     position: "top" }
+        { dataIndex: 12, label: "Candlestick Trigger → Reversal Down",                                     position: "top" }
       ]
     },
 
@@ -1867,26 +2012,35 @@ const LT_CHAPTERS_2 = [
       chart: {
         title: "Price HH + Oscillator LH — Name This Divergence",
         type: "candlestick",
-        cutIndex: 11,
-        labels: ltLabels(14),
+        cutIndex: 15,
+        labels: ltLabels(19),
+        // Widened so BOTH peaks and the full oscillator divergence are visible before the
+        // decision (it's a "name this" read): price prints a higher high (idx14) while the
+        // RSI prints a LOWER high. Seed 106 harness-verified (price HH2>HH1; RSI HH2<HH1).
         ohlc: ltCandles(80, [
-          { to: 102, bars: 6 },
-          { to: 97,  bars: 3 },
-          { to: 106, bars: 3 },
-          { to: 96,  bars: 1 },
-          { to: 90,  bars: 1 }
-        ], { seed: 129, wick: 0.4 }),
+          { to: 102, bars: 7 },
+          { to: 96,  bars: 4 },
+          { to: 107, bars: 4 },
+          { to: 96,  bars: 2 },
+          { to: 89,  bars: 2 }
+        ], { seed: 106, wick: 0.4 }),
+        indicator: "rsi",
+        rsiPeriod: 6,
         markAreas: [
-          { y0: 101, y1: 108, label: "Resistance Zone", color: "rgba(204,34,34,0.07)" }
+          { y0: 101, y1: 108, label: "Resistance Zone", color: "rgba(255,46,136,0.07)" }
         ],
         markPoints: [
-          { dataIndex:  5, label: "Price HH1 | Osc. High 1",                          position: "top" },
-          { dataIndex: 11, label: "Price HH2 (Higher) | Osc. High 2 (LOWER) ← Div",  position: "top" }
+          { dataIndex:  6, label: "Price HH1",          position: "top" },
+          { dataIndex: 14, label: "Price HH2 — Higher", position: "top" }
+        ],
+        // Oscillator annotated on the RSI line so the divergence is visible there too.
+        rsiMarkPoints: [
+          { dataIndex:  6, label: "Osc High 1",         position: "bottom", color: "#ff2e88" },
+          { dataIndex: 14, label: "Osc High 2 — Lower", position: "bottom", color: "#ff2e88" }
         ]
       },
       revealMarkPoints: [
-        { dataIndex: 11, label: "Bearish Div. Confirmed",  position: "top",    color: "#cc2222" },
-        { dataIndex: 12, label: "Reversal Begins ↓",       position: "top",    color: "#cc2222" }
+        { dataIndex: 15, label: "Reversal Begins ↓",       position: "top",    color: "#ff2e88" }
       ],
       explanation: "This is a <strong>Regular Bearish Divergence</strong>. Price created a new higher high — suggesting strength. But the RSI made a lower high at the same time — suggesting buyers are losing momentum even as price makes new highs. This disagreement is buyer exhaustion. Found at a resistance zone, it is a high-quality confluence signal to watch for a short trigger. The subsequent reversal confirmed the divergence was valid.",
       rule: "Regular Bearish Div = price HH + oscillator LH = buyer exhaustion → potential reversal DOWN. Never trade it alone — combine with S/R and a candlestick trigger."
@@ -1931,21 +2085,9 @@ const LT_CHAPTERS_2 = [
       ]
     },
 
-    introChart: {
-      title: "Spot Asset Price — Derivatives Track This Underlying",
-      type: "candlestick",
-      labels: ltLabels(18),
-      ohlc: ltCandles(82, [
-        { to: 97,  bars: 7 },
-        { to: 103, bars: 5 },
-        { to: 117, bars: 6 }
-      ], { seed: 130, wick: 0.4 }),
-      markPoints: [
-        { dataIndex:  0, label: "Spot Market Price",          position: "bottom" },
-        { dataIndex:  6, label: "Derivative ≈ Spot Price",   position: "top"    },
-        { dataIndex: 14, label: "Perp Swap Tracks This",      position: "top"    }
-      ]
-    },
+    // (introChart removed — a single price line can't illustrate "derivatives track the
+    // underlying"; the concept needs two series, so the labelled uptrend was misleading.
+    // The intro's copy + bullets cover spot vs derivatives directly.)
 
     lessonChart: {
       title: "Perpetual Swap — No Expiry, Continuous Leverage Trading",
@@ -1974,25 +2116,6 @@ const LT_CHAPTERS_2 = [
         { id: "b", text: "Spot Market — buy/sell actual BTC directly; no leverage by default; you own the underlying asset",               correct: false, type: "neutral" },
         { id: "c", text: "Standard Futures Contract — regulated exchange; fixed expiry date; must be rolled over at expiry",               correct: false, type: "bearish" }
       ],
-      chart: {
-        title: "Match the Instrument to the Use Case",
-        type: "candlestick",
-        cutIndex: 7,
-        labels: ltLabels(14),
-        ohlc: ltCandles(90, [
-          { to: 107, bars: 8 },
-          { to: 120, bars: 6 }
-        ], { seed: 132, wick: 0.35 }),
-        markPoints: [
-          { dataIndex:  0, label: "Trade Open — No Expiry",  position: "bottom" },
-          { dataIndex:  7, label: "Session N+30 — Still Open",position: "top"    }
-        ]
-      },
-      revealMarkPoints: [
-        { dataIndex:  7, label: "No Roll Needed",            position: "top",    color: "#00d4d4" },
-        { dataIndex: 10, label: "Leverage Amplifies Move",   position: "top",    color: "#ffcc00" },
-        { dataIndex: 13, label: "Perpetual Swap = Answer",   position: "top",    color: "#00d4d4" }
-      ],
       explanation: "The <strong>Perpetual Swap</strong> is the answer. Unlike standard futures, it has no expiry date — positions can be held indefinitely without rolling. It tracks the spot price through a funding rate mechanism, is available with leverage on every major crypto exchange, and is the most liquid crypto derivative instrument. Spot markets require you to own the actual asset and provide no leverage. Futures require rolling at expiry.",
       rule: "Perpetual Swap = no expiry + leverage + tracks spot. The most liquid instrument on crypto exchanges. Essential knowledge before Course 3."
     }
@@ -2010,11 +2133,11 @@ const LT_CHAPTERS_2 = [
 
     intro: {
       heading: "Your Toolbox Is Built — Now Use It Systematically",
-      body: "Course 2 covered five modules and transformed you from a market reader to a trader with a defined methodology. You now have a trading style, a systematic entry framework (LTE), three exit strategies, a library of price action formations, volume analysis, seven classical chart patterns, Fibonacci retracements, the Ichimoku system, oscillator confluence, divergences, and an understanding of the financial instruments you will be trading.",
+      body: "Course 2 covered five modules and transformed you from a market reader to a trader with a defined methodology. You now have a trading style, a systematic entry framework (LTE), three exit strategies, a library of price action formations, volume analysis, the classical chart patterns, Fibonacci retracements, the Ichimoku system, oscillator confluence, divergences, and an understanding of the financial instruments you will be trading.",
       bullets: [
         "Module 1: Trading Styles — identify your style; system flows from style; discipline is the edge",
         "Module 2: LTE Methodology — Level → Trigger → Entry; never move your invalidation; Set & Forget / Trailing / Partial TPs",
-        "Module 3: Price Action — engulfing, stars, inside bars, soldiers, crows; volume confirmation; 9 classical patterns",
+        "Module 3: Price Action — engulfing, stars, inside bars, soldiers, crows; volume confirmation; the classical patterns",
         "Module 4: Tools — Fibonacci 50%/61.8% confluence; Ichimoku Kumo breakout + Kijun trailing stop; oscillators + divergences",
         "Module 5: Financial Instruments — spot vs derivatives; futures vs perpetual swaps; leverage is Course 3",
         "The toolbox is complete — the next step is building a journal, finding your hit rate, and developing your edge through data"
@@ -2025,20 +2148,20 @@ const LT_CHAPTERS_2 = [
       heading: "14 Actionable Rules — Your Course 2 Checklist",
       body: "Every rule in this list was earned through the content of Course 2. Print this list. Put it on your desk. Before every trade, run through the applicable rules. A systematic trader who follows these rules consistently will outperform an intuitive trader over the long run — every single time.",
       bullets: [
-        "1. ✅ Identify your trading style first — your entire system flows from this decision",
-        "2. ✅ Use LTE for EVERY trade: Level → Trigger → Entry — no exceptions, no shortcuts",
-        "3. ✅ Never move your invalidation/stop loss to avoid a loss — ever",
-        "4. ✅ Always wait for candle CLOSE before acting on any formation",
-        "5. ✅ Always confirm breakouts with a volume spike — no volume = no confidence",
-        "6. ✅ Trade chart pattern completions + retests — never anticipate patterns mid-formation",
-        "7. ✅ Fibonacci 50% and 61.8% must align with an existing S/R zone to be a valid level",
-        "8. ✅ Only use Ichimoku in trending markets — never in range-bound conditions",
-        "9. ✅ All 4 Ichimoku prerequisites must be met before taking a Kumo Breakout trade",
-        "10. ✅ Use Kijun as the trailing stop in all Ichimoku trend trades",
-        "11. ✅ Divergences are confluence only — combine with S/R + volume + candlestick structure",
-        "12. ✅ Journal EVERY trade with entry, stop, target, risk%, actual R, and chart screenshot",
-        "13. ✅ Let your journal data dictate which exit strategy to use — not emotion in the moment",
-        "14. ✅ Understand derivatives before trading them: spot ≠ perpetual swap ≠ futures"
+        "1. <span class='lt-ico-ok' aria-hidden='true'></span> Identify your trading style first — your entire system flows from this decision",
+        "2. <span class='lt-ico-ok' aria-hidden='true'></span> Use LTE for EVERY trade: Level → Trigger → Entry — no exceptions, no shortcuts",
+        "3. <span class='lt-ico-ok' aria-hidden='true'></span> Never move your invalidation/stop loss to avoid a loss — ever",
+        "4. <span class='lt-ico-ok' aria-hidden='true'></span> Always wait for candle CLOSE before acting on any formation",
+        "5. <span class='lt-ico-ok' aria-hidden='true'></span> Always confirm breakouts with a volume spike — no volume = no confidence",
+        "6. <span class='lt-ico-ok' aria-hidden='true'></span> Trade chart pattern completions + retests — never anticipate patterns mid-formation",
+        "7. <span class='lt-ico-ok' aria-hidden='true'></span> Fibonacci 50% and 61.8% must align with an existing S/R zone to be a valid level",
+        "8. <span class='lt-ico-ok' aria-hidden='true'></span> Only use Ichimoku in trending markets — never in range-bound conditions",
+        "9. <span class='lt-ico-ok' aria-hidden='true'></span> All 4 Ichimoku prerequisites must be met before taking a Kumo Breakout trade",
+        "10. <span class='lt-ico-ok' aria-hidden='true'></span> Use Kijun as the trailing stop in all Ichimoku trend trades",
+        "11. <span class='lt-ico-ok' aria-hidden='true'></span> Divergences are confluence only — combine with S/R + volume + candlestick structure",
+        "12. <span class='lt-ico-ok' aria-hidden='true'></span> Journal EVERY trade with entry, stop, target, risk%, actual R, and chart screenshot",
+        "13. <span class='lt-ico-ok' aria-hidden='true'></span> Let your journal data dictate which exit strategy to use — not emotion in the moment",
+        "14. <span class='lt-ico-ok' aria-hidden='true'></span> Understand derivatives before trading them: spot ≠ perpetual swap ≠ futures"
       ]
     },
 
@@ -2091,15 +2214,16 @@ const LT_CHAPTERS_2 = [
         type: "candlestick",
         cutIndex: 9,
         labels: ltLabels(14),
+        volume: { spikes: { 19: 2.6 } },
         ohlc: ltCandles(105, [
           { to: 82, bars: 7 },
-          { to: 80, bars: 1 },
-          { to: 83, bars: 1 },
-          { to: 89, bars: 1 },
+          { to: 79, bars: 1 },
+          { to: 81.5, bars: 1 },
+          { to: 85, bars: 1 },
           { to: 95, bars: 1 },
           { to: 107, bars: 3 }
-        ], { seed: 134, wick: 0.4 }),
-        markLines: [
+        ], { seed: 1082, wick: 0.3 }),
+        markLines: [ { yAxis: 78.5, label: "Stop — below swing low", color: "#ff2e88" },
           { yAxis: 81, label: "61.8% Fib + Sr Flip", color: "#00d4d4" }
         ],
         markAreas: [
@@ -2124,201 +2248,3 @@ const COURSE2_META = {
   title: "Course 2: Building Your Toolbox",
   chapterCount: 17
 };
-
-/* Final-exam question POOL — authored separately from chapter quizzes.
-   Engine samples EXAM_LENGTH at random per attempt and shuffles options. */
-const LT_EXAM_QUESTIONS_2 = [
-  { chapterTitle: 'Trading Styles', question: 'Swing trading is best characterised by:',
-    answers: [
-      { id:'a', text:'Holding for days to weeks around daily/weekly swing points', correct:true },
-      { id:'b', text:'Opening and closing within minutes, many times a day', correct:false },
-      { id:'c', text:'Holding for months to years based on fundamentals only', correct:false },
-      { id:'d', text:'Never using a stop loss', correct:false } ] },
-  { chapterTitle: 'Choosing a Style', question: 'The "best" trading style for you is mainly decided by:',
-    answers: [
-      { id:'a', text:'Your personality, schedule and risk tolerance', correct:true },
-      { id:'b', text:'Whichever style is most profitable for everyone', correct:false },
-      { id:'c', text:'The style with the highest leverage', correct:false },
-      { id:'d', text:'Whatever is trending on social media', correct:false } ] },
-  { chapterTitle: 'Volume — Confirmation', question: 'A breakout above resistance accompanied by a sharp rise in volume suggests:',
-    answers: [
-      { id:'a', text:'Genuine participation — the breakout is more likely to hold', correct:true },
-      { id:'b', text:'A fake-out that should be faded immediately', correct:false },
-      { id:'c', text:'Nothing — volume is a lagging coincidence', correct:false },
-      { id:'d', text:'The market is about to be halted', correct:false } ] },
-  { chapterTitle: 'Volume — Exhaustion', question: 'Price makes a new high but on clearly declining volume. This most often warns of:',
-    answers: [
-      { id:'a', text:'Waning momentum — a possible exhaustion / reversal', correct:true },
-      { id:'b', text:'A guaranteed acceleration higher', correct:false },
-      { id:'c', text:'Increased conviction from buyers', correct:false },
-      { id:'d', text:'A data error to be ignored', correct:false } ] },
-  { chapterTitle: 'Chart Patterns', question: 'What does a classical chart pattern actually give a trader?',
-    answers: [
-      { id:'a', text:'A predefined entry, stop, target and invalidation — a risk structure', correct:true },
-      { id:'b', text:'A guarantee that the target will be hit', correct:false },
-      { id:'c', text:'A signal that works without any stop loss', correct:false },
-      { id:'d', text:'A reason to ignore market structure', correct:false } ] },
-  { chapterTitle: 'Ichimoku', question: 'A key rule when using Ichimoku is that it:',
-    answers: [
-      { id:'a', text:'Works best in trending markets — check the higher-timeframe trend first', correct:true },
-      { id:'b', text:'Works best in tight ranges and chop', correct:false },
-      { id:'c', text:'Replaces the need to read price action', correct:false },
-      { id:'d', text:'Only uses the candle bodies, never the cloud', correct:false } ] },
-  { chapterTitle: 'Fibonacci', question: 'The Fibonacci "golden pocket" that traders watch for retracement entries sits roughly between:',
-    answers: [
-      { id:'a', text:'The 0.618 and 0.786 retracement levels', correct:true },
-      { id:'b', text:'The 0.236 and 0.382 levels', correct:false },
-      { id:'c', text:'The 1.0 and 1.618 extension levels', correct:false },
-      { id:'d', text:'The 0.5 level only', correct:false } ] },
-  { chapterTitle: 'The Trade Setup Process', question: 'The consistent process for building a trade setup across any style is:',
-    answers: [
-      { id:'a', text:'Identify structure → find your level → define your risk', correct:true },
-      { id:'b', text:'Pick a coin → use max leverage → hope', correct:false },
-      { id:'c', text:'Enter first → decide the stop later', correct:false },
-      { id:'d', text:'Copy the loudest trader you can find', correct:false } ] },
-  { chapterTitle: 'LTE Methodology', question: 'The purpose of a repeatable methodology (like LTE) is to:',
-    answers: [
-      { id:'a', text:'Turn a general market read into a precise, consistent, executable plan', correct:true },
-      { id:'b', text:'Guarantee winning trades', correct:false },
-      { id:'c', text:'Remove the need for risk management', correct:false },
-      { id:'d', text:'Let you trade purely on emotion', correct:false } ] },
-  { chapterTitle: 'Patterns Across Markets', question: 'Why do classical chart patterns repeat across different assets and timeframes?',
-    answers: [
-      { id:'a', text:'They reflect recurring human psychology — fear, greed and indecision', correct:true },
-      { id:'b', text:'Exchanges program them deliberately', correct:false },
-      { id:'c', text:'They only appear on crypto charts', correct:false },
-      { id:'d', text:'They are guaranteed by regulation', correct:false } ] },
-  { chapterTitle: 'Timeframe & Patience', question: 'A daily-timeframe chart pattern typically:',
-    answers: [
-      { id:'a', text:'Takes weeks to months to play out — patience is required', correct:true },
-      { id:'b', text:'Resolves within a few minutes', correct:false },
-      { id:'c', text:'Is less reliable than a 1-minute pattern', correct:false },
-      { id:'d', text:'Should be traded with the tightest possible stop', correct:false } ] },
-  { chapterTitle: 'Confluence', question: 'When a higher-timeframe level lines up with a lower-timeframe signal, that trade is:',
-    answers: [
-      { id:'a', text:'Higher-confluence — generally worth prioritising', correct:true },
-      { id:'b', text:'Lower quality and best avoided', correct:false },
-      { id:'c', text:'Identical to any other trade', correct:false },
-      { id:'d', text:'Only valid without a stop loss', correct:false } ] },
-
-  /* ── Chart-reading questions (engine guarantees a quota of these per attempt) ── */
-  { chapterTitle: 'Classical Chart Patterns',
-    question: 'A sharp rally (the pole) is followed by a shallow, orderly drift lower on smaller candles. This pattern is a:',
-    chart: { type:'candlestick', labels: ltLabels(10),
-      ohlc: ltCandles(80, [{ to:110, bars:5 }, { to:103, bars:5 }], { seed: 321, wick: 0.35 }) },
-    answers: [
-      { id:'a', text:'Bull flag — continuation; expect another leg up', correct:true },
-      { id:'b', text:'Double top — a bearish reversal', correct:false },
-      { id:'c', text:'Head and shoulders — a bearish reversal', correct:false },
-      { id:'d', text:'Descending triangle — a breakdown', correct:false } ] },
-
-  { chapterTitle: 'Classical Pattern Examples',
-    question: 'Price made two distinct lows at the same level (highlighted) separated by a peak, with the neckline marked. This is a:',
-    chart: { type:'candlestick', labels: ltLabels(12),
-      ohlc: ltCandles(100, [{ to:84, bars:3 }, { to:95, bars:3 }, { to:84, bars:3 }, { to:93, bars:3 }], { seed: 322, wick: 0.4 }),
-      markLines: [{ yAxis: 95, label: 'Neckline', color: '#00d4d4' }],
-      markAreas: [{ y0: 82, y1: 86, label: 'Support', color: 'rgba(0,212,212,0.06)' }] },
-    answers: [
-      { id:'a', text:'Double bottom — bullish reversal on a neckline break', correct:true },
-      { id:'b', text:'Double top — a bearish reversal', correct:false },
-      { id:'c', text:'Bull flag — a continuation', correct:false },
-      { id:'d', text:'A range with no actionable signal', correct:false } ] },
-
-  { chapterTitle: 'Classical Pattern Examples',
-    question: 'Three peaks — a higher middle peak between two lower, roughly equal peaks — sit over a flat neckline (marked). This is a:',
-    chart: { type:'candlestick', labels: ltLabels(12),
-      ohlc: ltCandles(90, [{ to:100, bars:2 }, { to:94, bars:2 }, { to:108, bars:2 }, { to:94, bars:2 }, { to:100, bars:2 }, { to:95, bars:2 }], { seed: 323, wick: 0.4 }),
-      markLines: [{ yAxis: 94, label: 'Neckline', color: '#cc2222' }] },
-    answers: [
-      { id:'a', text:'Head and shoulders — bearish reversal on a neckline break', correct:true },
-      { id:'b', text:'Ascending triangle — a bullish breakout', correct:false },
-      { id:'c', text:'Double bottom — a bullish reversal', correct:false },
-      { id:'d', text:'Bull flag — a continuation', correct:false } ] },
-
-  { chapterTitle: 'Classical Chart Patterns',
-    question: 'Price keeps stalling at the same horizontal resistance (marked) while the lows step progressively higher. This is an:',
-    chart: { type:'candlestick', labels: ltLabels(10),
-      ohlc: ltCandles(88, [{ to:100, bars:2 }, { to:92, bars:2 }, { to:100, bars:2 }, { to:95, bars:2 }, { to:100, bars:2 }], { seed: 324, wick: 0.35 }),
-      markLines: [{ yAxis: 100, label: 'Resistance', color: '#cc2222' }] },
-    answers: [
-      { id:'a', text:'Ascending triangle — pressure building for a bullish breakout', correct:true },
-      { id:'b', text:'Descending triangle — a bearish breakdown', correct:false },
-      { id:'c', text:'Double top — a bearish reversal', correct:false },
-      { id:'d', text:'Bear flag — a continuation lower', correct:false } ] },
-
-  { chapterTitle: 'Fibonacci',
-    question: 'After the rally, price has pulled back into the highlighted 0.618–0.786 zone. For a trend-continuation long, this zone is:',
-    chart: { type:'candlestick', labels: ltLabels(11),
-      ohlc: ltCandles(80, [{ to:120, bars:6 }, { to:92, bars:5 }], { seed: 325, wick: 0.4 }),
-      markAreas: [{ y0: 88, y1: 95, label: 'Golden Pocket', color: 'rgba(0,212,212,0.07)' }] },
-    answers: [
-      { id:'a', text:'The higher-probability area to look for long entries', correct:true },
-      { id:'b', text:'The place to go short, against the trend', correct:false },
-      { id:'c', text:'Irrelevant — Fibonacci does not apply in a trend', correct:false },
-      { id:'d', text:'A guaranteed bounce with no stop needed', correct:false } ] },
-
-  { chapterTitle: 'Classical Pattern Examples',
-    question: 'Price made two distinct highs at the same level (highlighted) with a dip between, over a neckline (marked). This is a:',
-    chart: { type:'candlestick', labels: ltLabels(12),
-      ohlc: ltCandles(86, [{ to:104, bars:3 }, { to:94, bars:3 }, { to:104, bars:3 }, { to:97, bars:3 }], { seed: 326, wick: 0.4 }),
-      markLines: [{ yAxis: 94, label: 'Neckline', color: '#cc2222' }],
-      markAreas: [{ y0: 102, y1: 106, label: 'Resistance', color: 'rgba(204,34,34,0.06)' }] },
-    answers: [
-      { id:'a', text:'Double top — bearish reversal on a neckline break', correct:true },
-      { id:'b', text:'Double bottom — a bullish reversal', correct:false },
-      { id:'c', text:'Ascending triangle — a bullish breakout', correct:false },
-      { id:'d', text:'Bull flag — a continuation', correct:false } ] },
-
-  { chapterTitle: 'Price Action Formations',
-    question: 'A sharp sell-off (the pole) is followed by a shallow, orderly drift higher on smaller candles. This is a:',
-    chart: { type:'candlestick', labels: ltLabels(10),
-      ohlc: ltCandles(112, [{ to:84, bars:5 }, { to:91, bars:5 }], { seed: 327, wick: 0.35 }) },
-    answers: [
-      { id:'a', text:'Bear flag — continuation; expect another leg down', correct:true },
-      { id:'b', text:'Double bottom — a reversal higher', correct:false },
-      { id:'c', text:'Ascending triangle — a bullish breakout', correct:false },
-      { id:'d', text:'Bull flag — a continuation higher', correct:false } ] },
-
-  { chapterTitle: 'Price Action Formations',
-    question: 'After an uptrend, price coils into a symmetrical triangle (converging highs and lows). The highest-probability break is:',
-    chart: { type:'candlestick', labels: ltLabels(12),
-      ohlc: ltCandles(82, [{ to:104, bars:4 }, { to:96, bars:2 }, { to:102, bars:2 }, { to:98, bars:2 }, { to:100, bars:2 }], { seed: 328, wick: 0.3 }) },
-    answers: [
-      { id:'a', text:'In the direction of the prior trend — a break higher', correct:true },
-      { id:'b', text:'Always to the downside', correct:false },
-      { id:'c', text:'Random — triangles provide no edge', correct:false },
-      { id:'d', text:'Sideways indefinitely', correct:false } ] },
-
-  /* ── Additional concept questions (broaden the pool beyond the original 12) ── */
-  { chapterTitle: 'Divergences',
-    question: 'Bearish (regular) divergence on an oscillator like RSI is when:',
-    answers: [
-      { id:'a', text:'Price makes a higher high but the oscillator makes a lower high — momentum is fading', correct:true },
-      { id:'b', text:'Price and the oscillator both make higher highs', correct:false },
-      { id:'c', text:'Price makes a lower low and the oscillator a lower low', correct:false },
-      { id:'d', text:'The oscillator simply crosses its midline', correct:false } ] },
-
-  { chapterTitle: 'Oscillators',
-    question: 'An oscillator reading "overbought" (e.g. RSI above 70), on its own, means:',
-    answers: [
-      { id:'a', text:'Momentum is stretched — not an automatic sell; it can stay overbought in a strong trend', correct:true },
-      { id:'b', text:'Sell immediately, every time', correct:false },
-      { id:'c', text:'The top is in, guaranteed', correct:false },
-      { id:'d', text:'Add to longs with no risk', correct:false } ] },
-
-  { chapterTitle: 'Price Action Formations',
-    question: 'A trendline is generally considered valid once it has:',
-    answers: [
-      { id:'a', text:'At least two touches to draw it, with a third touch confirming it', correct:true },
-      { id:'b', text:'A single touch', correct:false },
-      { id:'c', text:'At least ten touches', correct:false },
-      { id:'d', text:'No touches — they are drawn arbitrarily', correct:false } ] },
-
-  { chapterTitle: 'Chart Patterns',
-    question: 'A chart pattern setup is "invalidated" when:',
-    answers: [
-      { id:'a', text:'Price closes beyond the level that disproves the idea (through its stop)', correct:true },
-      { id:'b', text:'It takes longer than you expected', correct:false },
-      { id:'c', text:'You simply change your mind', correct:false },
-      { id:'d', text:'Volume drops for one candle', correct:false } ] }
-];

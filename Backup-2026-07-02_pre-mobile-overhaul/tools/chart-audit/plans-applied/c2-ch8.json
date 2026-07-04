@@ -1,0 +1,25 @@
+{
+  "course": 2,
+  "chapterId": 8,
+  "title": "Classical Chart Patterns",
+  "module": "Price Action Concepts",
+  "edits": [
+    {
+      "slot": "introChart",
+      "addMarkLines": [
+        { "yAxis": 112, "label": "Target = Pole Height", "color": "#00d4d4" }
+      ],
+      "reason": "Lesson bullet: 'Bull Flag ... target = height of pole from breakout point.' The chart already has a 'Target' markPoint at idx17 (~112) but only as a callout. A teal markLine at 112 (band top, in range for ltCandles(70,...,to:112)) turns it into a labelled, measured LEVEL so students see the target is the pole height (70->102=32) projected up, not an arbitrary pin. Teal = bullish target per palette."
+    },
+    {
+      "slot": "lessonChart",
+      "addMarkLines": [
+        { "yAxis": 66, "label": "Target = Head→Neckline (66)", "color": "#00d4d4" },
+        { "yAxis": 90, "label": "Stop — above Right Shoulder", "color": "#ff2e88" }
+      ],
+      "reason": "Headline teaching of the worked H&S reversal: 'target = head-to-neckline distance' (head 98 - neckline 82 = 16; 82-16 = 66; final leg bottoms at 65 so 66 sits at the band-bottom edge, in range). Intro bullet promises 'Patterns provide: entry, stop, target, and invalidation — all predefined' yet the worked trade draws neither stop nor target. Right shoulder peaks at 89 (idx11), so a stop at 90 sits just above it inside the 65-98 band. Teal = downside take-profit target; pink = stop against the short. Entry is already covered by the existing Neckline @82 line + 'Retest (Entry)' markPoint, so no extra entry line is added."
+    }
+  ],
+  "alreadyGood": ["quiz.chart"],
+  "notes": "REJECTED auditor's introChart 'Flag Resistance (Breakout Level)' markLine @102: a bull flag is a DESCENDING channel, so its breakout boundary is a sloping line; a flat markLine at 102 is actually the pole top, and by the breakout bar (idx14) the descending channel wall sits well below 102. Drawing it as the flat 'breakout level' is geometrically misleading on a concept-illustration intro chart, so per the restraint rule it is dropped. Kept the auditor's other three proposals (intro Target @112, lesson Target @66, lesson Stop @90) — all text-justified, in-band, correctly coloured. quiz.chart confirmed alreadyComplete: cutIndex:12 hides the outcome and revealMarkPoints correctly annotate Pole Bottom/Flag/Breakdown post-answer; the explanation's measured target (~63) would clip below the 76 band floor, so no pre-cut target line is appropriate. No mislabels found in existing annotations."
+}

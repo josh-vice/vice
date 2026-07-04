@@ -1,0 +1,32 @@
+{
+  "course": 2,
+  "chapterId": 9,
+  "title": "Classical Pattern Examples",
+  "module": "Price Action Concepts",
+  "edits": [
+    {
+      "slot": "introChart",
+      "addMarkLines": [
+        { "yAxis": 103, "label": "Stop — Above Flag High", "color": "#ff2e88" },
+        { "yAxis": 78, "label": "Target — Pole Distance", "color": "#ffcc00" }
+      ],
+      "reason": "Lesson teaches the full Bear Flag LTE structure: 'Level = upper channel resistance → Trigger = ... hanging man → Entry = breakdown ... → Stop above flag high → Target = pole distance below breakdown'. Flag Resistance (99) is drawn but Stop and Target are not. Stop @103 sits clearly above the flag high / 97-102 level zone yet inside the band top (~108-110), so it reads as a level not buried in the zone fill. Target @78 equals the final leg .to (=78) and the existing 'Target Hit' pin at index 17, giving the gold take-profit magnet an explicit level so Stop/Target bracket the trade. (A true measured pole projection = 108-82 = 26 below the ~83 breakdown ≈ 57, which clips off-chart, so the chart's actual target level 78 is the only on-band choice — label avoids claiming an exact projection.)"
+    },
+    {
+      "slot": "lessonChart",
+      "addMarkLines": [
+        { "yAxis": 108, "label": "Target — Triangle Height", "color": "#ffcc00" }
+      ],
+      "reason": "Lesson: 'Ascending Triangle: higher lows + flat top resistance → breakout above flat resistance → ... Target = height of triangle'. Flat Top @92 is drawn; the measured Target exists only as a pin (index 17). Height = flat top 92 - base ~76 = 16; 92+16 = 108, inside band 74-116, giving the gold target a measured level (price overshoots to 114, which is fine). The flat-top line @92 already doubles as the retest/Entry level, so no separate Entry annotation is needed."
+    },
+    {
+      "slot": "quiz.chart",
+      "addRevealMarkPoints": [
+        { "dataIndex": 14, "label": "Target — Triangle Height", "position": "bottom", "color": "#ffcc00" }
+      ],
+      "reason": "Explanation/rule teach 'the measured target is the height of the triangle projected downward from the breakdown point ... Target = triangle height' but no target is drawn. Height ≈ first lower high 95 - flat support 84 = 11; 84-11 = 73 = the final leg .to. Index 14 is the last bar (15 bars total, 0-14) and the bottom of that breakdown leg. Routed to revealMarkPoints so it stays hidden behind cutIndex 11 and only shows the outcome after the user answers — does not spoil the decision."
+    }
+  ],
+  "alreadyGood": [],
+  "notes": "REJECTED 2 of the auditor's proposals. (1) introChart Entry markLine @83: 83 is the BOTTOM of the breakdown leg, not the entry. A bear-flag entry is at the lower-channel break (~88-90 near the Entry pin at index 13), so a line at 83 would sit below the entry pin and make Stop(103)->Entry(83)->Target(78) imply R<<1, contradicting the taught 3.88:1. The existing 'Entry — Breakdown' pin (index 13) plus the Flag Resistance line already locate the entry; an explicit entry line does more harm than good. (2) lessonChart Entry markPoint @index 13: that bar is already pinned 'BREAKOUT ↑', and the candles run straight 98->114 with NO retest dip, so an 'Entry — Retest' pin there is redundant/contradictory; the flat-top @92 line already represents the retest/entry level. MODIFIED introChart Stop 101->103 (101 lands inside the 97-102 Level Zone fill; 103 clears it while staying under band top ~108). Kept introChart Target @78 (relabeled 'Pole Distance' rather than 'Pole Projection' since the literal pole math lands off-chart). Colors follow chapter convention: gold for targets, pink for the stop against the short. Note: source comment mislabels this as 'CHAPTER 10' but the object id is 9."
+}

@@ -1,0 +1,28 @@
+{
+  "course": 1,
+  "chapterId": 2,
+  "title": "Support and Resistance",
+  "module": "Price Action Foundations",
+  "edits": [
+    {
+      "slot": "lessonChart",
+      "fixes": [
+        {
+          "find": "markPoint dataIndex:14 label \"Holds → support\"",
+          "replaceWith": "Holds → Buy entry",
+          "reason": "The lesson teaches the actionable trade: \"resistance breaks → old resistance becomes new support → buy the retest\" and \"The first retest of a flipped level is usually the cleanest entry.\" This is the worked-trade slot, yet the flipped-level retest is only labelled as confirmation (\"Holds → support\") and never identified as the long entry the lesson tells the learner to take. Folding the entry into the existing idx14 bottom point keeps it on the bar where the flip is confirmed (idx14 = [100,103,99,104], holding above the $100 line) without stacking a second callout on the same candle."
+        }
+      ],
+      "reason": "Identifies the buy entry the lesson explicitly teaches (\"buy the retest\" / \"cleanest entry\") on the flipped-level hold. Color stays teal-implicit (long/support side, consistent with the $100 teal line)."
+    },
+    {
+      "slot": "quiz.chart",
+      "addRevealMarkPoints": [
+        { "dataIndex": 16, "label": "Confirmed $118", "position": "top", "color": "#00d4d4" }
+      ],
+      "reason": "The explanation names the confirmation explicitly: \"The subsequent bounce to $118 confirmed the flip.\" The final candle idx16 = [112,117,111,118] reaches 118 but no annotation marks that confirming high. Added ONLY to revealMarkPoints so it stays hidden behind the cutIndex:13 decision and does not spoil the answer. Teal = bullish/confirmation, matching the existing reveal points. yAxis-equivalent (118) is at the top of the full-reveal band (91-118) so it does not clip; idx16 is the last bar (17 candles, 0-based), authored like sibling reveal points with no manual offset."
+    }
+  ],
+  "alreadyGood": ["introChart"],
+  "notes": "Auditor's two gaps both verified and accepted. (1) lessonChart buy-entry: I implemented it as a RELABEL of the existing idx14 point (auditor's offered alternative) rather than adding a second stacked bottom callout on the same bar — more restrained and avoids label de-conflict crowding. (2) quiz revealMarkPoint 'Confirmed $118' at idx16: coordinate-checked (last candle, high=118, inside full band, reveal-only so no pre-cut spoiler) — accepted as-is. introChart confirmed complete: concept (horizontal S/R with aligned multi-touch swing highs/lows) is fully illustrated by the two zones + Rejected/Bought points; the intro's 'Rule of Fives / 5th touch breaks' is not drawable on this 3-touch-each-side def and inventing a break would contradict the price action, so no addition. No new stop-loss invented on the lessonChart because the lesson text teaches no specific stop level (restraint)."
+}

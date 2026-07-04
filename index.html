@@ -2,17 +2,13 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>Liquidity Theory — Learn to Trade Crypto, Free</title>
   <link rel="icon" type="image/svg+xml" href="lt-logo.svg" />
-  <meta name="description" content="A free, no-account crypto trading academy. Four interactive courses, a live practice simulator, glossary, flashcards, and a final-exam certificate. Your progress saves automatically." />
-  <meta name="theme-color" content="#00d4d4" />
 
-  <!-- Canonical = apex domain. Set liqtheory.com as the primary domain in Vercel so
-       www.liqtheory.com 301-redirects to it (keeps social/SEO on one canonical URL). -->
+  <!-- SEO / social (carried over from the retired marketing landing — the app IS the site root now) -->
+  <meta name="description" content="A free, no-account crypto trading academy. Four interactive courses, a live practice simulator, glossary, flashcards, and interactive labs. Your progress saves automatically." />
   <link rel="canonical" href="https://liqtheory.com/" />
-
-  <!-- Open Graph (Discord, Facebook, LinkedIn, iMessage) -->
   <meta property="og:type" content="website" />
   <meta property="og:site_name" content="Liquidity Theory" />
   <meta property="og:title" content="Liquidity Theory — Learn to Trade Crypto, Free" />
@@ -22,8 +18,6 @@
   <meta property="og:image:width" content="1200" />
   <meta property="og:image:height" content="630" />
   <meta property="og:image:alt" content="Liquidity Theory — learn to trade, knowledge freely shared." />
-
-  <!-- Twitter / X -->
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="Liquidity Theory — Learn to Trade Crypto, Free" />
   <meta name="twitter:description" content="A free, interactive crypto trading academy — 4 courses, a live practice simulator, and real charts. No account needed." />
@@ -32,756 +26,246 @@
   <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <!-- Trimmed: IBM Plex Mono never renders (Cascadia always wins the stack) and
+       weight 300 is unused — dropping both cuts the font payload ~40%. -->
+  <link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
 
-  <!-- ECharts for the animated hero chart -->
-  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+  <!-- Styles -->
+  <link rel="stylesheet" href="lt-styles.css?v=1.118.0" />
+  <!-- v2 animated-lessons player chrome (scoped to .ltp2*; see lessons-v2/) -->
+  <link rel="stylesheet" href="lessons-v2/player.css?v=1.20.0" />
+
+  <!-- CDN deps — pinned exact versions + SRI so a compromised/drifting CDN can't
+       inject code. To upgrade: bump the version, re-download, recompute
+       `openssl dgst -sha384 -binary file | openssl base64 -A`. -->
+  <!-- ECharts (chart rendering) -->
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5.6.0/dist/echarts.min.js"
+          integrity="sha384-pPi0zxBAoDu6+JXW/C68UZLvBUUtU+7zonhif43rqj7pxsGyqyqzcian2Rj37Rss"
+          crossorigin="anonymous" defer></script>
+
   <!-- Lucide icons -->
-  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/lucide@1.23.0/dist/umd/lucide.min.js"
+          integrity="sha384-ouAVEJVCMsf8Svzn+BwqbaBhxBEA0xgeVBhHnxmWd+Wqyv18yhWCQwGegFD/OHLq"
+          crossorigin="anonymous" defer></script>
 
-  <style>
-    :root{
-      --bg:#070510;--bg2:#0d0a1a;--bg3:#13101f;--bg4:#1b1630;--bg5:#241d3f;
-      --border:#241d38;--border2:#332a4d;--border3:#453a63;
-      --teal:#00d4d4;--teal2:#00b8b8;--teal-dim:rgba(0,212,212,.10);--teal-glow:rgba(0,212,212,.22);--teal-faint:rgba(0,212,212,.05);
-      --pink:#ff2e88;--pink2:#ff5fa3;--pink-dim:rgba(255,46,136,.12);--pink-glow:rgba(255,46,136,.24);
-      --gold:#e7b53a;--purple:#a855f7;--coral:#ff7a4d;--red:#f23d5c;--c4:#ff7a4d;--green:#21d196;
-      --grad-miami:linear-gradient(90deg,#00d4d4,#ff2e88);--grad-flamingo:linear-gradient(155deg,#ff6cae 0%,#ff2e88 55%,#d61f6f 100%);
-      --text:#fff;--text2:#a39ab8;--text3:#675d82;
-      --radius:4px;--radius-lg:8px;--radius-xl:16px;
-      --maxw:1180px;
-      --mono:'JetBrains Mono',ui-monospace,'SFMono-Regular',Menlo,monospace;
-    }
-    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
-    html{scroll-behavior:smooth;overflow-x:hidden;}
-    body{
-      font-family:'JetBrains Mono',ui-monospace,'SFMono-Regular',Menlo,monospace;
-      background:var(--bg);color:var(--text);font-size:15px;line-height:1.6;
-      -webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;
-      overflow-x:hidden;
-    }
-    h1,h2,h3,h4{font-family:'JetBrains Mono',monospace;line-height:1.1;font-weight:700;letter-spacing:-0.5px;}
-    a{color:inherit;text-decoration:none;}
-    .wrap{max-width:var(--maxw);margin:0 auto;padding:0 24px;}
-    .accent-teal{color:var(--teal);}
+  <!-- Cross-device progress sync: LZ-String (compact link) + QRCode (scan to transfer).
+       Client-side only — the progress lives in the link's #fragment; nothing is uploaded. -->
+  <script src="https://cdn.jsdelivr.net/npm/lz-string@1.5.0/libs/lz-string.min.js"
+          integrity="sha384-0d+Gr7vM4Drod8E3hXKgciWJSWbjD/opKLLygI9ktiWbuvlDwQLzU46wJ9s5gsp7"
+          crossorigin="anonymous" defer></script>
+  <script src="https://cdn.jsdelivr.net/gh/davidshimjs/qrcodejs@04f46c6a0708418cb7b96fc563eacae0fbf77674/qrcode.min.js"
+          integrity="sha384-3zSEDfvllQohrq0PHL1fOXJuC/jSOO34H46t6UQfobFOmxE5BpjjaIJY5F2/bMnU"
+          crossorigin="anonymous" defer></script>
 
-    /* faint global candle grid backdrop */
-    body::before{
-      content:"";position:fixed;inset:0;z-index:0;pointer-events:none;
-      background:
-        radial-gradient(900px 480px at 82% -10%, rgba(0,212,212,.12), transparent 60%),
-        radial-gradient(820px 540px at 6% 6%, rgba(255,46,136,.09), transparent 58%),
-        radial-gradient(820px 560px at 50% 116%, rgba(168,85,247,.10), transparent 60%),
-        linear-gradient(rgba(168,120,220,.03) 1px,transparent 1px),
-        linear-gradient(90deg, rgba(168,120,220,.03) 1px,transparent 1px);
-      background-size:auto,auto,auto,44px 44px,44px 44px;
-    }
-    .wrap,nav.topnav{position:relative;z-index:1;}
+  <!-- Persistence facade: ONE registry of every fixed localStorage key + safe
+       accessors. Must load before lt-settings.js (reads prefs at parse time). -->
+  <script src="lt-store.js?v=1.1.0"></script>
 
-    /* ── NAV ─────────────────────────────────────────── */
-    nav.topnav{
-      position:sticky;top:0;z-index:50;
-      backdrop-filter:blur(12px);background:rgba(0,0,0,.62);
-      border-bottom:1px solid var(--border);
-    }
-    .topnav-inner{display:flex;align-items:center;gap:20px;height:64px;max-width:var(--maxw);margin:0 auto;padding:0 24px;}
-    .brand{display:flex;align-items:center;gap:10px;font-family:'JetBrains Mono',monospace;flex-shrink:0;}
-    .brand .brand-logo{width:28px;height:28px;display:block;flex-shrink:0;filter:drop-shadow(0 0 6px rgba(0,212,212,.42)) drop-shadow(0 0 11px rgba(255,46,136,.3));}
-    .brand-stack{display:flex;flex-direction:column;gap:2px;line-height:1;}
-    .brand-name{font-family:'JetBrains Mono',monospace;font-weight:800;font-size:21px;letter-spacing:.3px;line-height:1;color:var(--text);white-space:nowrap;}
-    /* "by Vice Terminal" parent-brand lockup */
-    .brand-by{display:inline-flex;align-items:center;gap:5px;font-family:var(--mono);line-height:1;}
-    .brand-by-pre{font-size:8.5px;font-weight:600;color:var(--text3);letter-spacing:.2px;}
-    .brand-flamingo{display:inline-block;width:15px;height:15px;flex-shrink:0;background:var(--grad-flamingo);-webkit-mask:url(vice-terminal.png?v=1) center/contain no-repeat;mask:url(vice-terminal.png?v=1) center/contain no-repeat;filter:drop-shadow(0 0 4px rgba(255,46,136,.55));}
-    .brand-by-name{font-size:9.5px;font-weight:700;color:var(--pink);letter-spacing:1.3px;text-transform:uppercase;}
-    .nav-links{display:flex;gap:24px;margin-left:16px;}
-    .nav-links a{color:var(--text2);font-size:14px;font-weight:500;transition:color .15s;white-space:nowrap;}
-    .nav-links a:hover{color:var(--text);}
-    /* Hide the section links before the nav gets cramped (they were colliding /
-       clipping the CTA in the ~920–1080px band). The CTA stays. */
-    @media(max-width:1100px){ .nav-links{display:none;} }
-    .nav-spacer{flex:1;}
-    .nav-ticker{display:flex;align-items:center;gap:7px;font-size:13px;color:var(--text2);padding:6px 11px;border:1px solid var(--border2);border-radius:var(--radius);background:var(--bg3);}
-    .nav-ticker .dot{width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);animation:pulse 1.8s infinite;}
-    .nav-ticker b{color:var(--text);font-family:var(--mono);font-weight:700;font-size:12px;}
-    @keyframes pulse{0%,100%{opacity:1;}50%{opacity:.35;}}
+  <!-- Settings load SYNCHRONOUSLY right after the store: ltApplySavedSettings() runs at
+       parse time and sets the theme/palette CSS vars BEFORE first paint (no flash).
+       Everything below is deferred — order-preserving, so the parse-time dependency
+       chain (chartgen → data → engine) is unchanged, but nothing blocks rendering. -->
+  <script src="lt-settings.js?v=1.38.2"></script>
 
-    .btn{
-      display:inline-flex;align-items:center;gap:9px;font-family:'JetBrains Mono',monospace;
-      font-weight:700;font-size:15px;padding:12px 22px;border-radius:var(--radius);
-      border:1px solid transparent;cursor:pointer;transition:all .16s;white-space:nowrap;
-    }
-    .btn svg{width:17px;height:17px;}
-    .btn-primary{background:var(--teal);color:#04201f;border-color:var(--teal);box-shadow:0 6px 22px var(--teal-glow);}
-    .btn-primary:hover{filter:brightness(1.08);transform:translateY(-1px);box-shadow:0 10px 30px var(--teal-glow);}
-    .btn-ghost{background:transparent;color:var(--text);border-color:var(--border3);}
-    .btn-ghost:hover{border-color:var(--teal);color:var(--teal);}
-    .btn-sm{padding:9px 16px;font-size:14px;}
+  <!-- Technical-analysis math (Ichimoku / RSI / CVD / volume). The engine delegates
+       its indicator helpers here; must load before lt-engine.js. -->
+  <script src="lt-ta.js?v=1.1.0" defer></script>
 
-    /* ── HERO ────────────────────────────────────────── */
-    .hero{padding:80px 0 70px;position:relative;}
-    .hero::before{content:"";position:absolute;right:-4%;top:2%;width:640px;height:540px;z-index:0;pointer-events:none;
-      background:radial-gradient(circle at 58% 42%, rgba(0,212,212,.22), rgba(0,212,212,.05) 42%, transparent 70%);
-      filter:blur(24px);}
-    .hero-grid{display:grid;grid-template-columns:1.05fr .95fr;gap:54px;align-items:center;position:relative;z-index:1;}
-    .eyebrow{display:inline-flex;align-items:center;gap:8px;font-size:12.5px;font-weight:600;letter-spacing:1.4px;text-transform:uppercase;color:var(--teal);background:var(--teal-dim);border:1px solid rgba(0,212,212,.25);padding:6px 13px;border-radius:100px;margin-bottom:22px;}
-    .hero h1{font-size:41px;letter-spacing:-1.2px;line-height:1.12;margin-bottom:20px;}
-    .hero h1 .grad{background:linear-gradient(110deg,#00d4d4 0%,#a855f7 52%,#ff2e88 100%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;}
-    .hero p.lead{font-size:18.5px;color:var(--text2);max-width:520px;margin-bottom:30px;}
-    .hero-cta{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:24px;}
-    .trust{display:flex;gap:20px;flex-wrap:wrap;font-size:13.5px;color:var(--text3);}
-    .trust span{display:inline-flex;align-items:center;gap:7px;}
-    .trust svg{width:15px;height:15px;color:var(--teal);}
+  <!-- Canonical data-viz palette (engine VIZ/RED/GOLD/TEAL2 alias to this). -->
+  <script src="lt-tokens.js?v=1.0.0" defer></script>
 
-    .hero-chart-card{
-      background:linear-gradient(180deg,var(--bg3),var(--bg2));border:1px solid var(--border2);
-      border-radius:var(--radius-xl);padding:16px 16px 8px;box-shadow:0 30px 80px rgba(0,0,0,.6),0 0 60px rgba(0,212,212,.08);position:relative;overflow:hidden;
-    }
-    .hero-chart-card::after{content:"";position:absolute;inset:0;border-radius:var(--radius-xl);border:1px solid rgba(0,212,212,.10);pointer-events:none;}
-    .hcc-head{display:flex;align-items:center;justify-content:space-between;padding:6px 8px 12px;}
-    .hcc-left{display:flex;align-items:center;gap:13px;}
-    .hcc-dots{display:flex;gap:6px;}
-    .hcc-dots i{width:9px;height:9px;border-radius:50%;display:inline-block;}
-    .hcc-sym{display:flex;align-items:center;gap:9px;font-family:'JetBrains Mono';font-weight:700;font-size:17px;}
-    .hcc-sym .bub{width:22px;height:22px;display:inline-flex;flex-shrink:0;}
-    .hcc-sym .bub svg{width:22px;height:22px;display:block;}
-    .hcc-right{display:flex;align-items:center;gap:10px;}
-    .hcc-price{font-family:var(--mono);font-weight:800;font-size:17px;letter-spacing:-.3px;}
-    .hcc-chg{font-family:var(--mono);font-size:11px;font-weight:700;padding:3px 8px;border-radius:4px;}
-    .hcc-chg.up{color:var(--green);background:rgba(0,200,120,.13);}
-    .hcc-chg.down{color:#ff5a5a;background:rgba(204,34,34,.15);}
-    .hcc-live{font-size:11px;font-weight:600;letter-spacing:1px;color:var(--green);display:flex;align-items:center;gap:6px;}
-    .hcc-live .dot{width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);animation:pulse 1.8s infinite;}
-    #hero-chart{width:100%;height:288px;}
-    .hcc-rail{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--border);border-top:1px solid var(--border);margin:8px -16px -8px;}
-    .hcc-rail > div{background:var(--bg2);padding:11px 16px;}
-    .hcc-rail .k{font-size:9.5px;letter-spacing:1.2px;text-transform:uppercase;color:var(--text3);}
-    .hcc-rail .v{font-family:var(--mono);font-weight:700;font-size:14px;letter-spacing:-.3px;margin-top:4px;color:var(--text);}
-    .hcc-rail .v.up{color:var(--green);}
-    .hcc-rail .v.down{color:#ff5a5a;}
+  <!-- Pure colour / number-format helpers (engine helpers delegate here). -->
+  <script src="lt-utils.js?v=1.2.0" defer></script>
 
-    /* ── VALUE PILL BAR ──────────────────────────────── */
-    .pillbar{border-top:1px solid var(--border);border-bottom:1px solid var(--border);background:var(--bg2);}
-    .pillbar-inner{display:grid;grid-template-columns:repeat(4,1fr);max-width:var(--maxw);margin:0 auto;}
-    .pillbar-cell{display:flex;align-items:center;justify-content:center;gap:9px;padding:18px 16px;
-      border-left:1px solid var(--border);font-family:var(--mono);font-weight:700;font-size:12.5px;
-      letter-spacing:1.2px;text-transform:uppercase;color:var(--text2);text-align:center;}
-    .pillbar-cell:first-child{border-left:none;}
-    .pillbar-cell svg{width:16px;height:16px;color:var(--teal);flex-shrink:0;}
+  <!-- Teaching-candle generator (data files call ltCandles() at parse time) -->
+  <script src="lt-chartgen.js?v=1.2.0" defer></script>
 
-    /* ── STATS ───────────────────────────────────────── */
-    .stats{border-top:1px solid var(--border);border-bottom:1px solid var(--border);background:var(--bg2);}
-    .stats-grid{display:grid;grid-template-columns:repeat(4,1fr);}
-    .stat{padding:30px 24px;text-align:center;border-left:1px solid var(--border);}
-    .stat:first-child{border-left:none;}
-    .stat .num{font-family:var(--mono);font-weight:800;font-size:38px;letter-spacing:-1px;color:var(--text);line-height:1;}
-    .stat .num span{color:var(--teal);}
-    .stat .lab{font-size:13px;color:var(--text2);margin-top:8px;letter-spacing:.3px;}
+  <!-- Data files MUST load before lt-engine.js (engine reads LT_CHAPTERS at parse time) -->
+  <script src="lt-data.js?v=1.18.2" defer></script>
+  <script src="lt-data-course2.js?v=1.22.0" defer></script>
+  <script src="lt-data-course3.js?v=1.20.0" defer></script>
+  <script src="lt-data-course4.js?v=1.27.0" defer></script>
 
-    /* ── SECTION SHELL ───────────────────────────────── */
-    section.block{padding:88px 0;}
-    .sec-head{text-align:center;max-width:680px;margin:0 auto 52px;}
-    .sec-head .kicker{font-size:12.5px;font-weight:600;letter-spacing:1.6px;text-transform:uppercase;color:var(--teal);margin-bottom:14px;}
-    .sec-head h2{font-size:31px;letter-spacing:-.8px;margin-bottom:16px;}
-    .sec-head p{font-size:17px;color:var(--text2);}
+  <!-- Module quizzes — multi-question end-of-module "Learning Assessment" (the Quiz step) -->
+  <script src="lt-module-quizzes.js?v=1.0.5" defer></script>
 
-    /* ── COURSES ─────────────────────────────────────── */
-    .courses{display:grid;grid-template-columns:repeat(2,1fr);gap:20px;}
-    .course-card{
-      position:relative;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius-lg);
-      padding:26px 26px 24px;overflow:hidden;transition:transform .18s,border-color .18s,box-shadow .18s;
-      --c:var(--teal);
-    }
-    .course-card::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--c);}
-    .course-card:hover{transform:translateY(-4px);border-color:color-mix(in srgb,var(--c) 55%,var(--border2));box-shadow:0 18px 44px rgba(0,0,0,.5);}
-    .cc-no{font-family:'JetBrains Mono';font-weight:800;font-size:14px;letter-spacing:2px;color:var(--c);margin-bottom:10px;}
-    .course-card h3{font-size:27px;margin-bottom:9px;}
-    .course-card p{font-size:14.5px;color:var(--text2);margin-bottom:18px;}
-    .cc-meta{display:flex;align-items:center;gap:14px;font-size:12.5px;color:var(--text3);}
-    .cc-meta .chip{display:inline-flex;align-items:center;gap:6px;}
-    .cc-meta svg{width:14px;height:14px;color:var(--c);}
+  <!-- Real historical pattern definitions -->
+  <script src="lt-patterns.js?v=1.5.0" defer></script>
 
-    /* ── FEATURES (bento) ────────────────────────────── */
-    .feat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;}
-    .feat{position:relative;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius-lg);padding:26px 24px;transition:border-color .18s,transform .18s;overflow:hidden;}
-    .feat:hover{border-color:var(--border3);transform:translateY(-3px);}
-    .feat-ic{width:46px;height:46px;border-radius:12px;background:var(--teal-dim);border:1px solid rgba(0,212,212,.2);display:flex;align-items:center;justify-content:center;margin-bottom:16px;}
-    .feat-ic svg{width:22px;height:22px;color:var(--teal);}
-    .feat h3{font-size:21px;margin-bottom:8px;}
-    .feat p{font-size:14px;color:var(--text2);max-width:30ch;}
-    /* featured wide tile */
-    .feat--wide{grid-column:span 2;display:flex;flex-direction:column;justify-content:space-between;
-      background:radial-gradient(120% 130% at 0% 0%, rgba(0,212,212,.10), transparent 55%), var(--bg3);
-      border-color:rgba(0,212,212,.22);}
-    .feat--wide h3{font-size:26px;}
-    .feat--wide p{font-size:15px;max-width:42ch;}
-    .feat-spark{display:flex;align-items:flex-end;gap:4px;height:42px;margin-top:20px;}
-    .feat-spark i{flex:1;border-radius:2px 2px 0 0;display:block;transform-origin:bottom;animation:sparkRise .9s cubic-bezier(.2,.8,.2,1) backwards;}
-    @keyframes sparkRise{from{transform:scaleY(.2);opacity:.3;}to{transform:scaleY(1);opacity:1;}}
+  <!-- Synthetic market generator -->
+  <script src="lt-simulator.js?v=1.4.0" defer></script>
 
-    /* ── HOW IT WORKS ────────────────────────────────── */
-    .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;counter-reset:step;}
-    .step{position:relative;padding:28px 24px;border:1px dashed var(--border3);border-radius:var(--radius-lg);}
-    .step .n{font-family:'JetBrains Mono';font-weight:800;font-size:15px;color:#04201f;background:var(--teal);width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;margin-bottom:16px;}
-    .step h3{font-size:21px;margin-bottom:8px;}
-    .step p{font-size:14px;color:var(--text2);}
+  <!-- UI modules (loaded before engine so engine can call them) -->
+  <script src="lt-gallery.js?v=2.0.1" defer></script>
+  <script src="lt-orderbook.js?v=1.5.1" defer></script>
+  <script src="lt-patternlib.js?v=1.1.1" defer></script>
+  <script src="lt-ichimoku.js?v=1.3.1" defer></script>
+  <script src="lt-fib.js?v=1.3.1" defer></script>
+  <script src="lt-msbuilder.js?v=1.1.1" defer></script>
+  <script src="lt-divtrainer.js?v=1.0.1" defer></script>
+  <script src="lt-volreader.js?v=1.0.1" defer></script>
+  <script src="lt-sim-ui.js?v=2.1.0" defer></script>
+  <script src="lt-glossary.js?v=2.2.1" defer></script>
+  <script src="lt-flashcards.js?v=1.9.10" defer></script>
+  <script src="lt-community.js?v=2.0.2" defer></script>
 
-    /* ── COMMUNITY ───────────────────────────────────── */
-    .comm{background:var(--bg2);border-top:1px solid var(--border);border-bottom:1px solid var(--border);}
-    .comm-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;}
-    .comm-card{display:flex;flex-direction:column;align-items:flex-start;gap:12px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius-lg);padding:24px 22px;transition:transform .18s,border-color .18s;}
-    .comm-card:hover{transform:translateY(-3px);border-color:var(--border3);}
-    .comm-ic{width:48px;height:48px;border-radius:13px;display:flex;align-items:center;justify-content:center;}
-    .comm-ic svg{width:24px;height:24px;color:#fff;}
-    .comm-ic-img{padding:7px;overflow:hidden;}
-    .comm-ic-img img{max-width:100%;max-height:100%;width:auto;height:auto;object-fit:contain;display:block;}
-    .comm-card h3{font-size:20px;}
-    .comm-card p{font-size:13px;color:var(--text2);flex:1;}
-    .comm-card .go{font-size:13px;font-weight:700;color:var(--teal);display:inline-flex;align-items:center;gap:6px;}
-    .comm-card .go svg{width:14px;height:14px;}
+  <!-- v2 animated-lessons stack (dependency-free): vocabulary + Canvas renderer + lesson-file
+       manifest. THE lesson renderer (engine maps each chapter → a v2 lesson; lesson files
+       lazy-load per course via window.LT_V2_FILES). Must load before the deferred engine. -->
+  <script src="lessons-v2/chart-vocabulary.js?v=1.14.0" defer></script>
+  <script src="lessons-v2/renderer.js?v=1.29.0" defer></script>
+  <script src="lessons-v2/lessons/manifest.js?v=1.1.1" defer></script>
+  <!-- which lessons have pre-generated narration audio (window.LT_AUDIO_MANIFEST) -->
+  <script src="lessons-v2/audio/manifest.js?v=2.0.0" defer></script>
 
-    /* ── FINAL CTA ───────────────────────────────────── */
-    .cta-band{padding:96px 0;text-align:center;}
-    .cta-inner{max-width:720px;margin:0 auto;background:linear-gradient(160deg,rgba(0,212,212,.12),rgba(0,212,212,.02));border:1px solid rgba(0,212,212,.25);border-radius:var(--radius-xl);padding:56px 40px;}
-    .cta-inner h2{font-size:33px;letter-spacing:-.8px;margin-bottom:16px;}
-    .cta-inner p{font-size:18px;color:var(--text2);margin-bottom:30px;}
-
-    /* ── "how this stays free" disclosure ─────────────── */
-    .support-note{border-top:1px solid var(--border);border-bottom:1px solid var(--border);background:var(--bg2);}
-    .support-note .wrap{padding:30px 24px;}
-    .support-note p{max-width:780px;margin:0 auto;text-align:center;font-size:14px;color:var(--text3);line-height:1.75;}
-    .support-note p strong{color:var(--text2);font-weight:600;}
-    .support-note a{color:var(--teal);font-weight:600;}
-
-    /* ── FOOTER ──────────────────────────────────────── */
-    footer.site{border-top:1px solid var(--border);padding:44px 0;}
-    .foot-grid{display:flex;justify-content:space-between;align-items:center;gap:24px;flex-wrap:wrap;}
-    .foot-links{display:flex;flex-wrap:wrap;gap:16px 24px;font-size:14px;}
-    .foot-links a{color:var(--text2);transition:color .15s;}
-    .foot-links a:hover{color:var(--text);}
-    .foot-copy{font-size:13px;color:var(--text3);}
-
-    /* ── Hero pixel-art logo ─────────────────────────── */
-    .hero-logo{display:block;margin:0 0 22px;padding:0;
-      font-family:'JetBrains Mono',ui-monospace,'SFMono-Regular',Menlo,monospace;
-      font-size:4px;line-height:1;letter-spacing:0;white-space:pre;font-weight:700;
-      transform:scaleX(1.667);transform-origin:left center;
-      -webkit-user-select:none;user-select:none;}
-    .hero-logo .lc{text-shadow:0 0 3px currentColor;}
-    .hero-logo .lc-t{color:#1ff5f0;}   /* bright teal */
-    .hero-logo .lc-w{color:#ffffff;}   /* pure white */
-
-    /* reveal on scroll */
-    .reveal{opacity:0;transform:translateY(22px);transition:opacity .6s ease,transform .6s ease;}
-    .reveal.in{opacity:1;transform:none;}
-
-    /* ── RESPONSIVE ──────────────────────────────────── */
-    @media(max-width:920px){
-      .hero-grid{grid-template-columns:1fr;gap:40px;}
-      .hero h1{font-size:36px;}
-      .hero-chart-card{order:-1;}
-      .stats-grid{grid-template-columns:repeat(2,1fr);}
-      .stat:nth-child(3){border-left:none;}
-      .courses,.feat-grid,.steps,.comm-grid{grid-template-columns:1fr;}
-      .feat-grid,.steps{grid-template-columns:repeat(2,1fr);}
-      .feat--wide{grid-column:span 2;}
-      .pillbar-inner{grid-template-columns:repeat(2,1fr);}
-      .pillbar-cell:nth-child(3){border-left:none;}
-      .nav-links{display:none;}
-    }
-    @media(max-width:768px){
-      /* Live BTC hero chart adds nothing for mobile users — hide it (JS init skipped too). */
-      .hero-chart-card{display:none;}
-    }
-    @media(max-width:560px){
-      /* The text-art logo is ~545px wide and ignores font-size (digit-grid).
-         Scale it down uniformly so it fits the phone (keeps the 1.667 aspect). */
-      .hero-logo{transform:scaleX(1.667) scale(0.5);}
-      .hero h1{font-size:27px;}
-      .sec-head h2{font-size:24px;}
-      .cta-inner h2{font-size:25px;}
-      .feat-grid,.steps,.comm-grid{grid-template-columns:1fr;}
-      .feat--wide{grid-column:auto;}
-      .pillbar-inner{grid-template-columns:1fr 1fr;}
-      .pillbar-cell{font-size:11px;letter-spacing:.8px;padding:14px 10px;}
-      .feat-liveprice{font-size:24px;}
-      .stats-grid{grid-template-columns:repeat(2,1fr);}
-      .nav-ticker{display:none;}
-      section.block{padding:64px 0;}
-    }
-    /* Very small phones (≤380px): trim side padding and let the chart-card header
-       wrap so the nav CTA and the LIVE badge don't clip. */
-    @media(max-width:380px){
-      .wrap,.topnav-inner{padding-left:16px;padding-right:16px;}
-      .hcc-head{flex-wrap:wrap;row-gap:8px;}
-      .hcc-right{gap:8px;}
-      /* Tiny phones: compact the brand + CTA so "Open the app" never clips. */
-      .topnav-inner{gap:8px;}
-      .brand{gap:7px;}
-      .brand .brand-logo{width:22px;height:22px;}
-      .brand-name{font-size:15px;}
-      .brand-flamingo{width:11px;height:11px;}
-      .brand-by-name{font-size:7.5px;letter-spacing:.8px;}
-      .topnav .btn{padding:8px 11px;font-size:12px;}
-    }
-    @media(prefers-reduced-motion:reduce){
-      .reveal{opacity:1;transform:none;transition:none;}
-      html{scroll-behavior:auto;}
-    }
-  </style>
+  <!-- Main engine — boots on DOMContentLoaded -->
+  <script src="lt-engine.js?v=3.152.1" defer></script>
   <!-- Vercel Analytics -->
   <script>window.va=window.va||function(){(window.vaq=window.vaq||[]).push(arguments);};</script>
   <script defer src="/_vercel/insights/script.js"></script>
 </head>
 <body>
 
-  <!-- ════════ NAV ════════ -->
-  <nav class="topnav">
-    <div class="topnav-inner">
-      <a href="#top" class="brand"><img class="brand-logo" src="lt-logo.svg" alt="" aria-hidden="true" /><span class="brand-name">Liquidity Theory</span></a>
-      <div class="nav-links">
-        <a href="#courses">Courses</a>
-        <a href="/learn/">Lessons</a>
-        <a href="#features">Features</a>
-        <a href="#how">How it works</a>
-        <a href="#community">Community</a>
-      </div>
-      <div class="nav-spacer"></div>
-      <div class="nav-ticker" title="Live BTC price">
-        <span class="dot"></span>BTC <b id="nav-btc">—</b>
-      </div>
-      <a href="lt-index.html" class="btn btn-primary btn-sm">Open the app <i data-lucide="arrow-right"></i></a>
+<!-- ═══════════════════════════════════════════════════════════════
+     APP SHELL
+     ═══════════════════════════════════════════════════════════════ -->
+<div class="app-layout">
+
+  <!-- ── SIDEBAR ─────────────────────────────────────────────────── -->
+  <aside class="sidebar" id="sidebar">
+
+    <div class="sidebar-header">
+      <a class="logo" href="./" onclick="if(typeof showHome==='function'){showHome();return false;}" title="Home">
+        <span class="logo-icon" aria-hidden="true">
+          <svg viewBox="74 90 252 220" fill-rule="nonzero" role="img" aria-label="Liquidity Theory">
+            <path fill="currentColor" d="M124.0,179.0 H143.0 A3.0,3.0 0 0 1 146.0,182.0 V236.0 A3.0,3.0 0 0 1 143.0,239.0 H124.0 A3.0,3.0 0 0 1 121.0,236.0 V182.0 A3.0,3.0 0 0 1 124.0,179.0 Z M208.0,177.0 H227.0 A3.0,3.0 0 0 1 230.0,180.0 V265.0 A3.0,3.0 0 0 1 227.0,268.0 H208.0 A3.0,3.0 0 0 1 205.0,265.0 V180.0 A3.0,3.0 0 0 1 208.0,177.0 Z M297.0,144.0 H316.0 A3.0,3.0 0 0 1 319.0,147.0 V213.0 A3.0,3.0 0 0 1 316.0,216.0 H297.0 A3.0,3.0 0 0 1 294.0,213.0 V147.0 A3.0,3.0 0 0 1 297.0,144.0 Z M217.5,140.0 H217.5 A4.0,4.0 0 0 1 221.5,144.0 V298.0 A4.0,4.0 0 0 1 217.5,302.0 H217.5 A4.0,4.0 0 0 1 213.5,298.0 V144.0 A4.0,4.0 0 0 1 217.5,140.0 Z M306.5,141.0 H306.5 A4.0,4.0 0 0 1 310.5,145.0 V224.0 A4.0,4.0 0 0 1 306.5,228.0 H306.5 A4.0,4.0 0 0 1 302.5,224.0 V145.0 A4.0,4.0 0 0 1 306.5,141.0 Z M134.0,238.0 H134.0 A4.0,4.0 0 0 1 138.0,242.0 V264.0 A4.0,4.0 0 0 1 134.0,268.0 H134.0 A4.0,4.0 0 0 1 130.0,264.0 V242.0 A4.0,4.0 0 0 1 134.0,238.0 Z M129.0,160.0 H137.0 V182.0 H129.0 Z M139.0,162.5C137.2,162.5 130.2,163.2 128.0,162.5C125.8,161.8 125.9,159.4 125.5,158.0C125.1,156.6 126.2,155.2 125.5,154.0C124.8,152.8 123.1,150.6 121.0,150.5C118.9,150.4 116.0,151.5 113.0,153.5C110.0,155.5 105.6,161.1 103.0,162.5C100.4,163.9 96.5,164.5 97.5,162.0C98.5,159.5 105.2,151.2 109.0,147.5C112.8,143.8 116.8,141.3 120.0,139.5C123.2,137.7 124.3,137.2 128.0,136.5C131.7,135.8 138.7,135.0 142.0,135.5C145.3,136.0 146.2,138.8 148.0,139.5C149.8,140.2 151.7,139.8 153.0,139.5C154.3,139.2 154.0,137.8 156.0,137.5C158.0,137.2 163.1,137.1 165.0,137.5C166.9,137.9 167.1,137.6 167.5,140.0C167.9,142.4 167.9,149.6 167.5,152.0C167.1,154.4 166.9,154.1 165.0,154.5C163.1,154.9 158.2,155.0 156.0,154.5C153.8,154.0 153.5,152.0 152.0,151.5C150.5,151.0 148.8,150.8 147.0,151.5C145.2,152.2 142.8,154.2 141.5,156.0C140.2,157.8 139.4,161.4 139.0,162.5C138.6,163.6 140.8,162.5 139.0,162.5Z M311.0,143.5C309.4,143.4 303.1,144.8 301.5,143.0C299.9,141.2 302.0,135.3 301.5,133.0C301.0,130.7 299.0,130.7 298.5,129.0C298.0,127.3 297.9,124.6 298.5,123.0C299.1,121.4 301.2,120.0 302.0,119.5C302.8,119.0 303.2,118.8 303.5,120.0C303.8,121.2 302.9,125.4 303.5,127.0C304.1,128.6 305.8,129.5 307.0,129.5C308.2,129.5 309.9,128.6 310.5,127.0C311.1,125.4 310.2,121.2 310.5,120.0C310.8,118.8 311.3,119.2 312.0,119.5C312.7,119.8 313.9,120.8 314.5,122.0C315.1,123.2 316.0,125.2 315.5,127.0C315.0,128.8 312.2,130.2 311.5,133.0C310.8,135.8 311.1,141.8 311.0,143.5C310.9,145.2 312.6,143.6 311.0,143.5Z"/>
+            <path fill="#16E9D0" d="M83.0,231.0 H102.0 A3.0,3.0 0 0 1 105.0,234.0 V273.0 A3.0,3.0 0 0 1 102.0,276.0 H83.0 A3.0,3.0 0 0 1 80.0,273.0 V234.0 A3.0,3.0 0 0 1 83.0,231.0 Z M166.0,210.0 H185.0 A3.0,3.0 0 0 1 188.0,213.0 V243.0 A3.0,3.0 0 0 1 185.0,246.0 H166.0 A3.0,3.0 0 0 1 163.0,243.0 V213.0 A3.0,3.0 0 0 1 166.0,210.0 Z M251.0,127.0 H271.0 A3.0,3.0 0 0 1 274.0,130.0 V215.0 A3.0,3.0 0 0 1 271.0,218.0 H251.0 A3.0,3.0 0 0 1 248.0,215.0 V130.0 A3.0,3.0 0 0 1 251.0,127.0 Z M92.5,208.0 H92.5 A4.0,4.0 0 0 1 96.5,212.0 V279.0 A4.0,4.0 0 0 1 92.5,283.0 H92.5 A4.0,4.0 0 0 1 88.5,279.0 V212.0 A4.0,4.0 0 0 1 92.5,208.0 Z M175.5,207.0 H175.5 A4.0,4.0 0 0 1 179.5,211.0 V272.0 A4.0,4.0 0 0 1 175.5,276.0 H175.5 A4.0,4.0 0 0 1 171.5,272.0 V211.0 A4.0,4.0 0 0 1 175.5,207.0 Z M261.0,96.0 H261.0 A4.0,4.0 0 0 1 265.0,100.0 V265.0 A4.0,4.0 0 0 1 261.0,269.0 H261.0 A4.0,4.0 0 0 1 257.0,265.0 V100.0 A4.0,4.0 0 0 1 261.0,96.0 Z"/>
+          </svg>
+        </span>
+        <span class="logo-text">Liquidity Theory</span>
+      </a>
+      <button class="sidebar-close-btn icon-btn" id="sidebar-close" aria-label="Close sidebar">
+        <i data-lucide="x" style="width:16px;height:16px;"></i>
+      </button>
     </div>
-  </nav>
 
-  <!-- ════════ HERO ════════ -->
-  <header id="top" class="hero">
-    <div class="wrap hero-grid">
-      <div>
-        <pre id="hero-logo" class="hero-logo" role="img" aria-label="Liquidity Theory candlestick logo"></pre>
-        <span class="eyebrow"><i data-lucide="book-open" style="width:14px;height:14px;"></i> A free, open learning resource</span>
-        <h1>Learn to trade crypto,<br><span class="grad">one candle at a time.</span></h1>
-        <p class="lead">A free, open resource for learning to trade — from your very first candlestick to advanced liquidity theory. No account, no ads, no paywall. The whole course is simply here, open to anyone who wants it.</p>
-        <div class="hero-cta">
-          <a href="lt-index.html" class="btn btn-primary"><i data-lucide="book-open"></i> Open the course</a>
-          <a href="#courses" class="btn btn-ghost"><i data-lucide="list"></i> Browse the curriculum</a>
-        </div>
-        <div class="trust">
-          <span><i data-lucide="check"></i> No sign-up — your progress just saves itself in your browser</span>
-        </div>
-      </div>
+    <!-- Home hub — static button below the logo, above the courses. Sits outside
+         #chapter-list so it never scrolls with the chapter list. -->
+    <button class="sidebar-home-btn" id="sidebar-home-btn" onclick="typeof showHome === 'function' && showHome()" aria-label="Home hub">
+      <i data-lucide="home" style="width:16px;height:16px;"></i>
+      <span>Home</span>
+    </button>
 
-      <div class="hero-chart-card">
-        <div class="hcc-head">
-          <div class="hcc-left">
-            <span class="hcc-dots"><i style="background:#ff5f56"></i><i style="background:#ffbd2e"></i><i style="background:#27c93f"></i></span>
-            <span class="hcc-sym"><span class="bub" aria-hidden="true"><svg viewBox="0 0 32 32"><circle cx="16" cy="16" r="16" fill="#F7931A"/><path fill="#fff" d="M23 14.2c.3-2-1.2-3-3.3-3.8l.7-2.7-1.7-.4-.7 2.6c-.4-.1-.9-.2-1.3-.3l.7-2.6-1.6-.4-.7 2.7c-.4-.1-.7-.2-1-.2l-2.3-.6-.4 1.8s1.2.3 1.2.3c.7.2.8.6.8 1l-.8 3c.1 0 .1 0 .1.1l-.1 0-1.1 4.3c-.1.2-.3.5-.7.4 0 0-1.2-.3-1.2-.3l-.8 1.9 2.2.5c.4.1.8.2 1.2.3l-.7 2.7 1.6.4.7-2.7c.4.1.9.2 1.3.3l-.7 2.7 1.7.4.7-2.7c2.8.5 4.9.3 5.8-2.2.7-2 0-3.2-1.5-3.9 1.1-.3 1.9-1 2.1-2.4zm-3.7 5.2c-.5 2-3.9.9-5 .6l.9-3.6c1.1.3 4.6.8 4.1 3zm.5-5.3c-.5 1.8-3.3.9-4.2.7l.8-3.3c.9.2 3.9.6 3.4 2.6z"/></svg></span> BTC / USDT</span>
-          </div>
-          <div class="hcc-right">
-            <span class="hcc-price" id="hcc-price">—</span>
-            <span class="hcc-chg up" id="hcc-chg">+0.00%</span>
-            <span class="hcc-live"><span class="dot"></span> LIVE</span>
-          </div>
-        </div>
-        <div id="hero-chart"></div>
-        <div class="hcc-rail">
-          <div><div class="k">24h High</div><div class="v" id="hcc-high">—</div></div>
-          <div><div class="k">24h Low</div><div class="v" id="hcc-low">—</div></div>
-          <div><div class="k">24h Change</div><div class="v up" id="hcc-change">—</div></div>
-        </div>
+    <!-- Legacy course-select (hidden — engine hides it, but the element must exist) -->
+    <select id="course-select" class="course-select" style="display:none;"></select>
+
+    <!-- Per-course progress bar -->
+    <div class="sidebar-progress-wrap">
+      <div class="sidebar-progress-track">
+        <div class="sidebar-progress-fill" id="sidebar-progress-bar" style="width:0%"></div>
       </div>
+      <div class="sidebar-progress-text" id="sidebar-progress-text">0 / 0 completed</div>
     </div>
-  </header>
 
-  <!-- ════════ VALUE PILL BAR ════════ -->
-  <div class="pillbar">
-    <div class="pillbar-inner">
-      <div class="pillbar-cell"><i data-lucide="gift"></i> Free, forever</div>
-      <div class="pillbar-cell"><i data-lucide="user-x"></i> No account, no email</div>
-      <div class="pillbar-cell"><i data-lucide="ban"></i> No ads, no paywall</div>
-      <div class="pillbar-cell"><i data-lucide="globe"></i> Open to everyone</div>
+    <!-- Chapter list (engine builds this via buildSidebar()) -->
+    <nav class="chapter-list" id="chapter-list"></nav>
+
+    <!-- Parent brand — sits at the foot of the sidebar (and the mobile drawer). -->
+    <div class="sidebar-brand-foot">
+      <span class="vt-flamingo" role="img" aria-label="Vice Terminal"></span>
+      <span class="vt-foot-text">A <strong>Vice&nbsp;Terminal</strong> product</span>
     </div>
-  </div>
+  </aside>
 
-  <!-- ════════ STATS ════════ -->
-  <div class="stats">
-    <div class="wrap stats-grid">
-      <div class="stat"><div class="num">4</div><div class="lab">Structured courses</div></div>
-      <div class="stat"><div class="num">80<span>+</span></div><div class="lab">Interactive sessions</div></div>
-      <div class="stat"><div class="num">80<span>+</span></div><div class="lab">Glossary terms</div></div>
-      <div class="stat"><div class="num"><span>$0</span></div><div class="lab">Forever — no paywall</div></div>
+  <!-- ── MAIN CONTENT WRAP ───────────────────────────────────────── -->
+  <div class="main-wrap">
+
+    <!-- Top header bar -->
+    <header class="top-header">
+      <button class="icon-btn menu-btn" id="sidebar-toggle" aria-label="Toggle sidebar" title="Toggle sidebar" aria-expanded="true">
+        <i data-lucide="menu" style="width:18px;height:18px;"></i>
+      </button>
+
+      <div class="header-info">
+        <span class="header-tag" id="header-tag">Module 1 · Session 1</span>
+        <div class="header-title" id="header-title">Loading…</div>
+      </div>
+
+      <!-- Live BTC price (Binance, streaming) -->
+      <div class="btc-ticker" id="btc-ticker" title="Live BTC · Binance">
+        <span class="btc-ticker-dot" aria-hidden="true"></span>
+        <span class="btc-ticker-sym">BTC</span>
+        <span class="btc-ticker-price" id="btc-ticker-price">—</span>
+      </div>
+
+      <!-- Discord -->
+      <a class="header-discord" href="https://discord.gg/LiquidityTheory" target="_blank" rel="noopener noreferrer" title="Join our Discord" aria-label="Join our Discord">
+        <svg viewBox="0 0 512 365.467" fill-rule="evenodd" clip-rule="evenodd" aria-hidden="true"><path fill="currentColor" d="M378.186 365.028s-15.794-18.865-28.956-35.099c57.473-16.232 79.41-51.77 79.41-51.77-17.989 11.846-35.099 20.182-50.454 25.885-21.938 9.213-42.997 14.917-63.617 18.866-42.118 7.898-80.726 5.703-113.631-.438-25.008-4.827-46.506-11.407-64.494-18.867-10.091-3.947-21.059-8.774-32.027-14.917-1.316-.877-2.633-1.316-3.948-2.193-.877-.438-1.316-.878-1.755-.878-7.898-4.388-12.285-7.458-12.285-7.458s21.06 34.659 76.779 51.331c-13.163 16.673-29.395 35.977-29.395 35.977C36.854 362.395 0 299.218 0 299.218 0 159.263 63.177 45.633 63.177 45.633 126.354-1.311 186.022.005 186.022.005l4.388 5.264C111.439 27.645 75.461 62.305 75.461 62.305s9.653-5.265 25.886-12.285c46.945-20.621 84.236-25.885 99.592-27.64 2.633-.439 4.827-.878 7.458-.878 26.763-3.51 57.036-4.387 88.624-.878 41.68 4.826 86.43 17.111 132.058 41.68 0 0-34.66-32.906-109.244-55.281l6.143-7.019s60.105-1.317 122.844 45.628c0 0 63.178 113.631 63.178 253.585 0-.438-36.854 62.739-133.813 65.81l-.001.001zm-43.874-203.133c-25.006 0-44.75 21.498-44.75 48.262 0 26.763 20.182 48.26 44.75 48.26 25.008 0 44.752-21.497 44.752-48.26 0-26.764-20.182-48.262-44.752-48.262zm-160.135 0c-25.008 0-44.751 21.498-44.751 48.262 0 26.763 20.182 48.26 44.751 48.26 25.007 0 44.75-21.497 44.75-48.26.439-26.763-19.742-48.262-44.75-48.262z"/></svg>
+      </a>
+
+      <!-- Global glossary search -->
+      <div class="header-search" id="header-search">
+        <i data-lucide="search" style="width:15px;height:15px;"></i>
+        <input id="lt-search-input" type="text" placeholder="Search terms — e.g. Ichimoku" autocomplete="off" spellcheck="false" />
+        <kbd class="search-kbd" aria-hidden="true">/</kbd>
+        <div class="lt-search-results hidden" id="lt-search-results"></div>
+      </div>
+
+      <div class="header-right">
+        <button class="icon-btn hidden" id="copy-link-btn" data-tip="Share lesson" aria-label="Share this lesson" onclick="typeof ltCopyLessonLink === 'function' && ltCopyLessonLink()">
+          <i data-lucide="share-2" style="width:16px;height:16px;"></i>
+        </button>
+        <button class="icon-btn" id="sim-sidebar-btn" data-tip="Practice Simulator" aria-label="Practice Simulator" onclick="typeof showSimulator === 'function' && showSimulator()">
+          <i data-lucide="activity" style="width:16px;height:16px;"></i>
+        </button>
+        <button class="icon-btn" id="glossary-sidebar-btn" data-tip="Glossary &amp; Definitions" aria-label="Glossary &amp; Definitions" onclick="typeof showGlossary === 'function' && showGlossary()">
+          <i data-lucide="book-open" style="width:16px;height:16px;"></i>
+        </button>
+        <button class="icon-btn" id="flashcards-sidebar-btn" data-tip="Flashcards" aria-label="Flashcards" onclick="typeof showFlashcards === 'function' && showFlashcards()">
+          <i data-lucide="layers" style="width:16px;height:16px;"></i>
+        </button>
+        <button class="icon-btn" id="community-sidebar-btn" data-tip="Community &amp; Social" aria-label="Community &amp; Social" onclick="typeof showCommunity === 'function' && showCommunity()">
+          <i data-lucide="users" style="width:16px;height:16px;"></i>
+        </button>
+        <button class="icon-btn" data-tip="Settings" aria-label="Settings" onclick="typeof showSettings === 'function' && showSettings()">
+          <i data-lucide="settings" style="width:16px;height:16px;"></i>
+        </button>
+      </div>
+    </header>
+
+    <!-- Global progress bar (3px strip beneath header) -->
+    <div class="global-progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+      <div class="global-progress-fill" id="global-progress-fill" style="width:0%"></div>
     </div>
-  </div>
 
-  <!-- ════════ COURSES ════════ -->
-  <section id="courses" class="block">
-    <div class="wrap">
-      <div class="sec-head reveal">
-        <div class="kicker">The Curriculum</div>
-        <h2>Four courses. One clear path.</h2>
-        <p>Start from absolute zero and build all the way to institutional-grade liquidity concepts. Each course unlocks the next — or jump straight to any topic you want.</p>
+    <!-- Scrollable content area — engine writes HTML here -->
+    <main class="content-area" id="content-area"></main>
+
+    <!-- Bottom nav bar -->
+    <footer class="nav-footer">
+      <div class="nav-footer-inner">
+        <button class="nav-btn nav-prev" id="btn-prev" disabled>
+          <span class="nav-arrow">←</span>
+          <span class="nav-label">Back</span>
+        </button>
+        <button class="nav-btn nav-next" id="btn-next">
+          <span class="nav-label">Next</span>
+          <span class="nav-arrow">→</span>
+        </button>
       </div>
-      <div class="courses">
-        <a href="lt-index.html" class="course-card reveal" style="--c:var(--teal)">
-          <div class="cc-no">COURSE 01</div>
-          <h3>Laying the Foundation</h3>
-          <p>Candlesticks, price action, support &amp; resistance, and how markets actually move. The bedrock every trader needs.</p>
-          <div class="cc-meta"><span class="chip"><i data-lucide="book-open"></i> Beginner</span><span class="chip"><i data-lucide="layers"></i> Core concepts</span></div>
-        </a>
-        <a href="lt-index.html" class="course-card reveal" style="--c:var(--coral)">
-          <div class="cc-no">COURSE 02</div>
-          <h3>Building Your Toolbox</h3>
-          <p>Supply &amp; demand zones, the order book, leverage, contracts, and executing positions with confidence.</p>
-          <div class="cc-meta"><span class="chip"><i data-lucide="wrench"></i> Intermediate</span><span class="chip"><i data-lucide="layers"></i> Mechanics</span></div>
-        </a>
-        <a href="lt-index.html" class="course-card reveal" style="--c:var(--purple)">
-          <div class="cc-no">COURSE 03</div>
-          <h3>Sharpening Your Edge</h3>
-          <p>Ichimoku, ranges, DBS/SSR strategies, and building a repeatable trading system you can trust.</p>
-          <div class="cc-meta"><span class="chip"><i data-lucide="target"></i> Advanced</span><span class="chip"><i data-lucide="layers"></i> Strategy</span></div>
-        </a>
-        <a href="lt-index.html" class="course-card reveal" style="--c:var(--pink)">
-          <div class="cc-no">COURSE 04</div>
-          <h3>Liquidity Theory</h3>
-          <p>An advanced, optional deep-dive into our own liquidity framework — liquidity pools, sentiment and reading the smart money. Builds on Courses 1–3; not required to become a capable trader.</p>
-          <div class="cc-meta"><span class="chip"><i data-lucide="zap"></i> Advanced</span><span class="chip"><i data-lucide="layers"></i> Optional track</span></div>
-        </a>
-      </div>
-    </div>
-  </section>
+    </footer>
 
-  <!-- ════════ FEATURES ════════ -->
-  <section id="features" class="block" style="background:var(--bg2);border-top:1px solid var(--border);border-bottom:1px solid var(--border);">
-    <div class="wrap">
-      <div class="sec-head reveal">
-        <div class="kicker">What's inside</div>
-        <h2>Learn by doing — not by watching.</h2>
-        <p>Every concept is paired with real, interactive charts and tools so it actually sticks. All of it is free to use.</p>
-      </div>
-      <div class="feat-grid">
-        <div class="feat feat--wide reveal">
-          <div>
-            <div class="feat-ic"><i data-lucide="activity"></i></div>
-            <h3>Practice Simulator</h3>
-            <p>Place trades on live-feeling charts with draggable take-profit and stop-loss orders. Build instincts and rehearse risk management — completely risk-free, no real money.</p>
-          </div>
-          <div class="feat-spark" id="feat-spark"></div>
-        </div>
-        <div class="feat reveal"><div class="feat-ic"><i data-lucide="candlestick-chart"></i></div><h3>Interactive Charts</h3><p>Every lesson is built on real candlestick charts you can read, replay, and learn to anticipate.</p></div>
-        <div class="feat reveal"><div class="feat-ic"><i data-lucide="book-open"></i></div><h3>Glossary &amp; Search</h3><p>80+ cross-referenced terms with diagrams. Search any concept instantly from anywhere in the app.</p></div>
-        <div class="feat reveal"><div class="feat-ic"><i data-lucide="layers"></i></div><h3>Flashcards</h3><p>Per-course decks to drill the vocabulary, then review only the ones you got wrong.</p></div>
-        <div class="feat reveal"><div class="feat-ic"><i data-lucide="award"></i></div><h3>Exam &amp; Certificate</h3><p>Test yourself with a final exam and earn a printable certificate of completion.</p></div>
-      </div>
-    </div>
-  </section>
+  </div><!-- /.main-wrap -->
 
-  <!-- ════════ HOW IT WORKS ════════ -->
-  <section id="how" class="block">
-    <div class="wrap">
-      <div class="sec-head reveal">
-        <div class="kicker">Open access</div>
-        <h2>Get started in seconds.</h2>
-        <p>No email, no password, no credit card — nothing to sign up for. Just open it and learn.</p>
-      </div>
-      <div class="steps">
-        <div class="step reveal"><div class="n">1</div><h3>Open the app</h3><p>Click Launch and you're in. There's no account to create and nothing to download.</p></div>
-        <div class="step reveal"><div class="n">2</div><h3>Work through the courses</h3><p>Follow the path or jump to any topic. Quizzes and charts make every lesson interactive.</p></div>
-        <div class="step reveal"><div class="n">3</div><h3>Your progress saves itself</h3><p>Everything is stored right in your browser. Want a copy? Export a backup anytime in Settings.</p></div>
-      </div>
-    </div>
-  </section>
+</div><!-- /.app-layout -->
 
-  <!-- ════════ COMMUNITY ════════ -->
-  <section id="community" class="comm block">
-    <div class="wrap">
-      <div class="sec-head reveal">
-        <div class="kicker">You're Not Alone</div>
-        <h2>Join the community.</h2>
-        <p>Trade ideas, ask questions, and learn alongside thousands of other traders.</p>
-      </div>
-      <div class="comm-grid">
-        <a href="https://discord.gg/LiquidityTheory" target="_blank" rel="noopener noreferrer" class="comm-card reveal">
-          <div class="comm-ic" style="background:#5865F2;box-shadow:0 8px 22px rgba(88,101,242,.4);">
-            <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M20.317 4.3698a19.7913 19.7913 0 0 0-4.8851-1.5152.0741.0741 0 0 0-.0785.0371c-.211.3753-.4447.8648-.6083 1.2495-1.8447-.2762-3.68-.2762-5.4868 0-.1636-.3933-.4058-.8742-.6177-1.2495a.077.077 0 0 0-.0785-.037 19.7363 19.7363 0 0 0-4.8852 1.515.0699.0699 0 0 0-.0321.0277C.5334 9.0458-.319 13.5799.0992 18.0578a.0824.0824 0 0 0 .0312.0561c2.0528 1.5076 4.0413 2.4228 5.9929 3.0294a.0777.0777 0 0 0 .0842-.0276c.4616-.6304.8731-1.2952 1.226-1.9942a.076.076 0 0 0-.0416-.1057c-.6528-.2476-1.2743-.5495-1.8722-.8923a.077.077 0 0 1-.0076-.1277c.1258-.0943.2517-.1923.3718-.2914a.0743.0743 0 0 1 .0776-.0105c3.9278 1.7933 8.18 1.7933 12.0614 0a.0739.0739 0 0 1 .0785.0095c.1202.099.246.1981.3728.2924a.077.077 0 0 1-.0066.1276 12.2986 12.2986 0 0 1-1.873.8914.0766.0766 0 0 0-.0407.1067c.3604.698.7719 1.3628 1.225 1.9932a.076.076 0 0 0 .0842.0286c1.961-.6067 3.9495-1.5219 6.0023-3.0294a.077.077 0 0 0 .0313-.0552c.5004-5.177-.8382-9.6739-3.5485-13.6604a.061.061 0 0 0-.0312-.0286zM8.02 15.3312c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9555-2.4189 2.157-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.9555 2.4189-2.1569 2.4189zm7.9748 0c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9554-2.4189 2.1569-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.946 2.4189-2.1568 2.4189Z"/></svg>
-          </div>
-          <h3>Discord</h3><p>Live chat, trade setups, and a friendly room of fellow learners.</p>
-          <span class="go">Join server <i data-lucide="arrow-up-right"></i></span>
-        </a>
-        <a href="https://www.youtube.com/@LiquidityTheory" target="_blank" rel="noopener noreferrer" class="comm-card reveal">
-          <div class="comm-ic" style="background:#FF0000;box-shadow:0 8px 22px rgba(255,0,0,.35);">
-            <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M9.5 16.5l7-4.5-7-4.5v9z"/></svg>
-          </div>
-          <h3>YouTube</h3><p>Deep-dive videos and breakdowns that pair with the courses.</p>
-          <span class="go">Watch now <i data-lucide="arrow-up-right"></i></span>
-        </a>
-        <a href="https://x.com/Captain_Kole" target="_blank" rel="noopener noreferrer" class="comm-card reveal">
-          <div class="comm-ic" style="background:#000;border:1px solid var(--border3);">
-            <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231 5.45-6.231zm-1.161 17.52h1.833L7.084 4.126H5.117l11.966 15.644z"/></svg>
-          </div>
-          <h3>X / Twitter</h3><p>Daily market takes from the founders, Captain Kole &amp; Mike BTC.</p>
-          <span class="go">Follow along <i data-lucide="arrow-up-right"></i></span>
-        </a>
-      </div>
-    </div>
-  </section>
+<!-- Sidebar overlay (mobile tap-to-close) -->
+<div class="sidebar-overlay hidden" id="sidebar-overlay"></div>
 
-  <!-- ════════ HOW THIS STAYS FREE ════════ -->
-  <div class="support-note">
-    <div class="wrap">
-      <p>Liquidity Theory is free, and it always will be — no ads, no paywall, no email wall. It's kept running through an <strong>optional</strong> <a href="https://partner.blofin.com/d/LiquidityTheory" target="_blank" rel="noopener noreferrer">BloFin</a> referral: if you ever decide to trade and fund an account through that link, a small commission helps cover the costs — at no extra cost to you. It's entirely optional, and never required to use anything here.</p>
-    </div>
-  </div>
+<!-- ═══════════════════════════════════════════════════════════════
+     TOAST NOTIFICATION
+     ═══════════════════════════════════════════════════════════════ -->
+<div class="toast hidden" id="toast"></div>
 
-  <!-- ════════ FINAL CTA ════════ -->
-  <section class="cta-band">
-    <div class="wrap">
-      <div class="cta-inner reveal">
-        <h2>It's all here, and it's free.</h2>
-        <p>No sign-up, no catch. Open Course 1 and start from the beginning, or jump straight to any topic you want — your progress saves itself as you go.</p>
-        <a href="lt-index.html" class="btn btn-primary"><i data-lucide="book-open"></i> Open the course</a>
-      </div>
-    </div>
-  </section>
-
-  <!-- ════════ FOOTER ════════ -->
-  <footer class="site">
-    <div class="wrap foot-grid">
-      <a href="#top" class="brand"><img class="brand-logo" src="lt-logo.svg" alt="" aria-hidden="true" /><span class="brand-stack"><span class="brand-name">Liquidity Theory</span><span class="brand-by"><span class="brand-by-pre">by</span><span class="brand-flamingo" role="img" aria-label="Vice Terminal"></span><span class="brand-by-name">Vice Terminal</span></span></span></a>
-      <div class="foot-links">
-        <a href="#courses">Courses</a>
-        <a href="/learn/">Lessons</a>
-        <a href="#features">Features</a>
-        <a href="#community">Community</a>
-        <a href="lt-index.html">Open the app</a>
-      </div>
-      <div class="foot-copy">© <span id="year"></span> Vice Terminal · Liquidity Theory — Educational content only, not financial advice.</div>
-    </div>
-  </footer>
-
-  <script>
-    document.getElementById('year').textContent = new Date().getFullYear();
-    if (window.lucide) lucide.createIcons();
-
-    /* ── Scroll reveal ── */
-    (function(){
-      var io = new IntersectionObserver(function(entries){
-        entries.forEach(function(e){ if(e.isIntersecting){ e.target.classList.add('in'); io.unobserve(e.target); } });
-      },{threshold:.12});
-      document.querySelectorAll('.reveal').forEach(function(el,i){
-        el.style.transitionDelay = (Math.min(i,6)*40)+'ms';
-        io.observe(el);
-      });
-    })();
-
-    /* ── Live BTC candlestick hero chart (real data; TradingView-style:
-          fixed history, only the current candle ticks, new candle on interval rollover) ── */
-    (function(){
-      var el = document.getElementById('hero-chart');
-      if (!el || typeof echarts === 'undefined') return;
-      // The hero chart is hidden on mobile (CSS) — skip its init + BTC fetch there
-      // (no purpose for mobile users, and avoids rendering ECharts into a hidden node).
-      if (window.matchMedia && window.matchMedia('(max-width:768px)').matches) return;
-      var chart = echarts.init(el, null, {renderer:'canvas'});
-      window.addEventListener('resize', function(){ chart.resize(); });
-
-      var INTERVAL = '30m', LIMIT = 60, INTERVAL_MS = 30 * 60 * 1000;
-      var candles = [];      // each: [open, close, low, high]
-      var lastOpen = 0;      // open-time (ms) of the most recent candle
-
-      function money(v){ return '$' + Math.round(v).toLocaleString(); }
-
-      /* ---- data sources (Binance → Binance.us → CoinGecko) ---- */
-      async function fetchKlines(){
-        var bases = ['https://api.binance.com', 'https://api.binance.us'];
-        for (var i = 0; i < bases.length; i++){
-          try{
-            var r = await fetch(bases[i] + '/api/v3/klines?symbol=BTCUSDT&interval=' + INTERVAL + '&limit=' + LIMIT, {cache:'no-store'});
-            if (r.ok){ var k = await r.json();
-              if (Array.isArray(k) && k.length) return k.map(function(c){ return { t:c[0], row:[+c[1], +c[4], +c[3], +c[2]] }; });  // [open,close,low,high]
-            }
-          }catch(e){}
-        }
-        try{ // CoinGecko OHLC, days=1 ≈ 30-min candles → [time,open,high,low,close]
-          var r2 = await fetch('https://api.coingecko.com/api/v3/coins/bitcoin/ohlc?vs_currency=usd&days=1', {cache:'no-store'});
-          if (r2.ok){ var g = await r2.json();
-            if (Array.isArray(g) && g.length) return g.slice(-LIMIT).map(function(c){ return { t:c[0], row:[c[1], c[4], c[3], c[2]] }; });
-          }
-        }catch(e){}
-        return null;
-      }
-      async function fetchPrice(){
-        var u = ['https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT',
-                 'https://api.binance.us/api/v3/ticker/price?symbol=BTCUSDT'];
-        for (var i = 0; i < u.length; i++){
-          try{ var r = await fetch(u[i], {cache:'no-store'}); if (r.ok){ var d = await r.json(); var p = parseFloat(d.price); if (isFinite(p)) return p; } }catch(e){}
-        }
-        try{ var r2 = await fetch('https://api.coinbase.com/v2/prices/BTC-USD/spot', {cache:'no-store'}); if (r2.ok){ var d2 = await r2.json(); var p2 = parseFloat(d2.data.amount); if (isFinite(p2)) return p2; } }catch(e){}
-        return null;
-      }
-      async function fetchStats(){   // 24h price/change/high/low for the card rail
-        var bases = ['https://api.binance.com', 'https://api.binance.us'];
-        for (var i = 0; i < bases.length; i++){
-          try{ var r = await fetch(bases[i] + '/api/v3/ticker/24hr?symbol=BTCUSDT', {cache:'no-store'});
-            if (r.ok){ var d = await r.json(); if (d && d.lastPrice) return { price:+d.lastPrice, pct:+d.priceChangePercent, high:+d.highPrice, low:+d.lowPrice }; }
-          }catch(e){}
-        }
-        try{ var r2 = await fetch('https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=bitcoin', {cache:'no-store'});
-          if (r2.ok){ var g = await r2.json(); if (g && g[0]) return { price:g[0].current_price, pct:g[0].price_change_percentage_24h, high:g[0].high_24h, low:g[0].low_24h }; }
-        }catch(e){}
-        return null;
-      }
-
-      /* ---- render ---- */
-      function render(){
-        if (!candles.length) return;
-        var min = Math.min.apply(null, candles.map(function(d){ return d[2]; }));
-        var max = Math.max.apply(null, candles.map(function(d){ return d[3]; }));
-        var pad = (max - min) * 0.08 || max * 0.01;
-        var lastClose = candles[candles.length - 1][1];
-        chart.setOption({
-          animation:true, animationDuration:600, animationDurationUpdate:300, animationEasingUpdate:'linear',
-          grid:{left:6, right:60, top:10, bottom:18},
-          xAxis:{type:'category', show:false, data:candles.map(function(_, i){ return i; })},
-          yAxis:{
-            scale:true, position:'right', min:min - pad, max:max + pad,
-            axisLine:{show:false}, axisTick:{show:false},
-            splitLine:{lineStyle:{color:'rgba(255,255,255,.04)'}},
-            axisLabel:{color:'#555', fontSize:10, formatter:function(v){ return Math.round(v / 1000) + 'k'; }}
-          },
-          series:[{
-            type:'candlestick', data:candles,
-            itemStyle:{color:'#00d4d4', color0:'#f2f2f2', borderColor:'#00d4d4', borderColor0:'#f2f2f2'},
-            markLine:{
-              symbol:'none', animation:false,
-              data:[{yAxis:lastClose}],
-              lineStyle:{color:'#00d4d4', type:'dashed', width:1, opacity:.8},
-              label:{formatter:money(lastClose), color:'#04201f', backgroundColor:'#00d4d4', padding:[3,6], borderRadius:3, fontSize:10, fontWeight:700}
-            }
-          }]
-        });
-      }
-
-      /* ---- card meta (price + 24h rail) ---- */
-      function setMeta(s){
-        var up = (s.pct >= 0), chg = (up ? '+' : '') + (isFinite(s.pct) ? s.pct.toFixed(2) : '0.00') + '%';
-        var set = function(id, txt, cls){ var e = document.getElementById(id); if (!e) return; e.textContent = txt; if (cls !== undefined) e.className = cls; };
-        set('hcc-price', money(s.price));
-        set('hcc-chg', chg, 'hcc-chg ' + (up ? 'up' : 'down'));
-        set('hcc-high', money(s.high));
-        set('hcc-low', money(s.low));
-        set('hcc-change', chg, 'v ' + (up ? 'up' : 'down'));
-      }
-      function metaFromCandles(price){   // fallback if 24h stats are unavailable
-        var hi = Math.max.apply(null, candles.map(function(d){ return d[3]; }));
-        var lo = Math.min.apply(null, candles.map(function(d){ return d[2]; }));
-        var first = candles[0][0];
-        return { price:price, pct:((price - first) / first) * 100, high:Math.max(hi, price), low:Math.min(lo, price) };
-      }
-
-      /* ---- live tick: roll a new candle on interval boundary, else update the current one ---- */
-      function tick(price){
-        if (!candles.length || !isFinite(price)) return;
-        var slot = Math.floor(Date.now() / INTERVAL_MS) * INTERVAL_MS;
-        if (slot > lastOpen){
-          var prevClose = candles[candles.length - 1][1];
-          candles.push([prevClose, price, Math.min(prevClose, price), Math.max(prevClose, price)]);
-          if (candles.length > LIMIT) candles.shift();
-          lastOpen = slot;
-        } else {
-          var c = candles[candles.length - 1];
-          c[1] = price;                        // close follows the live price
-          if (price > c[3]) c[3] = price;      // extend high
-          if (price < c[2]) c[2] = price;      // extend low
-        }
-        render();
-        var pe = document.getElementById('hcc-price'); if (pe) pe.textContent = money(price);
-      }
-
-      /* ---- boot ---- */
-      (async function init(){
-        var k = await fetchKlines();
-        if (k && k.length){
-          candles = k.map(function(x){ return x.row; });
-          lastOpen = k[k.length - 1].t;
-        } else {                               // last-resort static synthetic so the hero never looks empty (no scrolling)
-          var last = 64000;
-          for (var i = 0; i < LIMIT; i++){ var dr = (Math.random() - 0.48) * last * 0.01, o = last, c = last + dr;
-            candles.push([o, c, Math.min(o, c) - Math.random() * last * 0.004, Math.max(o, c) + Math.random() * last * 0.004]); last = c; }
-          lastOpen = Math.floor(Date.now() / INTERVAL_MS) * INTERVAL_MS;
-        }
-        render();
-
-        var s = await fetchStats();
-        var p0 = await fetchPrice();
-        if (!s && (p0 || candles.length)) s = metaFromCandles(p0 || candles[candles.length - 1][1]);
-        if (s) setMeta(s);
-        if (p0) tick(p0); else if (s) tick(s.price);
-
-        setInterval(async function(){ var p = await fetchPrice(); if (p) tick(p); }, 4000);   // live current-candle tick
-        setInterval(async function(){ var st = await fetchStats(); if (st) setMeta(st); }, 30000); // refresh 24h rail
-      })();
-    })();
-
-    /* ── Simulator tile spark bars ── */
-    (function(){
-      var el = document.getElementById('feat-spark');
-      if (!el) return;
-      var n = 22, html = '';
-      for (var i=0;i<n;i++){
-        var h = 28 + Math.round(Math.random()*70);
-        var up = Math.random() > 0.42;
-        html += '<i style="height:'+h+'%;background:'+(up?'#00d4d4':'#f2f2f2')+';animation-delay:'+(i*28)+'ms"></i>';
-      }
-      el.innerHTML = html;
-    })();
-
-    /* ── Hero logo, rendered as its raw character grid (t=teal, w=white, .=dim) ── */
-    (function(){
-      var el = document.getElementById('hero-logo');
-      if (!el) return;
-      // each string = one text row; 2 chars per cell (top,bottom pixel). t=teal w=white .=empty
-      var LOGO = ["...............................................................................................t.t.t............................", "..............................................................................................tttttt............................", "..............................................................................................tttttt............................", "..............................................................................................tttttt...............t.t...t.t....", ".........................................................................................t.t.ttttttt.t.t..........ttww.ttwwt....", "...........................t.t.t.t.t.......t.t..........................................tttttttttttttttt............wwwwwwt.....", "...................t.wtwwwwwwwwwwwwwwwtwwwwwwwtw......................twwwtw............tttttttttttttttt.........t.wwwwwww.w.t..", "...............ttwwwwwwtwwwwwwwwwwwwwwwtwwwwwwww......................wwwwwwtt..........tttttttttttttttt........wwwwwwwwwwwwww..", ".............wwwwtt.....t.wwwwwwwwt.......t.t.t.......................wtwwww............tttttttttttttttt........wwwwwwwwwwwwww..", "..........ttwtt...........ttwwwwtt....................................ttwwww............tttttttttttttttt........wwwwwwwwwwwwww..", "..........................ttwwwwtt....................................ttwwww............tttttttttttttttt........wwwwwwwwwwwwww..", "......................tttwtwwwwwtwtwtt............................wwwwwwwwwwwwww.t......tttttttttttttttt........wwwwwwwwwwwwww..", "......................ttwwwwwwwwwwwwtt............................wwwwwwwwwwwwwwtt......tttttttttttttttt........wwwwwwwwwwwwww..", "......................ttwwwwwwwwwwwwtt............................wwwwwwwwwwwwwwtt......tttttttttttttttt........wwwwwwwwwwwwww..", "......................ttwwwwwwwwwwwwtt...........t.t.t............wwwwwwwwwwwwwwtt......tttttttttttttttt........wwwwwwwwwwwwww..", "......tttttt..........ttwwwwwwwwwwwwtt......tttttttttttttt.t......wwwwwwwwwwwwwwtt......tttttttttttttttt........wwwwwwwwwwwwww..", "......tttttt..........ttwwwwwwwwwwwwtt......tttttttttttttttt......wwwwwwwwwwwwwwtt......t.t.t.ttttttt.t.........w.w.wwwwwww.w...", "...t.ttttttt.t.t......ttwwwwwwwwwwwwtt......tttttttttttttttt......wwwwwwwwwwwwwwtt............tttttt................ttwwwt......", "..tttttttttttttt......ttwwwwwwwwwwwwtt......tttttttttttttttt......wwwwwwwwwwwwwwtt............tttttt............................", "..tttttttttttttt........t.t.wwwwttt.........tttttttttttttttt......wwwwwwwwwwwwwwtt............tttttt............................", "..tttttttttttttt............wwwwtt............t.ttttttt.t.........wwwwwwwwwwwwwwtt............tttttt............................", "..tttttttttttttt............wwwwtt..............tttttt............wwwwwwwwwwwwwwtt............tttttt............................", "..tttttttttttttt............wwwwtt..............tttttt............wwwwwwwwwwwwwwt.............tttttt............................", "..tttttttttttttt................................tttttt................ttwwwwt...................................................", "......tttttt..........................................................ttwwww....................................................", "......................................................................ttwwww....................................................", "......................................................................ttwwww....................................................", "......................................................................t.w.t....................................................."];
-      // Decode the source (2 stacked pixels per row) into its true 56×64 grid, and fill each
-      // teal/white cell with a digit; empty cells become spaces so only the mark glows.
-      var rnd = function(){ return Math.floor(Math.random() * 10); };
-      var html = '';
-      for (var r = 0; r < LOGO.length; r++){
-        var row = LOGO[r], top = '', bot = '';
-        for (var c = 0; c * 2 < row.length; c++){
-          var tp = row.charAt(2*c), bt = row.charAt(2*c + 1);
-          top += (tp === 't' || tp === 'w') ? '<span class="lc lc-' + tp + '">' + rnd() + '</span>' : ' ';
-          bot += (bt === 't' || bt === 'w') ? '<span class="lc lc-' + bt + '">' + rnd() + '</span>' : ' ';
-        }
-        html += top + '\n' + bot + '\n';
-      }
-      el.innerHTML = html;
-
-      // Live "data stream" — continuously flicker a random subset of cells to new digits
-      var cells = el.querySelectorAll('span.lc');
-      if (cells.length){
-        setInterval(function(){
-          var k = Math.max(2, (cells.length * 0.10) | 0);
-          for (var i = 0; i < k; i++){ cells[(Math.random() * cells.length) | 0].textContent = rnd(); }
-        }, 90);
-      }
-    })();
-
-    /* ── Live BTC price (nav ticker + features banner) ── */
-    (function(){
-      var elp = document.getElementById('nav-btc');
-      function fmt(p){ return '$'+Number(p).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}); }
-      async function fetchBtc(){
-        var urls=['https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT',
-                  'https://api.binance.us/api/v3/ticker/price?symbol=BTCUSDT'];
-        for (var i=0;i<urls.length;i++){
-          try{ var r=await fetch(urls[i],{cache:'no-store'}); if(r.ok){var d=await r.json(); var p=parseFloat(d.price); if(isFinite(p)) return p;} }catch(e){}
-        }
-        try{ var r2=await fetch('https://api.coinbase.com/v2/prices/BTC-USD/spot',{cache:'no-store'}); if(r2.ok){var d2=await r2.json(); var p2=parseFloat(d2.data.amount); if(isFinite(p2)) return p2;} }catch(e){}
-        return null;
-      }
-      async function tick(){ var p=await fetchBtc(); if(p!=null){ var t=fmt(p); if(elp)elp.textContent=t; } }
-      tick(); setInterval(tick, 4000);
-    })();
-  </script>
 </body>
 </html>

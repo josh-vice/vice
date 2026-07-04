@@ -21,6 +21,15 @@
   --border2:      #363049;
   --border3:      #4b4566;
 
+  /* Strong custom easing curves — the built-in CSS eases are too weak (per the
+     emil-design-eng skill). ease-out for UI interactions, ease-in-out for movement. */
+  --ease-out:     cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out:  cubic-bezier(0.77, 0, 0.175, 1);
+
+  /* Display/heading font — IBM Plex Mono pairs with the Geist Mono body to give
+     headings their own voice while staying terminal-native. (Inter setting overrides both.) */
+  --font-display: 'Geist Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
+
   --teal:         #00d4d4;
   --teal2:        #00b8b8;
   --teal3:        #009696;
@@ -33,6 +42,10 @@
   --pink-dim:     rgba(255, 46, 136, 0.12);
   --pink-glow:    rgba(255, 46, 136, 0.24);
   --pink-faint:   rgba(255, 46, 136, 0.06);
+
+  /* bearish candle colour (mirrors the lt_bearish_color setting; bullish candles use --teal).
+     JS sets it inline per the saved setting; this is the default/fallback. */
+  --bear:         #ff2e88;
 
   --purple:       #a855f7;
   --purple-dim:   rgba(168, 85, 247, 0.14);
@@ -54,13 +67,21 @@
 
   --text:         #f6f5fb;
   --text2:        #a8a3bb;
-  --text3:        #716c88;
+  --text3:        #8b85a3;   /* lightened from #716c88 → ≥4.5:1 on --bg (WCAG AA for small text) */
   --text4:        #3a3a58;
 
   --sidebar-w:    272px;
   --header-h:     60px;
   --footer-h:     64px;
   --progress-h:   3px;
+
+  /* Display scale (MacBook-first). The px design targets ~1900px desktops;
+     body{zoom} scales the WHOLE app (text, chrome, canvas charts, engine
+     inline styles) uniformly on laptop windows. --app-zoom mirrors the zoom
+     so viewport-unit math can compensate: inside a zoomed body, 100dvh
+     resolves zoom-times too small — divide by var(--app-zoom) wherever a
+     length must span the real viewport. Tiers live with the laptop blocks. */
+  --app-zoom:     1;
 
   --radius:       4px;
   --radius-lg:    6px;
@@ -110,7 +131,7 @@ html, body {
 }
 
 body {
-  font-family: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
+  font-family: 'Geist Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
   font-size: 14.5px;
   background: var(--bg);
   color: var(--text);
@@ -119,7 +140,7 @@ body {
 }
 
 h1, h2, h3, h4, h5, h6 {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: 'Geist Mono', monospace;
 }
 
 button {
@@ -167,8 +188,8 @@ select:focus-visible,
    ═══════════════════════════════════════════════════════════════════════════ */
 .app-layout {
   display: flex;
-  height: 100vh;       /* fallback for older browsers */
-  height: 100dvh;      /* iOS Safari: excludes the dynamic browser toolbar */
+  height: calc(100vh / var(--app-zoom, 1));   /* fallback for older browsers */
+  height: calc(100dvh / var(--app-zoom, 1));  /* iOS Safari: excludes the dynamic browser toolbar */
   overflow: hidden;
   position: relative;
 }
@@ -179,8 +200,8 @@ select:focus-visible,
 .sidebar {
   width: var(--sidebar-w);
   min-width: var(--sidebar-w);
-  height: 100vh;
-  height: 100dvh;
+  height: calc(100vh / var(--app-zoom, 1));
+  height: calc(100dvh / var(--app-zoom, 1));
   background: var(--bg2);
   border-right: 1px solid var(--border);
   display: flex;
@@ -240,7 +261,7 @@ select:focus-visible,
 /* Product wordmark — mono is fixed-width, so size it to fit the wordmark inside
    even the narrowest (laptop) sidebar without clipping. */
 .logo-text {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: 'Geist Mono', monospace;
   font-size: 14px;
   font-weight: 700;
   color: var(--text);
@@ -256,8 +277,8 @@ select:focus-visible,
   display: inline-block;
   flex-shrink: 0;
   background: var(--grad-flamingo);
-  -webkit-mask: url(vice-terminal.png?v=1) center / contain no-repeat;
-  mask: url(vice-terminal.png?v=1) center / contain no-repeat;
+  -webkit-mask: url(vice-terminal-64.png?v=1) center / contain no-repeat;
+  mask: url(vice-terminal-64.png?v=1) center / contain no-repeat;
   filter: drop-shadow(0 0 4px var(--pink-glow));
 }
 
@@ -328,10 +349,9 @@ select:focus-visible,
 }
 
 .course-accordion-label {
-  font-size: 11px;
+  font-size: 11.5px;
   font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.6px;
+  letter-spacing: 0.2px;
   color: var(--text3);
 }
 
@@ -366,15 +386,6 @@ select:focus-visible,
   padding-left: 24px;
 }
 
-.sidebar-course-label {
-  font-size: 10px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.8px;
-  color: var(--text3);
-  padding: 12px 16px 8px;
-  flex-shrink: 0;
-}
 
 .sidebar-progress-wrap {
   padding: 0 16px 14px;
@@ -411,6 +422,9 @@ select:focus-visible,
   padding: 4px 8px 8px;
   scrollbar-width: thin;
   scrollbar-color: var(--border3) transparent;
+  /* soft scroll-edge fades — content eases out instead of hard-clipping */
+  -webkit-mask-image: linear-gradient(to bottom, transparent, #000 14px, #000 calc(100% - 14px), transparent);
+  mask-image: linear-gradient(to bottom, transparent, #000 14px, #000 calc(100% - 14px), transparent);
 }
 
 .chapter-list::-webkit-scrollbar {
@@ -472,9 +486,11 @@ select:focus-visible,
   font-size: 12px;
   font-weight: 500;
   color: var(--text);
-  white-space: nowrap;
+  /* wrap to two lines instead of a hard ellipsis so long chapter names stay readable */
   overflow: hidden;
-  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
   line-height: 1.3;
 }
 
@@ -482,6 +498,44 @@ select:focus-visible,
   font-size: 10px;
   color: var(--text3);
   margin-top: 1px;
+  /* keep the tag + its lab marker on one line (tags are uniformly short) */
+  white-space: nowrap;
+}
+
+/* Lab marker — a small flask on the tag line of sessions that carry an
+   interactive lab (chapter.demo). Colour is set inline per course accent. */
+.chapter-lab {
+  display: inline-flex;
+  align-items: center;
+  vertical-align: -1px;
+  margin-left: 5px;
+}
+.chapter-lab svg {
+  width: 11px;
+  height: 11px;
+  stroke-width: 2;
+}
+
+/* Inline semantic icons in lesson copy — solid filled badges that replace ✅/⚠️
+   emoji. Sized to the surrounding text (1em); green disc = confirm, amber
+   triangle = caution. Painted as background SVGs so they render solid (lucide is
+   an outline-only pack). */
+.lt-ico-ok,
+.lt-ico-warn {
+  display: inline-block;
+  width: 1.05em;
+  height: 1.05em;
+  vertical-align: -0.19em;
+  flex-shrink: 0;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: contain;
+}
+.lt-ico-ok {
+  background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="%2300c878"/><path d="M7.4 12.4l3 3 6.2-6.6" fill="none" stroke="%23ffffff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>');
+}
+.lt-ico-warn {
+  background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" fill="%23ffcc00"/><path d="M12 10v3.6" fill="none" stroke="%230a0a0c" stroke-width="2.3" stroke-linecap="round"/><circle cx="12" cy="16.9" r="1.25" fill="%230a0a0c"/></svg>');
 }
 
 .chapter-status {
@@ -490,49 +544,8 @@ select:focus-visible,
 }
 
 /* Sidebar footer */
-.sidebar-footer {
-  padding: 12px 12px 16px;
-  border-top: 1px solid var(--border);
-  flex-shrink: 0;
-}
 
-.btn-exam {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 11px 16px;
-  background: var(--bg4);
-  border: 1px solid var(--border2);
-  border-radius: var(--radius);
-  color: var(--text2);
-  font-size: 13px;
-  font-weight: 600;
-  transition: all 0.2s;
-}
 
-.btn-exam:not(:disabled):hover {
-  background: var(--teal-dim);
-  border-color: var(--teal);
-  color: var(--teal);
-  box-shadow: var(--glow-teal);
-}
-
-.btn-exam:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.btn-exam:not(:disabled) .exam-lock { display: none; }
-
-/* Final Exam slot — sits directly under the course list */
-.sidebar-exam-slot {
-  margin: 8px 6px 4px;
-  padding-top: 12px;
-  border-top: 1px solid var(--border);
-}
-.btn-flashcards { margin-bottom: 8px; }
 
 /* Sidebar session right-click menu — "Skip to here" */
 .lt-ctx-menu {
@@ -572,7 +585,7 @@ select:focus-visible,
   color: var(--text);
   text-align: left;
   cursor: pointer;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: 'Geist Mono', monospace;
   transition: background 0.12s, color 0.12s;
 }
 .lt-ctx-item:hover { background: var(--teal-faint); }
@@ -597,8 +610,8 @@ select:focus-visible,
 .main-wrap {
   flex: 1;
   min-width: 0;
-  height: 100vh;
-  height: 100dvh;
+  height: calc(100vh / var(--app-zoom, 1));
+  height: calc(100dvh / var(--app-zoom, 1));
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -626,7 +639,12 @@ select:focus-visible,
   border: 1px solid transparent;
   border-radius: var(--radius);
   color: var(--text2);
-  padding: 7px 9px;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   font-size: 14px;
   line-height: 1;
   transition: background 0.15s, color 0.15s, border-color 0.15s;
@@ -655,8 +673,7 @@ select:focus-visible,
 .header-tag {
   font-size: 10px;
   font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.8px;
+  letter-spacing: 0.2px;
   color: var(--course-accent, var(--teal));
   display: block;
   margin-bottom: 2px;
@@ -672,6 +689,27 @@ select:focus-visible,
   text-overflow: ellipsis;
 }
 
+/* Ticker marquee for a truncated title: the engine adds .header-title--marquee
+   (plus an inner span with --ht-shift/--ht-dur) only when the text actually
+   overflows and the user hasn't asked for reduced motion. Slow slide to reveal
+   the tail, pause at each end, slide back — never a hard loop-jump. */
+.header-title--marquee { text-overflow: clip; }
+.header-title--marquee .ht-marquee {
+  display: inline-block;
+  white-space: nowrap;
+  will-change: transform;
+  animation: ltTitleTicker var(--ht-dur, 14s) linear infinite;
+}
+@keyframes ltTitleTicker {
+  0%, 16%   { transform: translateX(0); }
+  50%, 66%  { transform: translateX(var(--ht-shift, 0px)); }
+  100%      { transform: translateX(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .header-title--marquee { text-overflow: ellipsis; }
+  .header-title--marquee .ht-marquee { animation: none; }
+}
+
 .header-right {
   display: flex;
   align-items: center;
@@ -679,38 +717,9 @@ select:focus-visible,
   flex-shrink: 0;
 }
 
-.step-pills {
-  display: flex;
-  gap: 4px;
-}
 
-.step-pill {
-  height: 22px;
-  padding: 0 9px;
-  border-radius: 11px;
-  font-size: 10px;
-  font-weight: 600;
-  border: 1px solid var(--border2);
-  display: flex;
-  align-items: center;
-  letter-spacing: 0.3px;
-  transition: all 0.2s;
-  cursor: default;
-  color: var(--text3);
-  background: transparent;
-}
 
-.step-pill--active {
-  background: color-mix(in srgb, var(--course-accent, var(--teal)) 14%, transparent);
-  border-color: var(--course-accent, var(--teal));
-  color: var(--course-accent, var(--teal));
-}
 
-.step-pill--done {
-  background: color-mix(in srgb, var(--course-accent, var(--teal)) 8%, transparent);
-  border-color: color-mix(in srgb, var(--course-accent, var(--teal)) 30%, transparent);
-  color: var(--course-accent, var(--teal));
-}
 
 .chapter-counter {
   font-size: 11px;
@@ -734,6 +743,38 @@ select:focus-visible,
   transition: width 0.6s cubic-bezier(0.4,0,0.2,1), background 0.3s ease;
   width: 0%;
 }
+/* Home hub: the strip spans the full width and the Miami duotone flows like fluid
+   (it's an ambient accent on Home, not a progress reading). Reverts to the progress
+   fill on any course/lesson view. */
+.global-progress-fill.is-home {
+  width: 100%;
+  background: linear-gradient(90deg, var(--teal), var(--purple), var(--pink), var(--purple), var(--teal));
+  background-size: 300% 100%;
+  animation: glProgressFlow 7s linear infinite;
+}
+@keyframes glProgressFlow { from { background-position: 0% 0; } to { background-position: -300% 0; } }
+@media (prefers-reduced-motion: reduce) { .global-progress-fill.is-home { animation: none; } }
+
+/* Glossary "find the term" flash — fires ONLY when you arrive at a chapter via a
+   glossary module-reference, so the referenced term is easy to spot. */
+.lt-gl-flash {
+  border-radius: 3px; padding: 0 3px; color: inherit;
+  /* persistent soft highlight — it stays put so the term remains easy to spot */
+  background: var(--teal-dim); box-shadow: inset 0 0 0 1px var(--teal-glow);
+  /* a stronger attention pulse on arrival, then it settles into the lasting highlight */
+  animation: ltGlFlash 3.4s var(--ease-out, ease) 1;
+}
+@keyframes ltGlFlash {
+  0%   { background: transparent;      box-shadow: none; }
+  9%   { background: var(--teal-glow); box-shadow: 0 0 0 5px var(--teal-glow); }
+  26%  { background: var(--pink-glow); box-shadow: 0 0 0 5px var(--pink-glow); }
+  43%  { background: var(--teal-glow); box-shadow: 0 0 0 4px var(--teal-glow); }
+  60%  { background: var(--pink-glow); box-shadow: 0 0 0 3px var(--pink-glow); }
+  100% { background: var(--teal-dim);  box-shadow: inset 0 0 0 1px var(--teal-glow); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lt-gl-flash { animation: none; }   /* keeps the static persistent highlight */
+}
 
 /* ═══════════════════════════════════════════════════════════════════════════
    CONTENT AREA
@@ -748,21 +789,27 @@ select:focus-visible,
   align-items: center;
   scrollbar-width: thin;
   scrollbar-color: var(--border3) transparent;
-  /* Ambient neon glow field — depth across every view (the home variant below
-     layers a grid on top). Default (scroll) attachment anchors the glow to the
-     content-area's own frame; `fixed` is avoided because it's sized to the
-     viewport while this element is offset by the sidebar, which produced visible
-     rectangular seams down the sides. */
+  /* Ambient neon glow field + faint candle-grid — depth across every view. The
+     home variant below reuses the same 44px grid with brighter glows. Default
+     (scroll) attachment anchors the field to the content-area's own frame; `fixed`
+     is avoided because it's sized to the viewport while this element is offset by
+     the sidebar, which produced visible rectangular seams down the sides. */
   background:
     radial-gradient(1200px 640px at 100% -8%, rgba(0,212,212,0.07), transparent 55%),
     radial-gradient(1040px 660px at -8% 2%, rgba(168,85,247,0.06), transparent 52%),
-    radial-gradient(1120px 720px at 50% 122%, rgba(255,46,136,0.05), transparent 60%);
+    radial-gradient(1120px 720px at 50% 122%, rgba(255,46,136,0.05), transparent 60%),
+    linear-gradient(rgba(168,120,220,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(168,120,220,0.03) 1px, transparent 1px);
+  background-size: auto, auto, auto, 44px 44px, 44px 44px;
 }
 html.theme-light .content-area {
   background:
     radial-gradient(1200px 640px at 100% -8%, rgba(13,148,136,0.06), transparent 55%),
     radial-gradient(1040px 660px at -8% 2%, rgba(124,58,237,0.05), transparent 52%),
-    radial-gradient(1120px 720px at 50% 122%, rgba(219,39,119,0.04), transparent 60%);
+    radial-gradient(1120px 720px at 50% 122%, rgba(219,39,119,0.04), transparent 60%),
+    linear-gradient(rgba(48,18,76,0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(48,18,76,0.04) 1px, transparent 1px);
+  background-size: auto, auto, auto, 44px 44px, 44px 44px;
 }
 
 .content-area > * {
@@ -816,9 +863,6 @@ html.theme-light .content-area {
   line-height: 1.3;
 }
 
-.content-card-heading--lesson {
-  font-size: 15.5px;
-}
 
 .content-card-body {
   font-size: 14px;
@@ -890,79 +934,20 @@ html.theme-light .lt-clr-white     { color: #555555; }
 /* "Practice This Pattern" button on lesson chapters.
    Lives here (always loaded) — previously only in the simulator's lazily-injected
    styles, so it rendered unstyled until the simulator had been opened once. */
-.chapter-practice-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  background: transparent;
-  border: 1px solid var(--border2);
-  border-radius: var(--radius);
-  color: var(--text2);
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-  padding: 6px 14px;
-  font-family: 'JetBrains Mono', monospace;
-  transition: all 0.15s;
-  margin-top: 14px;
-}
-.chapter-practice-btn:hover {
-  border-color: var(--course-accent, var(--teal));
-  color: var(--course-accent, var(--teal));
-  background: var(--teal-faint);
-}
 /* Muted "Beta" chip — signals the Practice CTA leads to the WIP Simulator,
    matching the caution-tape framing on the simulator view itself. */
-.chapter-practice-beta {
-  font-size: 8.5px;
-  font-weight: 700;
-  letter-spacing: 0.5px;
-  text-transform: uppercase;
-  color: var(--text3);
-  background: var(--bg4);
-  border: 1px solid var(--border2);
-  border-radius: var(--radius-sm);
-  padding: 1px 5px;
-  margin-left: 2px;
-}
 
 /* Key concept table */
-.concept-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 13px;
-  margin-top: 12px;
-}
 
-.concept-table th {
-  text-align: left;
-  padding: 8px 12px;
-  font-size: 10px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.6px;
-  color: var(--text3);
-  border-bottom: 1px solid var(--border2);
-}
 
-.concept-table td {
-  padding: 9px 12px;
-  border-bottom: 1px solid var(--border);
-  color: var(--text2);
-  vertical-align: top;
-}
 
-.concept-table td:first-child {
-  color: var(--text);
-  font-weight: 600;
-  white-space: nowrap;
-}
 
-.concept-table tr:last-child td {
-  border-bottom: none;
-}
 
 /* ── Chart Container ─────────────────────────────────────────────────────────── */
+/* Centered card variant — replaces the inline max-width/margin the engine used
+   to repeat on every chart + concept card shell. */
+.chart-card--center { max-width: 960px; margin: 0 auto 18px; }
+
 .chart-card {
   background: var(--bg3);
   border: 1px solid var(--border);
@@ -985,7 +970,7 @@ html.theme-light .lt-clr-white     { color: #555555; }
   padding: 6px 14px;
   background: transparent;
   color: var(--text2);
-  font-family: 'JetBrains Mono', monospace;
+  font-family: 'Geist Mono', monospace;
   font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.2px;
@@ -1029,10 +1014,6 @@ html.theme-light .lt-clr-white     { color: #555555; }
   height: 320px;
 }
 
-.chart-el.chart-el--gallery {
-  height: auto;
-  min-height: 0;
-}
 
 .chart-el--tall {
   height: 380px;
@@ -1042,7 +1023,11 @@ html.theme-light .lt-clr-white     { color: #555555; }
 .intro-layout {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 18px;
+  /* column-gap only: when the grid collapses to one column (≤860px) vertical spacing
+     comes purely from the blocks' own 18px margins, so it never compounds gap+margin
+     into an uneven rhythm. */
+  column-gap: 18px;
+  row-gap: 0;
   align-items: start;
 }
 
@@ -1053,10 +1038,23 @@ html.theme-light .lt-clr-white     { color: #555555; }
 }
 
 /* Single-column layout: the Introduction overview and the Visual step (chart only). */
-.intro-layout--solo {
-  grid-template-columns: 1fr;
+
+/* Introduction — one centered column (banner → readable overview → full-width visual).
+   Overrides the two-column grid above so a tall overview no longer sits beside a short
+   chart. Blocks keep their own 18px bottom margins for an even vertical rhythm. Keeps the
+   .intro-layout class so the chart expand/theater logic (card.closest('.intro-layout'))
+   still resolves. */
+.intro-layout--stack {
+  display: block;
   max-width: 960px;
   margin: 0 auto;
+}
+/* Hold the overview at a comfortable reading measure; the chart / concept / roadmap
+   figure runs wider beneath it (its own max-width:960 from chartCardHtml). */
+.intro-layout--stack .intro-copy {
+  max-width: 720px;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 /* LESSON step (reconstruction chapters) — the animated player is the lesson. */
@@ -1127,7 +1125,7 @@ html.theme-light .lt-clr-white     { color: #555555; }
   font-weight: 500;
   text-align: left;
   cursor: pointer;
-  transition: all 0.18s;
+  transition: background-color 0.18s, border-color 0.18s, color 0.18s, box-shadow 0.18s, opacity 0.18s, transform 0.18s var(--ease-out);
   line-height: 1.3;
   position: relative;
 }
@@ -1304,6 +1302,171 @@ html.theme-light .lt-clr-white     { color: #555555; }
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
+   MODULE QUIZ — multi-question end-of-module Learning Assessment ("Quiz" step)
+   ═══════════════════════════════════════════════════════════════════════════ */
+.mq-wrap { animation: fadeSlideIn 0.3s ease forwards; }
+
+.mq-head { margin-bottom: 18px; }
+.mq-kicker {
+  font-size: 11px; font-weight: 700; letter-spacing: 0.3px;
+  color: var(--course-accent, var(--teal)); margin-bottom: 6px;
+}
+.mq-title {
+  font-family: var(--font-display, inherit);
+  font-size: 21px; font-weight: 700; color: var(--text); letter-spacing: -0.3px; margin-bottom: 10px;
+}
+.mq-progress { font-size: 12.5px; color: var(--text3); margin-bottom: 8px; font-variant-numeric: tabular-nums; }
+.mq-progress span { color: var(--text); font-weight: 700; }
+.mq-progress-track { height: 4px; border-radius: 4px; background: var(--bg4); overflow: hidden; }
+.mq-progress-fill {
+  height: 100%; border-radius: 4px; background: var(--grad-miami);
+  transition: width 0.4s var(--ease-out, ease);
+}
+
+.mq-questions { display: flex; flex-direction: column; gap: 12px; }
+
+.mq-q {
+  background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius-lg);
+  padding: 16px 18px; box-shadow: var(--surface-hi);
+  transition: border-color 0.25s, background-color 0.25s;
+}
+.mq-q--cleared { border-color: rgba(33,209,150,0.35); background: linear-gradient(135deg, var(--bg3) 0%, rgba(33,209,150,0.04) 100%); }
+
+.mq-q-head { display: flex; align-items: flex-start; gap: 11px; margin-bottom: 12px; }
+.mq-q-num {
+  flex: 0 0 auto; width: 24px; height: 24px; border-radius: 7px;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: var(--bg4); border: 1px solid var(--border2); color: var(--text3);
+  font-size: 12px; font-weight: 800; font-variant-numeric: tabular-nums;
+}
+.mq-q--cleared .mq-q-num { background: rgba(33,209,150,0.12); border-color: rgba(33,209,150,0.4); color: var(--green); }
+.mq-q-text { flex: 1; font-size: 14.5px; font-weight: 600; color: var(--text); line-height: 1.45; }
+.mq-q-status { flex: 0 0 auto; color: var(--green); display: inline-flex; align-items: center; height: 24px; }
+
+.mq-options { display: flex; flex-direction: column; gap: 8px; }
+.mq-options--tf { flex-direction: row; gap: 10px; }
+.mq-options--tf .mq-opt { flex: 1; justify-content: center; }
+/* short single-choice answers → compact 2-col grid (no full-width rows of wasted space);
+   collapses to one column on phones where full width reads naturally */
+.mq-options--grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+@media (max-width: 560px) { .mq-options--grid { grid-template-columns: 1fr; } }
+
+.mq-opt {
+  display: flex; align-items: center; gap: 10px; width: 100%; text-align: left;
+  padding: 10px 13px; border-radius: var(--radius); border: 1.5px solid var(--border2);
+  background: var(--bg4); color: var(--text); font-size: 13.5px; font-weight: 500; line-height: 1.35;
+  cursor: pointer; position: relative;
+  transition: background-color 0.18s, border-color 0.18s, color 0.18s, box-shadow 0.18s, transform 0.12s var(--ease-out, ease);
+}
+.mq-opt:hover:not(:disabled) { border-color: var(--teal); background: var(--teal-faint); color: var(--teal); }
+.mq-opt:active:not(:disabled) { transform: scale(0.99); }
+.mq-opt:disabled { cursor: default; }
+.mq-opt-text { flex: 1; }
+
+.mq-opt-badge {
+  flex: 0 0 auto; width: 22px; height: 22px; border-radius: 6px; display: inline-flex;
+  align-items: center; justify-content: center; background: var(--bg3); border: 1px solid var(--border2);
+  color: var(--text3); font-size: 11.5px; font-weight: 800; font-variant-numeric: tabular-nums;
+}
+.mq-opt:hover:not(:disabled) .mq-opt-badge { border-color: currentColor; color: inherit; background: color-mix(in srgb, currentColor 15%, transparent); }
+
+/* Multi-select checkbox marker */
+.mq-opt--check .mq-check {
+  flex: 0 0 auto; width: 17px; height: 17px; border-radius: 4px;
+  border: 1.5px solid var(--border3); background: var(--bg3); position: relative; transition: all 0.15s;
+}
+.mq-opt--selected { border-color: var(--teal); background: var(--teal-faint); color: var(--teal); }
+.mq-opt--selected .mq-check { border-color: var(--teal); background: var(--teal); }
+.mq-opt--selected .mq-check::after {
+  content: ""; position: absolute; left: 5px; top: 1.5px; width: 4px; height: 9px;
+  border: solid var(--bg); border-width: 0 2px 2px 0; transform: rotate(45deg);
+}
+
+.mq-check-btn {
+  align-self: flex-start; margin-top: 2px; padding: 8px 16px; border-radius: var(--radius);
+  border: 1.5px solid var(--border2); background: var(--bg4); color: var(--text2);
+  font-family: 'Geist Mono', monospace; font-size: 12px; font-weight: 700; cursor: pointer;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+}
+.mq-check-btn:hover { border-color: var(--teal); color: var(--teal); background: var(--teal-faint); }
+
+/* Result states (green = right, red = wrong, faded = the rest once cleared) */
+.mq-opt--correct {
+  background: rgba(33,209,150,0.14) !important; border-color: var(--green) !important;
+  color: var(--green) !important; font-weight: 700;
+  box-shadow: 0 0 0 3px rgba(33,209,150,0.13) !important;
+}
+.mq-opt--correct .mq-check { border-color: var(--green); background: var(--green); }
+.mq-opt--wrong {
+  background: rgba(204,34,34,0.15) !important; border-color: var(--red) !important; color: var(--red) !important;
+}
+.mq-opt--dimmed { opacity: 0.4; }
+.mq-opt--shake { animation: answer-shake 0.55s cubic-bezier(0.36, 0.07, 0.19, 0.97) both; }
+
+.mq-feedback { font-size: 12.5px; font-weight: 600; margin-top: 0; height: 0; overflow: hidden; opacity: 0; transition: opacity 0.2s; display: flex; align-items: center; gap: 5px; }
+.mq-feedback--ok  { color: var(--green); height: auto; opacity: 1; margin-top: 10px; }
+.mq-feedback--bad { color: var(--red);   height: auto; opacity: 1; margin-top: 10px; }
+
+/* Results / actions panel */
+.mq-results {
+  margin-top: 18px; padding: 16px 18px; border-radius: var(--radius-lg);
+  background: var(--bg3); border: 1px solid var(--border); box-shadow: var(--surface-hi);
+}
+.mq-results--done { border-color: rgba(33,209,150,0.4); background: linear-gradient(135deg, var(--bg3) 0%, rgba(33,209,150,0.06) 100%); }
+.mq-results-msg { font-size: 13.5px; font-weight: 600; color: var(--text2); margin-bottom: 14px; display: flex; align-items: center; gap: 7px; }
+.mq-results--done .mq-results-msg { color: var(--green); }
+.mq-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.mq-action {
+  display: inline-flex; align-items: center; gap: 7px; padding: 9px 16px; border-radius: var(--radius);
+  border: 1.5px solid var(--border2); background: var(--bg4); color: var(--text2);
+  font-family: 'Geist Mono', monospace; font-size: 12px; font-weight: 700; cursor: pointer;
+  transition: border-color 0.15s, color 0.15s, background 0.15s, box-shadow 0.15s, transform 0.12s var(--ease-out, ease);
+}
+.mq-action:hover { border-color: var(--teal); color: var(--teal); background: var(--teal-faint); }
+.mq-action:active { transform: scale(0.97); }
+.mq-action--primary { border-color: var(--teal); color: var(--teal); background: var(--teal-faint); margin-left: auto; }
+.mq-action--primary:hover { box-shadow: var(--glow-teal); }
+.mq-results--done .mq-action--primary {
+  border-color: var(--green); color: var(--bg); background: var(--green);
+}
+.mq-results--done .mq-action--primary:hover { box-shadow: 0 0 18px rgba(33,209,150,0.4); }
+
+/* "review" panel — shown when too many were missed; pushes the learner to relearn */
+.mq-results--review { border-color: rgba(231,181,58,0.45); background: linear-gradient(135deg, var(--bg3) 0%, rgba(231,181,58,0.07) 100%); }
+.mq-results--review .mq-results-msg { color: var(--gold); }
+
+/* Suggested action (highlighted + a gentle attention pop/pulse) */
+.mq-action--suggested {
+  border-color: var(--teal); background: var(--teal); color: var(--bg); font-weight: 800;
+  animation: mqPop 0.5s var(--ease-out, ease) both, mqSuggestPulse 2.2s ease-in-out 0.5s infinite;
+}
+.mq-action--suggested:hover { background: var(--teal); color: var(--bg); box-shadow: var(--glow-teal); }
+.mq-suggested-tag {
+  display: inline-block; margin-left: 2px; padding: 1px 7px; border-radius: 999px;
+  background: rgba(0,0,0,0.2); color: inherit; font-size: 9px; font-weight: 800;
+  letter-spacing: 0.6px; text-transform: uppercase;
+}
+@keyframes mqPop {
+  0%   { transform: scale(0.92); opacity: 0; }
+  60%  { transform: scale(1.05); }
+  100% { transform: scale(1); opacity: 1; }
+}
+@keyframes mqSuggestPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(0,212,212,0.0); }
+  50%      { box-shadow: 0 0 16px 2px rgba(0,212,212,0.45); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .mq-action--suggested { animation: none; }
+}
+
+@media (max-width: 768px) {
+  .mq-title { font-size: 18px; }
+  .mq-action--primary { margin-left: 0; }
+  .mq-actions { flex-direction: column; }
+  .mq-action { justify-content: center; }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
    NAV FOOTER
    ═══════════════════════════════════════════════════════════════════════════ */
 .nav-footer {
@@ -1339,7 +1502,7 @@ html.theme-light .lt-clr-white     { color: #555555; }
   color: var(--text);
   font-size: 13px;
   font-weight: 600;
-  transition: all 0.18s;
+  transition: background-color 0.18s, border-color 0.18s, color 0.18s, box-shadow 0.18s, opacity 0.18s, transform 0.18s var(--ease-out);
   min-width: 110px;
 }
 
@@ -1386,7 +1549,7 @@ html.theme-light .lt-clr-white     { color: #555555; }
   height: 6px;
   border-radius: 50%;
   background: var(--border3);
-  transition: all 0.2s;
+  transition: background-color 0.2s, border-color 0.2s, color 0.2s, box-shadow 0.2s, opacity 0.2s, transform 0.2s var(--ease-out);
 }
 
 .step-dot--active {
@@ -1438,34 +1601,9 @@ html.theme-light .lt-clr-white     { color: #555555; }
   to   { opacity: 1; transform: scale(1); }
 }
 
-.modal-brand {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  margin-bottom: 20px;
-}
 
-.modal-logo-mark {
-  display: flex;
-  color: var(--text);
-  filter: drop-shadow(0 0 8px rgba(0,212,212,0.45)) drop-shadow(0 0 13px rgba(255,46,136,0.32));
-}
 
-.modal-brand-name {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 15px;
-  font-weight: 700;
-  letter-spacing: 0.5px;
-  color: var(--text2);
-  text-transform: uppercase;
-}
 
-.modal-divider {
-  height: 1px;
-  background: var(--border);
-  margin: 0 0 24px;
-}
 
 .modal-box h2 {
   font-size: 24px;
@@ -1481,21 +1619,7 @@ html.theme-light .lt-clr-white     { color: #555555; }
   margin-bottom: 18px;
 }
 
-.modal-progress-info {
-  background: var(--bg4);
-  border: 1px solid var(--border2);
-  border-radius: var(--radius);
-  padding: 12px 16px;
-  margin-bottom: 24px;
-  font-size: 13px;
-  color: var(--text2);
-  line-height: 1.6;
-}
 
-.modal-progress-info strong {
-  color: var(--modal-accent, var(--teal));
-  font-weight: 700;
-}
 
 .modal-actions {
   display: flex;
@@ -1559,532 +1683,13 @@ html.theme-light .lt-clr-white     { color: #555555; }
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.18s;
+  transition: background-color 0.18s, border-color 0.18s, color 0.18s, box-shadow 0.18s, opacity 0.18s, transform 0.18s var(--ease-out);
 }
 
 .btn-ghost:hover {
   background: var(--bg4);
   border-color: var(--border3);
   color: var(--text);
-}
-
-/* ═══════════════════════════════════════════════════════════════════════════
-   EXAM SCREEN
-   ═══════════════════════════════════════════════════════════════════════════ */
-.exam-screen {
-  position: fixed;
-  inset: 0;
-  background: var(--bg);
-  z-index: 8000;
-  overflow-y: auto;
-  padding: 0 16px 60px;
-  scrollbar-width: thin;
-  scrollbar-color: var(--border3) transparent;
-}
-
-.exam-inner {
-  max-width: 700px;
-  margin: 0 auto;
-  padding-top: 40px;
-}
-
-.exam-header {
-  text-align: center;
-  margin-bottom: 32px;
-}
-
-.exam-logo {
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--teal);
-  margin-bottom: 12px;
-  letter-spacing: 0.5px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-}
-.exam-logo-mark {
-  display: inline-flex;
-  align-items: center;
-  color: var(--text);
-}
-.exam-logo-mark svg { width: 20px; height: 20px; display: block; }
-
-.exam-title {
-  font-size: 22px;
-  font-weight: 700;
-  color: var(--text);
-  letter-spacing: -0.7px;
-  margin-bottom: 4px;
-}
-
-.exam-subtitle {
-  font-size: 14px;
-  color: var(--text3);
-  margin-bottom: 20px;
-}
-
-.exam-progress-wrap {
-  max-width: 400px;
-  margin: 0 auto;
-}
-
-.exam-progress-track {
-  height: 5px;
-  background: var(--bg4);
-  border-radius: 3px;
-  overflow: hidden;
-  margin-bottom: 8px;
-}
-
-.exam-progress-fill {
-  height: 100%;
-  background: linear-gradient(90deg, var(--teal), var(--teal2));
-  border-radius: 3px;
-  transition: width 0.4s ease;
-  width: 0%;
-}
-
-.exam-q-counter {
-  font-size: 12px;
-  color: var(--text3);
-  font-weight: 600;
-}
-
-.exam-body {
-  animation: fadeSlideIn 0.3s ease;
-}
-
-.exam-q-card {
-  background: var(--bg3);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  padding: 28px 28px 24px;
-  margin-bottom: 16px;
-}
-
-.exam-q-num {
-  font-size: 10px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  color: var(--teal);
-  margin-bottom: 8px;
-}
-
-/* Scenario chart on a chart-reading exam question (rendered by the engine into #exam-chart) */
-.exam-chart-card {
-  margin: 4px 0 18px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--bg4);
-  padding: 8px;
-}
-.exam-chart { width: 100%; height: 300px; }
-@media (max-width: 600px) { .exam-chart { height: 240px; } .exam-chart-card { padding: 6px; } }
-
-.exam-q-text {
-  font-size: 17px;
-  font-weight: 700;
-  color: var(--text);
-  line-height: 1.4;
-  margin-bottom: 6px;
-}
-
-.exam-q-chapter {
-  font-size: 11px;
-  color: var(--text3);
-  margin-bottom: 20px;
-}
-
-.exam-answers {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
-}
-
-.exam-answer-btn {
-  padding: 12px 14px;
-  border-radius: var(--radius);
-  border: 1.5px solid var(--border2);
-  background: var(--bg4);
-  color: var(--text);
-  font-size: 13px;
-  font-weight: 500;
-  text-align: left;
-  cursor: pointer;
-  transition: all 0.18s;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.exam-answer-btn:hover:not(:disabled):not(.exam-answer-btn--selected) {
-  background: var(--bg5);
-  border-color: var(--border3);
-}
-
-.exam-answer-btn:disabled { cursor: not-allowed; }
-
-.exam-answer-btn--correct {
-  background: rgba(0,212,212,0.12) !important;
-  border-color: var(--teal) !important;
-  color: var(--teal) !important;
-  font-weight: 700;
-}
-
-.exam-answer-btn--wrong {
-  background: rgba(204,34,34,0.1) !important;
-  border-color: var(--red) !important;
-  color: var(--red) !important;
-}
-
-.exam-answer-btn--missed {
-  background: rgba(0,212,212,0.05) !important;
-  border-color: rgba(0,212,212,0.3) !important;
-  color: rgba(0,212,212,0.6) !important;
-}
-
-/* Neutral "chosen" state during the exam — correctness is withheld until scoring */
-.exam-answer-btn--selected {
-  background: var(--teal-dim) !important;
-  border-color: var(--teal) !important;
-  color: var(--teal) !important;
-}
-
-/* Exit-exam control (top-left of the exam screen) */
-.exam-exit-btn {
-  position: absolute;
-  top: 18px;
-  left: 18px;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  background: var(--bg3);
-  border: 1px solid var(--border2);
-  border-radius: var(--radius);
-  color: var(--text2);
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 12px;
-  font-weight: 600;
-  padding: 7px 12px;
-  cursor: pointer;
-  transition: all 0.15s;
-  z-index: 2;
-}
-.exam-exit-btn:hover { border-color: var(--teal); color: var(--teal); }
-
-.exam-answer-letter {
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  border: 1.5px solid currentColor;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 10px;
-  font-weight: 700;
-  flex-shrink: 0;
-}
-
-.exam-next-btn {
-  width: 100%;
-  margin-top: 16px;
-  padding: 13px;
-  background: var(--teal);
-  border: none;
-  border-radius: var(--radius);
-  color: #000;
-  font-size: 14px;
-  font-weight: 700;
-  cursor: pointer;
-  transition: all 0.18s;
-  display: none;
-}
-
-.exam-next-btn.show {
-  display: block;
-  animation: fadeSlideIn 0.25s ease;
-}
-
-.exam-next-btn:hover {
-  background: var(--teal2);
-  box-shadow: var(--glow-teal);
-}
-
-/* Exam result */
-.exam-result {
-  text-align: center;
-  padding: 40px 20px 60px;
-  animation: fadeSlideIn 0.4s ease;
-}
-
-.exam-result-icon {
-  font-size: 60px;
-  margin-bottom: 16px;
-}
-
-.exam-result-score {
-  font-size: 44px;
-  font-weight: 800;
-  color: var(--teal);
-  letter-spacing: -2px;
-  margin-bottom: 4px;
-}
-
-.exam-result-label {
-  font-size: 16px;
-  color: var(--text2);
-  margin-bottom: 6px;
-}
-
-.exam-result-pass {
-  font-size: 13px;
-  color: var(--green);
-  font-weight: 600;
-  margin-bottom: 28px;
-}
-
-.exam-result-fail {
-  font-size: 13px;
-  color: var(--red);
-  font-weight: 600;
-  margin-bottom: 28px;
-}
-
-.exam-result-actions {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  max-width: 360px;
-  margin: 0 auto;
-}
-
-.exam-weak-chapters {
-  margin-top: 24px;
-  background: var(--bg3);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  padding: 16px 20px;
-  text-align: left;
-  max-width: 480px;
-  margin: 24px auto 0;
-}
-
-.exam-weak-title {
-  font-size: 12px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.8px;
-  color: var(--text3);
-  margin-bottom: 10px;
-}
-
-.exam-weak-list {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.exam-weak-item {
-  font-size: 13px;
-  color: var(--text2);
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.exam-weak-item::before {
-  content: "→";
-  color: var(--red);
-  font-weight: 700;
-}
-
-/* ═══════════════════════════════════════════════════════════════════════════
-   CERTIFICATE SCREEN
-   ═══════════════════════════════════════════════════════════════════════════ */
-.cert-screen {
-  position: fixed;
-  inset: 0;
-  /* Celebratory neon glow field behind the certificate — it's a shareable moment. */
-  background:
-    radial-gradient(820px 520px at 80% 6%, rgba(0,212,212,0.10), transparent 55%),
-    radial-gradient(760px 540px at 14% 92%, rgba(255,46,136,0.08), transparent 58%),
-    radial-gradient(720px 560px at 50% 50%, rgba(168,85,247,0.05), transparent 62%),
-    var(--bg);
-  z-index: 9000;
-  overflow-y: auto;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 20px;
-}
-html.theme-light .cert-screen {
-  background:
-    radial-gradient(820px 520px at 80% 6%, rgba(13,148,136,0.08), transparent 55%),
-    radial-gradient(760px 540px at 14% 92%, rgba(219,39,119,0.06), transparent 58%),
-    radial-gradient(720px 560px at 50% 50%, rgba(124,58,237,0.05), transparent 62%),
-    var(--bg);
-}
-
-.cert-inner {
-  max-width: 540px;
-  width: 100%;
-  background: var(--bg3);
-  border: 1px solid var(--border2);
-  border-radius: 20px;
-  padding: 48px 48px 40px;
-  text-align: center;
-  position: relative;
-  overflow: hidden;
-  animation: scaleIn 0.4s cubic-bezier(0.34,1.56,0.64,1);
-  box-shadow: 0 32px 100px rgba(0,0,0,0.6);
-}
-
-.cert-watermark {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%,-50%);
-  font-size: 220px;
-  opacity: 0.022;
-  pointer-events: none;
-  user-select: none;
-}
-.cert-watermark svg { width: 240px; height: 240px; color: var(--text); }
-
-.cert-top-rule,
-.cert-bottom-rule {
-  height: 2px;
-  background: linear-gradient(90deg, transparent, var(--teal), transparent);
-  margin: 0 auto 24px;
-  width: 80%;
-  opacity: 0.6;
-}
-
-.cert-bottom-rule { margin-top: 24px; margin-bottom: 20px; }
-
-.cert-badge {
-  font-size: 52px;
-  margin-bottom: 12px;
-  filter: drop-shadow(0 0 20px rgba(200,150,12,0.5));
-}
-.cert-badge svg { width: 52px; height: 52px; color: #d4a017; }
-
-.cert-presents {
-  font-size: 12px;
-  text-transform: uppercase;
-  letter-spacing: 2px;
-  color: var(--text3);
-  margin-bottom: 10px;
-}
-
-.cert-recipient {
-  font-size: 21px;
-  font-weight: 700;
-  color: var(--teal);
-  letter-spacing: -0.5px;
-  margin-bottom: 10px;
-}
-
-/* Editable recipient name (stored locally — no account needed) */
-.cert-name-input {
-  display: block;
-  width: 100%;
-  max-width: 360px;
-  margin: 0 auto 14px;
-  background: transparent;
-  border: none;
-  border-bottom: 1.5px solid var(--border2);
-  color: var(--text);
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 23px;
-  font-weight: 700;
-  text-align: center;
-  letter-spacing: -0.3px;
-  padding: 4px 6px 6px;
-  transition: border-color 0.15s;
-}
-.cert-name-input::placeholder { color: var(--text3); font-weight: 500; }
-.cert-name-input:focus { outline: none; border-bottom-color: var(--teal); }
-@media print {
-  .cert-name-input { border-bottom-color: transparent; color: #000; }
-  .cert-name-input::placeholder { color: transparent; }
-}
-
-.cert-has-completed {
-  font-size: 13px;
-  color: var(--text3);
-  margin-bottom: 14px;
-}
-
-.cert-course-name {
-  font-size: 18px;
-  font-weight: 700;
-  color: var(--text);
-  letter-spacing: -0.5px;
-  margin-bottom: 4px;
-}
-
-.cert-course-sub {
-  font-size: 13px;
-  color: var(--text3);
-  margin-bottom: 0;
-}
-
-.cert-divider {
-  height: 1px;
-  background: var(--border);
-  margin: 20px 0;
-}
-
-.cert-modules-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 6px 24px;
-  text-align: left;
-  max-width: 320px;
-  margin: 0 auto 18px;
-}
-
-.cert-module {
-  font-size: 12.5px;
-  color: var(--text2);
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.cert-score-display {
-  font-size: 14px;
-  font-weight: 700;
-  color: var(--teal);
-  margin-bottom: 6px;
-}
-
-.cert-date-display {
-  font-size: 12px;
-  color: var(--text3);
-  margin-bottom: 0;
-}
-
-.cert-actions {
-  display: flex;
-  gap: 10px;
-  justify-content: center;
-  margin-top: 20px;
-  flex-wrap: wrap;
-}
-
-.cert-actions .btn-primary {
-  width: auto;
-  padding: 11px 24px;
-}
-
-.cert-actions .btn-ghost {
-  width: auto;
-  padding: 11px 24px;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -2125,6 +1730,10 @@ html.theme-light .cert-screen {
     position: fixed;
     left: 0;
     top: 0;
+    /* wider as an overlay drawer (content sits behind the scrim) so chapter titles
+       aren't clipped — was ~210px and truncating nearly every name */
+    width: min(87vw, 320px);
+    min-width: 0;
     transform: translateX(-100%);
     z-index: 300;
     box-shadow: 4px 0 30px rgba(0,0,0,0.5);
@@ -2139,8 +1748,11 @@ html.theme-light .cert-screen {
   }
 
   .content-area {
-    padding: 16px 16px 10px;
+    padding: 12px 16px 8px;
   }
+  /* app-feel: a screen that fits must not scroll — kill trailing slack */
+  .content-area > :last-child { margin-bottom: 0; }
+  .content-area .recon-watch-original { margin: 6px 2px 0; font-size: 10.5px; }
 
   .top-header {
     padding: 0 14px 0 12px;
@@ -2152,25 +1764,11 @@ html.theme-light .cert-screen {
 
   .chapter-counter { display: none; }
 
-  .step-pills {
-    display: none;
-  }
 
   .intro-layout {
     grid-template-columns: 1fr;
   }
 
-  .exam-answers {
-    grid-template-columns: 1fr;
-  }
-
-  .cert-inner {
-    padding: 32px 24px 28px;
-  }
-
-  .cert-modules-grid {
-    grid-template-columns: 1fr;
-  }
 
   .nav-footer {
     padding: 0 16px;        /* match mobile .content-area padding */
@@ -2188,12 +1786,14 @@ html.theme-light .cert-screen {
   .nav-label { display: inline; }
 
   /* ── Reclaim vertical space: shorter header & footer ──────────────────── */
-  :root { --header-h: 52px; --footer-h: 54px; }
+  :root { --header-h: 52px; --footer-h: 62px; }   /* 48px buttons get even 7px air above/below */
 
   /* ── Header: tighter so the icon row fits comfortably ─────────────────── */
   .top-header { gap: 8px; }
   .header-tag { font-size: 9px; letter-spacing: 0.5px; }
-  .header-right { gap: 2px; }
+  /* one 8px rhythm across the whole right cluster (Discord → glossary →
+     settings) — matches the header gap so no pair reads tighter than another */
+  .header-right { gap: 8px; }
   /* ~40px touch targets for the header controls */
   .icon-btn {
     padding: 0;
@@ -2204,7 +1804,7 @@ html.theme-light .cert-screen {
     justify-content: center;
   }
   .menu-btn { width: 40px; height: 40px; }
-  .header-discord { width: 38px; height: 38px; }
+  .header-discord { width: 40px; height: 40px; }
 
   /* The lesson title is the priority on phones. Simulator / Flashcards / Community
      (+ the share button) live on the Home hub Tools row, so drop them from the
@@ -2214,24 +1814,23 @@ html.theme-light .cert-screen {
   #community-sidebar-btn,
   #copy-link-btn { display: none !important; }
 
-  /* ── Module banner ────────────────────────────────────────────────────── */
-  .module-banner { padding: 9px 11px; gap: 10px; margin-bottom: 12px; }
-  .module-banner-icon { width: 30px; height: 30px; }
-  .module-banner-name { font-size: 13.5px; }
-  .module-banner-tag { font-size: 10px; }
+  /* ── Module banner ────────────────────────────────────────────────────────
+     .content-area prefix: the base .module-banner rules live LATER in this
+     file and would otherwise win the cascade at equal specificity — these
+     mobile compactions were silently dead without it. */
+  .content-area .module-banner { padding: 9px 11px; gap: 10px; margin-bottom: 10px; }
+  .content-area .module-banner-icon { width: 30px; height: 30px; }
+  .content-area .module-banner-name { font-size: 13.5px; }
+  .content-area .module-banner-tag { font-size: 10px; }
 
   /* ── Content cards: less padding, smaller type ────────────────────────── */
   .content-card { padding: 16px 16px; margin-bottom: 14px; }
   .content-card-heading { font-size: 17px; margin-bottom: 9px; }
-  .content-card-heading--lesson { font-size: 15.5px; }
   .content-card-body { font-size: 13px; line-height: 1.6; margin-bottom: 11px; }
   .content-card-tag { font-size: 9.5px; margin-bottom: 6px; }
   .lesson-bullets { gap: 8px; }
   .lesson-bullets li { font-size: 12.5px; line-height: 1.55; padding-left: 18px; }
   .lesson-bullets li::before { top: 7px; }
-  .concept-table { font-size: 12px; }
-  .concept-table th, .concept-table td { padding: 7px 9px; }
-  .chapter-practice-btn { font-size: 11.5px; padding: 6px 12px; margin-top: 12px; }
 
   /* ── Charts: shorter, tighter header ──────────────────────────────────── */
   .chart-el { height: 230px; }
@@ -2266,35 +1865,9 @@ html.theme-light .cert-screen {
   .concept-step-desc { font-size: 12px; }
   .concept-check li { font-size: 12.5px; }
 
-  /* ── Home hub ─────────────────────────────────────────────────────────── */
-  .lt-home-wrap { gap: 18px; }
-  .lt-home-hero-title { font-size: 22px; }
-  .lt-home-hero-sub { font-size: 12px; }
-  .lt-home-continue { padding: 14px 16px; }
-  .lt-home-continue-title { font-size: 15px; }
-  .lt-home-course-name { font-size: 13.5px; margin-bottom: 12px; }
-  .lt-home-tool { padding: 15px 10px; font-size: 11.5px; }
-  .lt-home-term-name { font-size: 13px; }
-}
-
-/* ═══════════════════════════════════════════════════════════════════════════
-   PRINT STYLES (Certificate)
-   ═══════════════════════════════════════════════════════════════════════════ */
-@media print {
-  body * { visibility: hidden; }
-  .cert-screen, .cert-screen * { visibility: visible; }
-  .cert-screen {
-    position: static;
-    padding: 0;
-  }
-  .cert-inner {
-    box-shadow: none;
-    border: 1px solid #ccc;
-    border-radius: 0;
-    animation: none;
-    max-width: 100%;
-  }
-  .cert-actions { display: none; }
+  /* (the mobile Home-hub compaction that lived here was dead CSS — the base
+     .lt-home-* rules sit later in the file and outranked it. The canonical
+     mobile home layer now lives at the END of this file, where it wins.) */
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
@@ -2310,14 +1883,16 @@ html.theme-light .cert-screen {
   border: 1px solid var(--border2);
   border-radius: var(--radius-sm);
   color: var(--discord-color, #fff);
-  transition: all 0.15s;
+  transition: background-color 0.15s, border-color 0.15s, color 0.15s, box-shadow 0.15s, opacity 0.15s, transform 0.15s var(--ease-out);
 }
 .header-discord:hover {
   background: #5865F2;
   color: #fff;
   border-color: #5865F2;
 }
-.header-discord svg { width: 19px; height: auto; display: block; }
+/* -0.5px optical nudge: the box measures centered but the glyph's dense head /
+   sparse tails read as sitting low — lift it half a pixel to balance. */
+.header-discord svg { width: 19px; height: auto; display: block; transform: translateY(-0.5px); }
 
 .header-search {
   position: relative;
@@ -2340,7 +1915,7 @@ html.theme-light .cert-screen {
   border: none;
   outline: none;
   color: var(--text);
-  font-family: 'JetBrains Mono', monospace;
+  font-family: 'Geist Mono', monospace;
   font-size: 13px;
 }
 #lt-search-input::placeholder { color: var(--text3); }
@@ -2351,7 +1926,7 @@ html.theme-light .cert-screen {
   left: 0;
   right: 0;
   min-width: 320px;
-  max-height: 60vh;
+  max-height: calc(60vh / var(--app-zoom, 1));
   overflow-y: auto;
   background: var(--bg2);
   border: 1px solid var(--border2);
@@ -2389,7 +1964,7 @@ html.theme-light .cert-screen {
   display: flex;
   align-items: center;
   gap: 12px;
-  margin-bottom: 14px;
+  margin-bottom: 18px;
   padding: 10px 14px;
   background: var(--bg3);
   border: 1px solid var(--border);
@@ -2410,11 +1985,10 @@ html.theme-light .cert-screen {
   border: 1px solid color-mix(in srgb, var(--mod-accent, #00d4d4) 35%, transparent);
 }
 .module-banner-name {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: 'Geist Mono', monospace;
   font-size: 15px;
   font-weight: 800;
-  letter-spacing: 0.6px;
-  text-transform: uppercase;
+  letter-spacing: 0.2px;
   color: var(--text);
   line-height: 1.1;
 }
@@ -2423,7 +1997,6 @@ html.theme-light .cert-screen {
   color: var(--text3);
   margin-top: 2px;
 }
-
 /* Accent the section tag, bullet markers/terms and intro card to the module colour */
 .module-themed .content-card-tag { color: var(--mod-accent, var(--teal)); }
 .module-themed .lesson-bullets li::before { background: var(--mod-accent, var(--teal)); }
@@ -2442,6 +2015,7 @@ html.theme-light .cert-screen {
   border-left: 3px solid var(--mod-accent, var(--teal));
   border-radius: var(--radius-lg);
   padding: 20px 22px 22px;
+  margin-bottom: 18px;   /* course-view card rhythm — was 0, touching the card below */
   animation: fadeSlideIn 0.35s ease forwards;
 }
 .roadmap-head { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; }
@@ -2453,7 +2027,7 @@ html.theme-light .cert-screen {
   border: 1px solid color-mix(in srgb, var(--mod-accent, #00d4d4) 35%, transparent);
 }
 .roadmap-title {
-  font-family: 'JetBrains Mono', monospace; font-size: 19px; font-weight: 800;
+  font-family: 'Geist Mono', monospace; font-size: 19px; font-weight: 800;
   letter-spacing: 0.3px; color: var(--text); line-height: 1.1;
 }
 .roadmap-sub { font-size: 11.5px; color: var(--text3); margin-top: 2px; }
@@ -2468,7 +2042,7 @@ html.theme-light .cert-screen {
 .roadmap-node {
   width: 27px; height: 27px; flex-shrink: 0; border-radius: 50%;
   display: flex; align-items: center; justify-content: center; position: relative; z-index: 1;
-  font-family: 'JetBrains Mono', monospace; font-weight: 800; font-size: 13px;
+  font-family: 'Geist Mono', monospace; font-weight: 800; font-size: 13px;
   color: var(--mod-accent, var(--teal));
   background: color-mix(in srgb, var(--mod-accent, #00d4d4) 13%, var(--bg4));
   border: 1.5px solid color-mix(in srgb, var(--mod-accent, #00d4d4) 45%, transparent);
@@ -2493,7 +2067,7 @@ html.theme-light .cert-screen {
 .concept-node {
   width: 28px; height: 28px; flex-shrink: 0; border-radius: 50%;
   display: flex; align-items: center; justify-content: center; position: relative; z-index: 1;
-  font-family: 'JetBrains Mono', monospace; font-weight: 800; font-size: 13px;
+  font-family: 'Geist Mono', monospace; font-weight: 800; font-size: 13px;
   color: var(--mod-accent, var(--teal));
   background: color-mix(in srgb, var(--mod-accent, #00d4d4) 13%, var(--bg4));
   border: 1.5px solid color-mix(in srgb, var(--mod-accent, #00d4d4) 45%, transparent);
@@ -2546,14 +2120,11 @@ html.theme-light .cert-screen {
 .btc-ticker-price.tick-up { animation: btcTickUp 0.5s ease; }
 .btc-ticker-price.tick-down { animation: btcTickDown 0.5s ease; }
 @keyframes btcTickUp { 0% { background: rgba(0,200,120,0.4); } 100% { background: transparent; } }
-@keyframes btcTickDown { 0% { background: rgba(204,34,34,0.4); } 100% { background: transparent; } }
-.btc-ticker-chg { font-size: 10px; font-weight: 700; color: var(--text3); flex-shrink: 0; }
-.btc-ticker-chg.up { color: #00c878; }
-.btc-ticker-chg.down { color: #cc2222; }
+@keyframes btcTickDown { 0% { background: rgba(255,46,136,0.35); } 100% { background: transparent; } }
 
 /* ══════════════════════════════════════════════════════════════════════════
    SITE-WIDE FONT CHOICE (Settings → Display → Font)
-   Default = JetBrains Mono (Terminal) · Inter (all loaded via Google Fonts)
+   Default = Geist Mono (Terminal) · Inter (all loaded via Google Fonts)
    ══════════════════════════════════════════════════════════════════════════ */
 html.font-inter,    html.font-inter *    { font-family: 'Inter', sans-serif !important; }
 
@@ -2562,64 +2133,27 @@ html.font-inter,    html.font-inter *    { font-family: 'Inter', sans-serif !imp
 .lt-font-btn {
   padding: 6px 13px; border: 1px solid var(--border2); background: var(--bg4);
   color: var(--text2); font-size: 12px; font-weight: 600; border-radius: 8px;
-  cursor: pointer; transition: all 0.15s;
+  cursor: pointer; transition: background-color 0.15s, border-color 0.15s, color 0.15s, box-shadow 0.15s, opacity 0.15s, transform 0.15s var(--ease-out);
 }
 .lt-font-btn:hover { border-color: var(--teal); color: var(--teal); }
 .lt-font-btn.active { background: var(--teal-dim); border-color: var(--teal); color: var(--teal); }
 
 /* ── Chart header: video button + controls group ── */
 .chart-card-header-right { display: flex; align-items: center; gap: 10px; }
-.chart-video-btn {
-  display: inline-flex; align-items: center; gap: 6px;
-  background: transparent; border: 1px solid var(--border2);
-  color: var(--text2); font-family: 'JetBrains Mono', monospace;
-  font-size: 11px; font-weight: 600; padding: 4px 10px;
-  border-radius: 10px; cursor: pointer; transition: all 0.15s; white-space: nowrap;
-}
-.chart-video-btn:hover { border-color: #FF0000; color: var(--text); }
-.chart-video-btn.active { border-color: #FF0000; color: #ff5252; }
 
 /* Textbook ⇄ real-historical-example toggle on lesson charts */
 .chart-example-toggle {
   display: inline-flex; align-items: center; gap: 6px;
   background: transparent; border: 1px solid var(--border2);
-  color: var(--text2); font-family: 'JetBrains Mono', monospace;
+  color: var(--text2); font-family: 'Geist Mono', monospace;
   font-size: 11px; font-weight: 600; padding: 4px 10px;
-  border-radius: 10px; cursor: pointer; transition: all 0.15s; white-space: nowrap;
+  border-radius: 10px; cursor: pointer; transition: background-color 0.15s, border-color 0.15s, color 0.15s, box-shadow 0.15s, opacity 0.15s, transform 0.15s var(--ease-out); white-space: nowrap;
 }
 .chart-example-toggle:hover { border-color: var(--teal); color: var(--text); }
 .chart-example-toggle:disabled { opacity: 0.6; cursor: progress; }
 .chart-example-toggle--active { border-color: var(--teal); color: var(--teal); background: var(--teal-faint); }
-.chart-example-caption {
-  display: flex; align-items: flex-start; gap: 13px;
-  margin-top: 10px; padding: 13px 15px;
-  background: linear-gradient(180deg, var(--teal-faint), transparent), var(--bg2);
-  border: 1px solid var(--border);
-  border-left: 3px solid var(--teal); border-radius: var(--radius);
-}
 /* left icon chip — clearly flags this as historical data */
-.chart-example-caption .cec-icon {
-  flex-shrink: 0; width: 34px; height: 34px; border-radius: 9px;
-  display: flex; align-items: center; justify-content: center;
-  background: var(--teal-dim); border: 1px solid rgba(0, 212, 212, 0.28);
-  color: var(--teal); box-shadow: 0 0 14px rgba(0, 212, 212, 0.12);
-}
-.chart-example-caption .cec-body { flex: 1; min-width: 0; }
-.chart-example-caption .cec-head {
-  display: flex; align-items: center; gap: 9px; flex-wrap: wrap; margin-bottom: 6px;
-}
 /* "Historical" pill — distinguishes it from the textbook illustration */
-.chart-example-caption .cec-tag {
-  font-family: 'JetBrains Mono', monospace; font-weight: 800;
-  font-size: 11px; letter-spacing: 1px; text-transform: uppercase;
-  color: #04201f; background: var(--teal);
-  padding: 2px 8px; border-radius: 100px;
-}
-.chart-example-caption .cec-meta {
-  font-family: 'JetBrains Mono', monospace; font-weight: 700;
-  font-size: 13px; letter-spacing: 0.4px; text-transform: uppercase; color: var(--teal);
-}
-.chart-example-caption p { font-size: 13px; line-height: 1.65; color: var(--text2); margin: 0; }
 .intro-video-wrap { width: 100%; }
 .intro-video-frame-wrap { width: 100%; padding: 8px; }
 .intro-video-frame-wrap iframe { width: 100%; display: block; border-radius: var(--radius); }
@@ -2641,7 +2175,7 @@ html.font-inter,    html.font-inter *    { font-family: 'Inter', sans-serif !imp
   color: var(--text);
   border: 1px solid var(--border2);
   border-radius: var(--radius);
-  font-family: 'JetBrains Mono', monospace;
+  font-family: 'Geist Mono', monospace;
   font-size: 11px;
   font-weight: 600;
   padding: 5px 10px;
@@ -2678,7 +2212,7 @@ html.font-inter,    html.font-inter *    { font-family: 'Inter', sans-serif !imp
   border: none;
   border-radius: var(--radius-sm);
   padding: 6px 10px;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: 'Geist Mono', monospace;
   font-size: 11.5px;
   font-weight: 500;
   color: var(--text3);
@@ -2712,45 +2246,6 @@ html.font-inter,    html.font-inter *    { font-family: 'Inter', sans-serif !imp
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
-   CHART / VIDEO SEGMENTED TABS — browser-tab-style switch in the chart header
-   ══════════════════════════════════════════════════════════════════════════ */
-.chart-view-tabs {
-  display: inline-flex;
-  align-items: center;
-  gap: 2px;
-  background: var(--bg2);
-  border: 1px solid var(--border2);
-  border-radius: 8px;
-  padding: 2px;
-}
-.cvt-tab {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  background: transparent;
-  border: none;
-  border-radius: 6px;
-  color: var(--text2);
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.2px;
-  line-height: 1;
-  padding: 5px 12px;
-  cursor: pointer;
-  white-space: nowrap;
-  transition: background 0.15s, color 0.15s;
-}
-.cvt-tab svg { display: block; flex-shrink: 0; }
-.cvt-tab:hover:not(.cvt-tab--active) { color: var(--text); }
-.cvt-tab--active {
-  background: var(--bg5);
-  color: var(--text);
-  box-shadow: 0 1px 2px rgba(0,0,0,0.45);
-}
-.cvt-tab--video.cvt-tab--active { color: #ff5252; }
-
-/* ══════════════════════════════════════════════════════════════════════════
    SIDEBAR HOME BUTTON — static, below the logo / above the courses.
    Lives outside #chapter-list so it never scrolls with the chapter list.
    Styled as a clean nav row (matches the course-accordion headers) rather than
@@ -2766,7 +2261,7 @@ html.font-inter,    html.font-inter *    { font-family: 'Inter', sans-serif !imp
   border: none;
   border-left: 3px solid transparent;
   color: var(--text2);
-  font-family: 'JetBrains Mono', monospace;
+  font-family: 'Geist Mono', monospace;
   font-size: 13px;
   font-weight: 600;
   letter-spacing: 0.2px;
@@ -2826,7 +2321,7 @@ html.theme-light .content-area--home {
 }
 .lt-home-hero-text { min-width: 0; }
 .lt-home-hero-title {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: 'Geist Mono', monospace;
   font-size: 22px;
   font-weight: 700;
   letter-spacing: -0.7px;
@@ -2849,7 +2344,7 @@ html.theme-light .content-area--home {
 }
 .lt-home-overall-top { display: flex; align-items: baseline; gap: 9px; }
 .lt-home-overall-pct {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: 'Geist Mono', monospace;
   font-size: 20px;
   font-weight: 800;
   color: var(--text);
@@ -2886,15 +2381,14 @@ html.theme-light .content-area--home {
 }
 .lt-home-term-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .lt-home-term-eyebrow {
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 1px;
+  letter-spacing: 0.2px;
   color: var(--text3);
   white-space: nowrap;
 }
 .lt-home-term-name {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: 'Geist Mono', monospace;
   font-size: 14px;
   font-weight: 700;
   letter-spacing: -0.1px;
@@ -2926,7 +2420,7 @@ html.theme-light .content-area--home {
   background: none;
   border: none;
   color: var(--teal);
-  font-family: 'JetBrains Mono', monospace;
+  font-family: 'Geist Mono', monospace;
   font-size: 11px;
   font-weight: 700;
   cursor: pointer;
@@ -2943,7 +2437,6 @@ html.theme-light .content-area--home {
   gap: 18px;
   background: var(--bg3);
   border: 1px solid var(--border);
-  border-left: 2px solid var(--teal);
   border-radius: var(--radius);
   padding: 16px 20px;
   transition: border-color 0.3s ease;
@@ -2969,16 +2462,13 @@ html.theme-light .content-area--home {
   height: 60px;
   object-fit: contain;
   display: block;
-  /* subtle white glow so the Perpingo cutout lifts off the dark card */
-  filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.35));
-  transition: transform 0.3s ease, filter 0.3s ease;
+  transition: transform 0.3s ease;
 }
 .lt-home-continue-info { min-width: 0; }
 .lt-home-continue-eyebrow {
-  font-size: 9.5px;
+  font-size: 10px;
   font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 1px;
+  letter-spacing: 0.2px;
   color: var(--text3);
   margin-bottom: 6px;
   transition: color 0.3s ease;
@@ -2989,9 +2479,11 @@ html.theme-light .content-area--home {
   color: var(--text);
   letter-spacing: -0.2px;
   line-height: 1.25;
-  white-space: nowrap;
+  /* allow the chapter name to use two lines instead of clipping ("Understanding Price Act…") */
   overflow: hidden;
-  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
 }
 .lt-home-continue-meta { font-size: 11.5px; color: var(--text3); margin-top: 3px; }
 .lt-home-continue .btn-primary { width: auto; flex-shrink: 0; padding: 10px 20px; font-size: 13px; transition: opacity 0.26s ease, transform 0.26s ease; }
@@ -3000,11 +2492,10 @@ html.theme-light .content-area--home {
    card. Accent border + eyebrow, a popped/glowing avatar, and the Resume button
    fading away all animate via the transitions defined above. The accent morphs
    smoothly as you move between cards (var(--peek-accent) feeds border-color etc.). */
-.lt-home-continue--peek { border-left-color: var(--peek-accent, var(--teal)); }
+.lt-home-continue--peek { border-color: var(--peek-accent, var(--teal)); }
 .lt-home-continue--peek .lt-home-continue-eyebrow { color: var(--peek-accent, var(--teal)); }
 .lt-home-continue--peek .lt-home-continue-avatar img {
   transform: scale(1.08);
-  filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.45));
 }
 .lt-home-continue--peek .btn-primary {
   opacity: 0;
@@ -3015,12 +2506,11 @@ html.theme-light .content-area--home {
 /* Section block — label + content */
 .lt-home-section { display: flex; flex-direction: column; gap: 11px; }
 .lt-home-section-label {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 12px;
+  font-family: 'Geist Mono', monospace;
+  font-size: 12.5px;
   font-weight: 700;
-  letter-spacing: 1.2px;
-  text-transform: uppercase;
-  color: var(--text3);
+  letter-spacing: 0.2px;
+  color: var(--text2);
   padding-left: 2px;
 }
 
@@ -3038,9 +2528,9 @@ html.theme-light .content-area--home {
   background: var(--bg3);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 15px 16px 16px;
+  padding: 16px;
   cursor: pointer;
-  transition: border-color 0.15s;
+  transition: border-color 0.18s, box-shadow 0.18s, transform 0.18s;
 }
 .lt-home-course-share {
   position: absolute;
@@ -3057,9 +2547,6 @@ html.theme-light .content-area--home {
   transition: color 0.15s, background 0.15s;
 }
 .lt-home-course-share:hover { color: var(--caccent, var(--teal)); background: var(--bg4); }
-.lt-home-course-card {
-  transition: border-color 0.18s, box-shadow 0.18s, transform 0.18s;
-}
 .lt-home-course-card:hover {
   border-color: var(--caccent, var(--border3));
   transform: translateY(-2px);
@@ -3067,10 +2554,9 @@ html.theme-light .content-area--home {
               0 0 0 1px color-mix(in srgb, var(--caccent, var(--teal)) 22%, transparent);
 }
 .lt-home-course-label {
-  font-size: 9.5px;
+  font-size: 10px;
   font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.8px;
+  letter-spacing: 0.2px;
   color: var(--caccent, var(--text3));   /* "Course N" always in its accent */
   margin-bottom: 5px;
 }
@@ -3098,7 +2584,7 @@ html.theme-light .content-area--home {
   gap: 8px;
 }
 .lt-home-course-stat-pct {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: 'Geist Mono', monospace;
   font-size: 17px;
   font-weight: 800;
   color: var(--text);
@@ -3120,7 +2606,7 @@ html.theme-light .content-area--home {
 .lt-home-tools {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-  gap: 10px;
+  gap: 12px;
 }
 .lt-home-tool {
   display: flex;
@@ -3133,13 +2619,11 @@ html.theme-light .content-area--home {
   border-radius: var(--radius);
   padding: 18px 12px;
   color: var(--text2);
-  font-family: 'JetBrains Mono', monospace;
+  font-family: 'Geist Mono', monospace;
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
-  transition: border-color 0.15s, color 0.15s;
-}
-.lt-home-tool {
+  position: relative;
   transition: border-color 0.15s, color 0.15s, box-shadow 0.15s, transform 0.15s;
 }
 .lt-home-tool:hover {
@@ -3152,12 +2636,11 @@ html.theme-light .content-area--home {
 .lt-home-tool:hover .lt-home-tool-ic { color: var(--teal); }
 
 /* WIP corner badge on a home tool tile (e.g. the Simulator while in development) */
-.lt-home-tool { position: relative; }
 .lt-home-tool-wip {
   position: absolute;
   top: 7px;
   right: 7px;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: 'Geist Mono', monospace;
   font-weight: 700;
   font-size: 8px;
   letter-spacing: 0.5px;
@@ -3173,17 +2656,55 @@ html.theme-light .content-area--home {
    RISK CALLOUT — honest "real money, real risk" gate on leverage/derivatives lessons
    ══════════════════════════════════════════════════════════════════════════ */
 .risk-callout {
+  position: relative;
   display: flex;
   align-items: flex-start;
   gap: 12px;
   margin-bottom: 14px;
-  padding: 13px 15px;
+  padding: 13px 38px 13px 15px;   /* right pad clears the dismiss button */
   background: linear-gradient(180deg, rgba(255,159,26,0.10), rgba(255,159,26,0.03));
   border: 1px solid rgba(255,159,26,0.32);
   border-left: 3px solid #ff9f1a;
   border-radius: var(--radius);
   animation: fadeSlideIn 0.3s ease;
+  transition: opacity 0.22s var(--ease-out), transform 0.22s var(--ease-out),
+              height 0.22s var(--ease-out), margin-bottom 0.22s var(--ease-out),
+              padding-top 0.22s var(--ease-out), padding-bottom 0.22s var(--ease-out);
 }
+/* dismissed: fade + collapse (JS pins the height first so 0 can transition) */
+.risk-callout--out {
+  opacity: 0;
+  transform: translateY(-4px);
+  height: 0 !important;
+  margin-bottom: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.risk-callout-x {
+  position: absolute;
+  top: 7px;
+  right: 7px;
+  width: 26px;
+  height: 26px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-sm);
+  color: rgba(255,196,107,0.72);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, transform 0.16s var(--ease-out);
+}
+.risk-callout-x:hover { background: rgba(255,159,26,0.14); color: #ffc46b; }
+.risk-callout-x:active { transform: scale(0.92); }
+.risk-callout-x:focus-visible { outline: 2px solid #ff9f1a; outline-offset: 1px; }
+html.theme-light .risk-callout-x { color: rgba(180,83,9,0.7); }
+html.theme-light .risk-callout-x:hover { background: rgba(180,83,9,0.10); color: #b45309; }
+/* amber emphasis is unreadable on white — deepen it in light mode */
+html.theme-light .risk-callout-body strong { color: #b45309; }
 .risk-callout-ic {
   flex-shrink: 0;
   width: 32px;
@@ -3224,6 +2745,27 @@ html.theme-light .content-area--home {
 .course-note-body { font-size: 12.5px; line-height: 1.6; color: var(--text2); }
 .course-note-body strong { color: var(--text); font-weight: 700; }
 
+/* Proprietary-indicator disclaimer (Course 4 Indicator Suite + Hyblock lessons). Restricted-tone, violet. */
+.indicator-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 14px;
+  padding: 13px 15px;
+  background: linear-gradient(180deg, rgba(168,139,250,0.10), rgba(168,139,250,0.03));
+  border: 1px solid rgba(168,139,250,0.32);
+  border-left: 3px solid #a78bfa;
+  border-radius: var(--radius);
+  animation: fadeSlideIn 0.3s ease;
+}
+.indicator-note-ic {
+  flex-shrink: 0; width: 32px; height: 32px; border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  color: #a78bfa; background: rgba(168,139,250,0.12); border: 1px solid rgba(168,139,250,0.3);
+}
+.indicator-note-body { font-size: 12.5px; line-height: 1.6; color: var(--text2); }
+.indicator-note-body strong { color: #c4b5fd; font-weight: 700; }
+
 /* "Advanced" badges marking Course 4 as an optional deep-end track — muted/neutral. */
 .lt-home-course-adv,
 .sb-adv {
@@ -3261,7 +2803,7 @@ html.theme-light .content-area--home {
   gap: 9px;
   background: #141414;
   color: #f5c518;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: 'Geist Mono', monospace;
   font-weight: 800;
   font-size: 13px;
   letter-spacing: 2px;
@@ -3281,6 +2823,53 @@ html.theme-light .content-area--home {
   .lt-home-continue .btn-primary { width: 100%; }
 }
 
+/* ── Mobile audit fixes: legibility · tap targets · breathing room (≤480px) ── */
+@media (max-width: 480px) {
+  /* full-width course cards — 2-up at ~375px cramped the titles onto two lines */
+  .lt-home-courses { grid-template-columns: 1fr; }
+  /* header controls to a comfortable ≥44px tap target */
+  .icon-btn, .menu-btn, .header-discord { width: 44px; height: 44px; }
+  /* floor the tiny micro-labels so they stay legible on a phone */
+  .header-tag,
+  .lt-home-course-label,
+  .lt-home-continue-eyebrow,
+  .lt-home-term-eyebrow { font-size: 10.5px; }
+  .lt-home-term-cat,
+  .lt-home-course-adv,
+  .sb-adv,
+  .lt-home-tool-wip { font-size: 10px; }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   DISPLAY SCALE TIERS — MacBook-first
+   The px design targets ~1900px desktops. On laptop windows the whole app
+   scales down uniformly via body{zoom} — this reaches EVERYTHING (type, chrome,
+   ECharts canvas text, engine inline styles, lab widgets), unlike per-selector
+   media overrides. All MacBooks are retina, so the downscale stays crisp.
+   Layout width becomes window/zoom (a 1280 Air lays out like a 1506 desktop).
+   --app-zoom must always mirror the zoom: viewport units inside the zoomed
+   body resolve zoom-times too small and are divided back up where they must
+   span the real viewport (app shell heights above, lesson player height-fit
+   in lessons-v2/player.css). Mobile (≤768) keeps its own untouched layer.
+   ═══════════════════════════════════════════════════════════════════════════ */
+/* @supports guard: a browser that lacks CSS zoom (old Firefox) must ALSO skip
+   --app-zoom, else the /var(--app-zoom) compensations divide by a zoom that
+   never happened and the shell overflows the viewport. */
+@supports (zoom: 0.9) {
+  @media (min-width: 769px) and (max-width: 1359px) {   /* MacBook Air 13/15, small windows */
+    :root { --app-zoom: 0.85; }
+    body { zoom: 0.85; }
+  }
+  @media (min-width: 1360px) and (max-width: 1512px) {  /* MBP 14, 1440 externals, 1366 PCs */
+    :root { --app-zoom: 0.9; }
+    body { zoom: 0.9; }
+  }
+  @media (min-width: 1513px) and (max-width: 1800px) {  /* MBP 16, 1680/1728 windows */
+    :root { --app-zoom: 0.95; }
+    body { zoom: 0.95; }
+  }
+}
+
 /* ═══════════════════════════════════════════════════════════════════════════
    LAPTOP RESPONSIVE  (1024 – 1400px)
    Must come after all base rules so these overrides win the cascade.
@@ -3295,7 +2884,6 @@ html.theme-light .content-area--home {
   :root { --sidebar-w: 230px; }
   .top-header { gap: 8px; padding: 0 14px 0 12px; }
   .header-search { flex: 0 1 220px; }
-  .btc-ticker-chg { display: none; }
 
   .content-area { padding: 20px 26px 14px; }
   .content-card { padding: 20px 22px; }
@@ -3307,10 +2895,9 @@ html.theme-light .content-area--home {
   .chart-el--tall { height: 350px; }
 }
 
-/* Laptop M: drop labeled step-pills (dots remain), hide BTC symbol text */
+/* Laptop M: hide BTC symbol text, narrow the sidebar */
 @media (max-width: 1150px) {
   :root { --sidebar-w: 210px; }
-  .step-pills { display: none; }
   .header-search { flex: 0 1 180px; }
   .btc-ticker-sym { display: none; }
 }
@@ -3322,11 +2909,36 @@ html.theme-light .content-area--home {
   .header-search { flex: 0 1 160px; }
 }
 
+/* ── Laptop chrome compact (desktop widths, viewports ≤960px tall) ──────────
+   Laptops have the same content in ~200px less height than a desktop monitor.
+   Trim the fixed chrome around the lesson so the player's height-fit rule
+   (lessons-v2/player.css caps the stage against 100dvh minus this chrome)
+   resolves to the largest stage that still fits WHOLE — the transport bar must
+   never sit below the fold. min-width:769 keeps the mobile layer untouched;
+   tall desktop monitors (>960px viewports) keep the airier spacing. */
+@media (min-width: 769px) and (max-height: 960px) {
+  .content-area { padding: 14px 26px 10px; }
+  .content-area .module-banner { padding: 8px 12px; margin-bottom: 12px; gap: 10px; }
+  .content-area .module-banner-icon { width: 28px; height: 28px; border-radius: 7px; }
+  .content-area .module-banner-name { font-size: 14px; }
+  .content-area .module-banner-tag { font-size: 10.5px; }
+  .content-area .recon-watch-original { margin: 8px 14px; font-size: 10.5px; }
+}
+
+/* ── Short phones: the lesson player owns the screen ─────────────────────────
+   The no-clip rule (stage + caption + transport always fully visible) leaves
+   no room for auxiliary chrome on sub-750px-tall phones — the module banner
+   and watch-link duplicate context the header already gives (chapter tag +
+   marquee title), so on lesson-player steps they yield to the stage. */
+@media (max-width: 768px) and (max-height: 750px) {
+  .content-area:has(.lesson-wrap--player) .module-banner,
+  .content-area:has(.lesson-wrap--player) .recon-watch-original { display: none; }
+}
+
 /* ══════════════════════════════════════════════════════════════════════════
    RECONSTRUCTION PLAYER — mounts in the intro chart slot in place of the video.
    ══════════════════════════════════════════════════════════════════════════ */
 .recon-player-host { margin-top: 4px; }
-.cvt-tab--lesson.cvt-tab--active { color: var(--teal); }
 .recon-watch-original {
   display: inline-block;
   margin: 10px 14px 12px;
@@ -3337,3 +2949,330 @@ html.theme-light .content-area--home {
   transition: color 0.15s;
 }
 .recon-watch-original:hover { color: var(--teal); }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   INTERACTION FEEDBACK  (emil-design-eng audit)
+   Pressable elements scale down briefly on press so the UI feels like it's
+   listening to the user. Subtle (0.97); disabled controls stay put. The
+   transform animates via each element's existing transition (ease-out).
+   ═══════════════════════════════════════════════════════════════════════════ */
+.nav-btn:not(:disabled):active,
+.sidebar-home-btn:active,
+.chapter-item:not(.chapter-item--locked):active,
+.lt-home-course-share:active,
+.icon-btn:active {
+  transform: scale(0.97);
+}
+/* Course cards already lift on hover — keep the lift, add a small press settle. */
+.lt-home-course-card:active { transform: translateY(-1px) scale(0.99); }
+
+/* The card hover-lift is a transform; on touch devices :hover fires on tap and
+   would stick the lifted state. Gate it to real hover-capable pointers. */
+@media (hover: none) {
+  .lt-home-course-card:hover { transform: none; }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   DISPLAY FONT — IBM Plex Mono on headings / titles / large numerals, paired with
+   the Geist Mono body. Gives hierarchy a voice without leaving the terminal
+   family. The Inter setting (html.font-inter *) overrides this with !important.
+   ═══════════════════════════════════════════════════════════════════════════ */
+.content-card-heading,
+.lt-home-hero-title,
+.lt-home-overall-pct,
+.lt-home-continue-title,
+.lt-home-course-name,
+.modal-title,
+.cert-title {
+  font-family: var(--font-display);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   iOS-NATIVE MOBILE LAYER  (≤768px — desktop is untouched)
+   The goal: the app should feel like a native iOS app on a phone. Bottom tab
+   bar, safe-area awareness, sheet-style modals, continuous rounded corners,
+   universal press feedback, centered nav-bar titles. Everything here is
+   additive and mobile-scoped; the terminal aesthetic (mono type, hairlines,
+   near-black) stays — only the *ergonomics and geometry* go native.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+@media (max-width: 768px) {
+
+  /* ── iOS geometry: continuous rounded corners everywhere via the tokens ── */
+  :root {
+    --radius: 12px;
+    --radius-lg: 16px;
+    --radius-sm: 8px;
+  }
+
+  /* ── Safe areas on the app chrome ─────────────────────────────────────── */
+  .top-header {
+    padding-left: max(12px, env(safe-area-inset-left, 0px));
+    padding-right: max(14px, env(safe-area-inset-right, 0px));
+  }
+  .nav-footer {
+    height: auto;
+    min-height: calc(var(--footer-h) + env(safe-area-inset-bottom, 0px));
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  .sidebar {
+    padding-left: env(safe-area-inset-left, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  /* ── Nav bar title: left-aligned large-title style (iOS), ellipsized so it
+        can never collide with the right-side buttons ─────────────────────── */
+  .header-info { min-width: 0; flex: 1 1 auto; }
+  .header-title {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 14px;
+    letter-spacing: -0.2px;
+  }
+  .header-tag { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  /* ── Sheet-style modals (iOS presentation) ────────────────────────────── */
+  .modal-overlay {
+    align-items: flex-end;
+    padding: 0;
+  }
+  .modal-box {
+    max-width: none;
+    width: 100%;
+    border-radius: 20px 20px 0 0;
+    border-left: none; border-right: none; border-bottom: none;
+    padding: 30px 24px calc(26px + env(safe-area-inset-bottom, 0px));
+    animation: ltSheetUp 0.34s cubic-bezier(0.32, 0.72, 0, 1);
+  }
+  /* grabber handle */
+  .modal-box::before {
+    content: '';
+    display: block;
+    width: 36px;
+    height: 4px;
+    border-radius: 2.5px;
+    background: var(--border2);
+    margin: -14px auto 18px;
+  }
+  .lt-confirm-overlay { align-items: flex-end !important; padding: 0 !important; }
+  .lt-confirm-box {
+    max-width: none !important;
+    width: 100% !important;
+    border-radius: 20px 20px 0 0 !important;
+    padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px)) !important;
+    animation: ltSheetUp 0.34s cubic-bezier(0.32, 0.72, 0, 1) !important;
+  }
+
+  /* ── iOS type rhythm on the Home hub ──────────────────────────────────── */
+  .lt-home-hero-title { font-size: 26px; letter-spacing: -0.6px; }
+  .lt-home-hero-sub { font-size: 13px; }
+  .lt-home-section-label { font-size: 12px; letter-spacing: 0.8px; }
+  .lt-home-continue { border-radius: var(--radius-lg); }
+  .lt-home-course-card, .lt-home-tool, .lt-home-term { border-radius: var(--radius-lg); }
+
+  /* ── Cards & controls: native-feeling geometry ────────────────────────── */
+  .content-card, .quiz-card, .chart-card, .roadmap-card, .concept-card {
+    border-radius: var(--radius-lg);
+  }
+  .nav-btn {
+    border-radius: 13px;
+    font-size: 14px;
+    padding: 14px 14px;
+  }
+  .answer-btn {
+    border-radius: 12px;
+    min-height: 48px;
+    font-size: 13px;
+  }
+  .btn-primary { border-radius: 13px; }
+
+  /* ── Scroll feel ──────────────────────────────────────────────────────── */
+  .content-area {
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+@keyframes ltSheetUp {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+
+/* ── Universal press feedback on touch devices (iOS "listening" feel).
+     Gated to hover:none so desktop pointer behavior is untouched. ── */
+@media (hover: none) {
+  .btn-primary:active,
+  .answer-btn:not(:disabled):active,
+  .lt-home-tool:active,
+  .lt-home-continue .btn-primary:active,
+  .step-pill:active,
+  .header-discord:active,
+  .toast:active {
+    transform: scale(0.96);
+  }
+  .lt-home-course-card:active { transform: scale(0.985); }
+  .content-card:active, .quiz-card:active { transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .modal-box, .lt-confirm-box { animation: none !important; }
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   PREMIUM DETAIL LAYER  (2026-07-03 polish pass)
+   Nitpick-level depth + interaction details. Purely cosmetic: no layout,
+   no chart config, no functional behaviour is touched. Each block states
+   its reasoning — unseen details compound.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* 1 · Material depth — raised surfaces get the top-edge highlight plus a soft
+      ambient shadow, so cards sit ON the page instead of being outlined into it. */
+.quiz-card, .chart-card, .lt-home-continue, .lt-home-course-card, .lt-home-tool,
+.lt-home-term, .cm-promise, .cm-rows, .cm-card, .cm-support,
+.sim3-chart-card, .sim3-term, .sim3-panel, .sim3-stat, .sim3-verdict,
+.roadmap-card, .concept-card, .fc-face, .modal-box, .lt-settings-section {
+  box-shadow: var(--surface-hi), 0 12px 32px -22px rgba(0, 0, 0, 0.55);
+}
+html.theme-light .quiz-card, html.theme-light .chart-card, html.theme-light .lt-home-continue,
+html.theme-light .lt-home-course-card, html.theme-light .lt-home-tool, html.theme-light .lt-home-term,
+html.theme-light .cm-promise, html.theme-light .cm-rows, html.theme-light .cm-card,
+html.theme-light .cm-support, html.theme-light .sim3-chart-card, html.theme-light .sim3-term,
+html.theme-light .sim3-panel, html.theme-light .sim3-stat, html.theme-light .roadmap-card,
+html.theme-light .concept-card, html.theme-light .fc-face, html.theme-light .modal-box,
+html.theme-light .lt-settings-section {
+  box-shadow: 0 10px 26px -22px rgba(15, 23, 42, 0.22);
+}
+
+/* 2 · Shell depth — the header floats a hair above the page; the sidebar's inner
+      edge falls away into shadow. The app reads as layered planes, not one flat sheet. */
+.top-header { position: relative; z-index: 5; box-shadow: 0 10px 24px -20px rgba(0, 0, 0, 0.65); }
+@media (min-width: 769px) {
+  .sidebar { box-shadow: inset -16px 0 28px -28px rgba(0, 0, 0, 0.75); }
+}
+
+/* 3 · Press feedback everywhere, desktop included — the UI acknowledges every
+      click the instant it lands, not just on touch. */
+.btn-primary:not(:disabled):active,
+.btn-ghost:not(:disabled):active,
+.answer-btn:not(:disabled):active,
+.header-discord:active,
+.lt-home-tool:active,
+.cm-row:active, .cm-x-btn:active, .cm-support-cta:active,
+.sim3-chip:active, .sim3-tr-btn:active, .sim3-close-btn:active, .sim3-apply-btn:active {
+  transform: scale(0.975);
+}
+.answer-btn { transition: border-color 0.18s, background-color 0.18s, color 0.18s,
+  transform 0.16s var(--ease-out); }
+.cm-row, .cm-x-btn, .cm-support-cta, .sim3-chip, .sim3-tr-btn, .sim3-close-btn, .sim3-apply-btn,
+.header-discord, .lt-home-tool { transition-property: border-color, background-color, color, transform, box-shadow; transition-duration: 0.16s; transition-timing-function: var(--ease-out); }
+
+/* 4 · Tool cards — the icon answers the hover before the card does. Tiny lead-in
+      makes the grid feel alive without moving any layout. */
+.lt-home-tool svg { transition: transform 0.22s var(--ease-out); }
+@media (hover: hover) and (pointer: fine) {
+  .lt-home-tool:hover svg { transform: translateY(-2px) scale(1.07); }
+}
+
+/* 5 · Toasts — frosted, and they arrive with intent (rise + settle on the strong
+      curve) instead of a generic fade. */
+.toast {
+  background: color-mix(in srgb, var(--bg4) 86%, transparent);
+  -webkit-backdrop-filter: blur(12px) saturate(1.4);
+  backdrop-filter: blur(12px) saturate(1.4);
+  box-shadow: var(--surface-hi), 0 14px 34px -18px rgba(0, 0, 0, 0.6);
+  animation: ltToastIn 0.34s var(--ease-out);
+}
+@keyframes ltToastIn {
+  from { opacity: 0; transform: translateX(-50%) translateY(12px) scale(0.97); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
+}
+
+/* 6 · Search field — focus is a state change worth announcing: hairline turns
+      teal with a soft ring, matching the app's focus language. */
+.header-search:focus-within {
+  border-color: var(--teal);
+  box-shadow: 0 0 0 3px rgba(0, 212, 212, 0.12);
+}
+
+/* 7 · Sidebar chapters — unlocked rows lean toward the cursor; locked ones
+      stay put (affordance = interactivity). Active row doesn't shift. */
+@media (hover: hover) and (pointer: fine) {
+  .chapter-item { transition: background-color 0.15s, border-color 0.15s, transform 0.18s var(--ease-out); }
+  .chapter-item:not(.chapter-item--locked):not(.chapter-item--active):hover { transform: translateX(3px); }
+}
+
+/* 8 · Card entrances — same animation, stronger curve. ease → the house ease-out
+      so content settles instead of stopping. */
+.content-card { animation: fadeSlideIn 0.34s var(--ease-out) forwards; }
+
+/* 9 · Continue card — Perpingo perks up when you're about to resume. */
+.lt-home-continue-avatar img { transition: transform 0.25s var(--ease-out); }
+@media (hover: hover) and (pointer: fine) {
+  .lt-home-continue:hover .lt-home-continue-avatar img { transform: scale(1.06) rotate(-2deg); }
+}
+
+/* 10 · 3D tilt (driven by _ltInitCardTilt in lt-engine.js) — cards get real
+       perspective; the shine keeps to the existing border/shadow system. */
+.lt-tilt { will-change: transform; }
+
+@media (prefers-reduced-motion: reduce) {
+  .toast { animation: none; }
+  .chapter-item:not(.chapter-item--locked):not(.chapter-item--active):hover { transform: none; }
+  .lt-home-tool:hover svg, .lt-home-continue:hover .lt-home-continue-avatar img { transform: none; }
+}
+
+/* ── search shortcut hint (⌘K · / focuses the field; chip hides while typing) ── */
+.search-kbd {
+  position: absolute; right: 9px; top: 50%; transform: translateY(-50%);
+  font-family: 'Geist Mono', monospace; font-size: 10px; font-weight: 700;
+  color: var(--text3); background: var(--bg4); border: 1px solid var(--border2);
+  border-bottom-width: 2px; border-radius: 5px; padding: 1px 6px; pointer-events: none;
+  transition: opacity 0.15s;
+}
+.header-search { position: relative; }
+.header-search:focus-within .search-kbd { opacity: 0; }
+@media (hover: none) { .search-kbd { display: none; } }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   MOBILE HOME HUB (≤600px) — clean & crisp layer (2026-07-04 overhaul)
+   One tighter rhythm for the whole hub: hero band, continue card, course
+   cards, tools, term of the day. Replaces the dead ≤768 compaction (base
+   rules outranked it); lives at EOF so it always wins the cascade.
+   ═══════════════════════════════════════════════════════════════════════════ */
+@media (max-width: 600px) {
+  .lt-home-wrap { gap: 18px; padding-bottom: 18px; }
+
+  /* hero: greeting + overall progress as one tight, full-width band */
+  .lt-home-hero { gap: 10px; }
+  .lt-home-hero-title { font-size: 20px; letter-spacing: -0.5px; }
+  .lt-home-hero-sub { font-size: 11.5px; }
+  .lt-home-overall { min-width: 0; width: 100%; align-items: flex-start; gap: 6px; }
+  .lt-home-overall-track { width: 100%; }
+  .lt-home-overall-pct { font-size: 18px; }
+
+  /* continue card: tighter box, the full-width thumb button stays */
+  .lt-home-continue { padding: 13px 14px; gap: 12px; }
+  .lt-home-continue-left { gap: 11px; }
+  .lt-home-continue-avatar { width: 46px; height: 46px; }
+  .lt-home-continue-title { font-size: 14.5px; }
+
+  /* section rhythm */
+  .lt-home-section { gap: 9px; }
+
+  /* course cards — the approved tightened spec */
+  .lt-home-courses { gap: 10px; }
+  .lt-home-course-card { padding: 13px 14px; }
+  .lt-home-course-name { font-size: 13.5px; margin-bottom: 10px; }
+  .lt-home-course-track { margin-bottom: 7px; }
+  .lt-home-course-stat-pct { font-size: 15px; }
+
+  /* tools: compact, still comfortably tappable */
+  .lt-home-tools { gap: 8px; }
+  .lt-home-tool { padding: 12px 8px; gap: 6px; }
+
+  /* term of the day: slim card */
+  .lt-home-term { padding: 12px 14px; gap: 8px; }
+}

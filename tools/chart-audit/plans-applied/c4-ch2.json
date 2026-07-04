@@ -1,0 +1,24 @@
+{
+  "course": 4,
+  "chapterId": 2,
+  "title": "Identifying Liquidity",
+  "module": "Identifying Liquidity",
+  "edits": [
+    {
+      "slot": "introChart",
+      "addMarkLines": [
+        { "yAxis": 83, "label": "Support — Range Low", "color": "#00d4d4" }
+      ],
+      "reason": "Intro teaches the pool sits below support: 'They sit below key support and above key resistance' and bullet 'Liquidity Pools: found below support (long stop losses + breakdown shorts)'. The chart's idx0 markPoint already names 'Stops at 83' but the support LEVEL itself is never drawn as a line. yAxis 83 sits inside band [80,108]; teal = support per palette. A markLine (level) is non-redundant with the event pins and with the liqCluster ladder (80/82/84) which represents the stops, not the support edge."
+    },
+    {
+      "slot": "lessonChart",
+      "addMarkLines": [
+        { "yAxis": 108.5, "label": "Stop — Above Swept Cluster (buffer)", "color": "#ff2e88" }
+      ],
+      "reason": "Lesson explicitly teaches buffered stop placement for this SFP short: 'add buffer to stop to survive the spike'. The swept short-stop cluster tops at 107.5 and the spike reaches 108 (wick ~110), so a buffered stop sits just above at 108.5 — inside the wick margin of band [85,108]. Pink = a stop against a short / resistance per palette. Non-redundant: no existing line marks the stop; the cluster ladder shows the swept liquidity, not the trade's stop."
+    }
+  ],
+  "alreadyGood": ["quiz.chart"],
+  "notes": "Verified price bands — introChart [80,108] (START 92; legs 83/80/92/108; 18 bars idx0-17), lessonChart [85,108] (START 85; legs 104/96/108r4/89; 18 bars), quiz.chart [85,108] cutIndex12 (17 bars idx0-16). ACCEPTED 2 of the auditor's 6 gaps; REJECTED 4. Rejections: (introChart markArea 80-83 'Sweep/Stop-Run Zone') redundant — overlaps the liqCluster ladder at 80/82/84 plus the new support line at 83, and the sweep event is already pinned at idx11; intro should illustrate the concept, which it already does. (lessonChart short-entry) redundant — the entry IS the reversal already pinned 'Reversal — Shorts Filled' at idx13, and the auditor's own markLine alternative at 104 would double-pill the Prior Swing High line; no new annotation warranted. (lessonChart target 89) invented — the lesson never teaches a take-profit/target level for the SFP; the quote 'reverses' does not name a target, and idx17 'HTF Reversal Confirmed' already marks where the reversal carries. (lessonChart invalidation zone 104-108) redundant — the band sits directly on top of the existing liqCluster (104.5/106/107.5), the 104 swing-high line, and the new 108.5 stop, adding clutter rather than clarity; concept is taught but already visually represented by the cluster + line. quiz.chart correctly handled: pre-cut shows only decision context (swing-high line + cluster), outcome routed to revealMarkPoints — no spoiler, nothing to add. No fixes needed: existing labels/values match the text."
+}

@@ -1,0 +1,34 @@
+{
+  "course": "2",
+  "file": "11_Classical_Pattern_Examples.js",
+  "lessonId": "course2/11_classical_pattern_examples",
+  "edits": [
+    {
+      "beatId": "flag",
+      "beatType": "CHART",
+      "move": "bull_flag",
+      "addShow": [
+        { "kind": "marker", "at": "flagB", "label": "stop below flag", "style": "dot", "place": "below" }
+      ],
+      "reason": "Say: 'stop below the flag, target a pole-height higher.' The stop is the explicit trade-management level being taught and is not yet on the chart. flagB is a valid bull_flag point anchor at the lower/end of the flag channel — placing the marker below it puts the stop label clear of candles. Rejected the proposed poleBottom 'pole base' marker: 'We measure the pole' is one teaching reference already anchored at poleTop, and naming the base too is over-annotation of a noun the say does not emphasize."
+    },
+    {
+      "beatId": "hs",
+      "beatType": "CHART",
+      "move": "head_and_shoulders",
+      "addShow": [
+        { "kind": "marker", "at": "rightShoulder", "label": "stop above right shoulder", "style": "dot", "place": "above" }
+      ],
+      "reason": "Say: 'short the break or its retest, stop above the right shoulder.' The stop is an explicit, locatable trade reference not yet shown. rightShoulder is a valid head_and_shoulders point anchor; place above keeps the label off the candles. Rejected the proposed head marker: the head-to-neckline measured distance is already captured by the existing neckline (L) and target (L) labels, and the head is the move's most visually obvious feature — labeling it 'head' is redundant noun-naming, not a taught reference."
+    }
+  ],
+  "noAnchorGaps": [
+    {
+      "beatId": "flag",
+      "concept": "the projected measured-move target (a pole-height above the breakout)",
+      "quote": "project that same height up from the breakout to set our target ... target a pole-height higher",
+      "why": "move bull_flag exposes no target/level (L) anchor; its anchors are poleBottom, poleTop, flagA, flagB, breakout (all points), so the projected target price cannot be drawn"
+    }
+  ],
+  "notes": "Both CHART beats verified line-by-line against the file. Accepted the two high/med-confidence stop markers (flagB, rightShoulder) — explicit trade-management references, valid point anchors, not redundant. Rejected two low-confidence proposals as over-annotation: poleBottom 'pole base' (pole already anchored at poleTop; base is an unemphasized noun) and head 'head' (head-to-neckline projection already labelled via neckline + target; head is the move's most obvious drawn feature). Confirmed the bull_flag projected-target gap is a genuine noAnchorGap. Beats intro, failed, recap are CONCEPT (no chart) — skipped."
+}

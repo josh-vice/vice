@@ -1,0 +1,34 @@
+{
+  "course": 4,
+  "chapterId": 24,
+  "title": "Hyblock Indicators on Chart",
+  "module": "Applying Sentiment",
+  "edits": [
+    {
+      "slot": "introChart",
+      "addMarkAreas": [
+        {
+          "y0": 104,
+          "y1": 108,
+          "label": "Distribution Zone — Whales Sell to Retail",
+          "color": "rgba(255,46,136,0.07)"
+        }
+      ],
+      "reason": "Intro teaches 'Retail bullish + whales bearish = distribution; larger players are selling to retail buyers = likely price drop.' The 5 markPoints narrate the retail 75% long / whale net-short divergence (bars 6-9) but the distribution/supply ZONE itself is never drawn. A pink supply band across the top (104-108, inside the [76,108] band) where the divergence and 'Distribution! Retail Gets Rekt' (bar 9) occur visualizes the concept the chart is named after. Pink = supply/bearish per palette."
+    },
+    {
+      "slot": "lessonChart",
+      "addMarkAreas": [
+        {
+          "y0": 77,
+          "y1": 82,
+          "label": "Accumulation Zone — Whales Buy from Retail",
+          "color": "rgba(0,212,212,0.07)"
+        }
+      ],
+      "reason": "Lesson teaches 'Retail bearish + whales bullish = accumulation; larger players are buying from retail sellers = likely price rise.' markPoints narrate retail 80% short / whale net-long divergence (bars 6-9) at the bottom but the demand/accumulation ZONE is never drawn. A teal demand band across the bottom (77-82, inside the [77,124] band) where 'Accumulation! Retail Gets Rekt' (bar 9) sits before the rally to 124 mirrors the intro's distribution band. Teal = demand/bullish per palette."
+    }
+  ],
+  "alreadyGood": ["quiz.chart"],
+  "notes": "Verified all coordinates against the price bands. introChart band [76,108] -> distribution markArea 104-108 sits at top, inside band. lessonChart band [77,124] -> accumulation markArea 77-82 sits at bottom, inside band. quiz.chart is correctly built: SSR Zone markLine at 107 (inside [82,108] band, pink) draws the only level the decision references pre-cut, cutIndex:9 hides the drop, and the outcome is correctly routed to revealMarkPoints (post-answer) — no spoiler, nothing to add. REJECTED the auditor's lessonChart 'Target — Prior Resistance' markLine at 122: its justifying quote ('Target: prior resistance (for longs)... trailing stop at each swing high') is NOT in chapter 24's text — it lives in the separate Kijun Bounce chapter (lt-data-course4.js line ~3014). It is a cross-chapter invention; ch24's intro/lesson charts are sentiment-divergence illustrations, not explicit Entry/Stop/Target trade setups, so a target line would overstate them. Auditor self-flagged this as low confidence; I drop it. Approved both distribution/accumulation zone markAreas as-specified — they are symmetric, text-justified, non-redundant, and color-correct. No additional gaps found."
+}

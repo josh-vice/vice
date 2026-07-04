@@ -1,0 +1,8 @@
+{
+  "course": "4",
+  "file": "08_Funding_Rate.js",
+  "lessonId": "course4/08_funding_rate",
+  "edits": [],
+  "alreadyGood": ["extremes"],
+  "notes": "Only one CHART beat: 'extremes' (move funding_rate, anchors top(pt), reversal(pt)). Both anchors are already used by correct markers. 'top' marker ('funding extreme — longs crowded & offside') is justified by say: 'By the top, funding is at an extreme: the long side is dangerously crowded and offside.' 'reversal' marker ('longs squeezed → funding flips') is justified by: 'price reverses, those longs get squeezed, and funding flips negative.' Both kind/type-correct (markers on point anchors), non-redundant, label-accurate. No remaining anchor for any other locatable reference. Auditor's alreadyComplete:true confirmed. All other beats are CONCEPT (no chart, skipped)."
+}

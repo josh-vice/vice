@@ -1,0 +1,17 @@
+{
+  "course": 2,
+  "chapterId": 12,
+  "title": "Ichimoku Market Scenario",
+  "module": "Trading Tools",
+  "edits": [
+    {
+      "slot": "lessonChart",
+      "addMarkLines": [
+        { "yAxis": 113, "label": "Kijun-sen (trailing stop)", "color": "#ff2e88" }
+      ],
+      "reason": "The whole lesson centers on the Kijun as the trailing-stop tool: 'use the Kijun as a trailing stop, moving it up as price creates new swing highs. When price closes below Kijun, the trend is likely over — exit.' The chart pins say 'Trail Kijun ↑' three times and 'Close < Kijun EXIT' (idx 17) but the Kijun level itself is never drawn as a line — so the tool the lesson is named after is invisible. Pink #ff2e88 matches the chapter's consistent Kijun-sen markLine color (lines 1537, 1608, 1670). Value set to 113 (not the auditor's 108): the final leg runs 118→112 (close 112), so the Kijun line must sit just ABOVE 112 for the 'Close < Kijun EXIT' pin at idx17 to actually read as a close below the line. 113 is inside the chart band [82, ~120]. A single horizontal line is a deliberate simplification of the trailing line, placed at the trailed level near the final swing so the exit resolves visually."
+    }
+  ],
+  "alreadyGood": ["introChart", "quiz.chart"],
+  "notes": "REJECTED auditor lessonChart Gap 2 (gold 'Exit on Kijun close' markLine @112). It is redundant and geometrically self-contradictory: the exit IS the close below the Kijun, not a separate price level. With the Kijun line at 113, an exit line at 112 would sit BELOW the Kijun, yet the text teaches you exit BECAUSE price closed below Kijun — drawing a distinct gold exit level implies a fixed exit price the lesson never teaches, and the existing 'Close < Kijun EXIT' pin (idx 17) already marks the exit event. MODIFIED auditor Gap 1: kept the Kijun markLine (correct, matches convention and text) but changed yAxis 108 -> 113 and label to 'Kijun-sen (trailing stop)' so the final close (112) lands below the line and the EXIT pin reads correctly. introChart correctly illustrates the four-prerequisite concept (Kijun line + Kumo zone + 6 prereq/entry pins) — complete. quiz.chart is a cutIndex:10 decision: pre-cut it draws only decision context (Kijun @88 stop, Tenkan @100 pullback level, Kumo zone) and routes the outcome (Tenkan Entry / Bounce / Trend ↑) to revealMarkPoints — correctly scoped, does not spoil. No further gaps."
+}
