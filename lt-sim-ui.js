@@ -43,6 +43,7 @@ const SIM_MAX_LEV = 50;
 const SIM_TPB     = 5;         // synthetic ticks per 1h base candle
 const SIM_SPEEDS  = [ { label:'1×', ms:520 }, { label:'2×', ms:260 }, { label:'4×', ms:130 }, { label:'10×', ms:52 } ];
 const SIM_WINDOW  = 140;       // view candles in the default zoom window
+const SIM_RIGHT_PAD = 10;      // empty slots kept to the RIGHT of the last candle (TradingView scroll-into-void)
 const SIM_MAX_CANDLES = 2000;  // hard cap on kept view candles (scroll-back depth)
 
 /* ── PATTERN CONCEPTS (course tie-ins, revealed at session end) ───────────── */
@@ -707,9 +708,9 @@ function _net(side, qty, px, lev, isMaker, note, slTp) {
   return realized;
 }
 
-/* Fill feedback: one soft background pulse on the position card. */
+/* Fill feedback: one soft background pulse on the positions panel. */
 function _flashPos() {
-  const box = _el('sim3-pos-box');
+  const box = _el('sim3-positions');
   if (!box) return;
   box.classList.remove('sim3-flash');
   void box.offsetWidth;                 // restart the animation
@@ -1079,7 +1080,7 @@ window._sim3GoLive = function() {
   if (!S || !_simChart) return;
   S.followLive = true; S.viewSpan = SIM_WINDOW;   // snap back to the default follow window
   const b = _el('sim3-golive'); if (b) b.style.display = 'none';
-  const len = S.live.ohlc.length + (S.forming ? 1 : 0);
+  const len = S.live.ohlc.length + (S.forming ? 1 : 0) + SIM_RIGHT_PAD;   // keep the right void
   try { _simChart.setOption({ dataZoom: [{ startValue: Math.max(0, len - SIM_WINDOW), endValue: Math.max(0, len - 1) }] }); } catch(_) {}
   _drawLines();
 };
@@ -1257,10 +1258,37 @@ function _simStyles() {
   .sim3-submit:hover:not(:disabled) { filter:brightness(1.1); }
   .sim3-submit:disabled { opacity:.4; cursor:not-allowed; }
 
-  /* position card */
-  .sim3-pos { border-top:1px solid var(--border2); padding:9px 10px 11px; }
-  .sim3-pos.sim3-flash { animation:sim3FillFlash 420ms cubic-bezier(0.23,1,0.32,1); }
-  @keyframes sim3FillFlash { from { background:var(--s-flash); } to { background:transparent; } }
+  /* positions panel (full-width, below the chart — exchange style) */
+  .sim3-positions { margin-bottom:10px; }
+  .sim3-positions.sim3-flash { animation:sim3FillFlash 460ms cubic-bezier(0.23,1,0.32,1); }
+  @keyframes sim3FillFlash { from { background:var(--s-flash); } to { background:var(--bg3); } }
+  .sim3-poscount { color:var(--text3); font-weight:700; }
+  .sim3-postbl-scroll { overflow-x:auto; scrollbar-width:thin; }
+  .sim3-postbl-head, .sim3-postbl-row {
+    display:grid; grid-template-columns:1.3fr .95fr .8fr .8fr 1fr .8fr 1.1fr .9fr 2.1fr;
+    gap:8px; align-items:center; padding:7px 12px; min-width:860px; }
+  .sim3-postbl-head { font-size:8.5px; font-weight:700; text-transform:uppercase; letter-spacing:.5px; color:var(--text3); border-bottom:1px solid var(--border); }
+  .sim3-postbl-body { font-variant-numeric:tabular-nums; }
+  .sim3-postbl-row { border-bottom:1px solid var(--border); font-size:11.5px; }
+  .sim3-postbl-row:last-child { border-bottom:none; }
+  .sim3-postbl-empty { padding:20px 14px; text-align:center; font-size:11.5px; color:var(--text3); }
+  .sim3-pt-sym { display:flex; align-items:center; gap:8px; }
+  .sim3-pt-side { font-size:8.5px; font-weight:800; letter-spacing:.5px; padding:3px 6px; border-radius:3px; }
+  .sim3-pt-side.long  { background:rgba(0,212,212,.14); color:var(--teal); border:1px solid rgba(0,212,212,.35); }
+  .sim3-pt-side.short { background:var(--s-loss-bg); color:var(--s-loss); border:1px solid var(--s-loss-bd); }
+  .sim3-pt-symcol { display:flex; flex-direction:column; line-height:1.3; }
+  .sim3-pt-symcol b { color:var(--text); font-weight:800; font-size:12px; }
+  .sim3-pt-symcol small, .sim3-pt-col small { color:var(--text3); font-size:9.5px; }
+  .sim3-pt-col { display:flex; flex-direction:column; line-height:1.3; }
+  .sim3-pt-col b { color:var(--text2); font-weight:800; font-size:11.5px; }
+  .sim3-pt-num { color:var(--text2); font-weight:700; }
+  .sim3-pt-num small { color:inherit; opacity:.75; font-size:9.5px; }
+  .sim3-pt-act { display:flex; align-items:center; gap:8px; justify-content:flex-end; flex-wrap:wrap; }
+  .sim3-pt-sltp { display:inline-flex; gap:4px; align-items:center; }
+  .sim3-pt-sltp .sim3-input { width:62px; font-size:11px; padding:5px 6px; }
+  .sim3-pt-closebtns { display:inline-flex; gap:4px; }
+  .sim3-pt-closebtns .sim3-close-btn { flex:0 0 auto; padding:5px 9px; }
+  .sim3-close-all { border-color:var(--s-loss-bd); color:var(--s-loss); font-weight:800; }
   .sim3-pos-head { display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; }
   .sim3-pos-title { font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:1px; color:var(--text3); }
   .sim3-pos-side { font-size:9px; font-weight:800; letter-spacing:.6px; padding:2px 8px; border-radius:3px; }
@@ -1359,7 +1387,7 @@ function _simStyles() {
   @media (prefers-reduced-motion: reduce) {
     .sim3-badge.live { animation:none; }
     .sim3-verdict { animation:none; }
-    .sim3-pos.sim3-flash { animation:none; }
+    .sim3-positions.sim3-flash { animation:none; }
     .sim3-toast { transition:opacity 160ms ease; transform:translateX(-50%); }
     .sim3-toast.show { transform:translateX(-50%); }
     .sim3-seg-btn:active, .sim3-chip:active, .sim3-tr-btn:active, .sim3-side-btn:active,
@@ -1376,6 +1404,9 @@ const _icoStep  = () => '<svg viewBox="0 0 24 24" fill="currentColor" width="11"
 
 /* ── CHART ───────────────────────────────────────────────────────────────── */
 let _volOhlcRef = [];    // volume bar colors read candle direction from here (no per-tick alloc)
+/* real = candle count actually present; the arrays are padded on the RIGHT with
+   SIM_RIGHT_PAD empty slots so the chart can be scrolled into a void past the
+   last candle (TradingView-style breathing room). */
 function _chartData() {
   const ohlc = S.live.ohlc.slice();
   const vols = S.live.vols.slice();
@@ -1385,8 +1416,10 @@ function _chartData() {
     vols.push(+S.forming.vol.toFixed(1));
     labels.push(S.mode === 'live' ? _liveLabel(S.formingStart) : _labelFor(S.live.ohlc.length));
   }
+  const real = ohlc.length;
+  for (let i = 0; i < SIM_RIGHT_PAD; i++) { ohlc.push('-'); vols.push('-'); labels.push(''); }
   _volOhlcRef = ohlc;
-  return { ohlc, vols, labels };
+  return { ohlc, vols, labels, real };
 }
 
 const _fmtN = v => (+v).toLocaleString(undefined, { maximumFractionDigits: 0 });
@@ -1415,8 +1448,9 @@ function _renderChart() {
       formatter: params => {
         let head = '', body = '', vol = '';
         for (const p of params) {
-          if (p.seriesName === 'Price' && p.data) {
-            const raw = Array.isArray(p.data) ? p.data : p.data.value;
+          if (p.seriesName === 'Price' && p.data && p.data !== '-') {
+            const raw = Array.isArray(p.data) ? p.data : (p.data.value != null ? p.data.value : null);
+            if (!Array.isArray(raw)) continue;                // empty right-void slot
             const v = raw.length >= 5 ? raw.slice(1) : raw;   // echarts may prepend the index
             head = p.name;
             const up = +v[1] >= +v[0];
@@ -1425,7 +1459,7 @@ function _renderChart() {
                    'L ' + _fmtN(v[2]) + '&nbsp;&nbsp;C <span style="color:' + cCol + '">' + _fmtN(v[1]) + '</span>';
           } else if (p.seriesName === 'Vol') {
             const v = (p.data && p.data.value != null) ? p.data.value : p.data;
-            if (v != null) vol = '<br><span style="color:' + th.txt3 + '">Vol ' + (+v).toFixed(1) + '</span>';
+            if (v != null && v !== '-') vol = '<br><span style="color:' + th.txt3 + '">Vol ' + (+v).toFixed(1) + '</span>';
           }
         }
         return head ? head + '<br>' + body + vol : '';
@@ -1436,17 +1470,21 @@ function _renderChart() {
       { left: SIM_GRID.left, right: SIM_GRID.right, top: '74%', height: '16%' }
     ],
     dataZoom: [{
+      // drag = pan · wheel = zoom toward cursor (the standard chart feel)
       type: 'inside', xAxisIndex: [0, 1],
       startValue: Math.max(0, len - SIM_WINDOW), endValue: Math.max(0, len - 1),
-      zoomOnMouseWheel: true, moveOnMouseMove: true, moveOnMouseWheel: true,
-      minValueSpan: 20
+      zoomOnMouseWheel: true, moveOnMouseMove: true, moveOnMouseWheel: false,
+      preventDefaultMouseMove: true, minValueSpan: 15
     }],
     xAxis: [
-      { type: 'category', data: labels, gridIndex: 0, axisLine: { lineStyle: { color: bdr } }, axisLabel: { show: false }, splitLine: { show: false }, axisTick: { show: false } },
-      { type: 'category', data: labels, gridIndex: 1, axisLine: { lineStyle: { color: bdr } }, axisLabel: { color: th.txt3, fontSize: 9, fontFamily: 'Geist Mono,monospace', hideOverlap: true }, splitLine: { show: false } }
+      { type: 'category', data: labels, gridIndex: 0, boundaryGap: true, axisLine: { lineStyle: { color: bdr } }, axisLabel: { show: false }, splitLine: { show: false }, axisTick: { show: false } },
+      { type: 'category', data: labels, gridIndex: 1, boundaryGap: true, axisLine: { lineStyle: { color: bdr } }, axisLabel: { color: th.txt3, fontSize: 9, fontFamily: 'Geist Mono,monospace', hideOverlap: true }, splitLine: { show: false } }
     ],
     yAxis: [
       { scale: true, gridIndex: 0, position: 'right',
+        // ~7% headroom above/below so candles never touch the ceiling/floor
+        min: v => { const r = (v.max - v.min) || (v.max * 0.01) || 1; return v.min - r * 0.07; },
+        max: v => { const r = (v.max - v.min) || (v.max * 0.01) || 1; return v.max + r * 0.07; },
         splitLine: { lineStyle: { color: bdr, opacity: th.light ? 0.7 : 0.5 } },
         axisLine: { show: false }, axisTick: { show: false },
         axisLabel: { color: th.txt3, fontSize: 10, fontFamily: 'Geist Mono,monospace', margin: 6, formatter: v => _fmtN(v) } },
@@ -1473,14 +1511,15 @@ function _renderChart() {
   _simChart.on('datazoom', e => {
     try {
       const dz = (e && e.batch && e.batch[0]) || e || {};
-      const total = S.live.ohlc.length + (S.forming ? 1 : 0);
+      const real  = S.live.ohlc.length + (S.forming ? 1 : 0);   // real candles (no right void)
+      const total = real + SIM_RIGHT_PAD;                        // includes the void, for % math
       const endIdx = dz.endValue != null ? dz.endValue
         : Math.round(((dz.end != null ? dz.end : 100) / 100) * (total - 1));
       const startIdx = dz.startValue != null ? dz.startValue
         : Math.round(((dz.start != null ? dz.start : 0) / 100) * (total - 1));
       S.viewStart = Math.max(0, Math.round(startIdx));
       S.viewEnd   = Math.round(endIdx);
-      const atEdge = endIdx >= total - 2;
+      const atEdge = endIdx >= real - 2;   // at/into the void past the last real candle
       S.followLive = atEdge;
       if (atEdge) S.viewSpan = Math.max(20, Math.round(endIdx - startIdx + 1));  // remember the zoom while following
       const chip = _el('sim3-golive'); if (chip) chip.style.display = atEdge ? 'none' : '';
@@ -1578,6 +1617,7 @@ function _drawLines() {
     if (lq) g.push(lq);
     if (S.pos.sl > 0) {
       const sl = line('sim3-l-sl', S.pos.sl, th.loss, 'SL', !S.ended, p => {
+        if (!S.pos) { _drawLines(); return; }   // position auto-closed mid-drag
         const long = S.pos.side === 'long';
         if (long ? p >= S.price : p <= S.price) { _toast('SL must stay on the loss side', true); _drawLines(); return; }
         S.pos.sl = +p.toFixed(2);
@@ -1588,6 +1628,7 @@ function _drawLines() {
     }
     if (S.pos.tp > 0) {
       const tp = line('sim3-l-tp', S.pos.tp, TEAL, 'TP', !S.ended, p => {
+        if (!S.pos) { _drawLines(); return; }   // position auto-closed mid-drag
         const long = S.pos.side === 'long';
         if (long ? p <= S.price : p >= S.price) { _toast('TP must stay on the profit side', true); _drawLines(); return; }
         S.pos.tp = +p.toFixed(2);
@@ -1774,11 +1815,17 @@ function _paintBlown(eq) {
     <button class="sim3-blown-btn" onclick="_sim3Reset()">Reset account to $1,000</button>`;
 }
 
+/* Full-width positions panel below the chart (exchange-style). One-way netting
+   means at most one BTC/USD position; the row shows size, entry, mark, liq +
+   distance, margin, unrealized + ROE, realized, and inline TP/SL + close. The
+   light path (per tick) patches only the live cells. */
 function _paintPosition(lightOnly) {
-  const box = _el('sim3-pos-box');
-  if (!box) return;
+  const body = _el('sim3-positions-body');
+  if (!body) return;
+  const cnt = _el('sim3-pos-count');
   if (!S.pos) {
-    box.innerHTML = '<div class="sim3-pos-head"><span class="sim3-pos-title">Position</span></div><div class="sim3-flat">No open position</div>';
+    if (cnt) cnt.textContent = '(0)';
+    body.innerHTML = '<div class="sim3-postbl-empty">No open positions — place a market, limit, or stop order to open one.</div>';
     return;
   }
   const p = S.pos;
@@ -1787,43 +1834,44 @@ function _paintPosition(lightOnly) {
   const col = u >= 0 ? _winCol() : _lossCol();
   const liqDist = S.price > 0 ? Math.abs(S.price - p.liq) / S.price * 100 : 0;
   const liqCol = liqDist < 2 ? _lossCol() : liqDist < 5 ? _goldCol() : 'var(--text2)';
-  const liqTxt = _fmtPx(p.liq) + ' · ' + liqDist.toFixed(1) + '%';
-  if (lightOnly && _el('sim3-pos-upnl')) {
-    const el = _el('sim3-pos-upnl');
-    el.textContent = (u >= 0 ? '+' : '') + _fmtUsd(u).replace('$-','-$');
-    el.style.color = col;
-    const r = _el('sim3-pos-roe'); if (r) { r.textContent = (roe >= 0 ? '+' : '') + roe.toFixed(1) + '%'; r.style.color = col; }
-    const mk = _el('sim3-pos-mark'); if (mk) mk.textContent = _fmtPx(S.price);
-    const lq = _el('sim3-pos-liqv'); if (lq) { lq.textContent = liqTxt; lq.style.color = liqCol; }
+  const notional = p.qty * S.price;
+  const realized = p.realized - p.fees;
+  const rCol = realized >= 0 ? _winCol() : _lossCol();
+  if (lightOnly && _el('sim3-pt-upnl')) {
+    const el = _el('sim3-pt-upnl'); el.textContent = (u>=0?'+':'')+_fmtUsd(u).replace('$-','-$'); el.style.color = col;
+    const r = _el('sim3-pt-roe'); if (r) { r.textContent = (roe>=0?'+':'')+roe.toFixed(2)+'%'; r.style.color = col; }
+    const mk = _el('sim3-pt-mark'); if (mk) mk.textContent = _fmtPx(S.price);
+    const lq = _el('sim3-pt-liq'); if (lq) { lq.innerHTML = _fmtPx(p.liq)+' <small>'+liqDist.toFixed(2)+'%</small>'; lq.style.color = liqCol; }
+    const nt = _el('sim3-pt-notional'); if (nt) nt.textContent = _fmtUsd(notional,0);
+    const rl = _el('sim3-pt-real'); if (rl) { rl.textContent = (realized>=0?'+':'')+_fmtUsd(realized).replace('$-','-$'); rl.style.color = rCol; }
     return;
   }
-  box.innerHTML = `
-    <div class="sim3-pos-head">
-      <span class="sim3-pos-title">Position</span>
-      <span class="sim3-pos-side ${p.side}">${p.side.toUpperCase()} ${p.lev.toFixed(0)}×</span>
-    </div>
-    <div style="margin-bottom:6px;">
-      <span class="sim3-pos-pnl" id="sim3-pos-upnl" style="color:${col}">${(u>=0?'+':'')+_fmtUsd(u).replace('$-','-$')}</span>
-      <span class="sim3-pos-roe" id="sim3-pos-roe" style="color:${col}">${(roe>=0?'+':'')+roe.toFixed(1)}%</span>
-    </div>
-    <div class="sim3-pos-grid">
-      <div class="sim3-pos-kv"><span class="sim3-pos-k">Size</span><span class="sim3-pos-v">${_fmtQty(p.qty)} BTC</span></div>
-      <div class="sim3-pos-kv"><span class="sim3-pos-k">Entry</span><span class="sim3-pos-v">${_fmtPx(p.entry)}</span></div>
-      <div class="sim3-pos-kv"><span class="sim3-pos-k">Mark</span><span class="sim3-pos-v" id="sim3-pos-mark">${_fmtPx(S.price)}</span></div>
-      <div class="sim3-pos-kv"><span class="sim3-pos-k">Liq</span><span class="sim3-pos-v" id="sim3-pos-liqv" style="color:${liqCol}">${liqTxt}</span></div>
-      <div class="sim3-pos-kv"><span class="sim3-pos-k">Margin</span><span class="sim3-pos-v">${_fmtUsd(p.margin)}</span></div>
-      <div class="sim3-pos-kv"><span class="sim3-pos-k">Fees</span><span class="sim3-pos-v">${_fmtUsd(p.fees)}</span></div>
-    </div>
-    <div class="sim3-pos-sltp">
-      <input class="sim3-input" id="sim3-pos-sl" type="number" placeholder="SL price" aria-label="Position stop loss price" value="${p.sl > 0 ? Math.round(p.sl) : ''}" />
-      <input class="sim3-input" id="sim3-pos-tp" type="number" placeholder="TP price" aria-label="Position take profit price" value="${p.tp > 0 ? Math.round(p.tp) : ''}" />
-      <button class="sim3-apply-btn" onclick="_sim3ApplySlTp()">Set</button>
-    </div>
-    <div class="sim3-close-row">
-      <button class="sim3-close-btn" onclick="_sim3ClosePct(25)">Close 25%</button>
-      <button class="sim3-close-btn" onclick="_sim3ClosePct(50)">Close 50%</button>
-      <button class="sim3-close-btn" onclick="_sim3ClosePct(100)">Close All</button>
-    </div>`;
+  if (cnt) cnt.textContent = '(1)';
+  body.innerHTML = `<div class="sim3-postbl-row">
+    <span class="sim3-pt-sym">
+      <span class="sim3-pt-side ${p.side}">${p.side.toUpperCase()}</span>
+      <span class="sim3-pt-symcol"><b>BTC/USD</b><small>ISO · ${p.lev.toFixed(0)}×</small></span>
+    </span>
+    <span class="sim3-pt-col"><b>${_fmtQty(p.qty)} BTC</b><small id="sim3-pt-notional">${_fmtUsd(notional,0)}</small></span>
+    <span class="sim3-pt-num">${_fmtPx(p.entry)}</span>
+    <span class="sim3-pt-num" id="sim3-pt-mark">${_fmtPx(S.price)}</span>
+    <span class="sim3-pt-num" id="sim3-pt-liq" style="color:${liqCol}">${_fmtPx(p.liq)} <small>${liqDist.toFixed(2)}%</small></span>
+    <span class="sim3-pt-num">${_fmtUsd(p.margin)}</span>
+    <span class="sim3-pt-col"><b id="sim3-pt-upnl" style="color:${col}">${(u>=0?'+':'')+_fmtUsd(u).replace('$-','-$')}</b><small id="sim3-pt-roe" style="color:${col}">${(roe>=0?'+':'')+roe.toFixed(2)}%</small></span>
+    <span class="sim3-pt-num" id="sim3-pt-real" style="color:${rCol}">${(realized>=0?'+':'')+_fmtUsd(realized).replace('$-','-$')}</span>
+    <span class="sim3-pt-act">
+      <span class="sim3-pt-sltp">
+        <input class="sim3-input" id="sim3-pos-sl" type="number" placeholder="SL" aria-label="Position stop loss price" value="${p.sl>0?Math.round(p.sl):''}" />
+        <input class="sim3-input" id="sim3-pos-tp" type="number" placeholder="TP" aria-label="Position take profit price" value="${p.tp>0?Math.round(p.tp):''}" />
+        <button class="sim3-apply-btn" onclick="_sim3ApplySlTp()">Set</button>
+      </span>
+      <span class="sim3-pt-closebtns">
+        <button class="sim3-close-btn" onclick="_sim3ClosePct(25)">25%</button>
+        <button class="sim3-close-btn" onclick="_sim3ClosePct(50)">50%</button>
+        <button class="sim3-close-btn sim3-close-all" onclick="_sim3ClosePct(100)">Close</button>
+      </span>
+    </span>
+  </div>`;
 }
 
 function _paintOrders() {
@@ -2277,8 +2325,20 @@ function renderSimulator(containerId, opts) {
           <button class="sim3-submit buy" id="sim3-submit" onclick="_sim3Submit()" disabled>Buy / Long · Market</button>
         </div>
 
-        <div class="sim3-pos" id="sim3-pos-box"></div>
         <div class="sim3-orders" id="sim3-orders-box" style="display:none;"></div>
+      </div>
+    </div>
+
+    <div class="sim3-positions sim3-panel" id="sim3-positions">
+      <div class="sim3-panel-top">
+        <span>Positions <span id="sim3-pos-count" class="sim3-poscount">(0)</span></span>
+        <span class="sim3-panel-meta">BTC/USD · isolated · one-way</span>
+      </div>
+      <div class="sim3-postbl-scroll">
+        <div class="sim3-postbl-head">
+          <span>Symbol</span><span>Size</span><span>Entry</span><span>Mark</span><span>Liq. · Dist</span><span>Margin</span><span>Unrealized · ROE</span><span>Realized</span><span class="sim3-postbl-actions">TP / SL · Close</span>
+        </div>
+        <div class="sim3-postbl-body" id="sim3-positions-body"></div>
       </div>
     </div>
 
