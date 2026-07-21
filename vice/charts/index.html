@@ -19,11 +19,17 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="../vice.css?v=1.2.0" />
+  <link rel="stylesheet" href="../vice.css?v=1.6.0" />
 
   <script src="https://cdn.jsdelivr.net/npm/lucide@1.23.0/dist/umd/lucide.min.js"
           integrity="sha384-ouAVEJVCMsf8Svzn+BwqbaBhxBEA0xgeVBhHnxmWd+Wqyv18yhWCQwGegFD/OHLq"
           crossorigin="anonymous" defer></script>
+
+  <!-- ECharts (same pinned build + SRI as the app shell) + the in-page demo -->
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5.6.0/dist/echarts.min.js"
+          integrity="sha384-pPi0zxBAoDu6+JXW/C68UZLvBUUtU+7zonhif43rqj7pxsGyqyqzcian2Rj37Rss"
+          crossorigin="anonymous" defer></script>
+  <script type="module" src="demo.js?v=1.0.0"></script>
 </head>
 <body>
 
@@ -45,34 +51,86 @@
     </header>
 
     <section class="hero">
-      <p class="hero-kicker"><a href="https://vicesuite.com/">The Vice Suite</a> · A <strong>Vice Terminal</strong> product</p>
-      <h1><span class="pink">Vice Charts</span> — the chart you want, one message away.</h1>
-      <p class="hero-sub">
+      <p class="hero-kicker reveal"><a href="https://vicesuite.com/">The Vice Suite</a> · A <strong>Vice Terminal</strong> product</p>
+      <h1 class="reveal d1"><span class="pink">Vice Charts</span> — the chart you want, one message away.</h1>
+      <p class="hero-sub reveal d2">
         Type a command in any channel and get a rendered, professional chart back in
         seconds. Perps and spot from four venues, 21 indicators, comparisons, ratios,
         movers, and streaming price alerts. Free.
       </p>
-      <div class="hero-ctas">
+      <div class="hero-ctas reveal d3">
         <a class="btn btn-solid-pink" href="https://discord.com/oauth2/authorize?client_id=1529229252317282345&scope=bot&permissions=34816" target="_blank" rel="noopener noreferrer">
           <i data-lucide="plus"></i>Add to Discord
         </a>
         <a class="btn" href="#commands">Command reference</a>
       </div>
 
-      <div class="term" aria-hidden="true">
-        <div class="term-bar">
-          <span class="term-dot"></span><span class="term-dot"></span><span class="term-dot"></span>
-          <span class="term-title">#trading-floor</span>
+      <div class="dmock reveal d4" aria-hidden="true">
+        <div class="dmock-side">
+          <div class="dmock-server"><span class="vt-flamingo"></span>Vice Terminal</div>
+          <div class="dmock-chanlabel">MARKETS</div>
+          <div class="dmock-chan">welcome</div>
+          <div class="dmock-chan active">trading-floor</div>
+          <div class="dmock-chan">price-alerts</div>
         </div>
-        <div class="term-body">
-          <div><span class="ps">$ </span><span class="cmd">vc btc 1h ema20 ema55 bb20 rsi14 macd</span></div>
-          <div class="out">→ chart.png · <span class="t-teal">BTC PERP</span> · Hyperliquid · 5 indicators stacked</div>
-          <div><span class="ps">$ </span><span class="cmd">vc best</span></div>
-          <div class="out">→ chart.png · <span class="t-green">top 20 gainers</span> · 24h · one comparison chart</div>
-          <div><span class="ps">$ </span><span class="cmd">vc alert btc 100k repeat</span></div>
-          <div class="out">→ alert set · <span class="t-gold">BTC ≥ 100,000</span> · re-arms after pullback</div>
-          <div><span class="ps">$ </span><span class="cursor"></span></div>
+        <div class="dmock-chat">
+          <div class="dmock-chat-head">trading-floor</div>
+          <div class="dmock-msgs">
+            <div class="dmsg">
+              <span class="dmsg-av" style="background:#3b82f6">R</span>
+              <div class="dmsg-body">
+                <span class="dmsg-name">Ray</span><span class="dmsg-time">Today at 2:14 PM</span>
+                <div class="dmsg-text"><span class="vc-cmd">vc btc 1h ema20 ema55 bb20 supertrend rsi14 macd</span></div>
+              </div>
+            </div>
+            <div class="dmsg">
+              <span class="dmsg-av" style="background:var(--grad-flamingo)">VC</span>
+              <div class="dmsg-body">
+                <span class="dmsg-name" style="color:#ff8fbe">Vice Charts</span><span class="dmsg-app">APP</span><span class="dmsg-time">Today at 2:14 PM</span>
+                <img class="dmsg-img" src="example-indicators.png" alt="Rendered BTC chart reply with stacked indicators" loading="lazy" />
+              </div>
+            </div>
+            <div class="dmsg">
+              <span class="dmsg-av" style="background:#a855f7">M</span>
+              <div class="dmsg-body">
+                <span class="dmsg-name">Mila</span><span class="dmsg-time">Today at 2:15 PM</span>
+                <div class="dmsg-text"><span class="vc-cmd">vc alert btc 70k</span></div>
+              </div>
+            </div>
+            <div class="dmsg">
+              <span class="dmsg-av" style="background:var(--grad-flamingo)">VC</span>
+              <div class="dmsg-body">
+                <span class="dmsg-name" style="color:#ff8fbe">Vice Charts</span><span class="dmsg-app">APP</span><span class="dmsg-time">Today at 2:15 PM</span>
+                <div class="dmsg-text">alert set (now 66,355): <strong>BTC ≥ 70,000</strong></div>
+              </div>
+            </div>
+          </div>
         </div>
+      </div>
+    </section>
+
+    <section class="section" id="try">
+      <div class="section-head">
+        <h2>Try it — live, right now.</h2>
+        <p>This demo runs the bot's actual engine in your browser — same parser, same
+        indicator math, live exchange data. Type a command or tap an example.</p>
+      </div>
+      <div class="demo" id="vc-demo">
+        <div class="demo-bar">
+          <span class="demo-prefix">vc</span>
+          <input class="demo-input" type="text" value="btc 1h ema20 ema55" spellcheck="false" autocomplete="off" placeholder="btc 1h ema20 ema55" aria-label="chart command" />
+          <button class="demo-run btn btn-solid-pink" type="button">Run</button>
+        </div>
+        <div class="demo-egs">
+          <button class="demo-eg" data-cmd="btc 1h ema20 ema55 bb20 rsi14 macd" type="button">stacked indicators</button>
+          <button class="demo-eg" data-cmd="btc,eth,sol,doge 4h" type="button">compare</button>
+          <button class="demo-eg" data-cmd="btc/eth 1d" type="button">ratio</button>
+          <button class="demo-eg" data-cmd="best" type="button">top gainers</button>
+          <button class="demo-eg" data-cmd="btc 1d bear" type="button">bear (joke)</button>
+          <button class="demo-eg" data-cmd="help" type="button">help</button>
+        </div>
+        <div class="demo-chart" role="img" aria-label="rendered chart"></div>
+        <div class="demo-msg">loading…</div>
       </div>
     </section>
 
