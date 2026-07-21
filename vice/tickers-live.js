@@ -1,19 +1,22 @@
 /* Vice Tickers — live demo on the pricebots page.
-   Feeds the hero's Discord member-list mock with REAL prices: one Hyperliquid
-   metaAndAssetCtxs call covers every coin (markPx + prevDayPx), polled every
-   5 s like the actual bots. Names flip green/red with the day, presence dots
-   follow, and the status line runs the bots' real rotation:
-   change / liqtheory.com / change / discord invite in 15 s slots.
-   If the feed is unreachable the static mock values simply remain. */
+   Feeds every [data-live-coin] element with REAL prices:
+   - crypto rows: one Hyperliquid metaAndAssetCtxs call (markPx + prevDayPx)
+   - index rows (data-src="tv:..."): TradingView's scanner, POSTed as
+     text/plain — a CORS "simple request", because the scanner's preflight
+     doesn't allow a content-type header but its responses do carry ACAO.
+   Polls every 5 s like the actual bots. Names flip green/red with the day,
+   presence dots follow, prices flash on change, and the status line runs the
+   bots' real rotation (change / 🦩 vicesuite.com in 15 s slots).
+   If a feed is unreachable the static mock values simply remain. */
 
 const UP = '#16c784';
 const DOWN = '#ea3943';
 const DOT_UP = '#23a55a';
 const DOT_DOWN = '#f23f43';
-const STATUS_CYCLE = ['change', 'liqtheory.com', 'change', 'discord.gg/LiquidityTheory'];
+const STATUS_CYCLE = ['change', '🦩 vicesuite.com'];
 
-let quotes = {}; // coin -> { px, prev }
-const lastPx = {}; // coin -> last painted price, for the change flash
+let quotes = {}; // key -> { px, prev }
+const lastPx = {}; // key -> last painted price, for the change flash
 
 const fmtPrice = (v) => {
   if (v >= 10_000) return v.toLocaleString('en-US', { maximumFractionDigits: 0 });
@@ -25,7 +28,8 @@ const fmtPrice = (v) => {
 };
 const fmt2 = (v) => v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-async function fetchQuotes(coins) {
+async function fetchHl(coins) {
+  if (coins.length === 0) return {};
   const res = await fetch('https://api.hyperliquid.xyz/info', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -41,6 +45,27 @@ async function fetchQuotes(coins) {
   return out;
 }
 
+async function fetchTv(pairs) {
+  // pairs: [{ key, symbol }]
+  if (pairs.length === 0) return {};
+  const res = await fetch('https://scanner.tradingview.com/global/scan', {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain' }, // keep it a simple request
+    body: JSON.stringify({ symbols: { tickers: pairs.map((p) => p.symbol) }, columns: ['close', 'change_abs'] }),
+    signal: AbortSignal.timeout(10_000),
+  });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const json = await res.json();
+  const out = {};
+  for (const row of json.data ?? []) {
+    const pair = pairs.find((p) => p.symbol === row.s);
+    if (!pair) continue;
+    const [close, changeAbs] = row.d;
+    if (typeof close === 'number') out[pair.key] = { px: close, prev: close - changeAbs };
+  }
+  return out;
+}
+
 function paint() {
   const slot = STATUS_CYCLE[Math.floor(Date.now() / 15_000) % STATUS_CYCLE.length];
   document.querySelectorAll('[data-live-coin]').forEach((row) => {
@@ -50,12 +75,14 @@ function paint() {
     const up = q.px >= q.prev;
     const diff = Math.abs(q.px - q.prev);
     const pct = (diff / q.prev) * 100;
+    const indexStyle = row.dataset.fmt === 'index';
 
-    const name = row.querySelector('.dmember-name, .ht-name');
+    const name = row.querySelector('.dmember-name, .ht-name, .tc-price');
     const status = row.querySelector('.dmember-status, .ht-status');
     const dot = row.querySelector('.dmember-dot');
     if (name) {
-      name.textContent = `${coin} ${up ? '↗' : '↘'} $${fmtPrice(q.px)}`;
+      const priceText = indexStyle ? fmt2(q.px) : `$${fmtPrice(q.px)}`;
+      name.textContent = `${coin} ${up ? '↗' : '↘'} ${priceText}`;
       name.style.color = up ? UP : DOWN;
       if (lastPx[coin] !== undefined && lastPx[coin] !== q.px) {
         name.classList.remove('tick-flash');
@@ -76,12 +103,23 @@ function paint() {
 function initLiveTickers() {
   const rows = [...document.querySelectorAll('[data-live-coin]')];
   if (rows.length === 0) return;
-  const coins = rows.map((r) => r.dataset.liveCoin);
+  const seen = new Set();
+  const hlCoins = [];
+  const tvPairs = [];
+  for (const r of rows) {
+    const key = r.dataset.liveCoin;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    if (r.dataset.src?.startsWith('tv:')) tvPairs.push({ key, symbol: r.dataset.src.slice(3) });
+    else hlCoins.push(key);
+  }
   const poll = async () => {
-    try {
-      quotes = await fetchQuotes(coins);
-      paint();
-    } catch { /* keep last (or static) values */ }
+    const [hl, tv] = await Promise.all([
+      fetchHl(hlCoins).catch(() => ({})),
+      fetchTv(tvPairs).catch(() => ({})),
+    ]);
+    quotes = { ...quotes, ...hl, ...tv };
+    paint();
   };
   poll();
   setInterval(poll, 5_000);

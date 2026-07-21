@@ -19,13 +19,13 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="../vice.css?v=2.0.1" />
+  <link rel="stylesheet" href="../vice.css?v=2.1.0" />
 
   <script src="https://cdn.jsdelivr.net/npm/lucide@1.23.0/dist/umd/lucide.min.js"
           integrity="sha384-ouAVEJVCMsf8Svzn+BwqbaBhxBEA0xgeVBhHnxmWd+Wqyv18yhWCQwGegFD/OHLq"
           crossorigin="anonymous" defer></script>
 
-  <script src="../tickers-live.js?v=1.1.0" defer></script>
+  <script src="../tickers-live.js?v=1.4.0" defer></script>
 
   <script src="../vice.js?v=1.2.0" defer></script>
 </head>
@@ -98,7 +98,7 @@
           </div>
         </div>
         <div class="dmock-members">
-          <div class="dmock-mhead">LIVE PRICE — 3</div>
+          <div class="dmock-mhead">LIVE PRICE — 4</div>
           <div class="dmember" data-live-coin="BTC">
             <span class="dmember-av"><svg class="coin" viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="16" fill="#f7931a"/><path fill="#fff" d="M23.189 14.02c.314-2.096-1.283-3.223-3.465-3.975l.708-2.84-1.728-.43-.69 2.765c-.454-.114-.92-.22-1.385-.326l.695-2.783L15.596 6l-.708 2.839c-.376-.086-.746-.17-1.104-.26l.002-.009-2.384-.595-.46 1.846s1.283.294 1.256.312c.7.175.826.638.805 1.006l-.806 3.235c.048.012.11.03.18.057l-.183-.045-1.13 4.532c-.086.212-.303.531-.793.41.018.025-1.256-.313-1.256-.313l-.858 1.978 2.25.561c.418.105.828.215 1.231.318l-.715 2.872 1.727.43.708-2.84c.472.127.93.245 1.378.357l-.706 2.828 1.728.43.715-2.866c2.948.558 5.164.333 6.097-2.333.752-2.146-.037-3.385-1.588-4.192 1.13-.26 1.98-1.003 2.207-2.538zm-3.95 5.538c-.533 2.147-4.148.986-5.32.695l.95-3.805c1.172.293 4.929.872 4.37 3.11zm.535-5.569c-.487 1.953-3.495.96-4.47.717l.86-3.45c.975.243 4.118.696 3.61 2.733z"/></svg><span class="dmember-dot" style="background:#23a55a"></span></span>
             <div class="dmember-info">
@@ -119,7 +119,15 @@
             <span class="dmember-av"><svg class="coin" viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="16" fill="#181818"/><defs><linearGradient id="solg" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#9945FF"/><stop offset="1" stop-color="#14F195"/></linearGradient></defs><g fill="url(#solg)"><path d="M10.2 8.6h15.4l-3.6 3.7H6.6z"/><path d="M10.2 14.15H25.6l-3.6 3.7H6.6z" transform="scale(-1,1) translate(-32.2,0)"/><path d="M10.2 19.7h15.4l-3.6 3.7H6.6z"/></g></svg><span class="dmember-dot" style="background:#23a55a"></span></span>
             <div class="dmember-info">
               <div class="dmember-name" style="color:#16c784">SOL ↗ $151.24</div>
-              <div class="dmember-status">liqtheory.com</div>
+              <div class="dmember-status">🦩 vicesuite.com</div>
+            </div>
+            <span class="dmember-app">APP</span>
+          </div>
+                    <div class="dmember" data-live-coin="SPX" data-src="tv:SP:SPX" data-fmt="index">
+            <span class="dmember-av"><svg class="coin" viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="16" fill="#c81f2e"/><text x="16" y="21" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" font-weight="800" fill="#fff">S&amp;P</text></svg><span class="dmember-dot" style="background:#23a55a"></span></span>
+            <div class="dmember-info">
+              <div class="dmember-name" style="color:#16c784">SPX ↗ 7,509.20</div>
+              <div class="dmember-status">Up $65.92 (+0.89%) from prev. close</div>
             </div>
             <span class="dmember-app">APP</span>
           </div>
@@ -185,32 +193,47 @@
           <h4>The status line</h4>
           <div class="ref-sub">rotates every 15 seconds</div>
           <div class="cmd-row"><code>Up $1,151.48 (+1.77%) from prev. close</code></div>
-          <div class="cmd-row"><span>Alternates the live change with <code>liqtheory.com</code> and the community invite — the change line is on screen half the time.</span></div>
+          <div class="cmd-row"><span>Alternates the live change with <code>vicesuite.com</code> — the change line is on screen half the time.</span></div>
         </div>
       </div>
     </section>
 
     <section class="section">
       <div class="section-head sr">
-        <h2>The roster</h2>
-        <p>One bot per ticker, so each gets its own line in the member list.</p>
+        <h2>The roster — add them to your server</h2>
+        <p>One bot per ticker, so each gets its own line in the member list. Prices below are live.</p>
       </div>
-      <div class="ref-grid">
-        <div class="ref-card sr">
-          <h4>Live now</h4>
-          <div class="cmd-row">
-            <code>BTC</code>
-            <span>Bitcoin · Hyperliquid + TradingView data</span>
-            <span class="right"><a class="card-more" style="margin:0;color:var(--gold);" href="https://discord.com/oauth2/authorize?client_id=1529222506593128548&scope=bot&permissions=335544320" target="_blank" rel="noopener noreferrer">Add<i data-lucide="arrow-right"></i></a></span>
-          </div>
-        </div>
-        <div class="ref-card sr sr-d1">
-          <h4>On the way</h4>
-          <div class="cmd-row"><code>ETH</code><span>Ethereum</span></div>
-          <div class="cmd-row"><code>SOL</code><span>Solana</span></div>
-          <div class="cmd-row"><span>Want a specific ticker? Ask in <a href="https://discord.gg/LiquidityTheory" target="_blank" rel="noopener noreferrer" style="color:var(--gold);">the Discord</a>.</span></div>
-        </div>
+      <div class="tcards">
+        <a class="tcard sr" href="https://discord.com/oauth2/authorize?client_id=1529222506593128548&scope=bot&permissions=335544320" target="_blank" rel="noopener noreferrer" data-live-coin="BTC">
+          <span class="tc-ic"><svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="16" fill="#f7931a"/><path fill="#fff" d="M23.189 14.02c.314-2.096-1.283-3.223-3.465-3.975l.708-2.84-1.728-.43-.69 2.765c-.454-.114-.92-.22-1.385-.326l.695-2.783L15.596 6l-.708 2.839c-.376-.086-.746-.17-1.104-.26l.002-.009-2.384-.595-.46 1.846s1.283.294 1.256.312c.7.175.826.638.805 1.006l-.806 3.235c.048.012.11.03.18.057l-.183-.045-1.13 4.532c-.086.212-.303.531-.793.41.018.025-1.256-.313-1.256-.313l-.858 1.978 2.25.561c.418.105.828.215 1.231.318l-.715 2.872 1.727.43.708-2.84c.472.127.93.245 1.378.357l-.706 2.828 1.728.43.715-2.866c2.948.558 5.164.333 6.097-2.333.752-2.146-.037-3.385-1.588-4.192 1.13-.26 1.98-1.003 2.207-2.538zm-3.95 5.538c-.533 2.147-4.148.986-5.32.695l.95-3.805c1.172.293 4.929.872 4.37 3.11zm.535-5.569c-.487 1.953-3.495.96-4.47.717l.86-3.45c.975.243 4.118.696 3.61 2.733z"/></svg></span>
+          <span class="tc-code">BTC</span>
+          <span class="tc-name">Bitcoin</span>
+          <span class="tc-price">—</span>
+          <span class="btn btn-solid-gold"><i data-lucide="plus"></i>Add to your server</span>
+        </a>
+        <a class="tcard sr" href="https://discord.com/oauth2/authorize?client_id=1529272734624776433&scope=bot&permissions=335544320" target="_blank" rel="noopener noreferrer" data-live-coin="ETH">
+          <span class="tc-ic"><svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="16" fill="#627eea"/><g fill="#fff"><path fill-opacity=".602" d="M16.498 4v8.87l7.497 3.35z"/><path d="M16.498 4L9 16.22l7.498-3.35z"/><path fill-opacity=".602" d="M16.498 21.968v6.027L24 17.616z"/><path d="M16.498 27.995v-6.028L9 17.616z"/><path fill-opacity=".2" d="M16.498 20.573l7.497-4.353-7.497-3.348z"/><path fill-opacity=".602" d="M9 16.22l7.498 4.353v-7.701z"/></g></svg></span>
+          <span class="tc-code">ETH</span>
+          <span class="tc-name">Ethereum</span>
+          <span class="tc-price">—</span>
+          <span class="btn btn-solid-gold"><i data-lucide="plus"></i>Add to your server</span>
+        </a>
+        <a class="tcard sr" href="https://discord.com/oauth2/authorize?client_id=1529273091962835074&scope=bot&permissions=335544320" target="_blank" rel="noopener noreferrer" data-live-coin="SOL">
+          <span class="tc-ic"><svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="16" fill="#181818"/><defs><linearGradient id="solg3" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#9945FF"/><stop offset="1" stop-color="#14F195"/></linearGradient></defs><g fill="url(#solg3)"><path d="M10.2 8.4h15.4l-3.6 3.8H6.6z"/><path d="M10.2 14.1H25.6l-3.6 3.8H6.6z" transform="scale(-1,1) translate(-32.2,0)"/><path d="M10.2 19.8h15.4l-3.6 3.8H6.6z"/></g></svg></span>
+          <span class="tc-code">SOL</span>
+          <span class="tc-name">Solana</span>
+          <span class="tc-price">—</span>
+          <span class="btn btn-solid-gold"><i data-lucide="plus"></i>Add to your server</span>
+        </a>
+        <a class="tcard sr" href="https://discord.com/oauth2/authorize?client_id=1529273423879077960&scope=bot&permissions=335544320" target="_blank" rel="noopener noreferrer" data-live-coin="SPX" data-src="tv:SP:SPX" data-fmt="index">
+          <span class="tc-ic"><svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="16" fill="#c81f2e"/><text x="16" y="21" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" font-weight="800" fill="#fff">S&amp;P</text></svg></span>
+          <span class="tc-code">SPX</span>
+          <span class="tc-name">S&amp;P 500</span>
+          <span class="tc-price">—</span>
+          <span class="btn btn-solid-gold"><i data-lucide="plus"></i>Add to your server</span>
+        </a>
       </div>
+      <p class="dmock-note">Want another ticker? Ask in <a href="https://discord.gg/LiquidityTheory" target="_blank" rel="noopener noreferrer" style="color:var(--gold);">the Discord</a> — adding one takes us minutes.</p>
     </section>
 
     <footer>
