@@ -1,0 +1,17 @@
+{
+  "name": "liquidity-theory-ios",
+  "version": "1.0.0",
+  "private": true,
+  "description": "iOS (Capacitor) shell for the Liquidity Theory web app. Web code lives at the workspace root; run npm run sync to pull the latest into www/ and the native project.",
+  "scripts": {
+    "sync": "./sync-www.sh",
+    "open": "npx cap open ios"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^7.0.0"
+  },
+  "dependencies": {
+    "@capacitor/core": "^7.0.0",
+    "@capacitor/ios": "^7.0.0"
+  }
+}

@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Understanding the Order Book — Course 3: Sharpening Your Edge | Liquidity Theory</title>
+<meta name="description" content="The order book is the real-time record of every resting buy and sell order at each price level on the exchange. It is the most direct view of supply and…" />
+<link rel="canonical" href="https://liqtheory.com/learn/course-3-sharpening-your-edge/understanding-the-order-book/" />
+<link rel="icon" type="image/svg+xml" href="/lt-logo.svg" />
+<meta property="og:type" content="article" />
+<meta property="og:site_name" content="Liquidity Theory" />
+<meta property="og:title" content="Understanding the Order Book — Course 3: Sharpening Your Edge | Liquidity Theory" />
+<meta property="og:description" content="The order book is the real-time record of every resting buy and sell order at each price level on the exchange. It is the most direct view of supply and…" />
+<meta property="og:url" content="https://liqtheory.com/learn/course-3-sharpening-your-edge/understanding-the-order-book/" />
+<meta property="og:image" content="https://liqtheory.com/og-image.png?v=3" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="Understanding the Order Book — Course 3: Sharpening Your Edge | Liquidity Theory" />
+<meta name="twitter:description" content="The order book is the real-time record of every resting buy and sell order at each price level on the exchange. It is the most direct view of supply and…" />
+<meta name="twitter:image" content="https://liqtheory.com/og-image.png?v=3" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Cascadia+Code:wght@400;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"LearningResource","name":"Understanding the Order Book","description":"The order book is the real-time record of every resting buy and sell order at each price level on the exchange. It is the most direct view of supply and demand available. Understanding it tells you where buyers are waiting, where sellers are waiting, and where the next area of friction will most lik","url":"https://liqtheory.com/learn/course-3-sharpening-your-edge/understanding-the-order-book/","learningResourceType":"lesson","educationalLevel":"Beginner","inLanguage":"en","isAccessibleForFree":true,"isPartOf":{"@type":"Course","name":"Course 3: Sharpening Your Edge","url":"https://liqtheory.com/learn/"},"provider":{"@type":"Organization","name":"Liquidity Theory","url":"https://liqtheory.com"}}</script>
+<style>
+  :root{--bg:#08070f;--bg3:#14121f;--bg4:#1d1a30;--border:#272235;--border2:#363049;--teal:#00d4d4;--text:#f6f5fb;--text2:#a8a3bb;--text3:#8b85a3;}
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:var(--bg);color:var(--text);font-family:'JetBrains Mono',ui-monospace,monospace;line-height:1.7;
+    background-image:radial-gradient(900px 480px at 80% -10%,rgba(0,212,212,.08),transparent 60%),
+      linear-gradient(rgba(255,255,255,.015) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.015) 1px,transparent 1px);
+    background-size:auto,44px 44px,44px 44px;}
+  .wrap{max-width:760px;margin:0 auto;padding:28px 22px 64px;}
+  a{color:var(--teal);text-decoration:none;}
+  a:hover{text-decoration:underline;}
+  h1,h2,h3{font-family:'Cascadia Code','JetBrains Mono',ui-monospace,monospace;letter-spacing:-.2px;line-height:1.2;}
+  .brand{display:flex;align-items:center;gap:9px;font-family:'Cascadia Code','JetBrains Mono',ui-monospace,monospace;font-weight:700;font-size:19px;margin-bottom:20px;}
+  .brand svg{width:24px;height:24px;}
+  .crumb{font-size:12px;color:var(--text3);margin-bottom:14px;}
+  .crumb a{color:var(--text2);}
+  .eyebrow{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;margin-bottom:8px;}
+  h1.title{font-size:34px;font-weight:700;margin-bottom:18px;}
+  section{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:20px 22px;margin-bottom:16px;}
+  section h2{font-size:21px;font-weight:700;margin-bottom:10px;}
+  section p{color:var(--text2);margin-bottom:12px;}
+  section p strong,li strong{color:var(--text);font-weight:700;}
+  ul{list-style:none;display:flex;flex-direction:column;gap:8px;margin-top:6px;}
+  li{position:relative;padding-left:18px;color:var(--text2);font-size:14.5px;}
+  li::before{content:"–";position:absolute;left:0;color:var(--teal);font-weight:700;}
+  .tag{font-size:11px;color:var(--text3);margin-bottom:16px;}
+  .cta{display:inline-flex;align-items:center;gap:8px;background:var(--teal);color:#04201f;font-weight:700;
+    padding:13px 24px;border-radius:6px;margin:6px 0 4px;font-size:15px;}
+  .cta:hover{filter:brightness(1.08);text-decoration:none;}
+  .quiz-opts{list-style:none;padding:0;}
+  .quiz-opts li{background:var(--bg4);border:1px solid var(--border2);border-radius:6px;padding:10px 14px;padding-left:14px;}
+  .quiz-opts li::before{content:"";}
+  .nav{display:flex;justify-content:space-between;gap:12px;margin-top:24px;font-size:13px;}
+  .foot{margin-top:40px;padding-top:18px;border-top:1px solid var(--border);font-size:12px;color:var(--text3);line-height:1.7;}
+  .toc-course{margin-bottom:26px;}
+  .toc-course h2{font-size:22px;margin-bottom:10px;}
+  .toc-list{display:flex;flex-direction:column;gap:6px;}
+  .toc-list a{color:var(--text2);font-size:14px;}
+  .toc-list a:hover{color:var(--teal);}
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <a class="brand" href="/learn/"><svg viewBox="74 90 252 220" fill-rule="nonzero" aria-hidden="true"><path fill="#16E9D0" d="M83 231h19a3 3 0 0 1 3 3v39a3 3 0 0 1-3 3H83a3 3 0 0 1-3-3v-39a3 3 0 0 1 3-3Zm83-21h19a3 3 0 0 1 3 3v30a3 3 0 0 1-3 3h-19a3 3 0 0 1-3-3v-30a3 3 0 0 1 3-3Zm85-83h20a3 3 0 0 1 3 3v85a3 3 0 0 1-3 3h-20a3 3 0 0 1-3-3v-85a3 3 0 0 1 3-3Z"/><path fill="#fff" d="M124 179h19a3 3 0 0 1 3 3v54a3 3 0 0 1-3 3h-19a3 3 0 0 1-3-3v-54a3 3 0 0 1 3-3Zm84-2h19a3 3 0 0 1 3 3v85a3 3 0 0 1-3 3h-19a3 3 0 0 1-3-3v-85a3 3 0 0 1 3-3Zm89-33h19a3 3 0 0 1 3 3v66a3 3 0 0 1-3 3h-19a3 3 0 0 1-3-3v-66a3 3 0 0 1 3-3Z"/></svg><span>Liquidity Theory</span></a>
+    <div class="crumb"><a href="/learn/">Lessons</a> › <a href="/learn/#course-3-sharpening-your-edge">Course 3: Sharpening Your Edge</a> › Getting Started with Derivatives</div>
+    <div class="eyebrow" style="color:#a855f7">Course 3: Sharpening Your Edge · Getting Started with Derivatives</div>
+    <h1 class="title">Understanding the Order Book</h1>
+    <div class="tag">Module 1 · Session 3</div>
+    <a class="cta" href="/lt-index.html?c=3&ch=3&s=0">Open the interactive lesson →</a>
+    <section>
+      <div class="eyebrow" style="color:#a855f7">Introduction</div>
+      <h2>The Order Book — Every Resting Buy and Sell, Live</h2>
+      <p>The order book is the real-time record of every resting buy and sell order at each price level on the exchange. It is the most direct view of supply and demand available. Understanding it tells you where buyers are waiting, where sellers are waiting, and where the next area of friction will most likely be.</p>
+      <ul><li>Order book = real-time list of all resting buy and sell orders at each price level</li><li>Red (asks) = sell orders resting ABOVE current market price — sellers waiting for price to rise to them</li><li>Green (bids) = buy orders resting BELOW current market price — buyers waiting for price to fall to them</li><li>Grouping = adjust the price interval to view orders at different granularity (5 = detailed, 50 = overview)</li><li>Available instruments: Perpetual Swap (no expiry), Futures contracts (specific expiry dates), altcoin pairs</li><li>ETH/BTC pair = price denominated in BTC, not USD — always check the denomination before trading</li></ul>
+    </section>
+    <section>
+      <div class="eyebrow" style="color:#a855f7">Lesson</div>
+      <h2>Perpetual Swaps, Futures, and Reading Depth</h2>
+      <p>The instruments available in a derivatives order book differ from spot markets. The Perpetual Swap is the most important — no expiry, tracks spot via funding, and is the most liquid instrument on every major crypto exchange. Futures have fixed expiry dates for defined-horizon speculation or hedging.</p>
+      <ul><li><strong>Perpetual Swap:</strong> no expiry date; most liquid; price anchored to spot via 8-hour funding payments; used for leveraged speculation and hedging</li><li><strong>Futures Contracts:</strong> fixed expiry dates (quarterly, monthly); must be rolled at expiry; used to hedge or speculate on a future price at a defined point in time</li><li><strong>Grouping:</strong> fine (5) for precision; coarse (50) for overview of major order walls and supply/demand clusters</li><li>Large resting order blocks = potential support or resistance — the order book maps supply and demand visually</li><li>ETH/BTC pair: a fill price of 0.05 means 0.05 BTC per ETH — not 0.05 USD; always verify denomination</li><li>The order book updates in real time every second as orders are placed, filled, or cancelled</li><li>Order books can be spoofed — large resting orders are sometimes placed and immediately cancelled to mislead other traders</li></ul>
+    </section>
+    <section>
+      <div class="eyebrow" style="color:#a855f7">Check Yourself</div>
+      <p><strong>In a derivatives exchange order book, what do the red orders represent?</strong></p>
+      <ul class="quiz-opts"><li>Sell orders (asks) resting above current market price — sellers waiting for price to rise to their level</li><li>Buy orders (bids) — red indicates high-priority buyers protecting a key demand zone at those price levels</li><li>Filled orders — red indicates trades that have already been executed at those price levels on the exchange</li></ul>
+      <p style="margin-top:12px;font-size:13px;color:var(--text3)">Answer it (with a live chart) in the interactive lesson.</p>
+    </section>
+    <a class="cta" href="/lt-index.html?c=3&ch=3&s=0">Start this lesson in the app →</a>
+    <div class="nav">
+      <span><a href="/learn/course-3-sharpening-your-edge/deposit-and-withdraw/">← Deposit and Withdraw</a></span>
+      <span><a href="/learn/course-3-sharpening-your-edge/getting-into-positions/">Getting Into Positions →</a></span>
+    </div>
+    <div class="foot">Liquidity Theory · Learn · Analyze · Trade together<br/>Educational content only — trading involves substantial risk and most beginners lose money. Nothing here is financial advice.</div>
+  </div>
+</body>
+</html>

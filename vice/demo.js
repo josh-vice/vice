@@ -588,6 +588,14 @@ const mkLegend = (names, top = 54) => ({
   textStyle: { color: THEME.text, fontSize: 11 },
   icon: 'roundRect', itemWidth: 12, itemHeight: 3,
 });
+const brandMark = () => ({
+  // sized to match the demo chart title (16px bold)
+  type: 'group', right: 14, top: 8, silent: true,
+  children: [
+    { type: 'image', x: 0, y: 0, style: { image: '../vice-terminal-64.png', width: 21, height: 21 } },
+    { type: 'text', x: 27, y: 3, style: { text: 'vicesuite.com', fill: THEME.textStrong, fontSize: 16, fontWeight: 700 } },
+  ],
+});
 const watermark = () => ({
   type: 'text', left: 'center', top: 'middle', rotation: Math.PI / 12, silent: true,
   style: { text: 'NOT REAL CHART', fontSize: 52, fontWeight: 900, fill: 'rgba(230,237,243,0.14)' },
@@ -839,12 +847,12 @@ function candleOption(cmd, dataset, H) {
     backgroundColor: THEME.bg, animation: false,
     title: mkTitle(
       `${pair} · ${cmd.timeframe} · ${venueLabel}${cmd.percent ? ' · %' : ''}`,
-      `${lastLabel}   ${sign}${chg.toFixed(2)}% over ${display.length} candles${markerSubtitle(cmd.markers)}   ·   vicesuite.com`,
+      `${lastLabel}   ${sign}${chg.toFixed(2)}% over ${display.length} candles${markerSubtitle(cmd.markers)}`,
     ),
     legend: legendNames.length ? mkLegend(legendNames) : undefined,
     grid: grids, xAxis: xAxes, yAxis: yAxes, series,
   };
-  if (cmd.joke) option.graphic = [watermark()];
+  option.graphic = cmd.joke ? [watermark(), brandMark()] : [brandMark()];
   return option;
 }
 
@@ -862,9 +870,10 @@ function compareOption(cmd, datasets, opts = {}) {
     backgroundColor: THEME.bg, animation: false,
     title: mkTitle(
       opts.titleText ?? `${entries.map((e) => e.name).join(' vs ')} · ${cmd.timeframe}`,
-      `% change over ${n} candles${markerSubtitle(cmd.markers)}   ·   vicesuite.com`,
+      `% change over ${n} candles${markerSubtitle(cmd.markers)}`,
     ),
     legend: mkLegend(entries.map((e) => `${e.name} ${e.last >= 0 ? '+' : ''}${e.last.toFixed(2)}%`), 54),
+    graphic: [brandMark()],
     grid: [{ left: 10, right: 64, top: entries.length > 5 ? 108 : 88, bottom: 38 }],
     xAxis: [baseAxis(labels, true)],
     yAxis: [valueAxis({ axisLabel: { color: THEME.text, fontSize: 11, formatter: (v) => `${v.toFixed(1)}%` } })],
@@ -892,8 +901,9 @@ function ratioOption(cmd, datasets) {
     backgroundColor: THEME.bg, animation: false,
     title: mkTitle(
       `${name} · ${cmd.timeframe} · ${venues} · ratio`,
-      `${ratio[n - 1].toPrecision(6)}   ${chg >= 0 ? '+' : ''}${chg.toFixed(2)}% over ${n} candles${markerSubtitle(cmd.markers)}   ·   vicesuite.com`,
+      `${ratio[n - 1].toPrecision(6)}   ${chg >= 0 ? '+' : ''}${chg.toFixed(2)}% over ${n} candles${markerSubtitle(cmd.markers)}`,
     ),
+    graphic: [brandMark()],
     grid: [{ left: 10, right: 74, top: 56, bottom: 38 }],
     xAxis: [baseAxis(labels, true)],
     yAxis: [valueAxis({ axisLabel: { color: THEME.text, fontSize: 11, formatter: (v) => v.toPrecision(5) } })],

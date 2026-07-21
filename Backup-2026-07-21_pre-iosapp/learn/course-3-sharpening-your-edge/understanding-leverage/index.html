@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Understanding Leverage — Course 3: Sharpening Your Edge | Liquidity Theory</title>
+<meta name="description" content="Leverage is the most misunderstood concept in derivatives trading. Used correctly, it is a risk-management tool that lets you minimize capital exposed t…" />
+<link rel="canonical" href="https://liqtheory.com/learn/course-3-sharpening-your-edge/understanding-leverage/" />
+<link rel="icon" type="image/svg+xml" href="/lt-logo.svg" />
+<meta property="og:type" content="article" />
+<meta property="og:site_name" content="Liquidity Theory" />
+<meta property="og:title" content="Understanding Leverage — Course 3: Sharpening Your Edge | Liquidity Theory" />
+<meta property="og:description" content="Leverage is the most misunderstood concept in derivatives trading. Used correctly, it is a risk-management tool that lets you minimize capital exposed t…" />
+<meta property="og:url" content="https://liqtheory.com/learn/course-3-sharpening-your-edge/understanding-leverage/" />
+<meta property="og:image" content="https://liqtheory.com/og-image.png?v=3" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="Understanding Leverage — Course 3: Sharpening Your Edge | Liquidity Theory" />
+<meta name="twitter:description" content="Leverage is the most misunderstood concept in derivatives trading. Used correctly, it is a risk-management tool that lets you minimize capital exposed t…" />
+<meta name="twitter:image" content="https://liqtheory.com/og-image.png?v=3" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Cascadia+Code:wght@400;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"LearningResource","name":"Understanding Leverage","description":"Leverage is the most misunderstood concept in derivatives trading. Used correctly, it is a risk-management tool that lets you minimize capital exposed to potentially insecure exchanges while maintaining full position size. Used incorrectly, it turns a manageable loss into a catastrophic one.","url":"https://liqtheory.com/learn/course-3-sharpening-your-edge/understanding-leverage/","learningResourceType":"lesson","educationalLevel":"Beginner","inLanguage":"en","isAccessibleForFree":true,"isPartOf":{"@type":"Course","name":"Course 3: Sharpening Your Edge","url":"https://liqtheory.com/learn/"},"provider":{"@type":"Organization","name":"Liquidity Theory","url":"https://liqtheory.com"}}</script>
+<style>
+  :root{--bg:#08070f;--bg3:#14121f;--bg4:#1d1a30;--border:#272235;--border2:#363049;--teal:#00d4d4;--text:#f6f5fb;--text2:#a8a3bb;--text3:#8b85a3;}
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:var(--bg);color:var(--text);font-family:'JetBrains Mono',ui-monospace,monospace;line-height:1.7;
+    background-image:radial-gradient(900px 480px at 80% -10%,rgba(0,212,212,.08),transparent 60%),
+      linear-gradient(rgba(255,255,255,.015) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.015) 1px,transparent 1px);
+    background-size:auto,44px 44px,44px 44px;}
+  .wrap{max-width:760px;margin:0 auto;padding:28px 22px 64px;}
+  a{color:var(--teal);text-decoration:none;}
+  a:hover{text-decoration:underline;}
+  h1,h2,h3{font-family:'Cascadia Code','JetBrains Mono',ui-monospace,monospace;letter-spacing:-.2px;line-height:1.2;}
+  .brand{display:flex;align-items:center;gap:9px;font-family:'Cascadia Code','JetBrains Mono',ui-monospace,monospace;font-weight:700;font-size:19px;margin-bottom:20px;}
+  .brand svg{width:24px;height:24px;}
+  .crumb{font-size:12px;color:var(--text3);margin-bottom:14px;}
+  .crumb a{color:var(--text2);}
+  .eyebrow{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;margin-bottom:8px;}
+  h1.title{font-size:34px;font-weight:700;margin-bottom:18px;}
+  section{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:20px 22px;margin-bottom:16px;}
+  section h2{font-size:21px;font-weight:700;margin-bottom:10px;}
+  section p{color:var(--text2);margin-bottom:12px;}
+  section p strong,li strong{color:var(--text);font-weight:700;}
+  ul{list-style:none;display:flex;flex-direction:column;gap:8px;margin-top:6px;}
+  li{position:relative;padding-left:18px;color:var(--text2);font-size:14.5px;}
+  li::before{content:"–";position:absolute;left:0;color:var(--teal);font-weight:700;}
+  .tag{font-size:11px;color:var(--text3);margin-bottom:16px;}
+  .cta{display:inline-flex;align-items:center;gap:8px;background:var(--teal);color:#04201f;font-weight:700;
+    padding:13px 24px;border-radius:6px;margin:6px 0 4px;font-size:15px;}
+  .cta:hover{filter:brightness(1.08);text-decoration:none;}
+  .quiz-opts{list-style:none;padding:0;}
+  .quiz-opts li{background:var(--bg4);border:1px solid var(--border2);border-radius:6px;padding:10px 14px;padding-left:14px;}
+  .quiz-opts li::before{content:"";}
+  .nav{display:flex;justify-content:space-between;gap:12px;margin-top:24px;font-size:13px;}
+  .foot{margin-top:40px;padding-top:18px;border-top:1px solid var(--border);font-size:12px;color:var(--text3);line-height:1.7;}
+  .toc-course{margin-bottom:26px;}
+  .toc-course h2{font-size:22px;margin-bottom:10px;}
+  .toc-list{display:flex;flex-direction:column;gap:6px;}
+  .toc-list a{color:var(--text2);font-size:14px;}
+  .toc-list a:hover{color:var(--teal);}
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <a class="brand" href="/learn/"><svg viewBox="74 90 252 220" fill-rule="nonzero" aria-hidden="true"><path fill="#16E9D0" d="M83 231h19a3 3 0 0 1 3 3v39a3 3 0 0 1-3 3H83a3 3 0 0 1-3-3v-39a3 3 0 0 1 3-3Zm83-21h19a3 3 0 0 1 3 3v30a3 3 0 0 1-3 3h-19a3 3 0 0 1-3-3v-30a3 3 0 0 1 3-3Zm85-83h20a3 3 0 0 1 3 3v85a3 3 0 0 1-3 3h-20a3 3 0 0 1-3-3v-85a3 3 0 0 1 3-3Z"/><path fill="#fff" d="M124 179h19a3 3 0 0 1 3 3v54a3 3 0 0 1-3 3h-19a3 3 0 0 1-3-3v-54a3 3 0 0 1 3-3Zm84-2h19a3 3 0 0 1 3 3v85a3 3 0 0 1-3 3h-19a3 3 0 0 1-3-3v-85a3 3 0 0 1 3-3Zm89-33h19a3 3 0 0 1 3 3v66a3 3 0 0 1-3 3h-19a3 3 0 0 1-3-3v-66a3 3 0 0 1 3-3Z"/></svg><span>Liquidity Theory</span></a>
+    <div class="crumb"><a href="/learn/">Lessons</a> › <a href="/learn/#course-3-sharpening-your-edge">Course 3: Sharpening Your Edge</a> › Understanding Leverage</div>
+    <div class="eyebrow" style="color:#a855f7">Course 3: Sharpening Your Edge · Understanding Leverage</div>
+    <h1 class="title">Understanding Leverage</h1>
+    <div class="tag">Module 2 · Session 1</div>
+    <a class="cta" href="/lt-index.html?c=3&ch=7&s=0">Open the interactive lesson →</a>
+    <section>
+      <div class="eyebrow" style="color:#a855f7">Introduction</div>
+      <h2>Leverage — Tool, Not Weapon</h2>
+      <p>Leverage is the most misunderstood concept in derivatives trading. Used correctly, it is a risk-management tool that lets you minimize capital exposed to potentially insecure exchanges while maintaining full position size. Used incorrectly, it turns a manageable loss into a catastrophic one.</p>
+      <ul><li>Leverage = increased purchasing power via a margin account — you use less of your capital to back a position</li><li>Two legitimate uses: (1) mitigate counterparty risk by keeping less capital on the exchange; (2) capital optimization across multiple positions simultaneously</li><li>Cross Margin: full account balance used as trading margin — best for swing/position traders scaling into a single trade</li><li>Isolated Margin: only the predefined multiplier is used per position; only that amount liquidated if hit</li><li>Liquidation = forced closure when margin falls below maintenance level — should NEVER happen with proper stop losses</li><li>Stop losses are the ONLY defense against liquidation — use them on every single trade without exception</li></ul>
+    </section>
+    <section>
+      <div class="eyebrow" style="color:#a855f7">Lesson</div>
+      <h2>Cross vs Isolated Margin — Choosing the Right Mode</h2>
+      <p>The choice between cross and isolated margin fundamentally changes how risk is structured across your portfolio. Cross margin pools the entire account balance as a buffer — good for single large positions. Isolated margin ringfences each position — essential when running multiple concurrent positions where one cannot cascade into others.</p>
+      <ul><li><strong>Cross Margin:</strong> full account balance acts as collateral for all open positions; maximum buffer against liquidation on any single position; but one catastrophic position can drain the whole account</li><li><strong>Isolated Margin:</strong> each position has a fixed margin allocation; maximum loss limited to that allocation; other positions completely unaffected if one is liquidated</li><li><strong>Initial Margin:</strong> minimum collateral required to OPEN a position (e.g., 1% of position size at 100x max leverage on BitMEX)</li><li><strong>Maintenance Margin:</strong> minimum equity required to KEEP a position open (e.g., 0.5% of position size)</li><li>BitMEX XBTUSD combined requirement: ~1.5% of position size (initial 1% + maintenance 0.5%)</li><li>Leverage does NOT change your risk if used correctly — it only changes how much capital sits on the exchange</li><li>A liquidation should be theoretically impossible if the stop loss is correctly placed and fires before liquidation</li></ul>
+    </section>
+    <section>
+      <div class="eyebrow" style="color:#a855f7">Check Yourself</div>
+      <p><strong>A day trader wants to trade multiple crypto assets simultaneously while ensuring that if one position is liquidated, it does not affect the capital reserved for other open trades. Which margin type should they use?</strong></p>
+      <ul class="quiz-opts"><li>Isolated Margin — only the predefined margin amount is at risk per position; a liquidation in one does not affect capital allocated to other trades</li><li>Cross Margin — the full account balance as shared collateral maximises capital efficiency and gives each position the most room before liquidation</li><li>Leverage level — keeping leverage at 3x or below prevents liquidation on any position regardless of the margin mode selected</li></ul>
+      <p style="margin-top:12px;font-size:13px;color:var(--text3)">Answer it (with a live chart) in the interactive lesson.</p>
+    </section>
+    <a class="cta" href="/lt-index.html?c=3&ch=7&s=0">Start this lesson in the app →</a>
+    <div class="nav">
+      <span><a href="/learn/course-3-sharpening-your-edge/understanding-contracts/">← Understanding Contracts</a></span>
+      <span><a href="/learn/course-3-sharpening-your-edge/applying-leverage-eth-swing-trade-example/">Applying Leverage — ETH Swing Trade Example →</a></span>
+    </div>
+    <div class="foot">Liquidity Theory · Learn · Analyze · Trade together<br/>Educational content only — trading involves substantial risk and most beginners lose money. Nothing here is financial advice.</div>
+  </div>
+</body>
+</html>

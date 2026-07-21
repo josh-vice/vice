@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Applying Leverage — ETH Swing Trade Example — Course 3: Sharpening Your Edge | Liquidity Theory</title>
+<meta name="description" content="The most important principle about leverage is also the most counterintuitive: used correctly, leverage does not change your risk at all. Your position…" />
+<link rel="canonical" href="https://liqtheory.com/learn/course-3-sharpening-your-edge/applying-leverage-eth-swing-trade-example/" />
+<link rel="icon" type="image/svg+xml" href="/lt-logo.svg" />
+<meta property="og:type" content="article" />
+<meta property="og:site_name" content="Liquidity Theory" />
+<meta property="og:title" content="Applying Leverage — ETH Swing Trade Example — Course 3: Sharpening Your Edge | Liquidity Theory" />
+<meta property="og:description" content="The most important principle about leverage is also the most counterintuitive: used correctly, leverage does not change your risk at all. Your position…" />
+<meta property="og:url" content="https://liqtheory.com/learn/course-3-sharpening-your-edge/applying-leverage-eth-swing-trade-example/" />
+<meta property="og:image" content="https://liqtheory.com/og-image.png?v=3" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="Applying Leverage — ETH Swing Trade Example — Course 3: Sharpening Your Edge | Liquidity Theory" />
+<meta name="twitter:description" content="The most important principle about leverage is also the most counterintuitive: used correctly, leverage does not change your risk at all. Your position…" />
+<meta name="twitter:image" content="https://liqtheory.com/og-image.png?v=3" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Cascadia+Code:wght@400;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"LearningResource","name":"Applying Leverage — ETH Swing Trade Example","description":"The most important principle about leverage is also the most counterintuitive: used correctly, leverage does not change your risk at all. Your position size, stop loss, and R multiple are determined entirely by your system — not by your leverage level. Leverage only determines how much margin you po","url":"https://liqtheory.com/learn/course-3-sharpening-your-edge/applying-leverage-eth-swing-trade-example/","learningResourceType":"lesson","educationalLevel":"Beginner","inLanguage":"en","isAccessibleForFree":true,"isPartOf":{"@type":"Course","name":"Course 3: Sharpening Your Edge","url":"https://liqtheory.com/learn/"},"provider":{"@type":"Organization","name":"Liquidity Theory","url":"https://liqtheory.com"}}</script>
+<style>
+  :root{--bg:#08070f;--bg3:#14121f;--bg4:#1d1a30;--border:#272235;--border2:#363049;--teal:#00d4d4;--text:#f6f5fb;--text2:#a8a3bb;--text3:#8b85a3;}
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:var(--bg);color:var(--text);font-family:'JetBrains Mono',ui-monospace,monospace;line-height:1.7;
+    background-image:radial-gradient(900px 480px at 80% -10%,rgba(0,212,212,.08),transparent 60%),
+      linear-gradient(rgba(255,255,255,.015) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.015) 1px,transparent 1px);
+    background-size:auto,44px 44px,44px 44px;}
+  .wrap{max-width:760px;margin:0 auto;padding:28px 22px 64px;}
+  a{color:var(--teal);text-decoration:none;}
+  a:hover{text-decoration:underline;}
+  h1,h2,h3{font-family:'Cascadia Code','JetBrains Mono',ui-monospace,monospace;letter-spacing:-.2px;line-height:1.2;}
+  .brand{display:flex;align-items:center;gap:9px;font-family:'Cascadia Code','JetBrains Mono',ui-monospace,monospace;font-weight:700;font-size:19px;margin-bottom:20px;}
+  .brand svg{width:24px;height:24px;}
+  .crumb{font-size:12px;color:var(--text3);margin-bottom:14px;}
+  .crumb a{color:var(--text2);}
+  .eyebrow{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;margin-bottom:8px;}
+  h1.title{font-size:34px;font-weight:700;margin-bottom:18px;}
+  section{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:20px 22px;margin-bottom:16px;}
+  section h2{font-size:21px;font-weight:700;margin-bottom:10px;}
+  section p{color:var(--text2);margin-bottom:12px;}
+  section p strong,li strong{color:var(--text);font-weight:700;}
+  ul{list-style:none;display:flex;flex-direction:column;gap:8px;margin-top:6px;}
+  li{position:relative;padding-left:18px;color:var(--text2);font-size:14.5px;}
+  li::before{content:"–";position:absolute;left:0;color:var(--teal);font-weight:700;}
+  .tag{font-size:11px;color:var(--text3);margin-bottom:16px;}
+  .cta{display:inline-flex;align-items:center;gap:8px;background:var(--teal);color:#04201f;font-weight:700;
+    padding:13px 24px;border-radius:6px;margin:6px 0 4px;font-size:15px;}
+  .cta:hover{filter:brightness(1.08);text-decoration:none;}
+  .quiz-opts{list-style:none;padding:0;}
+  .quiz-opts li{background:var(--bg4);border:1px solid var(--border2);border-radius:6px;padding:10px 14px;padding-left:14px;}
+  .quiz-opts li::before{content:"";}
+  .nav{display:flex;justify-content:space-between;gap:12px;margin-top:24px;font-size:13px;}
+  .foot{margin-top:40px;padding-top:18px;border-top:1px solid var(--border);font-size:12px;color:var(--text3);line-height:1.7;}
+  .toc-course{margin-bottom:26px;}
+  .toc-course h2{font-size:22px;margin-bottom:10px;}
+  .toc-list{display:flex;flex-direction:column;gap:6px;}
+  .toc-list a{color:var(--text2);font-size:14px;}
+  .toc-list a:hover{color:var(--teal);}
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <a class="brand" href="/learn/"><svg viewBox="74 90 252 220" fill-rule="nonzero" aria-hidden="true"><path fill="#16E9D0" d="M83 231h19a3 3 0 0 1 3 3v39a3 3 0 0 1-3 3H83a3 3 0 0 1-3-3v-39a3 3 0 0 1 3-3Zm83-21h19a3 3 0 0 1 3 3v30a3 3 0 0 1-3 3h-19a3 3 0 0 1-3-3v-30a3 3 0 0 1 3-3Zm85-83h20a3 3 0 0 1 3 3v85a3 3 0 0 1-3 3h-20a3 3 0 0 1-3-3v-85a3 3 0 0 1 3-3Z"/><path fill="#fff" d="M124 179h19a3 3 0 0 1 3 3v54a3 3 0 0 1-3 3h-19a3 3 0 0 1-3-3v-54a3 3 0 0 1 3-3Zm84-2h19a3 3 0 0 1 3 3v85a3 3 0 0 1-3 3h-19a3 3 0 0 1-3-3v-85a3 3 0 0 1 3-3Zm89-33h19a3 3 0 0 1 3 3v66a3 3 0 0 1-3 3h-19a3 3 0 0 1-3-3v-66a3 3 0 0 1 3-3Z"/></svg><span>Liquidity Theory</span></a>
+    <div class="crumb"><a href="/learn/">Lessons</a> › <a href="/learn/#course-3-sharpening-your-edge">Course 3: Sharpening Your Edge</a> › Understanding Leverage</div>
+    <div class="eyebrow" style="color:#a855f7">Course 3: Sharpening Your Edge · Understanding Leverage</div>
+    <h1 class="title">Applying Leverage — ETH Swing Trade Example</h1>
+    <div class="tag">Module 2 · Session 2</div>
+    <a class="cta" href="/lt-index.html?c=3&ch=8&s=0">Open the interactive lesson →</a>
+    <section>
+      <div class="eyebrow" style="color:#a855f7">Introduction</div>
+      <h2>Leverage Is Irrelevant — It Does Not Change Your Risk</h2>
+      <p>The most important principle about leverage is also the most counterintuitive: used correctly, leverage does not change your risk at all. Your position size, stop loss, and R multiple are determined entirely by your system — not by your leverage level. Leverage only determines how much margin you post to back that position on the exchange.</p>
+      <ul><li>Position size = determined by your risk % of portfolio — never by your leverage level</li><li>Leverage = reduces the margin posted; keeps more capital off a potentially vulnerable exchange</li><li>Example: 750,000 contracts requires 101 BTC collateral without leverage; 10x leverage = only 10 BTC on exchange</li><li>Nothing changes: same position size, same stop loss, same R multiple, same risk — just less margin on exchange</li><li>Liquidation Price MUST be below stop loss (longs) or above stop loss (shorts) — if liquidation fires first, too much leverage</li><li>Wrong use: treating 10x leverage as permission to take a 10x bigger position and 10x bigger risk</li></ul>
+    </section>
+    <section>
+      <div class="eyebrow" style="color:#a855f7">Lesson</div>
+      <h2>The Safe Leverage Rule — Liquidation Beyond Stop Loss</h2>
+      <p>One simple rule determines whether leverage is being used correctly: the liquidation price must be on the other side of your stop loss. For longs, liquidation must be BELOW the stop. For shorts, liquidation must be ABOVE the stop. If it is not, you will be liquidated before your stop fires — and your position protection is meaningless.</p>
+      <ul><li><strong>The Safe Rule:</strong> Liquidation Price below Stop Loss (for longs); Liquidation Price above Stop Loss (for shorts)</li><li><strong>Correct example:</strong> Entry $134 | Stop $125 | Liq $115 → stop fires at $125 before liquidation at $115 — leverage is correct</li><li><strong>Wrong example:</strong> Entry $134 | Stop $125 | Liq $127 → liquidation fires at $127 BEFORE the stop at $125 — too much leverage</li><li>Use the exchange calculator: input entry, stop, position size → it shows liquidation price; verify it is beyond the stop</li><li>Capital preservation comes before profitability — if leverage creates any risk of liquidation before your stop, reduce it</li><li>Correct leverage use = minimize counterparty risk + optimize capital allocation = no change to risk per trade</li><li>Master profitability WITHOUT leverage first — if unprofitable without it, leverage only amplifies the losses</li></ul>
+    </section>
+    <section>
+      <div class="eyebrow" style="color:#a855f7">Check Yourself</div>
+      <p><strong>A trader is long from $85 with a stop loss at $80 and a liquidation price at $77. Is this setup using leverage correctly, and why?</strong></p>
+      <ul class="quiz-opts"><li>Yes — the liquidation price ($77) is below the stop loss ($80); the stop fires first; leverage is being used correctly to reduce margin posted, not to increase risk</li><li>No — the liquidation price must always be above the stop loss for longs to give the trade room to breathe before exiting</li><li>Cannot determine — whether liquidation is safe depends entirely on the specific exchange maintenance margin formula</li></ul>
+      <p style="margin-top:12px;font-size:13px;color:var(--text3)">Answer it (with a live chart) in the interactive lesson.</p>
+    </section>
+    <a class="cta" href="/lt-index.html?c=3&ch=8&s=0">Start this lesson in the app →</a>
+    <div class="nav">
+      <span><a href="/learn/course-3-sharpening-your-edge/understanding-leverage/">← Understanding Leverage</a></span>
+      <span><a href="/learn/course-3-sharpening-your-edge/margin-management/">Margin Management →</a></span>
+    </div>
+    <div class="foot">Liquidity Theory · Learn · Analyze · Trade together<br/>Educational content only — trading involves substantial risk and most beginners lose money. Nothing here is financial advice.</div>
+  </div>
+</body>
+</html>

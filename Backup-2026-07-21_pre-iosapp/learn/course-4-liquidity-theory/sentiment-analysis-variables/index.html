@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Sentiment Analysis Variables — Course 4: Liquidity Theory | Liquidity Theory</title>
+<meta name="description" content="Sentiment analysis uses four quantitative variables to assess the real-time state of market participants. Each provides a different lens on the same mar…" />
+<link rel="canonical" href="https://liqtheory.com/learn/course-4-liquidity-theory/sentiment-analysis-variables/" />
+<link rel="icon" type="image/svg+xml" href="/lt-logo.svg" />
+<meta property="og:type" content="article" />
+<meta property="og:site_name" content="Liquidity Theory" />
+<meta property="og:title" content="Sentiment Analysis Variables — Course 4: Liquidity Theory | Liquidity Theory" />
+<meta property="og:description" content="Sentiment analysis uses four quantitative variables to assess the real-time state of market participants. Each provides a different lens on the same mar…" />
+<meta property="og:url" content="https://liqtheory.com/learn/course-4-liquidity-theory/sentiment-analysis-variables/" />
+<meta property="og:image" content="https://liqtheory.com/og-image.png?v=3" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="Sentiment Analysis Variables — Course 4: Liquidity Theory | Liquidity Theory" />
+<meta name="twitter:description" content="Sentiment analysis uses four quantitative variables to assess the real-time state of market participants. Each provides a different lens on the same mar…" />
+<meta name="twitter:image" content="https://liqtheory.com/og-image.png?v=3" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Cascadia+Code:wght@400;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"LearningResource","name":"Sentiment Analysis Variables","description":"Sentiment analysis uses four quantitative variables to assess the real-time state of market participants. Each provides a different lens on the same market: who is paying, who is adding positions, who is more aggressive, and how far the market has drifted from equilibrium. Individually they provide ","url":"https://liqtheory.com/learn/course-4-liquidity-theory/sentiment-analysis-variables/","learningResourceType":"lesson","educationalLevel":"Beginner","inLanguage":"en","isAccessibleForFree":true,"isPartOf":{"@type":"Course","name":"Course 4: Liquidity Theory","url":"https://liqtheory.com/learn/"},"provider":{"@type":"Organization","name":"Liquidity Theory","url":"https://liqtheory.com"}}</script>
+<style>
+  :root{--bg:#08070f;--bg3:#14121f;--bg4:#1d1a30;--border:#272235;--border2:#363049;--teal:#00d4d4;--text:#f6f5fb;--text2:#a8a3bb;--text3:#8b85a3;}
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:var(--bg);color:var(--text);font-family:'JetBrains Mono',ui-monospace,monospace;line-height:1.7;
+    background-image:radial-gradient(900px 480px at 80% -10%,rgba(0,212,212,.08),transparent 60%),
+      linear-gradient(rgba(255,255,255,.015) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.015) 1px,transparent 1px);
+    background-size:auto,44px 44px,44px 44px;}
+  .wrap{max-width:760px;margin:0 auto;padding:28px 22px 64px;}
+  a{color:var(--teal);text-decoration:none;}
+  a:hover{text-decoration:underline;}
+  h1,h2,h3{font-family:'Cascadia Code','JetBrains Mono',ui-monospace,monospace;letter-spacing:-.2px;line-height:1.2;}
+  .brand{display:flex;align-items:center;gap:9px;font-family:'Cascadia Code','JetBrains Mono',ui-monospace,monospace;font-weight:700;font-size:19px;margin-bottom:20px;}
+  .brand svg{width:24px;height:24px;}
+  .crumb{font-size:12px;color:var(--text3);margin-bottom:14px;}
+  .crumb a{color:var(--text2);}
+  .eyebrow{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;margin-bottom:8px;}
+  h1.title{font-size:34px;font-weight:700;margin-bottom:18px;}
+  section{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:20px 22px;margin-bottom:16px;}
+  section h2{font-size:21px;font-weight:700;margin-bottom:10px;}
+  section p{color:var(--text2);margin-bottom:12px;}
+  section p strong,li strong{color:var(--text);font-weight:700;}
+  ul{list-style:none;display:flex;flex-direction:column;gap:8px;margin-top:6px;}
+  li{position:relative;padding-left:18px;color:var(--text2);font-size:14.5px;}
+  li::before{content:"–";position:absolute;left:0;color:var(--teal);font-weight:700;}
+  .tag{font-size:11px;color:var(--text3);margin-bottom:16px;}
+  .cta{display:inline-flex;align-items:center;gap:8px;background:var(--teal);color:#04201f;font-weight:700;
+    padding:13px 24px;border-radius:6px;margin:6px 0 4px;font-size:15px;}
+  .cta:hover{filter:brightness(1.08);text-decoration:none;}
+  .quiz-opts{list-style:none;padding:0;}
+  .quiz-opts li{background:var(--bg4);border:1px solid var(--border2);border-radius:6px;padding:10px 14px;padding-left:14px;}
+  .quiz-opts li::before{content:"";}
+  .nav{display:flex;justify-content:space-between;gap:12px;margin-top:24px;font-size:13px;}
+  .foot{margin-top:40px;padding-top:18px;border-top:1px solid var(--border);font-size:12px;color:var(--text3);line-height:1.7;}
+  .toc-course{margin-bottom:26px;}
+  .toc-course h2{font-size:22px;margin-bottom:10px;}
+  .toc-list{display:flex;flex-direction:column;gap:6px;}
+  .toc-list a{color:var(--text2);font-size:14px;}
+  .toc-list a:hover{color:var(--teal);}
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <a class="brand" href="/learn/"><svg viewBox="74 90 252 220" fill-rule="nonzero" aria-hidden="true"><path fill="#16E9D0" d="M83 231h19a3 3 0 0 1 3 3v39a3 3 0 0 1-3 3H83a3 3 0 0 1-3-3v-39a3 3 0 0 1 3-3Zm83-21h19a3 3 0 0 1 3 3v30a3 3 0 0 1-3 3h-19a3 3 0 0 1-3-3v-30a3 3 0 0 1 3-3Zm85-83h20a3 3 0 0 1 3 3v85a3 3 0 0 1-3 3h-20a3 3 0 0 1-3-3v-85a3 3 0 0 1 3-3Z"/><path fill="#fff" d="M124 179h19a3 3 0 0 1 3 3v54a3 3 0 0 1-3 3h-19a3 3 0 0 1-3-3v-54a3 3 0 0 1 3-3Zm84-2h19a3 3 0 0 1 3 3v85a3 3 0 0 1-3 3h-19a3 3 0 0 1-3-3v-85a3 3 0 0 1 3-3Zm89-33h19a3 3 0 0 1 3 3v66a3 3 0 0 1-3 3h-19a3 3 0 0 1-3-3v-66a3 3 0 0 1 3-3Z"/></svg><span>Liquidity Theory</span></a>
+    <div class="crumb"><a href="/learn/">Lessons</a> › <a href="/learn/#course-4-liquidity-theory">Course 4: Liquidity Theory</a> › Determining Control</div>
+    <div class="eyebrow" style="color:#f87171">Course 4: Liquidity Theory · Determining Control</div>
+    <h1 class="title">Sentiment Analysis Variables</h1>
+    <div class="tag">Module 2 · Session 2</div>
+    <a class="cta" href="/lt-index.html?c=4&ch=6&s=0">Open the interactive lesson →</a>
+    <section>
+      <div class="eyebrow" style="color:#f87171">Introduction</div>
+      <h2>Four Variables That Reveal Who Is in Control</h2>
+      <p>Sentiment analysis uses four quantitative variables to assess the real-time state of market participants. Each provides a different lens on the same market: who is paying, who is adding positions, who is more aggressive, and how far the market has drifted from equilibrium. Individually they provide hints. Together they provide conviction.</p>
+      <ul><li>Variable 1 — Funding Rate: cost to hold long or short on perpetual swap exchanges; extremes signal participant exhaustion</li><li>Variable 2 — Open Interest: total open contracts; relationship to price direction signals trend strength or dangerous divergence</li><li>Variable 3 — Cumulative Delta: net market buys minus market sells; imbalances show who is aggressively off-sides</li><li>Variable 4 — Futures Basis: spread between spot price and futures price; contango and backwardation extremes signal exhaustion</li><li>None are 100% reliable standalone signals — they must combine with TA and with each other for maximum effect</li><li>All four pointing the same direction = maximum confluence; even two or three aligned signals significantly raise conviction</li></ul>
+    </section>
+    <section>
+      <div class="eyebrow" style="color:#f87171">Lesson</div>
+      <h2>How the Four Variables Work Together for Maximum Confluence</h2>
+      <p>The power of sentiment analysis comes from variable alignment. When multiple independent variables confirm the same trade thesis, their agreement is not coincidental — it reflects a genuine and extreme imbalance in the market. A single variable is a hint. Two is a signal. Three or four is a high-conviction trade.</p>
+      <ul><li>Funding alone: useful but easily misread without price and level context</li><li>OI alone: tells you whether positions are growing or shrinking; needs price direction for meaningful interpretation</li><li>Cumulative Delta alone: shows who is more aggressive right now; can be noise without TA context</li><li>Futures Basis alone: shows drift from equilibrium; needs trend context to be useful</li><li>All four bearish: funding positive (longs paying), OI rising as price rises then stalls (longs adding), delta very green at resistance (longs aggressive at wrong level), contango extreme (market stretched) = maximum conviction short at SSR</li><li>All four bullish: funding negative (shorts paying), OI rising as price falls (shorts adding), delta very red at support (shorts at wrong level), backwardation extreme = maximum conviction long at DBS</li></ul>
+    </section>
+    <section>
+      <div class="eyebrow" style="color:#f87171">Check Yourself</div>
+      <p><strong>A trader sees all four sentiment variables at extreme readings and all pointing bullishly at a key DBS support zone. Funding is extreme negative, OI rising with falling price, cumulative delta extreme red, and the futures basis is deep backwardation. Compared to a setup where only one SA variable is mildly elevated, how should position sizing differ?</strong></p>
+      <ul class="quiz-opts"><li>Maximum position size on the four-variable alignment — all four independently agree with the TA setup; this represents the highest possible conviction within the framework; size should reflect that; mildly elevated single-variable setups warrant significantly reduced size</li><li>Same position size for both — position size should always be fixed and determined only by the TA setup; SA variable count does not change the risk-to-reward ratio and therefore should not affect size</li><li>Smaller position size on the four-variable alignment — too many variables pointing the same way is a contrarian indicator; when everyone and every indicator agrees the market will do the opposite</li></ul>
+      <p style="margin-top:12px;font-size:13px;color:var(--text3)">Answer it (with a live chart) in the interactive lesson.</p>
+    </section>
+    <a class="cta" href="/lt-index.html?c=4&ch=6&s=0">Start this lesson in the app →</a>
+    <div class="nav">
+      <span><a href="/learn/course-4-liquidity-theory/who-is-in-control-primer/">← Who Is in Control Primer</a></span>
+      <span><a href="/learn/course-4-liquidity-theory/funding-rate/">Funding Rate →</a></span>
+    </div>
+    <div class="foot">Liquidity Theory · Learn · Analyze · Trade together<br/>Educational content only — trading involves substantial risk and most beginners lose money. Nothing here is financial advice.</div>
+  </div>
+</body>
+</html>

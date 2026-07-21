@@ -1,0 +1,12 @@
+{
+  "appId": "com.liquiditytheory.app",
+  "appName": "Liquidity Theory",
+  "webDir": "www",
+  "ios": {
+    "contentInset": "never",
+    "backgroundColor": "#000000"
+  },
+  "server": {
+    "allowNavigation": []
+  }
+}

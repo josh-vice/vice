@@ -549,3 +549,6 @@ section[id] { scroll-margin-top: 24px; }
   background: var(--blurple); color: #fff;
   border-radius: 3px; padding: 1px 5px;
 }
+
+/* live-demo caption under the tickers-page member-list mock */
+.dmock-note { margin-top: 12px; font-size: 12px; color: var(--text3); max-width: 560px; }
