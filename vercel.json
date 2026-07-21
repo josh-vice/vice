@@ -4,6 +4,28 @@
   "outputDirectory": ".",
   "cleanUrls": false,
   "trailingSlash": false,
+  "rewrites": [
+    {
+      "source": "/",
+      "has": [{ "type": "host", "value": "(www\\.)?vicesuite\\.com" }],
+      "destination": "/vice/index.html"
+    },
+    {
+      "source": "/chartbot",
+      "has": [{ "type": "host", "value": "(www\\.)?vicesuite\\.com" }],
+      "destination": "/vice/charts/index.html"
+    },
+    {
+      "source": "/pricebots",
+      "has": [{ "type": "host", "value": "(www\\.)?vicesuite\\.com" }],
+      "destination": "/vice/tickers/index.html"
+    },
+    {
+      "source": "/:path*",
+      "has": [{ "type": "host", "value": "(www\\.)?vicesuite\\.com" }],
+      "destination": "/vice/:path*"
+    }
+  ],
   "headers": [
     {
       "source": "/",

@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Vice Tickers — live prices in your Discord member list</title>
+  <link rel="icon" type="image/svg+xml" href="../lt-logo.svg" />
+
+  <meta name="description" content="Vice Tickers: bots that live in your Discord sidebar as always-on price tickers. The nickname is the live price, the name turns green or red with the day, the status shows the move from previous close. Free." />
+  <link rel="canonical" href="https://vicesuite.com/pricebots" />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Vice Terminal" />
+  <meta property="og:title" content="Vice Tickers — live prices in your Discord member list" />
+  <meta property="og:description" content="Always-on price tickers in your server's sidebar. Green when up, red when down, updated every few seconds. Free." />
+  <meta property="og:url" content="https://vicesuite.com/pricebots" />
+  <meta property="og:image" content="https://liqtheory.com/og-image.png?v=3" />
+  <meta name="twitter:card" content="summary_large_image" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../vice.css?v=1.2.0" />
+
+  <script src="https://cdn.jsdelivr.net/npm/lucide@1.23.0/dist/umd/lucide.min.js"
+          integrity="sha384-ouAVEJVCMsf8Svzn+BwqbaBhxBEA0xgeVBhHnxmWd+Wqyv18yhWCQwGegFD/OHLq"
+          crossorigin="anonymous" defer></script>
+</head>
+<body>
+
+  <div class="wrap">
+    <header class="top">
+      <a href="https://vicesuite.com/" style="display:flex;align-items:center;gap:10px;">
+        <span class="vt-flamingo" role="img" aria-label="Vice Terminal"></span>
+        <span class="top-name">Vice <strong>Terminal</strong></span>
+      </a>
+      <nav class="top-right">
+        <a class="top-link" href="https://vicesuite.com/"><i data-lucide="layout-grid"></i><span>Suite</span></a>
+        <a class="top-link" href="https://vicesuite.com/chartbot"><i data-lucide="bar-chart-2"></i><span>Charts</span></a>
+        <a class="top-link" href="https://liqtheory.com/"><i data-lucide="book-open"></i><span>Academy</span></a>
+        <a class="top-link" href="https://discord.gg/LiquidityTheory" target="_blank" rel="noopener noreferrer" title="Join the Discord">
+          <svg viewBox="0 0 512 365.467" fill="currentColor" aria-hidden="true"><path d="M378.186 365.028s-15.794-18.865-28.956-35.099c57.473-16.232 79.41-51.77 79.41-51.77-17.989 11.846-35.099 20.182-50.454 25.885-21.938 9.213-42.997 14.917-63.617 18.866-42.118 7.898-80.726 5.703-113.631-.438-25.008-4.827-46.506-11.407-64.494-18.867-10.091-3.947-21.059-8.774-32.027-14.917-1.316-.877-2.633-1.316-3.948-2.193-.877-.438-1.316-.878-1.755-.878-7.898-4.388-12.285-7.458-12.285-7.458s21.06 34.659 76.779 51.331c-13.163 16.673-29.395 35.977-29.395 35.977C36.854 362.395 0 299.218 0 299.218 0 159.263 63.177 45.633 63.177 45.633 126.354-1.311 186.022.005 186.022.005l4.388 5.264C111.439 27.645 75.461 62.305 75.461 62.305s9.653-5.265 25.886-12.285c46.945-20.621 84.236-25.885 99.592-27.64 2.633-.439 4.827-.878 7.458-.878 26.763-3.51 57.036-4.387 88.624-.878 41.68 4.826 86.43 17.111 132.058 41.68 0 0-34.66-32.906-109.244-55.281l6.143-7.019s60.105-1.317 122.844 45.628c0 0 63.178 113.631 63.178 253.585 0-.438-36.854 62.739-133.813 65.81l-.001.001zm-43.874-203.133c-25.006 0-44.75 21.498-44.75 48.262 0 26.763 20.182 48.26 44.75 48.26 25.008 0 44.752-21.497 44.752-48.26 0-26.764-20.182-48.262-44.752-48.262zm-160.135 0c-25.008 0-44.751 21.498-44.751 48.262 0 26.763 20.182 48.26 44.751 48.26 25.007 0 44.75-21.497 44.75-48.26.439-26.763-19.742-48.262-44.75-48.262z"/></svg>
+          <span>Discord</span>
+        </a>
+      </nav>
+    </header>
+
+    <section class="hero">
+      <p class="hero-kicker"><a href="https://vicesuite.com/">The Vice Suite</a> · A <strong>Vice Terminal</strong> product</p>
+      <h1><span class="teal">Vice Tickers</span> — the market, always on your sidebar.</h1>
+      <p class="hero-sub">
+        Each ticker is a bot that lives in your member list. Its name is the live price,
+        it turns green or red with the day, and its status line carries the move from
+        previous close. Add it once — it takes care of itself.
+      </p>
+      <div class="hero-ctas">
+        <a class="btn btn-solid-teal" href="https://discord.com/oauth2/authorize?client_id=1529222506593128548&scope=bot&permissions=335544320" target="_blank" rel="noopener noreferrer">
+          <i data-lucide="plus"></i>Add BTC ticker
+        </a>
+        <a class="btn" href="https://discord.gg/LiquidityTheory" target="_blank" rel="noopener noreferrer">See it live in our Discord</a>
+      </div>
+
+      <div class="mock-sidebar big" aria-hidden="true">
+        <div class="mock-label">Live Price — 3</div>
+        <div class="mock-row">
+          <span class="mock-dot" style="background:var(--green)"></span>
+          <span class="mock-name" style="color:var(--green)">BTC ↗ $66,355</span>
+          <span class="mock-app">APP</span>
+        </div>
+        <div class="mock-status">Up $1,151.48 (+1.77%) from prev. close</div>
+        <div class="mock-row">
+          <span class="mock-dot" style="background:var(--pink)"></span>
+          <span class="mock-name" style="color:var(--pink)">ETH ↘ $1,921</span>
+          <span class="mock-app">APP</span>
+        </div>
+        <div class="mock-status">Down $17.02 (0.89%) from prev. close</div>
+        <div class="mock-row">
+          <span class="mock-dot" style="background:var(--green)"></span>
+          <span class="mock-name" style="color:var(--green)">SOL ↗ $151.24</span>
+          <span class="mock-app">APP</span>
+        </div>
+        <div class="mock-status">liqtheory.com</div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-head">
+        <h2>How it works</h2>
+        <p>No configuration, no commands to learn — the ticker manages itself.</p>
+      </div>
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">01</div>
+          <h4>Invite the ticker</h4>
+          <p>One click, two permissions: change its own nickname and manage its two
+          color roles. It can't read messages, and it never posts.</p>
+        </div>
+        <div class="step">
+          <div class="step-num">02</div>
+          <h4>It sets itself up</h4>
+          <p>On arrival it creates two roles — Ticker Green and Ticker Red — and takes
+          whichever matches the day. When the market flips, it swaps roles and the
+          name changes color everywhere at once.</p>
+        </div>
+        <div class="step">
+          <div class="step-num">03</div>
+          <h4>Prices, around the clock</h4>
+          <p>The price refreshes every few seconds. The nickname carries the live
+          price, the status dot is green or red with the day, and the status line
+          rotates the move from previous close with community links.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-head">
+        <h2>What the ticker shows</h2>
+      </div>
+      <div class="ref-grid">
+        <div class="ref-card">
+          <h4>The nickname</h4>
+          <div class="ref-sub">the sidebar line itself</div>
+          <div class="cmd-row"><code>BTC ↗ $66,355</code><span class="right">live price + direction arrow</span></div>
+          <div class="cmd-row"><span>Green name on an up day, red on a down day — via its self-managed color roles.</span></div>
+        </div>
+        <div class="ref-card">
+          <h4>The status line</h4>
+          <div class="ref-sub">rotates every 15 seconds</div>
+          <div class="cmd-row"><code>Up $1,151.48 (+1.77%) from prev. close</code></div>
+          <div class="cmd-row"><span>Alternates the live change with <code>liqtheory.com</code> and the community invite — the change line is on screen half the time.</span></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-head">
+        <h2>The roster</h2>
+        <p>One bot per ticker, so each gets its own line in the member list.</p>
+      </div>
+      <div class="ref-grid">
+        <div class="ref-card">
+          <h4>Live now</h4>
+          <div class="cmd-row">
+            <code>BTC</code>
+            <span>Bitcoin · Hyperliquid + TradingView data</span>
+            <span class="right"><a class="card-more" style="margin:0;color:var(--teal);" href="https://discord.com/oauth2/authorize?client_id=1529222506593128548&scope=bot&permissions=335544320" target="_blank" rel="noopener noreferrer">Add<i data-lucide="arrow-right"></i></a></span>
+          </div>
+        </div>
+        <div class="ref-card">
+          <h4>On the way</h4>
+          <div class="cmd-row"><code>ETH</code><span>Ethereum</span></div>
+          <div class="cmd-row"><code>SOL</code><span>Solana</span></div>
+          <div class="cmd-row"><span>Want a specific ticker? Ask in <a href="https://discord.gg/LiquidityTheory" target="_blank" rel="noopener noreferrer" style="color:var(--teal);">the Discord</a>.</span></div>
+        </div>
+      </div>
+    </section>
+
+    <footer>
+      <div class="foot-inner">
+        <span class="vt-flamingo" role="img" aria-label="Vice Terminal"></span>
+        <span>Vice Tickers · A <strong>Vice Terminal</strong> product</span>
+        <div class="foot-links">
+          <a href="https://vicesuite.com/">Suite</a>
+          <a href="https://vicesuite.com/chartbot">Charts</a>
+          <a href="https://liqtheory.com/">liqtheory.com</a>
+          <a href="https://discord.gg/LiquidityTheory" target="_blank" rel="noopener noreferrer">Discord</a>
+        </div>
+      </div>
+    </footer>
+  </div>
+
+  <script>
+    window.addEventListener('DOMContentLoaded', () => {
+      if (window.lucide?.createIcons) lucide.createIcons();
+    });
+  </script>
+</body>
+</html>

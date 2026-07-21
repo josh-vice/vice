@@ -20,3 +20,10 @@ tools/tts/beats.json
 # Local-only Anthropic API key (never commit). Lives at the workspace root after the
 # rebuild/ tree was removed; match the name anywhere.
 .anthropic_key
+
+# iOS app (IOSApp/): the native Xcode project IS tracked; generated bundle,
+# deps, and pods are rebuilt locally (www/ regenerates on every commit via hook)
+IOSApp/node_modules/
+IOSApp/www/
+IOSApp/ios/App/Pods/
+IOSApp/ios/DerivedData/
