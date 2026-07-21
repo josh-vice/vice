@@ -19,13 +19,15 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="../vice.css?v=1.9.0" />
+  <link rel="stylesheet" href="../vice.css?v=2.0.1" />
 
   <script src="https://cdn.jsdelivr.net/npm/lucide@1.23.0/dist/umd/lucide.min.js"
           integrity="sha384-ouAVEJVCMsf8Svzn+BwqbaBhxBEA0xgeVBhHnxmWd+Wqyv18yhWCQwGegFD/OHLq"
           crossorigin="anonymous" defer></script>
 
-  <script src="../tickers-live.js?v=1.0.0" defer></script>
+  <script src="../tickers-live.js?v=1.1.0" defer></script>
+
+  <script src="../vice.js?v=1.2.0" defer></script>
 </head>
 <body class="pg-gold">
 
@@ -140,25 +142,25 @@
     </section>
 
     <section class="section">
-      <div class="section-head">
+      <div class="section-head sr">
         <h2>How it works</h2>
         <p>No configuration, no commands to learn — the ticker manages itself.</p>
       </div>
       <div class="steps">
-        <div class="step">
+        <div class="step sr">
           <div class="step-num">01</div>
           <h4>Invite the ticker</h4>
           <p>One click, two permissions: change its own nickname and manage its two
           color roles. It can't read messages, and it never posts.</p>
         </div>
-        <div class="step">
+        <div class="step sr sr-d1">
           <div class="step-num">02</div>
           <h4>It sets itself up</h4>
           <p>On arrival it creates two roles — Ticker Green and Ticker Red — and takes
           whichever matches the day. When the market flips, it swaps roles and the
           name changes color everywhere at once.</p>
         </div>
-        <div class="step">
+        <div class="step sr sr-d2">
           <div class="step-num">03</div>
           <h4>Prices, around the clock</h4>
           <p>The price refreshes every few seconds. The nickname carries the live
@@ -169,17 +171,17 @@
     </section>
 
     <section class="section">
-      <div class="section-head">
+      <div class="section-head sr">
         <h2>What the ticker shows</h2>
       </div>
       <div class="ref-grid">
-        <div class="ref-card">
+        <div class="ref-card sr">
           <h4>The nickname</h4>
           <div class="ref-sub">the sidebar line itself</div>
           <div class="cmd-row"><code>BTC ↗ $66,355</code><span class="right">live price + direction arrow</span></div>
           <div class="cmd-row"><span>Green name on an up day, red on a down day — via its self-managed color roles.</span></div>
         </div>
-        <div class="ref-card">
+        <div class="ref-card sr sr-d1">
           <h4>The status line</h4>
           <div class="ref-sub">rotates every 15 seconds</div>
           <div class="cmd-row"><code>Up $1,151.48 (+1.77%) from prev. close</code></div>
@@ -189,12 +191,12 @@
     </section>
 
     <section class="section">
-      <div class="section-head">
+      <div class="section-head sr">
         <h2>The roster</h2>
         <p>One bot per ticker, so each gets its own line in the member list.</p>
       </div>
       <div class="ref-grid">
-        <div class="ref-card">
+        <div class="ref-card sr">
           <h4>Live now</h4>
           <div class="cmd-row">
             <code>BTC</code>
@@ -202,7 +204,7 @@
             <span class="right"><a class="card-more" style="margin:0;color:var(--gold);" href="https://discord.com/oauth2/authorize?client_id=1529222506593128548&scope=bot&permissions=335544320" target="_blank" rel="noopener noreferrer">Add<i data-lucide="arrow-right"></i></a></span>
           </div>
         </div>
-        <div class="ref-card">
+        <div class="ref-card sr sr-d1">
           <h4>On the way</h4>
           <div class="cmd-row"><code>ETH</code><span>Ethereum</span></div>
           <div class="cmd-row"><code>SOL</code><span>Solana</span></div>

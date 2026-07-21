@@ -13,6 +13,7 @@ const DOT_DOWN = '#f23f43';
 const STATUS_CYCLE = ['change', 'liqtheory.com', 'change', 'discord.gg/LiquidityTheory'];
 
 let quotes = {}; // coin -> { px, prev }
+const lastPx = {}; // coin -> last painted price, for the change flash
 
 const fmtPrice = (v) => {
   if (v >= 10_000) return v.toLocaleString('en-US', { maximumFractionDigits: 0 });
@@ -50,12 +51,18 @@ function paint() {
     const diff = Math.abs(q.px - q.prev);
     const pct = (diff / q.prev) * 100;
 
-    const name = row.querySelector('.dmember-name');
-    const status = row.querySelector('.dmember-status');
+    const name = row.querySelector('.dmember-name, .ht-name');
+    const status = row.querySelector('.dmember-status, .ht-status');
     const dot = row.querySelector('.dmember-dot');
     if (name) {
       name.textContent = `${coin} ${up ? '↗' : '↘'} $${fmtPrice(q.px)}`;
       name.style.color = up ? UP : DOWN;
+      if (lastPx[coin] !== undefined && lastPx[coin] !== q.px) {
+        name.classList.remove('tick-flash');
+        void name.offsetWidth; // restart the animation
+        name.classList.add('tick-flash');
+      }
+      lastPx[coin] = q.px;
     }
     if (dot) dot.style.background = up ? DOT_UP : DOT_DOWN;
     if (status) {
