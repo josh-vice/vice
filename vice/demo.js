@@ -935,9 +935,21 @@ const HELP_TEXT = [
 function initDemo() {
   const root = document.getElementById('vc-demo');
   if (!root) return;
+  // ECharts arrives via a deferred CDN script — poll for it instead of racing
+  // it, and say so plainly if it never shows up (adblock, CDN hiccup).
+  const started = Date.now();
   if (!window.echarts) {
-    // ECharts CDN script may still be in flight — retry once the page finishes.
-    window.addEventListener('load', initDemo, { once: true });
+    if (Date.now() - (initDemo._t0 ?? (initDemo._t0 = started)) > 15_000) {
+      const skel = root.querySelector('.demo-skel');
+      const msg = root.querySelector('.demo-msg');
+      if (skel) skel.textContent = 'chart engine failed to load';
+      if (msg) {
+        msg.textContent = "the chart library didn't load — refresh the page, or see real bot output below";
+        msg.classList.add('demo-msg--err');
+      }
+      return;
+    }
+    setTimeout(initDemo, 200);
     return;
   }
   const input = root.querySelector('.demo-input');
@@ -992,6 +1004,7 @@ function initDemo() {
           : candleOption(effective, datasets[0], chartEl.clientHeight);
       }
       chart.setOption(option, { notMerge: true });
+      root.querySelector('.demo-skel')?.remove();
       say('rendered — same engine the Discord bot runs');
     } catch (err) {
       say(err.message, true);

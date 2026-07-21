@@ -19,7 +19,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="vice.css?v=1.6.0" />
+  <link rel="stylesheet" href="vice.css?v=1.8.0" />
 
   <!-- Lucide icons — same pinned build + SRI as the app shell -->
   <script src="https://cdn.jsdelivr.net/npm/lucide@1.23.0/dist/umd/lucide.min.js"
@@ -31,7 +31,7 @@
   <div class="wrap">
     <header class="top">
       <span class="vt-flamingo" role="img" aria-label="Vice Terminal"></span>
-      <span class="top-name">Vice <strong>Terminal</strong></span>
+      <span class="top-name">Vice <strong>Suite</strong></span>
       <nav class="top-right">
         <a class="top-link" href="https://vicesuite.com/pricebots"><i data-lucide="activity"></i><span>Tickers</span></a>
         <a class="top-link" href="https://vicesuite.com/chartbot"><i data-lucide="bar-chart-2"></i><span>Charts</span></a>
@@ -46,18 +46,47 @@
     </header>
 
     <section class="hero">
-      <p class="hero-kicker reveal">A <strong>Vice Terminal</strong> product line</p>
-      <h1 class="reveal d1">The <span class="grad">Vice Suite</span> — market tools where you already are.</h1>
-      <p class="hero-sub reveal d2">
-        Two free <strong>Discord bots</strong> for your server — live prices in the
-        sidebar and professional charts on demand — plus a full trading academy in
-        your browser. No accounts, terminal-native.
-      </p>
-      <div class="hero-ctas reveal d3">
-        <a class="btn btn-solid-teal" href="#suite"><i data-lucide="arrow-down"></i>See the suite</a>
-        <a class="btn" href="https://discord.gg/LiquidityTheory" target="_blank" rel="noopener noreferrer">Join the Discord</a>
+      <div class="hero-grid">
+        <div>
+          <h1 class="reveal d1">The <span class="grad">Vice Suite</span> — market tools where you already are.</h1>
+          <p class="hero-sub reveal d2">
+            Two free <strong>Discord bots</strong> for your server — live prices in the
+            sidebar and professional charts on demand — plus a full trading academy in
+            your browser. No accounts, terminal-native.
+          </p>
+          <div class="hero-ctas reveal d3">
+            <a class="btn btn-solid-teal" href="#suite"><i data-lucide="arrow-down"></i>See the suite</a>
+            <a class="btn" href="https://discord.gg/LiquidityTheory" target="_blank" rel="noopener noreferrer">Join the Discord</a>
+          </div>
+        </div>
+        <aside class="hero-tickers reveal d3" aria-hidden="true">
+          <div class="ht-label">LIVE IN YOUR MEMBER LIST</div>
+          <div class="ht-row">
+            <span class="ht-ic"><svg viewBox="0 0 32 32"><circle cx="16" cy="16" r="16" fill="#f7931a"/><path fill="#fff" d="M23.189 14.02c.314-2.096-1.283-3.223-3.465-3.975l.708-2.84-1.728-.43-.69 2.765c-.454-.114-.92-.22-1.385-.326l.695-2.783L15.596 6l-.708 2.839c-.376-.086-.746-.17-1.104-.26l.002-.009-2.384-.595-.46 1.846s1.283.294 1.256.312c.7.175.826.638.805 1.006l-.806 3.235c.048.012.11.03.18.057l-.183-.045-1.13 4.532c-.086.212-.303.531-.793.41.018.025-1.256-.313-1.256-.313l-.858 1.978 2.25.561c.418.105.828.215 1.231.318l-.715 2.872 1.727.43.708-2.84c.472.127.93.245 1.378.357l-.706 2.828 1.728.43.715-2.866c2.948.558 5.164.333 6.097-2.333.752-2.146-.037-3.385-1.588-4.192 1.13-.26 1.98-1.003 2.207-2.538zm-3.95 5.538c-.533 2.147-4.148.986-5.32.695l.95-3.805c1.172.293 4.929.872 4.37 3.11zm.535-5.569c-.487 1.953-3.495.96-4.47.717l.86-3.45c.975.243 4.118.696 3.61 2.733z"/></svg></span>
+            <span class="ht-info">
+              <span class="ht-name" style="color:#16c784;display:block;">BTC ↗ $66,355</span>
+              <span class="ht-status">Up $1,151.48 (+1.77%) from prev. close</span>
+            </span>
+            <span class="ht-app">APP</span>
+          </div>
+          <div class="ht-row">
+            <span class="ht-ic"><svg viewBox="0 0 32 32"><circle cx="16" cy="16" r="16" fill="#627eea"/><g fill="#fff"><path fill-opacity=".602" d="M16.498 4v8.87l7.497 3.35z"/><path d="M16.498 4L9 16.22l7.498-3.35z"/><path fill-opacity=".602" d="M16.498 21.968v6.027L24 17.616z"/><path d="M16.498 27.995v-6.028L9 17.616z"/><path fill-opacity=".2" d="M16.498 20.573l7.497-4.353-7.497-3.348z"/><path fill-opacity=".602" d="M9 16.22l7.498 4.353v-7.701z"/></g></svg></span>
+            <span class="ht-info">
+              <span class="ht-name" style="color:#ea3943;display:block;">ETH ↘ $1,921</span>
+              <span class="ht-status">Down $17.02 (0.89%) from prev. close</span>
+            </span>
+            <span class="ht-app">APP</span>
+          </div>
+          <div class="ht-row">
+            <span class="ht-ic"><svg viewBox="0 0 32 32"><circle cx="16" cy="16" r="16" fill="#181818"/><defs><linearGradient id="solg2" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#9945FF"/><stop offset="1" stop-color="#14F195"/></linearGradient></defs><g fill="url(#solg2)"><path d="M10.2 8.4h15.4l-3.6 3.8H6.6z"/><path d="M10.2 14.1H25.6l-3.6 3.8H6.6z" transform="scale(-1,1) translate(-32.2,0)"/><path d="M10.2 19.8h15.4l-3.6 3.8H6.6z"/></g></svg></span>
+            <span class="ht-info">
+              <span class="ht-name" style="color:#16c784;display:block;">SOL ↗ $151.24</span>
+              <span class="ht-status">liqtheory.com</span>
+            </span>
+            <span class="ht-app">APP</span>
+          </div>
+        </aside>
       </div>
-
     </section>
 
     <section class="section" id="suite">

@@ -236,6 +236,22 @@ function renderCommunity(containerId) {
 
       <hr class="cm-rule" />
 
+      <!-- the Vice Suite — free Discord bots, lives at vicesuite.com -->
+      <div class="cm-h">The Vice Suite</div>
+      <div class="cm-rows">
+        <a class="cm-row" style="--hue:#ff2e88" href="https://vicesuite.com" target="_blank" rel="noopener noreferrer">
+          <span class="cm-row-ic"><span class="vt-flamingo" style="width:20px;height:20px;"></span></span>
+          <span class="cm-row-info">
+            <span class="cm-row-title">vicesuite.com <span class="cm-row-meta">free Discord bots</span></span>
+            <span class="cm-row-desc">Our bots for your own server — live price tickers in the member list, and an
+            on-demand chart bot with 21 indicators, comparisons and price alerts. Free, like everything else.</span>
+          </span>
+          <span class="cm-row-cta">Explore <i data-lucide="arrow-up-right"></i></span>
+        </a>
+      </div>
+
+      <hr class="cm-rule" />
+
       <!-- team -->
       <div class="cm-h">The team</div>
       <div class="cm-team">

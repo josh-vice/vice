@@ -2,6 +2,12 @@
   "version": "0.0.1",
   "configurations": [
     {
+      "name": "vice-suite",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": ["-m", "http.server", "5311", "--directory", "/Users/pbot/.openclaw/workspace"],
+      "port": 5311
+    },
+    {
       "name": "landing-lesson",
       "runtimeExecutable": "python3",
       "runtimeArgs": ["-m", "http.server", "5301", "--directory", "."],

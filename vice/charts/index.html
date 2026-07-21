@@ -19,7 +19,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="../vice.css?v=1.6.0" />
+  <link rel="stylesheet" href="../vice.css?v=1.8.0" />
 
   <script src="https://cdn.jsdelivr.net/npm/lucide@1.23.0/dist/umd/lucide.min.js"
           integrity="sha384-ouAVEJVCMsf8Svzn+BwqbaBhxBEA0xgeVBhHnxmWd+Wqyv18yhWCQwGegFD/OHLq"
@@ -29,7 +29,7 @@
   <script src="https://cdn.jsdelivr.net/npm/echarts@5.6.0/dist/echarts.min.js"
           integrity="sha384-pPi0zxBAoDu6+JXW/C68UZLvBUUtU+7zonhif43rqj7pxsGyqyqzcian2Rj37Rss"
           crossorigin="anonymous" defer></script>
-  <script type="module" src="demo.js?v=1.0.0"></script>
+  <script type="module" src="../demo.js?v=1.0.2"></script>
 </head>
 <body>
 
@@ -37,7 +37,7 @@
     <header class="top">
       <a href="https://vicesuite.com/" style="display:flex;align-items:center;gap:10px;">
         <span class="vt-flamingo" role="img" aria-label="Vice Terminal"></span>
-        <span class="top-name">Vice <strong>Terminal</strong></span>
+        <span class="top-name">Vice <strong>Suite</strong></span>
       </a>
       <nav class="top-right">
         <a class="top-link" href="https://vicesuite.com/"><i data-lucide="layout-grid"></i><span>Suite</span></a>
@@ -51,7 +51,7 @@
     </header>
 
     <section class="hero">
-      <p class="hero-kicker reveal"><a href="https://vicesuite.com/">The Vice Suite</a> · A <strong>Vice Terminal</strong> product</p>
+      <p class="hero-kicker reveal"><a href="https://vicesuite.com/">← The Vice Suite</a></p>
       <h1 class="reveal d1"><span class="pink">Vice Charts</span> — the chart you want, one message away.</h1>
       <p class="hero-sub reveal d2">
         Type a command in any channel and get a rendered, professional chart back in
@@ -87,7 +87,7 @@
               <span class="dmsg-av" style="background:var(--grad-flamingo)">VC</span>
               <div class="dmsg-body">
                 <span class="dmsg-name" style="color:#ff8fbe">Vice Charts</span><span class="dmsg-app">APP</span><span class="dmsg-time">Today at 2:14 PM</span>
-                <img class="dmsg-img" src="example-indicators.png" alt="Rendered BTC chart reply with stacked indicators" loading="lazy" />
+                <img class="dmsg-img" src="../example-indicators.png" alt="Rendered BTC chart reply with stacked indicators" loading="lazy" />
               </div>
             </div>
             <div class="dmsg">
@@ -129,7 +129,7 @@
           <button class="demo-eg" data-cmd="btc 1d bear" type="button">bear (joke)</button>
           <button class="demo-eg" data-cmd="help" type="button">help</button>
         </div>
-        <div class="demo-chart" role="img" aria-label="rendered chart"></div>
+        <div class="demo-chart" role="img" aria-label="rendered chart"><div class="demo-skel">connecting to live market data…</div></div>
         <div class="demo-msg">loading…</div>
       </div>
     </section>
@@ -141,15 +141,15 @@
       </div>
       <div class="gallery">
         <figure class="shot wide">
-          <img src="example-indicators.png" alt="BTC hourly candlestick chart with EMA20, EMA55, Bollinger Bands, Supertrend, RSI and MACD panes" loading="lazy" />
+          <img src="../example-indicators.png" alt="BTC hourly candlestick chart with EMA20, EMA55, Bollinger Bands, Supertrend, RSI and MACD panes" loading="lazy" />
           <figcaption><code>vc btc 1h ema20 ema55 bb20 supertrend rsi14 macd</code> — overlays plus oscillator panes, stacked in one command.</figcaption>
         </figure>
         <figure class="shot">
-          <img src="example-movers.png" alt="Top 20 gainers over 24 hours plotted together as percentage lines" loading="lazy" />
+          <img src="../example-movers.png" alt="Top 20 gainers over 24 hours plotted together as percentage lines" loading="lazy" />
           <figcaption><code>vc best</code> — the day's top 20 gainers on one percentage chart, legend sorted by move.</figcaption>
         </figure>
         <figure class="shot">
-          <img src="example-compare.png" alt="BTC, ETH, SOL and DOGE compared on a percentage scale" loading="lazy" />
+          <img src="../example-compare.png" alt="BTC, ETH, SOL and DOGE compared on a percentage scale" loading="lazy" />
           <figcaption><code>vc btc,eth,sol,doge 1h</code> — up to 10 symbols rebased to % on one chart.</figcaption>
         </figure>
       </div>
