@@ -1,9 +1,8 @@
 /* Vice Charts — in-page live demo.
    This is the actual chart-bot engine ported to the browser: same command
    parser, same indicator math, same chart-option builder. Data comes straight
-   from the exchanges' public APIs (Hyperliquid + Coinbase + GeckoTerminal
-   allow CORS; KuCoin and Kraken don't, so kc:/kr: point users at the real
-   bot in Discord).
+   from the exchanges' public APIs (Hyperliquid + Coinbase allow CORS; KuCoin
+   and Kraken don't, so kc:/kr: point users at the real bot in Discord).
    Rendering: ECharts in the page instead of the bot's server-side PNG. */
 
 /* ── config / theme (mirrors the bot's config.js) ─────────────────────── */
@@ -89,59 +88,7 @@ async function coinbase(base, timeframe, limit) {
   return out.length ? out.slice(-limit) : null;
 }
 
-/* GeckoTerminal DEX pools (CORS-friendly): gt:<name> or a pasted contract
-   address. Same resolution as the bot: deepest pool wins. */
-const GT_API = 'https://api.geckoterminal.com/api/v2';
-const GT_TF = {
-  '1m': ['minute', 1], '5m': ['minute', 5], '15m': ['minute', 15],
-  '1h': ['hour', 1], '4h': ['hour', 4], '12h': ['hour', 12], '1d': ['day', 1],
-};
-const gtPools = new Map();
-
-async function gtResolve(query) {
-  const key = query.toLowerCase();
-  if (gtPools.has(key)) return gtPools.get(key);
-  const json = await getJson(`${GT_API}/search/pools?query=${encodeURIComponent(query)}&page=1`);
-  const pools = json?.data ?? [];
-  if (pools.length === 0) return null;
-  const best = [...pools.slice(0, 10)].sort(
-    (a, b) => Number(b.attributes.reserve_in_usd || 0) - Number(a.attributes.reserve_in_usd || 0),
-  )[0];
-  const pool = best.attributes.address;
-  const resolved = { network: best.id.slice(0, best.id.length - pool.length - 1), pool };
-  gtPools.set(key, resolved);
-  return resolved;
-}
-
-async function gecko(base, timeframe, limit) {
-  const tf = GT_TF[timeframe];
-  if (!tf) throw new Error(`GeckoTerminal supports 1m 5m 15m 1h 4h 12h 1d (not ${timeframe})`);
-  const friendly429 = (err) => {
-    if (/HTTP 429/.test(err.message)) throw new Error('GeckoTerminal rate limit hit — try again in a minute');
-    throw err;
-  };
-  const r = await gtResolve(base).catch(friendly429);
-  if (!r) return null;
-  const json = await getJson(
-    `${GT_API}/networks/${r.network}/pools/${r.pool}/ohlcv/${tf[0]}` +
-    `?aggregate=${tf[1]}&limit=${Math.min(limit, 1000)}&currency=usd&token=base`,
-  ).catch(friendly429);
-  const rows = json?.data?.attributes?.ohlcv_list;
-  if (!Array.isArray(rows) || rows.length === 0) return null;
-  const sym = (json.meta?.base?.symbol ?? base).toUpperCase();
-  const candles = rows
-    .map((k) => ({ t: k[0] * 1000, o: +k[1], h: +k[2], l: +k[3], c: +k[4], v: +k[5] }))
-    .sort((x, y) => x.t - y.t);
-  return { candles, venueLabel: 'GeckoTerminal', name: sym, pair: `${sym}/USD (${r.network})` };
-}
-
 async function fetchCandles(symbol, timeframe, limit) {
-  if (symbol.venue === 'gt') {
-    // addresses are case-sensitive (Solana) — no uppercasing
-    const r = await gecko(symbol.base, timeframe, limit);
-    if (!r) throw new Error(`no pool found on GeckoTerminal for "${symbol.base}"`);
-    return r;
-  }
   const base = symbol.base.toUpperCase();
   if (symbol.venue === 'kc' || symbol.venue === 'kr') {
     throw new Error(`${symbol.venue === 'kc' ? 'KuCoin' : 'Kraken'} data isn't reachable from a browser — the real bot in Discord covers it`);
@@ -457,7 +404,6 @@ const IND_DEFAULTS = {
 };
 const IND_RE = /^(ema|sma|wma|dema|tema|hma|alma|lsma|rma|vwma|vwap|bb|supertrend|rsi|macd|stoch|atr|adx|cci|mfi|obv)(\d{1,3})?$/i;
 const SYMBOL_RE = /^(?:(hl|kc|cb|kr):)?([a-z0-9]{2,20})$/i;
-const DEX_ADDR_RE = /^(?:0x[0-9a-fA-F]{40}|[1-9A-HJ-NP-Za-km-z]{32,44})$/;
 const PENDING = {
   oi: 'open interest overlay', liq: 'liquidation heatmap', sl: 'stop-loss clusters',
   tp: 'take-profit clusters', news: 'news overlay', table: 'news table',
@@ -466,9 +412,6 @@ const PENDING = {
 const TZ_OFFSET_MIN = { utc: 0, est: -300, edt: -240, cst: -360, cdt: -300, mst: -420, mdt: -360, pst: -480, pdt: -420 };
 
 function parseSymbol(token) {
-  const gt = /^gt:(.+)$/i.exec(token);
-  if (gt) return { base: gt[1], venue: 'gt' };
-  if (DEX_ADDR_RE.test(token)) return { base: token, venue: 'gt' };
   const m = SYMBOL_RE.exec(token);
   if (!m) throw new Error(`can't read symbol "${token}"`);
   return { base: m[2].toUpperCase(), venue: m[1]?.toLowerCase() ?? 'auto' };
@@ -512,9 +455,8 @@ function parseCommand(text) {
     mode: 'candles', symbols: [], timeframe: DEFAULT_TIMEFRAME, count: DEFAULT_CANDLES,
     indicators: [], percent: false, markers: [], fromTs: null, shade: [], joke: null,
   };
-  // raw, not lowercased — DEX addresses are case-sensitive
-  const symExpr = tokens.shift();
-  if (symExpr.includes('/') && !/^https?:/i.test(symExpr)) {
+  const symExpr = tokens.shift().toLowerCase();
+  if (symExpr.includes('/') && !symExpr.startsWith('http')) {
     const [a, b] = symExpr.split('/');
     cmd.mode = 'ratio';
     cmd.symbols = [parseSymbol(a), parseSymbol(b)];
@@ -594,7 +536,6 @@ function parseCommand(text) {
 const fmtPrice = (v) => {
   if (v == null || !Number.isFinite(v)) return '';
   const abs = Math.abs(v);
-  if (abs > 0 && abs < 0.001) return v.toLocaleString('en-US', { maximumSignificantDigits: 3 });
   const digits = abs >= 1000 ? 0 : abs >= 10 ? 2 : abs >= 0.1 ? 4 : 6;
   return v.toLocaleString('en-US', { maximumFractionDigits: digits });
 };
@@ -997,9 +938,8 @@ const HELP_TEXT = [
   'charts: btc · eth 4h · sol 5m s · btc 1h %',
   'indicators: btc 1h ema20 ema55 bb20 rsi14 macd (21 available)',
   'compare: btc,eth,sol 1h — ratio: btc/eth 4h — movers: best / worst',
-  'dex: gt:pepe 1h, or paste a contract address (deepest pool wins)',
   'extras: weekends · usmarket · time:2026-07-04 · from:nyo · over/bear/bull',
-  'venues here: Hyperliquid (default) + cb: Coinbase + gt: DEX pools — kc:/kr: need the real bot',
+  'venues here: Hyperliquid (default) + cb: Coinbase — kc:/kr: need the real bot',
 ].join('\n');
 
 function initDemo() {
@@ -1042,7 +982,7 @@ function initDemo() {
     const first = body.split(/\s+/)[0].toLowerCase();
 
     if (first === 'help') { say(HELP_TEXT); return; }
-    if (first === 'exchanges') { say('Hyperliquid perps (default), cb: Coinbase, and gt: GeckoTerminal DEX pools work right here in the browser. KuCoin + Kraken need the real bot in Discord.'); return; }
+    if (first === 'exchanges') { say('Hyperliquid perps (default) and cb: Coinbase work right here in the browser. KuCoin + Kraken need the real bot in Discord.'); return; }
     if (first === 'trumpdays') { say(`${Math.ceil((Date.UTC(2029, 0, 20) - Date.now()) / 86_400_000)} days until Jan 20, 2029`); return; }
     if (first === 'alert' || first === 'alerts' || first === 'unalert') {
       say('alerts ping a Discord channel, so they live in the real bot — add Vice Charts to your server to use them'); return;
@@ -1091,30 +1031,6 @@ function initDemo() {
   });
   run('btc 1h ema20 ema55'); // opening render so the demo is alive on arrival
 }
-
-/* Engine export for Vice Hub's native chart widget (../hub.js). The demo UI
-   above only boots when #vc-demo exists, so on /hub this file is a pure
-   library: full bot parser + venues (HL/Coinbase/GeckoTerminal) + builders. */
-window.ViceChartEngine = {
-  parseCommand,
-  async buildOption(body, height) {
-    const text = body.trim();
-    const first = text.split(/\s+/)[0]?.toLowerCase();
-    if (first === 'best' || first === 'worst') return moversOption(first);
-    const cmd = parseCommand(text);
-    let count = cmd.count;
-    const oldest = Math.min(cmd.fromTs ?? Infinity, ...cmd.markers.map((m) => m.ts));
-    if (Number.isFinite(oldest)) {
-      count = Math.min(MAX_CANDLES, Math.max(count, Math.ceil((Date.now() - oldest) / tfMs(cmd.timeframe)) + 5));
-    }
-    const effective = { ...cmd, count };
-    const fetchLimit = cmd.mode === 'candles' ? count + WARMUP : count;
-    const datasets = await Promise.all(cmd.symbols.map((s) => fetchCandles(s, cmd.timeframe, fetchLimit)));
-    return cmd.mode === 'ratio' ? ratioOption(effective, datasets)
-      : cmd.mode === 'compare' ? compareOption(effective, datasets)
-      : candleOption(effective, datasets[0], height);
-  },
-};
 
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', initDemo);

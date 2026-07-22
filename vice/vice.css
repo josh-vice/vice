@@ -168,6 +168,8 @@ h1 .gold { color: var(--gold); }
 .btn-solid-pink { background: var(--pink); border-color: var(--pink); color: #fff; }
 .btn-solid-gold { background: var(--gold); border-color: var(--gold); color: var(--bg); }
 .btn-gold { border-color: var(--gold); color: var(--gold); }
+.btn-purple { border-color: var(--purple); color: var(--purple); }
+.btn-solid-purple { background: var(--purple); border-color: var(--purple); color: #fff; }
 
 /* ── sections ────────────────────────────────────────────── */
 .section { padding: 0 0 72px; }
@@ -178,6 +180,11 @@ h1 .gold { color: var(--gold); }
 /* ── offering cards (hub) — the app's course-card interaction ── */
 .cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
 @media (max-width: 900px) { .cards { grid-template-columns: 1fr; } }
+/* two half-height bot cards stacked in one grid cell */
+.card-stack { display: flex; flex-direction: column; gap: 18px; }
+.card-stack .card { flex: 1; }
+.card-compact p.desc { flex: 1; margin-bottom: 18px; }
+.card-compact .card-top { margin-bottom: 14px; }
 .card {
   --caccent: var(--teal);
   position: relative;
@@ -192,6 +199,7 @@ h1 .gold { color: var(--gold); }
 .card.c-teal { --caccent: var(--teal); }
 .card.c-pink { --caccent: var(--pink); }
 .card.c-gold { --caccent: var(--gold); }
+.card.c-purple { --caccent: var(--purple); }
 @media (hover: hover) and (pointer: fine) {
   .card:hover .card-icon { border-color: var(--caccent); }
   .card:hover {

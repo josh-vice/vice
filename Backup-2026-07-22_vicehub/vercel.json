@@ -21,11 +21,6 @@
       "destination": "/vice/tickers/index.html"
     },
     {
-      "source": "/hub",
-      "has": [{ "type": "host", "value": "(www\\.)?vicesuite\\.com" }],
-      "destination": "/vice/hub/index.html"
-    },
-    {
       "source": "/:path*",
       "has": [{ "type": "host", "value": "(www\\.)?vicesuite\\.com" }],
       "destination": "/vice/:path*"

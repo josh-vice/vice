@@ -1092,30 +1092,6 @@ function initDemo() {
   run('btc 1h ema20 ema55'); // opening render so the demo is alive on arrival
 }
 
-/* Engine export for Vice Hub's native chart widget (../hub.js). The demo UI
-   above only boots when #vc-demo exists, so on /hub this file is a pure
-   library: full bot parser + venues (HL/Coinbase/GeckoTerminal) + builders. */
-window.ViceChartEngine = {
-  parseCommand,
-  async buildOption(body, height) {
-    const text = body.trim();
-    const first = text.split(/\s+/)[0]?.toLowerCase();
-    if (first === 'best' || first === 'worst') return moversOption(first);
-    const cmd = parseCommand(text);
-    let count = cmd.count;
-    const oldest = Math.min(cmd.fromTs ?? Infinity, ...cmd.markers.map((m) => m.ts));
-    if (Number.isFinite(oldest)) {
-      count = Math.min(MAX_CANDLES, Math.max(count, Math.ceil((Date.now() - oldest) / tfMs(cmd.timeframe)) + 5));
-    }
-    const effective = { ...cmd, count };
-    const fetchLimit = cmd.mode === 'candles' ? count + WARMUP : count;
-    const datasets = await Promise.all(cmd.symbols.map((s) => fetchCandles(s, cmd.timeframe, fetchLimit)));
-    return cmd.mode === 'ratio' ? ratioOption(effective, datasets)
-      : cmd.mode === 'compare' ? compareOption(effective, datasets)
-      : candleOption(effective, datasets[0], height);
-  },
-};
-
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', initDemo);
 } else {
