@@ -98,7 +98,7 @@ i[data-lucide] { display: inline-block; width: 1em; height: 1em; }
 }
 .top-name { font-weight: 700; font-size: 14px; letter-spacing: 0.3px; white-space: nowrap; }
 .top-name strong { color: var(--pink); }
-.top-right { margin-left: auto; display: flex; align-items: center; gap: 18px; }
+.top-right { margin-left: auto; display: flex; align-items: center; gap: 30px; }
 .top-link {
   font-size: 13px; color: var(--text2);
   display: inline-flex; align-items: center; gap: 6px;
@@ -107,7 +107,7 @@ i[data-lucide] { display: inline-block; width: 1em; height: 1em; }
 }
 .top-link:hover { color: var(--teal); }
 .top-link svg, .top-link i { width: 15px; height: 15px; }
-@media (max-width: 620px) { .top-link span { display: none; } }
+@media (max-width: 620px) { .top-link span { display: none; } .top-right { gap: 20px; } }
 
 /* ── hero ────────────────────────────────────────────────── */
 .hero { padding: 56px 0 64px; }
