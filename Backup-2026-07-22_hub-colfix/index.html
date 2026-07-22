@@ -19,11 +19,11 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="../vice.css?v=2.7.0" />
+  <link rel="stylesheet" href="../vice.css?v=2.6.0" />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gridstack@12.6.0/dist/gridstack.min.css"
         integrity="sha384-v0+pyCGvaIDMe1HS4sAK/N5W4dvvEUFvTvAW9CmGumaXgHxaYO56Ow3DULWhd/kO"
         crossorigin="anonymous" />
-  <link rel="stylesheet" href="../hub.css?v=1.21.1" />
+  <link rel="stylesheet" href="../hub.css?v=1.11.2" />
 
   <script src="https://cdn.jsdelivr.net/npm/lucide@1.23.0/dist/umd/lucide.min.js"
           integrity="sha384-ouAVEJVCMsf8Svzn+BwqbaBhxBEA0xgeVBhHnxmWd+Wqyv18yhWCQwGegFD/OHLq"
@@ -36,9 +36,8 @@
   <script src="https://cdn.jsdelivr.net/npm/echarts@5.6.0/dist/echarts.min.js"
           integrity="sha384-pPi0zxBAoDu6+JXW/C68UZLvBUUtU+7zonhif43rqj7pxsGyqyqzcian2Rj37Rss"
           crossorigin="anonymous" defer></script>
-  <script type="module" src="../demo.js?v=1.2.1"></script>
-  <script src="../vchart.js?v=1.4.0" defer></script>
-  <script src="../hub.js?v=2.10.5" defer></script>
+  <script type="module" src="../demo.js?v=1.2.0"></script>
+  <script src="../hub.js?v=1.14.0" defer></script>
   <script src="../vice.js?v=1.2.0" defer></script>
 </head>
 <body class="hub-page">
@@ -48,12 +47,8 @@
       <a class="hub-brand" href="https://vicesuite.com/" title="The Vice Suite">
         <span class="vt-flamingo" role="img" aria-label="Vice Terminal"></span>
       </a>
-      <a class="hub-bar-title" href="#/" title="Back to the dashboard">Vice <strong>Hub</strong></a>
+      <span class="hub-bar-title">Vice <strong>Hub</strong></span>
       <button id="hub-price" class="hub-live" type="button" title="Focus on this market"><span class="dot"></span><span class="hp-txt">—</span></button>
-      <nav id="hub-nav" class="hub-nav" aria-label="Hub sections">
-        <a href="#/" data-sec="dash" title="Your customizable dashboard"><i data-lucide="layout-dashboard"></i><span>Dashboard</span></a>
-        <a href="#/chart" data-sec="chart" title="Full-page charting"><i data-lucide="candlestick-chart"></i><span>Chart</span></a>
-      </nav>
       <span class="spacer"></span>
       <button id="hub-focus" class="hub-btn" type="button" title="Focus on one ticker (F)"><i data-lucide="crosshair"></i><span>Focus</span></button>
       <button id="hub-pal" class="hub-btn hub-pal-hint" type="button" title="Command palette"><i data-lucide="search"></i><kbd>⌘K</kbd></button>
@@ -83,7 +78,6 @@
     </div>
 
     <div id="hub-grid" class="grid-stack"></div>
-    <div id="hub-section" class="hub-sec" hidden></div>
     <div id="hub-empty" class="hub-empty" hidden>
       <i data-lucide="layout-dashboard"></i>
       <p>This layout is empty.</p>
@@ -94,7 +88,7 @@
   <footer class="footer">
     <div class="wrap foot-inner">
       <span>Vice Hub — layouts live in your browser. No account, nothing leaves your machine.</span>
-      <span class="foot-links"><a href="https://vicesuite.com/">Suite</a> <a href="https://vicesuite.com/pricebots">Tickers</a> <a href="https://vicesuite.com/chartbot">Charts</a> <a href="https://liqtheory.com/" target="_blank" rel="noopener noreferrer">Academy</a></span>
+      <span>a <a href="https://vicesuite.com/">Vice Terminal</a> product</span>
     </div>
   </footer>
 

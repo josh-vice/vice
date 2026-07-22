@@ -5,7 +5,417 @@ The Vice Suite is Vice Terminal's product line: **7 Discord price-ticker bots**,
 /hub, built this session), and **Vice Academy** (= liqtheory.com, untouched).
 Site: **vicesuite.com** (same Vercel project as liqtheory.com). Everything is free.
 
-## 0. END-OF-SESSION STATE (2026-07-22, read this first)
+## 0-FINAL-NIGHT. THIRD 2026-07-22 SESSION — VICE CHART PRO (read THIS first)
+
+**PROD still runs v1.14.0.** The deploy batch GREW tonight: everything in the
+old 0-FINAL below PLUS the owner-directed Chart-page overhaul.
+
+**LOCAL END-STATE — hub.js v2.9.2 / hub.css v1.17.2 / vchart.js v1.1.1 (NEW
+file, vice ROOT) / vice-coinalyze +volh kind (api AND dev server, lockstep):**
+
+- **/hub #/chart is now OUR OWN CHART** (`vice/vchart.js`, `window.VChartPro`,
+  registered as widget `vChartPro` — also tray-addable/pinnable, w16 h13).
+  TV embed is gone from the page (tvChart widget itself still in registry).
+  Owner asked "use TV charts as base + overlay" — NOT possible: the free TV
+  embed is a cross-origin iframe (no overlay, no zoom sync); Velo pays for
+  TV's self-hosted Charting Library license. Told the owner; ours is ECharts
+  canvas (same base as the LT sim chart), TV-styled.
+- **Engine**: HL candles (5m/15m/1h/4h/1d, BARS_FOR per TF), 5s live merge,
+  pan/zoom (dataZoom inside) w/ follow-live + zoomSpan, crosshair drives
+  Velo-style legend rows (OHLC + one row per indicator, live values, hover
+  gear→settings popover, ×→remove). Legend rows are built ONCE and only
+  values repaint (rebuilding per tick killed popovers/buttons — gotcha).
+  Toolbar: TV-style symbol button (BTC USD ⌄) → search modal (HL universe
+  by volume, movers-proxy icons, live px/chg, arrows/Enter/Esc, free-typed
+  tickers), TF chips, Indicators menu (2-col, all 19), Heatmap toggle,
+  opacity slider (heatAlpha, shows only when on), fullscreen. Setup persists
+  to localStorage `viceHub.vchartPro` {tf, heat, heatAlpha, active[]}.
+- **All 19 <Velo> indicators implemented as <Vice>** (defs researched from
+  docs.velo.xyz/web-app/chart.md): Agg Funding (OI-weighted across venues,
+  1h/8h/24h/1y standardization — proxy APR ÷ {8760,1095,365,1}), Funding,
+  Cross-Exchange Funding, Agg OI (stack/total/delta), OI, Agg Liqs
+  (BIN/BYB/OKX only — no DER/HL liq feed exists, footnoted), Liqs, Volume
+  ($/coin), Agg Volume (venue stack via NEW volh kind / delta / CVD via cvd
+  kind), Agg Spot Volume (CB+KR), Premium + Coinbase Premium (HL perp vs CB
+  spot legs), Tape + Agg Tape (HL candle `n` = trade count!) + Spot Tape
+  (Kraken OHLC count col), MA (SMA/EMA/VWAP/OIWMA approx), Returns, Realized
+  Vol (ann. stdev), Total Return (perp value incl. funding, overlay).
+  Hourly Coinalyze series resample to chart TF (stepTo/sumTo w/ smear).
+  czKind promise-cache 120s; liveTick refreshes all indicators (cache makes
+  it network-free); loadSeq token drops stale async results on sym/tf switch
+  (cross-symbol misalign crashed draw before — guarded + per-series try).
+- **Toggle Heatmap = MODELED LIQUIDATION MAP (vchart.js v1.2.2)** — the
+  live book recorder was built first, but the owner showed Velo's
+  before/after: their map covers the WHOLE candle history the instant it's
+  toggled, which no free historical depth feed can serve. Rebuilt the way
+  the well-known liq maps work: every bar seeds estimated long/short liq
+  prices (leverage tiers 10/25/50/100x, maintenance buffer 0.4%, weights
+  .18/.30/.32/.20) at bar close, weighted by the bar's $ volume; each level
+  glows until a later bar trades through it (runs per price bin, split only
+  when intensity moves >35% so the rect count stays low). Instant on
+  toggle, all TFs, updates live, cached per (sym,tf,bars). Look tuned to
+  the reference over 3 iterations: 430 bins across the loaded range, log
+  intensity normalized BETWEEN observed min/max (absolute logs cluster and
+  wash out), noise floor 0.3, gamma 0.72 lift, alpha (0.05+rel·0.9)×slider,
+  indigo→violet→magenta→straw ramp. The old book recorder is DELETED
+  (viceHub.vheat.* localStorage keys are now orphans — harmless).
+  Rendered as ECharts custom series UNDER candles;
+  **MUST keep `encode:{x:[0,1],y:[2,3]}`** (without it dim1 pollutes the y
+  axis → axis to 0) and bins are clipped to the VISIBLE candle range
+  (viewIdx tracked from datazoom, redraw 140ms after gesture) or far-tier
+  levels stretch the axis flat.
+- **Screener rebuilt 1:1 Velo** (same vScreener widget id): Favorites-only +
+  News checkboxes, Auto (refresh cadence), All Exchanges (BIN/BYB/OKX/CB/
+  KR/KuCoin/Bitget/HTX — TV scanner has NO Hyperliquid), Watchlist filter,
+  All|Crypto|TradFi segmented, search, ★ favorites (localStorage
+  viceHub.scrFavs), TV coin logos, sortable Price/24h/Volume. Data: TV
+  `coin/scan` (composite, text/plain trick) / `crypto/scan` filtered by
+  exchange (pair `24h_vol|5` = USD turnover; raw `volume` is base units —
+  don't multiply), TRADFI_BOOK quotes w/ logoids, News mode = vice-news
+  feed. Row click → linkSymbol.
+- **CSS gotchas**: `.vpanel-body .vw-scroll` (0-2-0) beats new single-class
+  rules — scope overrides (`.vscr2 .vscr2-scroll`); chart page hides
+  `.vpanel-head` via `.vp-chartpro` (engine has its own toolbar).
+- **vice-dev launch config is now autoPort** (dev server reads PORT env,
+  launch.json runtimeArgs dropped the hardcoded 5323) — parallel sessions
+  stop fighting over the port. KEEP api/vice-coinalyze.js + dev server in
+  LOCKSTEP (volh added to both tonight).
+
+**UX AUDIT ROUND (same night, after the heatmap rebuild)** — 6-agent
+multi-lens audit (85 findings) + hands-on stress test, fixes implemented.
+Final versions: **vchart.js 1.4.0 / hub.js 2.10.0 / hub.css 1.19.1 /
+vice.css +tokens / demo.js 1.2.1**. What changed:
+- **`--mono` was NEVER DEFINED** — every `font: … var(--mono)` shorthand in
+  the vcp/vscr2 chrome was invalid and fell back to 15px body scale. Token
+  added to vice.css :root (+ `--red`/`--red2`; all hardcoded #ff6473/#ff8b96
+  in hub.css replaced). THE reason the toolbar didn't feel terminal-dense.
+- **Snappiness**: draw() now computes a structure fingerprint — unchanged
+  structure = setOption MERGE (crosshair/hover/zoom survive live ticks; the
+  5s full-notMerge rebuild was the flicker), structural changes = notMerge
+  with the zoom window ALWAYS pinned from viewIdx. datazoom reads the event
+  payload (getOption deep-cloned the world per wheel event). Heatmap
+  progressive:0 (chunked paint popped in). Resize→scheduleDraw.
+- **Races fixed**: reload() + liveTick() now both hold a loadSeq token
+  across their awaits (rapid TF/symbol switches could interleave: 1h bars
+  under a 5m header, BTC candle spliced into an ETH series). Per-indicator
+  _seq guards settings flips. czKind failures back off 60s (was a 5s retry
+  storm); spot legs (CB/KR) got a 60s promise cache (refired every tick).
+  First-load failure now retries via liveTick instead of dying. Unknown
+  symbol reverts the toolbar to the last good sym.
+- **Trader features**: indicators are MULTI-INSTANCE (per-uid — EMA 20 +
+  EMA 200 finally possible; menu badge shows counts, click always adds,
+  legend × removes; loadSetup migrates + validates old entries). Chart page
+  fills the viewport (calc(100dvh−122px) — was a fixed 660px strip). Legend
+  title carries "· UTC". Typing a letter over the chart opens symbol search
+  prefilled (TV muscle memory). Sub-panes capped at 8 with price pane
+  reserved first (was negative-height at 6+ subs). Search is
+  case-insensitive vs HL's kPEPE-style listings w/ loading/failed states.
+  CVD no longer fabricates a flat zero lead-in. Fullscreen checks element
+  identity, flips its icon, hides on iOS.
+- **Nav/IA**: section pages hide dashboard-only controls (layout select,
+  Edit, Add) AND the ⋮ menu's layout-management entries (suite links stay).
+  linkSymbol on the chart page re-points the mounted engine IN PLACE (was a
+  full teardown). Palette Edit/Add actions route to the dashboard first;
+  'e' hotkey is dashboard-only; enterFocus exits sections first. Hub
+  wordmark links to #/. Footers standardized on all 4 pages (Hub added,
+  'liqtheory.com' relabeled 'Academy').
+- **Polish**: focus-visible teal rings across chart toolbar + screener,
+  radius scale normalized to var(--radius)/var(--radius-lg) (5px/8px drift
+  gone), legend buttons reveal via opacity (no width jump), veils fade
+  (veilIn) with the card doing the motion, toast keyframe keeps its
+  translateX centering, ⋮ menu scales from its corner, countdown bar
+  animates scaleX not width, edit-grid guides track the dynamic cell height
+  (--hub-cell), screener star got a real hit area + touch visibility,
+  hover transforms gated to (hover:hover), container queries adapt the
+  vcp bar/menu + vscr2 columns inside narrow widgets (page media queries
+  lied there), 16px inputs at coarse pointers (iOS zoom), safe-area insets
+  consumed, demo.js/demo panel joined the suite palette (#0d0b18).
+- **NOT done (roadmap)**: /pricebots→/tickers slug rename (owner call: URL
+  change + 301s), absolute→relative internal links, bar-close countdown on
+  the price axis, per-widget vchart setups (two pinned Pro charts still
+  share viceHub.vchartPro + clobber each other's prefs), screener/vFunding
+  per-tick innerHTML rebuilds, gridstack touch resize handle.
+
+**NAV/DENSITY ROUND (owner: "still clunky and too big")** — final batch is
+now **hub.js 2.10.4 / hub.css 1.21.1 / vice.css 2.7.0**:
+- Hub bar 51px → 35px: buttons/select/nav DEBOXED (quiet text, hover
+  reveals surface; only Edit-active/primary keep fills), brand 18px,
+  11.5px controls. Chart toolbar matches (deboxed, 36px); chart height
+  calc(100dvh−104px). Site header (.top) tightened to match.
+- **TICKER TAPE was broken** (owner screenshot: prices clipped, header
+  half the widget): the tape widget was h:2 = 60px total (27px header +
+  19px body) vs TV's 72px band. Fix: displayMode 'regular' (one-line
+  marquee, prices inline), manifest h/minH 3, PRESETS rewritten (all 3
+  tapes h:3, every row below shifted +1) and a load() migration that
+  grows stored tapes AND shifts the rows below — growing h alone made
+  gridstack exile the tape to the board's bottom (learned the hard way).
+- Screener controls compacted to app scale (10.5px chks/selects/tabs,
+  custom-chevron selects, 5px paddings) — they rendered ~1.5× the rest
+  of the site.
+- GOTCHA for anyone probing: pages are cached without headers by the
+  python dev server — a stale index.html serves OLD ?v= asset URLs; hard
+  refresh (Cmd+Shift+R) before judging whether a change landed.
+
+**DEPLOY (owner)**: unchanged — add COINALYZE_API_KEY env → `vercel --prod`.
+Post-deploy adds: /hub serves hub.js 2.9.2 + vchart.js 1.1.1 (cache-bust!),
+#/chart shows OUR chart (candles + toolbar, no TV iframe), indicators fill
+(agg funding/OI/liqs need the env key), Toggle Heatmap starts recording,
+screener fills w/ TV logos + exchange filter works,
+`/api/vice-coinalyze?kind=volh&sym=BTC&days=2` returns venues.
+
+**STILL OPEN**: owner deploy + env key · rotate BTC bot token + Coinalyze key
+someday · www→apex flip · chart-bot phase-3 (mc view, daily/weekly movers,
+OI, categories, baskets, Polymarket, gt: alerts — APIs verified working this
+session: CG markets w/ 7d% + market_chart + categories, Polymarket
+gamma public-search + clob prices-history, GT pool price, HL openInterest;
+backup at DiscordBots/Backup-2026-07-22_phase3/, nothing built yet) ·
+optional page restores from ~/Desktop/veloclone. NOTE: ticker app icons are
+DONE — owner already uploaded coin logos for all 7 apps (verified via API).
+Backups: workspace Backup-2026-07-22_vchartpro/ (hub.js/hub.css/index/
+coinalyze/dev-server pre-overhaul).
+
+---
+
+## 0-FINAL. END OF 2026-07-22 (historical — superseded by 0-FINAL-NIGHT)
+
+**PROD** runs the v1.14.0 batch (deployed midday). Everything below is LOCAL,
+verified, waiting on one deploy.
+
+**LOCAL END-STATE — hub.js v2.7.0 / hub.css v1.15.0 (+ vice.css 2.6.0):**
+- /hub = **Dashboard + Chart only** (2-tab nav; dead hashes → Dashboard).
+  The multi-page Velo clone was built, then owner clarified he only wanted
+  the two pages — the FULL clone (v2.6.0, all 7 pages) is snapshotted at
+  **~/Desktop/veloclone/** with a restore README. Do not rebuild pages
+  unless asked; restore from the snapshot instead.
+- The **widget registry keeps every analytics widget** built tonight, all
+  tray-addable + pinnable: venue vol/OI snapshots, Funding Rate (APR),
+  OI history, Price, CVD, Liquidations, 3M Basis, Volume, seasonality ×2,
+  session returns, DVOL/IV-term/top-options/ATM-IV/25d-skew/spot-vol/
+  IV-slope, Funding APR heatmap, sectors, OI-normalized CVD, market
+  vol/OI, cross-asset screener, funding matrix (BIN/OKX/BYB/HL/DER).
+- Critical fixes riding this batch: **layout-corruption fix** (hidden-tab
+  load collapsed gridstack cols and persisted garbage — prod still bites
+  until deploy; users can menu→Reset), window-fit cellHeight, segmented
+  nav redesign, TV-embed fill in section panels, HYPE→COINBASE:HYPEUSD
+  everywhere (+ store migration + Market Overview lead:indices migration).
+- **API functions in the batch**: vice-coinalyze (multi-venue liqs/oi/
+  funding/cvd/vol + snap + whole-market kinds; credit-aware), vice-okx
+  (rubik+liq proxy), vice-deribit (chart-data incl. OPTION instruments),
+  vice-movers (adds fdv + c7d). vice-fng stays deleted.
+- **Ticker bot**: HYPE feed switched to COINBASE:HYPEUSD, restarted,
+  verified. Both bots healthy under launchd.
+
+**DEPLOY (owner)**: add Vercel env **COINALYZE_API_KEY** (free key, also at
+~/.openclaw/vice-dev.env) → `vercel --prod`. Post-deploy: /hub serves
+v2.7.0 (cache-bust when probing!), nav = Dashboard|Chart, layout survives
+background-tab load, /api/vice-coinalyze?kind=oisnap&sym=BTC returns
+venues [BIN,BYB,OKX,DER,HL], tray widgets fill (liqs/OI/CVD panels).
+
+**DEV HARNESS**: launch config "vice-dev" (port 5323) runs
+tools/vice-dev-server.py — statics + real /api/vice-* locally (reads the
+key file; forwards deployed fns to prod). KEEP IT IN LOCKSTEP with the
+api/*.js functions. Coinalyze free tier is **SYMBOL-WEIGHTED: every coin
+in a batched request counts toward 40/min** — the dev server has a
+credit-weighted queue + caches; don't hammer it with curls.
+
+**STILL OPEN**: owner deploy + env key · coin-logo Discord icons for the
+6 newer ticker apps · rotate BTC bot token + Coinalyze key someday ·
+www→apex flip · chart-bot phase-3 remainder (see §3) · optional page
+restores from ~/Desktop/veloclone.
+
+---
+
+## 0-NEW. SECOND 2026-07-22 SESSION (historical — superseded by 0-FINAL)
+
+**Owner deployed the v1.14.0 batch mid-day.** Post-deploy checklist ran clean:
+/hub live, vice-news/headlines/movers all answering, vice-fng 404 as intended,
+**crypto screener FILLS on the real domain** (localhost ghosting was referrer
+gating). Stock screener ghosts even standalone on tradingview-widget.com —
+TV-side, not our config. Watch for STALE EDGE CACHE on first probes after a
+deploy: re-curl with a cache-buster before diagnosing.
+
+Built this session (hub.js **v2.0.0** / hub.css **v1.12.0** + new
+`api/vice-okx.js` — verified locally, **NOT deployed**):
+- **CRITICAL FIX — layout corruption**: loading /hub in a hidden/narrow window
+  collapsed gridstack to 2/6 cols; re-expanding to 24 was lossy (widths ×2,
+  rows cascade into a broken stack) and got PERSISTED because the change event
+  fires with getColumn() already 24. boot() now tracks lastCol and re-applies
+  store geometry on any return to 24 cols (store insts are never clamped =
+  authoritative), plus a resize backstop. **Prod v1.14.0 still corrupts until
+  the next deploy** — users who hit it: menu → Reset to default.
+- **fitCells()**: cellHeight now tracks grid width (owner: "scale to the
+  window") — gridW/24×0.68, clamped 30–52.
+- **HYPE = COINBASE:HYPEUSD** everywhere (CRYPTO:HYPEUSD has no scanner data —
+  dead tape slot). Ticker bot config updated + restarted + verified live.
+  load() migration patches saved tapes and sets Market Overview lead:'indices'
+  on migrated TradFi/Macro layouts (owner-reported "still shows crypto" bug).
+- **VELO CLONE phase 1** (owner: replicate velo.xyz pages 1:1 with our UI;
+  Dashboard untouched; pinnable panels): hash-routed pages on /hub —
+  `#/chart` (TV chart + cross-asset screener), `#/news`, `#/futures/SYM`
+  (venue vol/OI snapshots, funding APR history, OI history, price, taker CVD,
+  daily volume, annualized basis, seasonality hour/day, session returns,
+  liquidity map — asset chips BTC/ETH/SOL/HYPE/XRP/ZEC), `#/options` (Deribit:
+  DVOL candles, IV term structure, top-volume options, OI by strike/expiry,
+  BTC/ETH), `#/market` (return buckets, price/OI change leaders, funding
+  matrix, heatmap), `#/tradfi` (dated-futures OI/volume/basis/funding + TradFi
+  quote board + stock heatmap). Every panel has a **pin** button →
+  pinInstance() appends {type, settings} to the active dashboard layout.
+  All new panels are real registry widgets (also in the Add tray).
+- **Data facts learned**: OKX rubik endpoints have NO CORS → `api/vice-okx.js`
+  proxy (strict allowlist; OI-history + taker-CVD panels only fill via proxy =
+  on prod); rubik caps ~100 points; Bybit geo-blocks US like Binance; Deribit
+  is fully CORS-open; **CME blocks unlicensed access (ToS — do NOT scrape)**,
+  so the TradFi page runs the same chart types on dated crypto futures until
+  the owner licenses CME data or buys a Velo API key; aggregated liquidations
+  have no free REST source (panel omitted, told owner); ATM-IV/skew HISTORY
+  panels need snapshot storage we don't have yet.
+- **NAV OVERHAUL (owner: "jumbled mess") — hub.css v1.13.0**: the section nav
+  is one segmented control (text-only tabs, active = filled; icons hidden —
+  words read as places, seven icons read as noise); Focus + palette are
+  icon-only chips (labels in tooltips; Focus speaks only when focused:
+  "SOL · exit"); ⌘K kbd hint hidden; below 800px the nav takes its own
+  full-width scrollable row. Subtle 220ms page glide-in (reduced-motion safe).
+- **TV CHART FILL BUG**: the tv-wrap density trick was scoped `.hw-body >`
+  (dashboard only) — TV iframes inside section panels collapsed to their min
+  height. Now also scoped `.vpanel-body >` + `.vpanel:fullscreen` unscale.
+  GOTCHA for future containers: any new widget host needs the .tv-wrap sizing
+  rules extended to it.
+- **CLASS COLLISION GOTCHA**: #hub-section briefly wore class `hub-page` —
+  which is the BODY's frame class; its padding leaked page-wide. Renamed to
+  `.hub-sec`. Check for body-level class names before minting container ones.
+- **FULL PANEL PARITY (hub.js v2.1.0 / hub.css v1.14.0)**: Futures = the
+  reference page's exact 12 panels in its 4-col order (cols4 grid ≥1500px):
+  vol/OI venue snapshots, funding APR, OI stacked, price area (vPrice),
+  taker CVD, liquidations (vLiqs — OKX public liquidation-orders, the one
+  venue with a public liq feed; recent window only), 3M annualized basis
+  (OKX + Deribit dated futures), daily volume, seasonality ×2, session
+  returns; plus a MARKETCAP/FDV stats strip (movers proxy now carries fdv).
+  DERIBIT is a 5th venue (DER, gold #e7b53a): snapshots (inverse perp OI/vol
+  are USD-native), funding APR (get_funding_rate_history), basis line.
+  Options page adds vSpotVol (rolling 2d correlation: HL hourly returns vs
+  DVOL moves — Deribit's get_tradingview_chart_data is their ONE CORS-closed
+  public endpoint, hence api/vice-deribit.js proxy for the basis candle legs;
+  price legs use HL instead). vTopOpts is vertical C/P-colored bars.
+  STILL NOT 1:1 (data-blocked, told owner): ATM-IV/skew/term-slope HISTORY
+  panels need IV snapshot storage; CVD is a taker buy/sell-volume
+  approximation, not tick-level.
+- **MULTI-VENUE LIQS + OI (hub.js v2.2.0 + api/vice-coinalyze.js)**: owner
+  wants BIN/BYB/HL/OKX on liquidations + OI history. Those venues have no
+  public liq REST and geo-block US browsers AND AWS egress — the only honest
+  path is the Coinalyze aggregator (free API key). Built end-to-end:
+  api/vice-coinalyze.js (kinds liqs|oi, resolves per-venue perp symbols from
+  /future-markets, cached 6h per instance; filters to Binance/Bybit/OKX/
+  Hyperliquid-if-listed; normalizes to {venues:[{venue,points}]}) reading env
+  **COINALYZE_API_KEY**; vLiqs renders per-venue stacks (shorts up, longs
+  down at 0.62 opacity, venue hues) and vOIHist consumes the same feed.
+  Without the key the function answers {noKey:true} and both panels fall
+  back to today's behavior (OKX public feeds). **OWNER ACTION: free signup
+  at coinalyze.net → API key → add COINALYZE_API_KEY in the Vercel project
+  env → redeploy.**
+- **COINALYZE VALIDATED WITH THE OWNER'S KEY (2026-07-22 eve)**: exchange
+  codes Binance=A Bybit=6 OKX=3 Hyperliquid=H Deribit=2; BTC perp symbols
+  BTCUSDT_PERP.A / BTCUSDT.6 / BTCUSDT_PERP.3 / BTC.H; OI history covers
+  ALL FOUR incl. Hyperliquid; liquidation history covers BIN/BYB/OKX (no HL
+  liq rows — Coinalyze doesn't track HL liqs). Shapes exactly as the proxy
+  assumed ({t seconds, l, s} / OHLC close, convert_to_usd works). The key
+  lives in **~/.openclaw/vice-dev.env** (OUTSIDE the deploy tree, chmod 600)
+  — it still needs adding to Vercel env as COINALYZE_API_KEY (prompt given
+  to owner). Key passed through chat — regenerate someday.
+- **LOCAL DEV SERVER — tools/vice-dev-server.py (launch config "vice-dev",
+  port 5323)**: workspace statics + WORKING /api/vice-* locally: implements
+  coinalyze/okx/deribit (mirrors the Vercel fns, reads the env file above),
+  forwards every other /api/vice-* to prod vicesuite.com. This is now THE
+  preview for hub work — every futures/options panel lights up with real
+  data (multi-venue liqs verified incl. the same $15M spike the reference
+  chart shows; dual-venue basis DER+OKX both ~4%). /_vercel/* answered 204
+  to hush analytics 404s. Owner can watch at
+  http://localhost:5323/vice/hub/index.html while sessions edit.
+- **FIVE-VENUE FUTURES SPEC (owner-directed, hub.js v2.3.0)**: panels 1/2/3/
+  4/6/9 (24h Volume, OI Snapshot, Funding Rate (APR), Open Interest, CVD
+  Dollars, Volume) now serve Binance+Bybit+OKX+Deribit+Hyperliquid to every
+  visitor via an expanded vice-coinalyze proxy (kinds: liqs, oi, funding,
+  cvd, vol, volsnap, oisnap; Deribit added to WANTED); direct venue APIs
+  remain the keyless fallback. Panel titles renamed to the owner's exact
+  list; vVenueBars split into vVol24h+vOiSnap and vSeasonality into
+  vRetHour+vRetDay (factories venueSnapWidget/seasonalityWidget — type
+  renames safe, v2.x never deployed). CALIBRATION FACTS baked into both
+  proxies: Coinalyze funding values = venue rate ×100 (percent per period;
+  HL hourly ×8760, others ×1095 → APR); ohlcv v/bv are BASE-coin units
+  unless oi_lq_vol_denominated_in=QUOTE_ASSET (Deribit) → ×close for USD;
+  convert_to_usd only affects OI/liq endpoints. LIQUIDATIONS CEILING:
+  Coinalyze has NO Deribit or Hyperliquid liq rows — panel 7 is BIN/BYB/OKX
+  (venue-side reality, told owner). Free tier = 40 req/min → dev server got
+  a 150s TTL cache with stale-serve-on-429 (prod is behind Vercel's edge
+  cache); a 429 storm looks like empty panels — check the dev-server log.
+  KEEP tools/vice-dev-server.py IN LOCKSTEP with api/vice-coinalyze.js.
+- **1:1 NUMBERS PASS (hub.js v2.4.0)**: the reference aggregates WHOLE
+  venues, so vice-coinalyze now SUMS each venue's USD/USDT/USDC perp markets
+  per timestamp for oi/vol/volsnap/oisnap/cvd/liqs (funding stays on the
+  venue's USDT lead market — it's a rate, not a quantity). Verified vs the
+  reference: OI snapshot BIN $7.77B / BYB $4.0B, 24h vol BIN ~$10B, OI stack
+  ~$18-21B — magnitudes now track theirs. vBasis gained the missing THIRD
+  line: Binance's own /futures/data/basis feed (CURRENT_QUARTER, expiry =
+  computed last-Friday-of-quarter 08:00 UTC; geo-blocked US visitors see
+  OKX+DER, everyone else all three). Dev server got a one-shot 429 retry in
+  cz(); a fresh dev-server restart can still drop 1-2 kinds on the very
+  first render (cold cache burst) — panels self-heal on their next poll,
+  reloads after ~1min are clean. Prod rides the shared edge cache and
+  won't show this.
+- **OPTIONS PAGE 1:1 (hub.js v2.5.0 / hub.css v1.15.0)**: layout = large
+  DVOL hero on the left (grid-row span 3, ≥1350px; stacks below that) + six
+  panels 2×3 right: IV Term Structure, 24h Top Volume Options, ATM Implied
+  Volatility (1w/1m/3m/6m), 25 Delta Skew (1w/1m/3m/6m), Spot-Vol
+  Correlation, IV Term Structure Slope (1m−6m). BTC/ETH only, per the
+  reference. THE HISTORY PANELS NEED NO SNAPSHOT STORAGE after all:
+  Deribit serves per-instrument PRICE history (get_tradingview_chart_data,
+  via the vice-deribit proxy — regex now allows option names
+  CUR-DDMMMYY-STRIKE-C/P) and mark prices are BS-consistent, so hub.js
+  inverts Black-Scholes (bisection, price×spot vs strike/T) against the
+  perp spot series to recover IV histories. Helpers: normCdf/bsPrice/
+  impliedVol, deribitTenors() (nearest listed expiry per 1w/1m/3m/6m),
+  strike25d() (±0.25-delta strike from ATM vol), ivSeries(). TENOR_C
+  palette shared across panels. vOiStrike/vOiExpiry removed from the PAGE
+  (still in registry/tray/pinnable). METHOD FOOTNOTE: we track the nearest
+  LISTED expiry per tenor (the reference interpolates constant maturity),
+  so slope extremes can read slightly deeper — same shape/regime, verified
+  side-by-side (ATM IV band 27-45% w/ 6m on top, skew's Jul-17 1w spike,
+  spot-vol −0.5→0, slope ~−6%). GOTCHA: dev-server restarts are needed
+  after editing tools/vice-dev-server.py (a stale process rejected option
+  instruments with 400 until restarted).
+- **OWNER PIVOT (late 2026-07-22, hub.js v2.7.0)**: the Velo-page direction
+  was a misunderstanding. FULL SNAPSHOT of the complete clone (hub.js v2.6.0
+  with News/Futures/Options/Market/TradFi pages + all ten market panels)
+  lives at **~/Desktop/veloclone/** (vice/ + api/ + dev server + routing +
+  README with restore notes). The live hub now keeps ONLY Dashboard + Chart:
+  SECTION_META reduced to chart, nav stripped to two tabs, futures palette
+  action + linkSymbol futures branches removed, PAGE_STATE gone. Dead hashes
+  (#/futures etc) fall back to the Dashboard. EVERYTHING ELSE SURVIVES: the
+  full widget registry (all Velo-parity analytics widgets — venue snapshots,
+  funding APR, OI history, CVD, liquidations, basis, seasonality, sessions,
+  DVOL/IV suite, APR heatmap, sectors, OI-CVD, market volume/OI, screener)
+  stays in the Add tray and pinnable to dashboards, and all four API
+  functions (vice-coinalyze/okx/deribit/movers) stay in the deploy batch —
+  the widgets need them. Market-page work (task ledger) ended mid-verify:
+  7/10 panels confirmed live; the 3 aggregator-heavy ones were fighting the
+  free tier's SYMBOL-WEIGHTED 40-credit/min limit (each batched symbol = 1
+  call — the last discovery of the night; primary-market baskets + credit-
+  weighted dev bucket + 900s edge cache were the fix, all in the snapshot
+  AND in the live api/vice-coinalyze.js).
+- Rollback copies of deployed v1.14.0 assets: `Backup-2026-07-22_hub-colfix/`.
+
+Post-deploy checks for THIS batch: /hub loads at v2.0.0 (cache-bust!), layout
+survives loading in a background tab then focusing (the corruption fix),
+`/api/vice-okx?kind=oi&instId=BTC-USDT-SWAP` returns data, futures page OI +
+CVD panels fill, options page fills, HYPEUSD live in the tape, TradFi layout's
+Market Overview leads with Indices.
+
+Velo-parity still open: per-panel CSV/PNG export buttons, chart-page drawing
+tools (we embed TV's widget, not their licensed charting library), VeloNews-
+style tagged feed, options IV/skew history, liquidations, CME data decision.
+
+---
+
+## 0. PREVIOUS STATE (first 2026-07-22 session — deployed)
 
 Shipped today, ALL verified locally, NOTHING deployed (owner runs `vercel --prod`):
 - Bots: launchd persistence (com.vicesuite.*), DEX charts in the vc bot (gt:/addresses

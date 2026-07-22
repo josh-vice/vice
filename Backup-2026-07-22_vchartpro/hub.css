@@ -1,4 +1,4 @@
-/* Vice Hub — dashboard styles. v1.21.1
+/* Vice Hub — dashboard styles. v1.15.0
    Layers on vice.css tokens. PATH RULE: lives in vice/ ROOT (deep pages serve
    at /hub with no directory, so assets resolve at the domain root). */
 
@@ -9,26 +9,26 @@
 /* ── toolbar ────────────────────────────────────────────────────────────── */
 .hub-bar {
   position: sticky; top: 0; z-index: 60;
-  display: flex; align-items: center; gap: 5px; flex-wrap: wrap;
-  padding: 4px 16px;
-  margin: 0 -16px 10px;
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  padding: 8px 16px;
+  margin: 0 -16px 12px;
   background: color-mix(in srgb, var(--bg) 82%, transparent);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--border);
 }
 .hub-brand { display: inline-flex; align-items: center; }
-.hub-brand .vt-flamingo { width: 18px; height: 18px; transition: transform 160ms var(--ease-out); }
-@media (hover: hover) and (pointer: fine) { .hub-brand:hover .vt-flamingo { transform: scale(1.08); } }
-.hub-bar-title { color: var(--text); font-weight: 700; font-size: 12px; letter-spacing: 0.2px; white-space: nowrap; }
+.hub-brand .vt-flamingo { width: 22px; height: 22px; transition: transform 160ms var(--ease-out); }
+.hub-brand:hover .vt-flamingo { transform: scale(1.08); }
+.hub-bar-title { color: var(--text); font-weight: 700; font-size: 13.5px; letter-spacing: 0.3px; white-space: nowrap; }
 .hub-bar-title strong { color: var(--text); }
 .hub-bar .spacer { flex: 1; }
 .hub-live {
   display: inline-flex; align-items: center; gap: 6px;
-  color: var(--text2); font-size: 11px;
-  background: none; border: 0; padding: 3px 6px; border-radius: var(--radius);
+  color: var(--text2); font-size: 11.5px;
+  background: none; border: 0; padding: 4px 7px; border-radius: var(--radius);
   font-family: inherit; cursor: pointer;
-  transition: background 140ms var(--ease-out), transform 140ms var(--ease-out);
+  transition: background 140ms var(--ease-out);
 }
 .hub-live:hover { background: var(--bg3); }
 .hub-live:active { transform: scale(0.97); }
@@ -36,31 +36,30 @@
 .hp-txt b { color: var(--text); font-weight: 600; }
 .hp-txt em { font-style: normal; font-size: 11px; }
 .hp-txt em.up { color: var(--green); }
-.hp-txt em.down { color: var(--red); }
+.hp-txt em.down { color: #ff6473; }
 .hub-live .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); animation: hubPulse 2.2s ease-in-out infinite; }
 @keyframes hubPulse { 0%,100% { opacity: 1; } 50% { opacity: 0.35; } }
 
 .hub-select {
   appearance: none; -webkit-appearance: none;
-  background: none; color: var(--text2);
-  border: none; border-radius: var(--radius);
-  font: inherit; font-size: 11.5px; padding: 5px 24px 5px 8px;
+  background: var(--bg3); color: var(--text);
+  border: 1px solid var(--border2); border-radius: var(--radius);
+  font: inherit; font-size: 12.5px; padding: 6px 28px 6px 10px;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23a8a3bb' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
-  background-repeat: no-repeat; background-position: right 7px center;
+  background-repeat: no-repeat; background-position: right 9px center;
   cursor: pointer;
 }
-.hub-select:hover { background-color: var(--bg3); color: var(--text); }
 .hub-select:focus-visible { outline: 2px solid var(--teal); outline-offset: 1px; }
 
 .hub-btn {
   display: inline-flex; align-items: center; gap: 6px;
-  background: none; color: var(--text3);
-  border: none; border-radius: var(--radius);
-  font: inherit; font-size: 11.5px; padding: 5px 8px; cursor: pointer;
-  transition: color 140ms var(--ease-out), background 140ms var(--ease-out), transform 140ms var(--ease-out);
+  background: var(--bg3); color: var(--text2);
+  border: 1px solid var(--border2); border-radius: var(--radius);
+  font: inherit; font-size: 12.5px; padding: 6px 11px; cursor: pointer;
+  transition: color 160ms var(--ease-out), border-color 160ms var(--ease-out), background 160ms var(--ease-out), transform 140ms var(--ease-out);
 }
 .hub-btn i, .hub-btn svg { width: 13px; height: 13px; flex: none; }
-.hub-btn:hover { color: var(--text); background: var(--bg3); }
+.hub-btn:hover { color: var(--text); border-color: var(--border3); }
 .hub-btn:active { transform: scale(0.97); }
 .hub-btn:focus-visible { outline: 2px solid var(--teal); outline-offset: 1px; }
 .hub-btn.primary { background: var(--teal); border-color: var(--teal); color: var(--bg); font-weight: 600; }
@@ -87,8 +86,8 @@
 .hub-menu button i, .hub-menu button svg, .hub-menu label i, .hub-menu label svg,
 .hub-menu a i, .hub-menu a svg { width: 13px; height: 13px; flex: none; }
 .hub-menu .sep { height: 1px; margin: 5px 4px; background: var(--border); }
-.hub-menu .danger { color: var(--red); }
-.hub-menu .danger:hover { color: var(--red2); }
+.hub-menu .danger { color: #ff6473; }
+.hub-menu .danger:hover { color: #ff8b96; }
 
 /* ── grid canvas ────────────────────────────────────────────────────────── */
 #hub-grid { min-height: 60vh; }
@@ -96,7 +95,7 @@
   background-image:
     linear-gradient(color-mix(in srgb, var(--border) 55%, transparent) 1px, transparent 1px),
     linear-gradient(90deg, color-mix(in srgb, var(--border) 55%, transparent) 1px, transparent 1px);
-  background-size: calc(100% / 24) var(--hub-cell, 36px);
+  background-size: calc(100% / 24) 36px;
   border-radius: var(--radius-lg);
   outline: 1px dashed var(--border2);
   outline-offset: 4px;
@@ -150,7 +149,7 @@
 .hw-btn:hover { color: var(--text); background: var(--bg4); }
 .hw-btn:active { transform: scale(0.92); }
 .hw-btn:focus-visible { outline: 2px solid var(--teal); outline-offset: -1px; }
-.hw-btn[data-act="remove"]:hover { color: var(--red); }
+.hw-btn[data-act="remove"]:hover { color: #ff6473; }
 /* view mode hides the settings gear; remove (X) is always one hover away */
 body:not(.editing) .hw-btn[data-act="settings"] { display: none; }
 /* actions fade in on hover (fine pointers only — touch keeps them visible) */
@@ -243,7 +242,7 @@ body:not(.editing) .hub-btn.edit-only { display: none; }
 .vrow .px { margin-left: auto; color: var(--text); font-variant-numeric: tabular-nums; }
 .vrow .chg { min-width: 78px; text-align: right; font-variant-numeric: tabular-nums; font-size: 11.5px; white-space: nowrap; }
 .vrow .chg.up { color: var(--green); }
-.vrow .chg.down { color: var(--red); }
+.vrow .chg.down { color: #ff6473; }
 .vrow.flash { animation: vFlash 600ms var(--ease-out); }
 @keyframes vFlash { 0% { background: var(--bg4); } 100% { background: transparent; } }
 
@@ -257,7 +256,7 @@ body:not(.editing) .hub-btn.edit-only { display: none; }
 .vtab:active { transform: scale(0.95); }
 .vtab:not(.on):hover { color: var(--text2); border-color: var(--border3); }
 .vtab.on { color: var(--bg); background: var(--teal); border-color: var(--teal); font-weight: 600; }
-.vtab.on.down { background: var(--red); border-color: var(--red); }
+.vtab.on.down { background: #ff6473; border-color: #ff6473; }
 .vcol { position: absolute; inset: 0; display: flex; flex-direction: column; }
 .vcol .vw-scroll { position: relative; inset: auto; flex: 1; min-height: 0; }
 
@@ -420,7 +419,7 @@ body.focused #hub-layout, body.focused #hub-add, body.focused #hub-edit { displa
 .vchart { position: absolute; inset: 0; }
 .vchart-err {
   position: absolute; left: 0; right: 0; bottom: 0; display: none;
-  padding: 6px 11px; color: var(--red2); font-size: 11px;
+  padding: 6px 11px; color: #ff8b96; font-size: 11px;
   background: color-mix(in srgb, var(--bg2) 85%, transparent);
   border-top: 1px solid var(--border);
 }
@@ -432,7 +431,7 @@ body.focused #hub-layout, body.focused #hub-add, body.focused #hub-edit { displa
 .vcd-row .tf { color: var(--text3); font-size: 10px; letter-spacing: 0.07em; min-width: 20px; }
 .vcd-row .left { color: var(--text); font-variant-numeric: tabular-nums; min-width: 78px; }
 .vcd-row .bar { flex: 1; height: 3px; border-radius: 2px; background: var(--bg4); overflow: hidden; }
-.vcd-row .bar > span { display: block; height: 100%; width: 100%; background: var(--teal); border-radius: 2px; transform: scaleX(0); transform-origin: left; transition: transform 1s linear; }
+.vcd-row .bar > span { display: block; height: 100%; background: var(--teal); border-radius: 2px; transition: width 1s linear; }
 
 /* alert history */
 .vhist-h {
@@ -480,7 +479,7 @@ body.focused #hub-layout, body.focused #hub-add, body.focused #hub-edit { displa
   background: var(--bg3); border: 1px solid var(--border2); border-radius: var(--radius);
   color: var(--text); font-size: 12.5px; padding: 9px 15px;
   box-shadow: 0 12px 34px rgba(0, 0, 0, 0.5);
-  animation: hubToastIn 180ms var(--ease-out);
+  animation: hubModalIn 180ms var(--ease-out);
 }
 
 /* ── responsive ────────────────────────────────────────────────────────── */
@@ -536,15 +535,16 @@ body.focused #hub-layout, body.focused #hub-add, body.focused #hub-edit { displa
 /* ── v1.13.0: section nav — one segmented control, text only. Icons on
    seven tabs read as noise; words read as places. ─────────────────────── */
 .hub-nav {
-  display: flex; align-items: center; gap: 2px;
-  margin-left: 10px;
+  display: flex; align-items: center; gap: 1px;
+  margin-left: 12px; padding: 2px;
+  background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius);
   min-width: 0; overflow-x: auto; scrollbar-width: none;
 }
 .hub-nav::-webkit-scrollbar { display: none; }
 .hub-nav a {
   display: inline-flex; align-items: center; flex: none;
   color: var(--text3); text-decoration: none; white-space: nowrap;
-  font-size: 11.5px; padding: 4px 10px; border-radius: var(--radius);
+  font-size: 12px; padding: 4px 11px; border-radius: 3px;
   transition: color 160ms var(--ease-out), background 160ms var(--ease-out);
 }
 .hub-nav a i, .hub-nav a svg { display: none; }
@@ -562,7 +562,7 @@ body.focused #hub-layout, body.focused #hub-add, body.focused #hub-edit { displa
    it has something to say: "SOL · exit") */
 .hub-pal-hint kbd { display: none; }
 #hub-focus:not(.focus-on) span { display: none; }
-#hub-focus, #hub-pal { padding: 5px 6px; }
+#hub-focus, #hub-pal { padding: 6px 8px; }
 
 /* section boards are ephemeral — layout controls are dashboard-only */
 body.in-section #hub-layout,
@@ -658,412 +658,3 @@ body.in-section #hub-add { display: none; }
   .vpage-opt .vpanel.vp-hero-l { grid-column: 1 / -1; grid-row: auto; min-height: 430px; }
 }
 @media (max-width: 900px) { .vpage-grid.vpage-opt { grid-template-columns: 1fr; } }
-
-/* ── Vice Chart Pro (vchart.js — own engine: candles + <Vice> indicators +
-      order-book depth heatmap). Fills its panel; toolbar, legend rows like
-      the reference, hairline chips throughout. ─────────────────────────── */
-.vpanel.vp-chartpro { min-height: 660px; }
-@media (max-width: 900px) { .vpanel.vp-chartpro { min-height: 540px; } }
-.vcp { position: absolute; inset: 0; display: flex; flex-direction: column; }
-.vcp-bar {
-  position: relative; display: flex; align-items: center; gap: 6px;
-  flex-wrap: wrap; padding: 7px 10px; border-bottom: 1px solid var(--border);
-}
-.vcp-syms, .vcp-tfs { display: flex; align-items: center; gap: 3px; }
-.vcp-sp { flex: 1; }
-.vcp-chip {
-  padding: 3px 8px; border: 1px solid transparent; border-radius: 4px;
-  background: none; color: var(--text2); font: 600 11px/1.4 var(--mono);
-  cursor: pointer; transition: color 120ms, background 120ms, border-color 120ms;
-}
-.vcp-chip:hover { color: var(--text); }
-.vcp-chip.on { background: var(--bg4); color: var(--text); border-color: var(--border2); }
-.vcp-input {
-  width: 74px; padding: 3px 8px; border: 1px solid var(--border); border-radius: 4px;
-  background: var(--bg2); color: var(--text); font: 500 11px/1.4 var(--mono);
-}
-.vcp-input:focus { outline: none; border-color: var(--border2); }
-.vcp-btn {
-  display: inline-flex; align-items: center; gap: 5px; padding: 4px 8px;
-  border: none; border-radius: var(--radius); background: none;
-  color: var(--text3); font: 600 11px/1.5 var(--mono); cursor: pointer;
-  transition: color 120ms, background 120ms, transform 120ms var(--ease-out);
-}
-.vcp-btn:hover { color: var(--text); background: var(--bg3); }
-.vcp-btn:active { transform: scale(0.97); }
-.vcp-btn.on { background: color-mix(in srgb, var(--pink) 16%, transparent); color: var(--pink); border-color: color-mix(in srgb, var(--pink) 45%, transparent); }
-.vcp-btn i, .vcp-btn svg { width: 13px; height: 13px; stroke-width: 1.8; }
-.vcp-venue { color: var(--text3); font-size: 10px; }
-.vcp-stage { position: relative; flex: 1; min-height: 0; }
-.vcp-box { position: absolute; inset: 0; }
-.vcp-err {
-  display: none; padding: 6px 11px; color: var(--red2); font-size: 11px;
-  background: color-mix(in srgb, var(--bg2) 85%, transparent);
-  border-top: 1px solid var(--border);
-}
-.vcp-err.on { display: block; }
-
-/* legend rows — Velo puts live values top-left; so do we */
-.vcp-legend {
-  position: absolute; top: 6px; left: 10px; z-index: 3;
-  display: flex; flex-direction: column; gap: 2px; max-width: min(72%, 560px);
-  pointer-events: none;
-}
-.vcp-lrow {
-  display: flex; align-items: center; gap: 8px; padding: 1px 0;
-  font-size: 11px; color: var(--text2); pointer-events: auto; min-height: 18px;
-}
-.vcp-ohlc { color: var(--text); flex-wrap: wrap; row-gap: 0; }
-.vcp-ohlc b { font-weight: 700; font-size: 11.5px; color: var(--text); }
-.vcp-ohlc span { color: var(--text3); }
-.vcp-ohlc em { font-style: normal; }
-.vcp-ohlc em.up { color: var(--green, #21d196); }
-.vcp-ohlc em.down { color: var(--red); }
-.vcp-lname { color: var(--text2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.vcp-lval { color: var(--text); white-space: nowrap; }
-.vcp-lerr { color: var(--red2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 260px; }
-.vcp-lbtns {
-  display: inline-flex; align-items: center; gap: 2px;
-  opacity: 0; pointer-events: none; transition: opacity 150ms var(--ease-out);
-}
-.vcp-lrow:hover .vcp-lbtns { opacity: 1; pointer-events: auto; }
-.vcp-lbtn {
-  display: inline-flex; align-items: center; justify-content: center;
-  width: 18px; height: 18px; padding: 0; border: none; border-radius: var(--radius);
-  background: none; color: var(--text3); cursor: pointer;
-}
-.vcp-lbtn:hover { color: var(--text); background: var(--bg4); }
-.vcp-lbtn i, .vcp-lbtn svg { width: 12px; height: 12px; stroke-width: 1.8; }
-@media (pointer: coarse) {
-  .vcp-lbtns { opacity: 1; pointer-events: auto; }
-  .vcp-lbtn { width: 24px; height: 24px; }
-}
-
-/* indicator picker + per-indicator settings popover */
-.vcp-menu {
-  position: absolute; top: calc(100% + 4px); right: 10px; z-index: 30;
-  display: grid; grid-template-columns: repeat(2, minmax(230px, 1fr));
-  gap: 1px 6px; padding: 6px; border: 1px solid var(--border2);
-  border-radius: var(--radius-lg); background: var(--bg2);
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
-}
-@media (max-width: 700px) {
-  .vcp-menu { grid-template-columns: 1fr; max-height: 320px; overflow-y: auto; }
-}
-.vcp-mrow {
-  display: flex; align-items: center; justify-content: space-between; gap: 10px;
-  padding: 6px 9px; border: none; border-radius: 4px; background: none;
-  color: var(--text2); font: 500 11.5px/1.4 var(--mono); text-align: left; cursor: pointer;
-}
-.vcp-mrow:hover { background: var(--bg3); color: var(--text); }
-.vcp-mrow.on { color: var(--text); }
-.vcp-mrow i, .vcp-mrow svg { width: 13px; height: 13px; color: var(--teal); }
-.vcp-pop {
-  position: absolute; top: calc(100% + 2px); left: 0; z-index: 31;
-  display: flex; flex-direction: column; gap: 7px; min-width: 220px;
-  padding: 10px; border: 1px solid var(--border2); border-radius: var(--radius-lg);
-  background: var(--bg2); box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
-}
-.vcp-poprow { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 11px; color: var(--text2); }
-.vcp-poprow select {
-  padding: 3px 6px; border: 1px solid var(--border); border-radius: 4px;
-  background: var(--bg3); color: var(--text); font: 500 11px/1.4 var(--mono);
-}
-.vcp-popnote { color: var(--text3); font-size: 10px; line-height: 1.5; max-width: 240px; }
-
-/* ── Chart-page refinement pass (owner: TV-grade, sleek) ─────────────────
-      The chart page hides the panel chrome — the engine carries its own
-      toolbar; symbol button + search modal follow TradingView's pattern. */
-.vpanel.vp-chartpro > .vpanel-head { display: none; }
-.vpanel.vp-chartpro { border-radius: 6px; overflow: hidden; }
-.vcp-bar { gap: 7px; padding: 4px 8px; }
-.vcp-symbtn {
-  display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px;
-  border: none; border-radius: var(--radius); background: none; cursor: pointer;
-  color: var(--text); font: 700 13px/1.3 var(--mono);
-  transition: background 120ms;
-}
-.vcp-symbtn:hover { background: var(--bg3); }
-.vcp-symbtn b { font-weight: 700; letter-spacing: 0.01em; }
-.vcp-symq { color: var(--text3); font-size: 10.5px; font-weight: 600; margin-left: -2px; }
-.vcp-symbtn i, .vcp-symbtn svg { width: 13px; height: 13px; color: var(--text3); stroke-width: 2; }
-.vcp-div { width: 1px; height: 18px; background: var(--border); }
-.vcp-btn.vcp-ico { padding: 4px 6px; }
-.vcp-btn.vcp-ico i, .vcp-btn.vcp-ico svg { margin: 0; }
-
-/* heatmap opacity slider — appears only while the map is on */
-.vcp-alpha { display: none; align-items: center; }
-.vcp-alpha.show { display: inline-flex; }
-.vcp-alpha input[type="range"] {
-  width: 74px; height: 3px; appearance: none; -webkit-appearance: none;
-  background: linear-gradient(90deg, #31188466, #f44ac6);
-  border-radius: 2px; outline: none; cursor: pointer;
-}
-.vcp-alpha input[type="range"]::-webkit-slider-thumb {
-  appearance: none; -webkit-appearance: none; width: 11px; height: 11px;
-  border-radius: 50%; background: var(--text); border: 2px solid var(--bg2);
-  cursor: grab;
-}
-.vcp-alpha input[type="range"]::-moz-range-thumb {
-  width: 11px; height: 11px; border-radius: 50%; background: var(--text);
-  border: 2px solid var(--bg2); cursor: grab;
-}
-
-/* symbol search modal — TradingView pattern: dim, centered card, live rows */
-.vcp-search {
-  position: absolute; inset: 0; z-index: 40; display: flex;
-  align-items: flex-start; justify-content: center; padding-top: 42px;
-  background: rgba(5, 4, 12, 0.62); backdrop-filter: blur(3px);
-  animation: veilIn 160ms ease both;
-}
-@keyframes veilIn { from { opacity: 0; } }
-.vcp-search-box {
-  animation: vcpPop 150ms var(--ease-out) both;
-  transform-origin: top center;
-  width: min(480px, 92%); max-height: min(430px, 82%); display: flex;
-  flex-direction: column; border: 1px solid var(--border2); border-radius: var(--radius-lg);
-  background: var(--bg2); box-shadow: 0 24px 64px rgba(0, 0, 0, 0.55);
-  overflow: hidden;
-}
-.vcp-search-inp {
-  padding: 12px 14px; border: none; border-bottom: 1px solid var(--border);
-  background: none; color: var(--text); font: 500 13px/1.4 var(--mono);
-}
-.vcp-search-inp:focus { outline: none; }
-.vcp-search-list { overflow-y: auto; padding: 4px; }
-.vcp-srow {
-  display: grid; grid-template-columns: 26px 64px 1fr auto auto; gap: 10px;
-  align-items: center; width: 100%; padding: 7px 10px; border: none;
-  border-radius: var(--radius); background: none; text-align: left; cursor: pointer;
-  color: var(--text2); font: 500 12px/1.4 var(--mono);
-}
-.vcp-srow:hover, .vcp-srow.sel { background: var(--bg3); color: var(--text); }
-.vcp-srow b { color: var(--text); font-weight: 700; }
-.vcp-sic { display: flex; align-items: center; justify-content: center; }
-.vcp-sic img { width: 20px; height: 20px; border-radius: 50%; }
-.vcp-sletter {
-  display: inline-flex; align-items: center; justify-content: center;
-  width: 20px; height: 20px; border-radius: 50%; background: var(--bg4);
-  color: var(--text2); font-size: 10px; font-weight: 700;
-}
-.vcp-sname { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; color: var(--text3); font-size: 11px; }
-.vcp-spx { color: var(--text); font-variant-numeric: tabular-nums; }
-.vcp-schg { font-variant-numeric: tabular-nums; font-size: 11px; }
-.vcp-schg.up { color: var(--green, #21d196); }
-.vcp-schg.down { color: var(--red); }
-.vcp-snone { padding: 18px; text-align: center; color: var(--text3); font-size: 12px; }
-
-/* ── Velo-style screener (vScreener rebuild) ────────────────────────── */
-.vscr2 { position: absolute; inset: 0; display: flex; flex-direction: column; }
-.vscr2-bar {
-  display: flex; align-items: center; gap: 9px; flex-wrap: wrap;
-  padding: 5px 10px; border-bottom: 1px solid var(--border);
-}
-.vscr2-chk {
-  display: inline-flex; align-items: center; gap: 5px; color: var(--text3);
-  font-size: 10.5px; cursor: pointer; user-select: none;
-  transition: color 120ms var(--ease-out);
-}
-.vscr2-chk:hover { color: var(--text); }
-.vscr2-chk input { accent-color: var(--pink); width: 12px; height: 12px; cursor: pointer; }
-.vscr2-sel {
-  appearance: none; -webkit-appearance: none;
-  padding: 2px 18px 2px 7px; border: 1px solid var(--border); border-radius: var(--radius);
-  background: var(--bg2); color: var(--text2); font: 500 10.5px/1.5 var(--mono);
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='9' height='9' viewBox='0 0 24 24' fill='none' stroke='%238b85a3' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
-  background-repeat: no-repeat; background-position: right 6px center;
-  cursor: pointer;
-}
-.vscr2-sel:hover { color: var(--text); border-color: var(--border2); }
-.vscr2-tabs {
-  display: inline-flex; gap: 1px; margin-left: auto; padding: 1px;
-  border: 1px solid var(--border); border-radius: var(--radius);
-}
-.vscr2-tab {
-  padding: 2px 9px; border: none; border-radius: var(--radius); background: none;
-  color: var(--text3); font: 600 10.5px/1.5 var(--mono); cursor: pointer;
-}
-.vscr2-tab.on { background: var(--bg4); color: var(--text); }
-.vscr2-search {
-  display: flex; align-items: center; gap: 7px; padding: 4px 10px;
-  border-bottom: 1px solid var(--border); color: var(--text3);
-}
-.vscr2-search i, .vscr2-search svg { width: 12px; height: 12px; }
-.vscr2-search input {
-  flex: 1; border: none; background: none; color: var(--text);
-  font: 500 11px/1.6 var(--mono);
-}
-.vscr2-search input:focus { outline: none; }
-.vscr2 .vscr2-scroll { position: relative; inset: auto; flex: 1; min-height: 0; }
-.vscr2-r {
-  display: grid; grid-template-columns: 30px minmax(150px, 1fr) 110px 90px 110px;
-  gap: 8px; align-items: center; padding: 4px 10px;
-  border-bottom: 1px solid color-mix(in srgb, var(--border) 55%, transparent);
-  font-size: 12px; color: var(--text2);
-}
-.vscr2-r.clickable { cursor: pointer; }
-.vscr2-r.clickable:hover { background: var(--bg3); }
-.vscr2-h {
-  position: sticky; top: 0; z-index: 2; background: var(--bg2);
-  color: var(--text3); font-size: 10px; letter-spacing: 0.05em;
-  text-transform: uppercase;
-}
-.vscr2-c.fr { text-align: right; font-variant-numeric: tabular-nums; }
-.vscr2-h .vscr2-c { cursor: pointer; user-select: none; }
-.vscr2-h .vscr2-c:hover { color: var(--text); }
-.vscr2-sym { display: inline-flex; align-items: center; gap: 8px; overflow: hidden; }
-.vscr2-sym b { color: var(--text); font-weight: 700; }
-.vscr2-sym i, .vscr2-sym svg { width: 16px; height: 16px; color: var(--text3); }
-.vscr2-name {
-  overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
-  color: var(--text3); font-size: 10.5px;
-}
-.vscr2-logo { width: 18px; height: 18px; border-radius: 50%; flex: none; }
-.vscr2-star {
-  display: inline-flex; align-items: center; justify-content: center;
-  border: none; background: none; padding: 8px; margin: -8px;
-  color: var(--text3); opacity: 0.35; font-size: 13px; cursor: pointer; line-height: 1;
-}
-@media (hover: none) { .vscr2-star { opacity: 0.7; } }
-.vscr2-r:hover .vscr2-star { opacity: 0.8; }
-.vscr2-star.on { color: #e7b53a; opacity: 1; }
-.vscr2-h .vscr2-star { cursor: default; opacity: 0; }
-.vscr2-c.up { color: var(--green, #21d196); }
-.vscr2-c.down { color: var(--red); }
-.vscr2-none { padding: 22px; text-align: center; color: var(--text3); font-size: 12px; }
-.vscr2-news {
-  display: grid; grid-template-columns: 92px 1fr auto; gap: 10px;
-  align-items: baseline; padding: 8px 12px; text-decoration: none;
-  border-bottom: 1px solid color-mix(in srgb, var(--border) 55%, transparent);
-}
-.vscr2-news:hover { background: var(--bg3); }
-.vscr2-nsrc { color: var(--text3); font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; }
-.vscr2-nt { color: var(--text); font-size: 12px; }
-.vscr2-nago { color: var(--text3); font-size: 10.5px; }
-@media (max-width: 760px) {
-  .vscr2-r { grid-template-columns: 26px minmax(110px, 1fr) 90px 70px; }
-  .vscr2-r .cvol { display: none; }
-  .vscr2-name { display: none; }
-}
-
-/* ── UX audit pass (owner: snappy/compact/polished) ──────────────────── */
-/* the chart IS the page — fill the viewport instead of a fixed strip */
-.vpanel.vp-chartpro { height: calc(100dvh - 104px); min-height: 460px; }
-@media (max-width: 900px) { .vpanel.vp-chartpro { height: calc(100dvh - 110px); min-height: 420px; } }
-
-/* section pages hide the dashboard-only controls — they do nothing there */
-body.in-section #hub-layout,
-body.in-section #hub-edit,
-body.in-section #hub-add { display: none; }
-
-/* fetches dim the stage just enough to read as "working" */
-.vcp-stage { transition: opacity 140ms var(--ease-out); }
-.vcp.loading .vcp-stage { opacity: 0.55; }
-
-/* pressables answer the press */
-.vcp-chip:active, .vcp-symbtn:active, .vscr2-tab:active, .vscr2-sel:active,
-.vcp-mrow:active, .vcp-srow:active { transform: scale(0.97); }
-.vcp-chip, .vcp-symbtn, .vscr2-tab, .vcp-mrow, .vcp-srow {
-  transition: color 120ms var(--ease-out), background 120ms var(--ease-out),
-    border-color 120ms var(--ease-out), transform 120ms var(--ease-out);
-}
-
-/* popovers scale in from their trigger, quick and origin-aware */
-.vcp-menu {
-  transform-origin: top right;
-  animation: vcpPop 140ms var(--ease-out) both;
-}
-.vcp-pop {
-  transform-origin: top left;
-  animation: vcpPop 140ms var(--ease-out) both;
-}
-@keyframes vcpPop {
-  from { opacity: 0; transform: scale(0.96); }
-  to { opacity: 1; transform: scale(1); }
-}
-@media (prefers-reduced-motion: reduce) {
-  .vcp-menu, .vcp-pop { animation: none; }
-}
-
-/* screener rows: press feedback + calmer hover */
-.vscr2-r.clickable { transition: background 100ms var(--ease-out); }
-.vscr2-r.clickable:active { background: var(--bg4); }
-
-/* mid-width toolbars: one scrollable row beats a two-line wrap */
-@media (max-width: 760px) {
-  .vcp-bar { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
-  .vcp-bar::-webkit-scrollbar { display: none; }
-  .vscr2-bar { gap: 8px; }
-  .vscr2-tabs { margin-left: 0; }
-}
-
-
-/* ── audit round 2: focus rings, section menu, containers, safe areas ── */
-.vcp-chip:focus-visible, .vcp-btn:focus-visible, .vcp-symbtn:focus-visible,
-.vscr2-tab:focus-visible, .vscr2-sel:focus-visible, .vcp-lbtn:focus-visible,
-.vscr2-star:focus-visible {
-  outline: 2px solid var(--teal); outline-offset: 1px;
-}
-.vcp-input:focus { border-color: var(--teal); }
-
-/* indicator-menu instance count (multi-instance indicators) */
-.vcp-mn {
-  font-style: normal; min-width: 16px; text-align: center;
-  padding: 1px 4px; border-radius: var(--radius);
-  background: var(--bg4); color: var(--teal); font-size: 10px; font-weight: 700;
-}
-
-/* section pages: layout management is dashboard business — the ⋮ menu keeps
-   only the suite links (Reset/Delete on a chart page begged for misclicks) */
-body.in-section .hub-menu button[data-menu],
-body.in-section .hub-menu label,
-body.in-section .hub-menu .sep { display: none; }
-
-/* the chart toolbar + menu + screener adapt to their CONTAINER — page media
-   queries lied inside narrow pinned widgets */
-@container (max-width: 560px) {
-  .vcp-btn span { display: none; }
-  .vcp-btn { padding: 4px 7px; }
-  .vcp-div { display: none; }
-  .vcp-alpha input[type="range"] { width: 52px; }
-  .vcp-menu { grid-template-columns: 1fr; max-width: calc(100% - 16px); max-height: 300px; overflow-y: auto; }
-  .vscr2-r { grid-template-columns: 26px minmax(100px, 1fr) 88px 68px; }
-  .vscr2-r .cvol { display: none; }
-  .vscr2-name { display: none; }
-}
-
-/* iOS: sub-16px inputs auto-zoom the page on focus */
-@media (pointer: coarse) {
-  .vcp-search-inp, .vscr2-search input, .hub-palette-input, .vcp-input { font-size: 16px; }
-}
-
-/* viewport-fit=cover is declared — consume the insets it exposes */
-.hub-bar {
-  padding-left: max(16px, env(safe-area-inset-left));
-  padding-right: max(16px, env(safe-area-inset-right));
-}
-.hub-main {
-  padding-left: max(16px, env(safe-area-inset-left));
-  padding-right: max(16px, env(safe-area-inset-right));
-  padding-bottom: max(40px, env(safe-area-inset-bottom));
-}
-
-
-@keyframes hubToastIn { from { opacity: 0; transform: translateX(-50%) translateY(8px) scale(0.985); } }
-
-/* overflow menu scales in from its trigger corner */
-.hub-menu.open { animation: vcpPop 150ms var(--ease-out) both; transform-origin: top right; }
-
-/* modal + palette veils fade instead of popping */
-.hub-modal-veil, .hub-palette-veil { animation: veilIn 160ms ease both; }
-@media (prefers-reduced-motion: reduce) {
-  .hub-menu.open, .hub-modal-veil, .hub-palette-veil, .vcp-search, .vcp-search-box { animation: none; }
-}
-
-/* wordmark is a link home to the dashboard now */
-a.hub-bar-title { text-decoration: none; }
-a.hub-bar-title:hover strong { color: var(--teal); }
-
-/* legend rows shrink-wrap — full-width rows were eating crosshair hovers */
-.vcp-legend { align-items: flex-start; }
-.vcp-lrow { width: max-content; max-width: 100%; }

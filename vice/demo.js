@@ -16,7 +16,7 @@ const MAX_COMPARE_SYMBOLS = 10;
 const WARMUP = 220;
 
 const THEME = {
-  bg: '#0d1117',
+  bg: '#0d0b18',
   grid: '#1e2530',
   text: '#8b98a9',
   textStrong: '#e6edf3',

@@ -1,4 +1,4 @@
-/* Vice Hub — customizable live market dashboard + Velo-style section boards. v2.10.5
+/* Vice Hub — customizable live market dashboard + Velo-style section boards. v2.7.0
    Architecture: a widget REGISTRY (manifest per type: title, sizes, settings
    schema, mount/destroy lifecycle) + a Gridstack canvas (float mode, 24-col
    fine grid). Saved layouts store INSTANCES ({id,type,x,y,w,h,settings}),
@@ -387,14 +387,8 @@
       hits++;
     }
     persist();
-    // the chart page follows the new symbol in place — a full renderSection()
-    // teardown refetched everything and dropped indicator/zoom state
-    if (currentSection === 'chart') {
-      const pm = pageMounts.find((m) => m.type === 'vChartPro');
-      if (pm?.handle?.setSymbol) { pm.settings.symbol = linkedSym; pm.handle.setSymbol(linkedSym); }
-      else renderSection();
-      return;
-    }
+    // the chart page follows the new symbol wholesale
+    if (currentSection === 'chart') { renderSection(); return; }
     if (hits) toast(`linked ${hits} block${hits === 1 ? '' : 's'} to ${linkedSym}`);
   }
   const rowLinker = (container) => container.addEventListener('click', (ev) => {
@@ -564,7 +558,7 @@
     },
     tvTape: {
       title: 'Ticker Tape', icon: 'move-horizontal', cat: 'Charts',
-      w: 24, h: 3, minW: 8, minH: 3,
+      w: 24, h: 2, minW: 8, minH: 2,
       settings: [
         F.area('symbols', 'Symbols (comma-separated)',
           'BITSTAMP:BTCUSD, BITSTAMP:ETHUSD, CRYPTO:SOLUSD, CRYPTO:XRPUSD, CRYPTO:BNBUSD, CRYPTO:DOGEUSD, CRYPTO:ADAUSD, COINBASE:HYPEUSD'),
@@ -573,9 +567,7 @@
       mount(body, s) {
         const symbols = s.symbols.split(',').map((x) => x.trim()).filter(Boolean)
           .map((proName) => ({ proName, title: proName.split(':').pop() }));
-        // regular = the one-line marquee (44px band, prices inline) — adaptive
-        // picked the 72px stacked variant, which clipped inside short cells
-        return tvEmbed(body, 'ticker-tape', { symbols, showSymbolLogo: s.logos, displayMode: 'regular' }, true);
+        return tvEmbed(body, 'ticker-tape', { symbols, showSymbolLogo: s.logos, displayMode: 'adaptive' }, true);
       },
     },
 
@@ -1024,38 +1016,6 @@
         return { destroy() { unsub(); } };
       },
     },
-    vChartPro: {
-      title: 'Vice Chart Pro', icon: 'candlestick-chart', cat: 'Charts', vice: true,
-      w: 16, h: 13, minW: 8, minH: 8,
-      settings: [
-        F.text('symbol', 'Symbol', 'BTC', 'Hyperliquid perp ticker — BTC, ETH, SOL, XRP, HYPE…'),
-        LINKED(),
-      ],
-      link: (s, sym) => ({ symbol: sym }),
-      label: (s) => s.symbol.toUpperCase(),
-      mount(body, s) {
-        // the engine lives in vchart.js (loaded on the hub page); candles +
-        // indicator panes + the order-book depth heatmap, all ours
-        let handle = null;
-        let dead = false;
-        let tries = 0;
-        const start = () => {
-          if (dead) return;
-          if (!window.VChartPro || !window.echarts) {
-            if (++tries > 75) { note(body, 'alert-triangle', "the chart engine didn't load — refresh the page"); return; }
-            setTimeout(start, 200);
-            return;
-          }
-          handle = window.VChartPro.mount(body, { symbol: s.symbol.trim().toUpperCase() });
-        };
-        start();
-        return {
-          destroy() { dead = true; handle?.destroy?.(); },
-          refresh() { handle?.refresh?.(); },
-          setSymbol(sym2) { handle?.setSymbol?.(sym2); },
-        };
-      },
-    },
     vChart: {
       title: 'Vice Chart', icon: 'bar-chart-3', cat: 'Charts', vice: true,
       w: 8, h: 9, minW: 4, minH: 5,
@@ -1228,7 +1188,7 @@
             const t = h >= 24 ? `${Math.floor(h / 24)}d ${pad(h % 24)}:${pad(m)}:${pad(sec)}`
               : `${pad(h)}:${pad(m)}:${pad(sec)}`;
             return `<div class="vcd-row"><span class="tf">${label}</span><span class="left">${t}</span>` +
-              `<span class="bar"><span style="transform:scaleX(${(into / ms).toFixed(4)})"></span></span></div>`;
+              `<span class="bar"><span style="width:${((into / ms) * 100).toFixed(2)}%"></span></span></div>`;
           }).join('');
         };
         paint();
@@ -2337,207 +2297,93 @@
       },
     },
     vScreener: {
-      title: 'Screener', icon: 'table-2', cat: 'Vice', vice: true,
+      title: 'Cross-Asset Screener', icon: 'table-2', cat: 'Vice', vice: true,
       w: 24, h: 10, minW: 8, minH: 5,
       settings: [
         F.sel('tab', 'Universe', 'all', [['all', 'All'], ['crypto', 'Crypto'], ['tradfi', 'TradFi']]),
-        F.num('count', 'Crypto rows', 100, 20, 200),
+        F.num('count', 'Crypto rows', 30, 10, 100),
       ],
       label: (s) => (s.tab === 'all' ? 'crypto + TradFi' : s.tab),
-      // Velo-style screener on TradingView scanner data: coin composite by
-      // default, per-exchange pairs when filtered, TradFi quote book, TV
-      // logos, favorites, watchlist filter, search, sortable columns, and a
-      // News mode that swaps the table for the aggregated feed.
       mount(body, s) {
-        const FAVS_KEY = 'viceHub.scrFavs';
-        // the venues TradingView's crypto scanner actually indexes (no HL there)
-        const EXCHANGES = [['', 'All Exchanges'], ['BINANCE', 'Binance'], ['BYBIT', 'Bybit'], ['OKX', 'OKX'], ['COINBASE', 'Coinbase'], ['KRAKEN', 'Kraken'], ['KUCOIN', 'KuCoin'], ['BITGET', 'Bitget'], ['HTX', 'HTX']];
-        const AUTO = [['15000', 'Auto'], ['5000', '5s'], ['15000', '15s'], ['60000', '60s']];
-        const readFavs = () => { try { return new Set(JSON.parse(localStorage.getItem(FAVS_KEY)) ?? []); } catch { return new Set(); } };
-        const favs = readFavs();
-        const saveFavs = () => { try { localStorage.setItem(FAVS_KEY, JSON.stringify([...favs])); } catch { /* fine */ } };
-        const readWatch = () => { try { return new Set(JSON.parse(localStorage.getItem(LS_WATCH)) ?? []); } catch { return new Set(); } };
-
-        const ui = { favOnly: false, news: false, ms: 15000, exch: '', watch: false, tab: s.tab, q: '', sortKey: 'vol', sortDir: -1 };
-        let cryptoRows = [];
-        let tradfiRows = [];
-        let newsItems = [];
-        let timer = null;
-        let dead = false;
-
-        const wrap = el('div', 'vscr2');
-        body.appendChild(wrap);
-        const barEl = el('div', 'vscr2-bar');
-        const mkChk = (label, key) => {
-          const l = el('label', 'vscr2-chk', `<input type="checkbox"><span>${label}</span>`);
-          l.querySelector('input').addEventListener('change', (ev) => { ui[key] = ev.target.checked; if (key === 'news' && ev.target.checked && !newsItems.length) loadNews(); paint(); });
-          return l;
-        };
-        const mkSel = (opts, key, onchange) => {
-          const sel = document.createElement('select');
-          sel.className = 'vscr2-sel';
-          for (const [v, t] of opts) { const o = document.createElement('option'); o.value = v; o.textContent = t; sel.appendChild(o); }
-          sel.addEventListener('change', () => onchange(sel.value));
-          return sel;
-        };
-        const autoSel = mkSel(AUTO, 'ms', (v) => { ui.ms = Number(v); schedule(); });
-        const exchSel = mkSel(EXCHANGES, 'exch', (v) => { ui.exch = v; cryptoRows = []; paint(); loadCrypto(); });
-        const watchSel = mkSel([['', 'No Watchlist'], ['1', 'My Watchlist']], 'watch', (v) => { ui.watch = !!v; paint(); });
-        const tabs = el('div', 'vscr2-tabs');
-        for (const t of ['all', 'crypto', 'tradfi']) {
-          const b = el('button', `vscr2-tab${ui.tab === t ? ' on' : ''}`, t === 'all' ? 'All' : t === 'crypto' ? 'Crypto' : 'TradFi');
-          b.addEventListener('click', () => {
-            ui.tab = t;
-            tabs.querySelectorAll('.vscr2-tab').forEach((x) => x.classList.toggle('on', x === b));
-            paint();
-          });
-          tabs.appendChild(b);
-        }
-        barEl.append(mkChk('Favorites only', 'favOnly'), mkChk('News', 'news'), autoSel, exchSel, watchSel, tabs);
-        const searchEl = el('div', 'vscr2-search', '<i data-lucide="search"></i>');
-        const inp = document.createElement('input');
-        inp.placeholder = 'Search';
-        inp.addEventListener('input', () => { ui.q = inp.value.trim().toUpperCase(); paint(); });
-        searchEl.appendChild(inp);
-        const scroll = el('div', 'vw-scroll vscr2-scroll');
-        wrap.append(barEl, searchEl, scroll);
-        icons();
-
-        const tvIcon = (logoid) => (logoid
-          ? `<img class="vscr2-logo" src="https://s3-symbol-logo.tradingview.com/${esc(logoid)}.svg" alt="" loading="lazy">`
-          : '<i data-lucide="landmark"></i>');
-        const scan = (path, payload) => fetch(`https://scanner.tradingview.com/${path}`, {
+        const scroll = el('div', 'vw-scroll vscr');
+        body.appendChild(scroll);
+        let tvRows = {}; // label -> {px, chg}
+        let sortKey = 'vol';
+        let sortDir = -1;
+        const wantTv = s.tab !== 'crypto';
+        const wantCr = s.tab !== 'tradfi';
+        const tvList = TRADFI_BOOK.slice(0, 14);
+        const loadTv = () => fetch('https://scanner.tradingview.com/global/scan', {
           method: 'POST',
           headers: { 'Content-Type': 'text/plain' }, // simple request — their preflight rejects JSON
-          body: JSON.stringify(payload),
-          signal: AbortSignal.timeout(12000),
-        }).then((r) => r.json());
-
-        async function loadCrypto() {
-          try {
-            if (!ui.exch) {
-              const j = await scan('coin/scan', {
-                columns: ['base_currency', 'base_currency_desc', 'base_currency_logoid', 'close', '24h_close_change|5', '24h_vol_cmc'],
-                sort: { sortBy: '24h_vol_cmc', sortOrder: 'desc' },
-                range: [0, Number(s.count)],
-              });
-              cryptoRows = (j?.data ?? []).map((d) => ({
-                kind: 'crypto', sym: d.d[0], name: d.d[1] ?? '', logoid: d.d[2],
-                px: d.d[3], chg: d.d[4], vol: d.d[5],
-              })).filter((r) => r.sym && r.px != null);
-            } else {
-              // pair-level: 24h_vol|5 is the venue pair's 24h USD turnover;
-              // keep each coin's deepest USD/USDT/USDC market
-              const j = await scan('crypto/scan', {
-                filter: [{ left: 'exchange', operation: 'equal', right: ui.exch }],
-                columns: ['base_currency', 'base_currency_desc', 'base_currency_logoid', 'close', 'change', '24h_vol|5'],
-                range: [0, 3000],
-              });
-              const best = new Map();
-              for (const d of j?.data ?? []) {
-                if (!/USDT?C?(\.P)?$/.test(d.s.split(':')[1] ?? '')) continue;
-                const vol = d.d[5] ?? 0;
-                const cur = best.get(d.d[0]);
-                if (!cur || vol > cur.vol) best.set(d.d[0], {
-                  kind: 'crypto', sym: d.d[0], name: d.d[1] ?? '', logoid: d.d[2],
-                  px: d.d[3], chg: d.d[4], vol,
-                });
-              }
-              cryptoRows = [...best.values()].sort((a, b) => (b.vol ?? 0) - (a.vol ?? 0)).slice(0, Number(s.count));
-            }
-          } catch { /* scanner unreachable — stale rows stay */ }
-          if (!dead) paint();
-        }
-        async function loadTradfi() {
-          try {
-            const j = await scan('global/scan', {
-              symbols: { tickers: TRADFI_BOOK.map((e) => e[1]) },
-              columns: ['close', 'change', 'logoid', 'description'],
-            });
-            tradfiRows = (j?.data ?? []).map((d) => {
-              const entry = TRADFI_BOOK.find((e) => e[1] === d.s);
-              return entry ? {
-                kind: 'tradfi', sym: entry[0], name: d.d[3] ?? entry[1], logoid: d.d[2],
-                tv: entry[1], px: d.d[0], chg: d.d[1], vol: null,
-              } : null;
-            }).filter(Boolean);
-          } catch { /* stale rows stay */ }
-          if (!dead) paint();
-        }
-        const loadNews = () => getJson('/api/vice-news', 9000).then((j) => {
-          // proxy shape: [{ t: title, u: url, src, ts }]
-          newsItems = (Array.isArray(j) ? j : []).slice(0, 40);
-          if (!dead) paint();
-        }).catch(() => { /* local preview — news needs the proxy */ });
-
-        function paint() {
-          if (ui.news) {
-            scroll.innerHTML = newsItems.length
-              ? newsItems.map((n) =>
-                `<a class="vscr2-news" href="${esc(n.u)}" target="_blank" rel="noopener">` +
-                `<span class="vscr2-nsrc">${esc(n.src ?? '')}</span><span class="vscr2-nt">${esc(n.t)}</span>` +
-                `<span class="vscr2-nago">${ago(n.ts)}</span></a>`).join('')
-              : '<div class="vscr2-none">news feed needs the site proxy — works on vicesuite.com</div>';
-            return;
+          body: JSON.stringify({ symbols: { tickers: tvList.map((e) => e[1]) }, columns: ['close', 'change'] }),
+          signal: AbortSignal.timeout(9000),
+        }).then((r) => r.json()).then((j) => {
+          const m = {};
+          for (const d of j?.data ?? []) {
+            const entry = tvList.find((e) => e[1] === d.s);
+            if (entry) m[entry[0]] = { px: d.d[0], chg: d.d[1] };
           }
-          const watch = ui.watch ? readWatch() : null;
-          let rows = [];
-          if (ui.tab !== 'tradfi') rows = rows.concat(cryptoRows);
-          if (ui.tab !== 'crypto') rows = rows.concat(tradfiRows);
-          if (watch) rows = rows.filter((r) => r.kind !== 'crypto' || watch.has(r.sym));
-          if (ui.favOnly) rows = rows.filter((r) => favs.has(r.sym));
-          if (ui.q) rows = rows.filter((r) => r.sym.toUpperCase().includes(ui.q) || r.name.toUpperCase().includes(ui.q));
-          const dir = ui.sortDir;
-          const k = ui.sortKey;
+          tvRows = m;
+          paint(hlFeed.snap() ?? {});
+        }).catch(() => { /* scanner unreachable — crypto rows still paint */ });
+        const paint = (map) => {
+          const rows = [];
+          if (wantCr) {
+            for (const [sym, q] of Object.entries(map)) {
+              rows.push({ kind: 'crypto', sym, name: coinNames[sym] ?? '', px: q.px, chg: q.chg, vol: q.vol, apr: q.funding * 24 * 365 * 100 });
+            }
+            rows.sort((a, b) => (b.vol ?? 0) - (a.vol ?? 0));
+            rows.length = Math.min(rows.length, Number(s.count));
+          }
+          if (wantTv) {
+            for (const [label, q] of Object.entries(tvRows)) {
+              rows.push({ kind: 'tradfi', sym: label, name: tvList.find((e) => e[0] === label)?.[1] ?? '', px: q.px, chg: q.chg, vol: null, apr: null });
+            }
+          }
+          const dir = sortDir;
           rows.sort((a, b) => {
-            const av = a[k];
-            const bv = b[k];
+            const av = a[sortKey];
+            const bv = b[sortKey];
             if (av == null && bv == null) return 0;
             if (av == null) return 1;
             if (bv == null) return -1;
-            return av > bv ? dir : av < bv ? -dir : 0;
+            return av > bv ? dir : av < bv ? -dir : 0; // dir -1 = descending
           });
-          const arrow = (key) => (ui.sortKey === key ? (ui.sortDir === -1 ? ' ↓' : ' ↑') : '');
+          const arrow = (k) => (sortKey === k ? (sortDir === -1 ? ' ↓' : ' ↑') : '');
           scroll.innerHTML =
-            `<div class="vscr2-r vscr2-h"><span class="vscr2-star"></span><span class="vscr2-sym">Symbol</span>` +
-            `<span class="vscr2-c fr" data-k="px">Price${arrow('px')}</span>` +
-            `<span class="vscr2-c fr" data-k="chg">24h Chg${arrow('chg')}</span>` +
-            `<span class="vscr2-c fr cvol" data-k="vol">24h Volume${arrow('vol')}</span></div>` +
-            (rows.map((r) =>
-              `<div class="vscr2-r clickable" data-sym="${esc(r.sym)}" data-kind="${r.kind}">` +
-              `<button class="vscr2-star${favs.has(r.sym) ? ' on' : ''}" data-fav="${esc(r.sym)}" title="Favorite">★</button>` +
-              `<span class="vscr2-sym">${tvIcon(r.logoid)}<b>${esc(r.sym)}</b><span class="vscr2-name">${esc(r.name)}</span></span>` +
-              `<span class="vscr2-c fr">$${fmtPx(r.px)}</span>` +
-              `<span class="vscr2-c fr ${r.chg >= 0 ? 'up' : 'down'}">${fmtChg(r.chg)}</span>` +
-              `<span class="vscr2-c fr cvol">${r.vol == null ? '—' : `$${fmtCompact(r.vol)}`}</span></div>`).join('')
-            || '<div class="vscr2-none">nothing matches</div>');
+            `<div class="vrow vrow-h vscr-r"><span class="vic-slot"></span><span class="sym">sym</span>` +
+            `<span class="chg fr vscr-c" data-k="px">price${arrow('px')}</span>` +
+            `<span class="chg fr vscr-c" data-k="chg">24h${arrow('chg')}</span>` +
+            `<span class="chg fr vscr-c cvol" data-k="vol">24h vol${arrow('vol')}</span>` +
+            `<span class="chg fr vscr-c capr" data-k="apr">funding apr${arrow('apr')}</span></div>` +
+            rows.map((r) => {
+              const icon = r.kind === 'crypto' ? iconFor(r.sym) : '<i data-lucide="landmark"></i>';
+              return `<div class="vrow clickable vscr-r" data-sym="${esc(r.kind === 'crypto' ? r.sym : r.name)}" title="Link charts">` +
+                `<span class="vic-slot">${icon}</span><span class="sym">${esc(r.sym)}</span>` +
+                `<span class="chg fr">$${fmtPx(r.px)}</span>` +
+                `<span class="chg fr ${r.chg >= 0 ? 'up' : 'down'}">${fmtChg(r.chg)}</span>` +
+                `<span class="chg fr cvol">${r.vol == null ? '—' : `$${fmtCompact(r.vol)}`}</span>` +
+                `<span class="chg fr capr ${r.apr >= 0 ? 'up' : 'down'}">${r.apr == null ? '—' : `${r.apr.toFixed(2)}%`}</span></div>`;
+            }).join('');
           icons();
-        }
+        };
         scroll.addEventListener('click', (ev) => {
-          const fav = ev.target.closest('[data-fav]');
-          if (fav) {
-            const symK = fav.dataset.fav;
-            if (favs.has(symK)) favs.delete(symK); else favs.add(symK);
-            saveFavs();
-            paint();
-            return;
-          }
-          const th = ev.target.closest('.vscr2-c[data-k]');
+          const th = ev.target.closest('.vscr-c');
           if (th) {
             const k = th.dataset.k;
-            if (ui.sortKey === k) ui.sortDir = -ui.sortDir;
-            else { ui.sortKey = k; ui.sortDir = -1; }
-            paint();
+            if (sortKey === k) sortDir = -sortDir;
+            else { sortKey = k; sortDir = -1; }
+            paint(hlFeed.snap() ?? {});
             return;
           }
-          const r = ev.target.closest('.vscr2-r.clickable');
-          if (r?.dataset.sym) linkSymbol(r.dataset.sym);
+          const r = ev.target.closest('.vrow.clickable');
+          if (r?.dataset.sym) linkSymbol(r.dataset.sym.replace(/^.*:/, ''));
         });
-        const loadAll = () => { loadCrypto(); loadTradfi(); };
-        const schedule = () => { clearInterval(timer); timer = setInterval(loadAll, ui.ms); };
-        loadAll();
-        schedule();
-        return { destroy() { dead = true; clearInterval(timer); } };
+        const unsub = wantCr ? hlFeed.sub(paint) : null;
+        let tvTimer = null;
+        if (wantTv) { loadTv(); tvTimer = setInterval(loadTv, 15_000); if (!wantCr) paint({}); }
+        return { destroy() { unsub?.(); clearInterval(tvTimer); } };
       },
     },
     vFundHeat: {
@@ -2769,35 +2615,35 @@
   const P = (type, x, y, w, h, settings = {}) => ({ id: uid(), type, x, y, w, h, settings });
   const PRESETS = {
     DeFi: () => [
-      P('tvTape', 0, 0, 24, 3, { symbols: 'BITSTAMP:BTCUSD, BITSTAMP:ETHUSD, CRYPTO:SOLUSD, CRYPTO:XRPUSD, CRYPTO:BNBUSD, CRYPTO:DOGEUSD, CRYPTO:ADAUSD, COINBASE:HYPEUSD, CRYPTO:ZECUSD' }),
-      P('tvChart', 0, 3, 14, 14, { symbol: 'BITSTAMP:BTCUSD', interval: '60' }),
-      P('vWatch', 14, 3, 5, 8),
-      P('vMovers', 19, 3, 5, 14),
-      P('vNews', 14, 11, 5, 6),
-      P('vHeat', 0, 17, 12, 10),
-      P('vLiqs', 12, 17, 12, 10, { symbol: 'BTC' }),
-      P('vFunding', 0, 27, 10, 7),
-      P('vCountdown', 10, 27, 4, 7),
-      P('tvNews', 14, 27, 10, 7, { market: 'crypto' }),
+      P('tvTape', 0, 0, 24, 2, { symbols: 'BITSTAMP:BTCUSD, BITSTAMP:ETHUSD, CRYPTO:SOLUSD, CRYPTO:XRPUSD, CRYPTO:BNBUSD, CRYPTO:DOGEUSD, CRYPTO:ADAUSD, COINBASE:HYPEUSD, CRYPTO:ZECUSD' }),
+      P('tvChart', 0, 2, 14, 14, { symbol: 'BITSTAMP:BTCUSD', interval: '60' }),
+      P('vWatch', 14, 2, 5, 8),
+      P('vMovers', 19, 2, 5, 14),
+      P('vNews', 14, 10, 5, 6),
+      P('vHeat', 0, 16, 12, 10),
+      P('vChart', 12, 16, 12, 10, { command: 'eth 1h ema20 ema55' }),
+      P('vFunding', 0, 26, 10, 7),
+      P('vCountdown', 10, 26, 4, 7),
+      P('tvNews', 14, 26, 10, 7, { market: 'crypto' }),
     ],
     TradFi: () => [
-      P('tvTape', 0, 0, 24, 3, { symbols: 'FOREXCOM:SPXUSD, FOREXCOM:NSXUSD, TVC:VIX, NASDAQ:AAPL, NASDAQ:NVDA, NASDAQ:TSLA, NASDAQ:MSFT, AMEX:SPY' }),
-      P('tvChart', 0, 3, 14, 12, { symbol: 'AMEX:SPY', interval: 'D' }),
-      P('tvOverview', 14, 3, 5, 12, { lead: 'indices' }),
-      P('tvCal', 19, 3, 5, 12),
-      P('tvStockHeat', 0, 15, 12, 10),
-      P('tvNews', 12, 15, 6, 10, { market: 'stock' }),
-      P('tvMini', 18, 15, 6, 10, { symbol: 'NASDAQ:NVDA', range: '3M' }),
+      P('tvTape', 0, 0, 24, 2, { symbols: 'FOREXCOM:SPXUSD, FOREXCOM:NSXUSD, TVC:VIX, NASDAQ:AAPL, NASDAQ:NVDA, NASDAQ:TSLA, NASDAQ:MSFT, AMEX:SPY' }),
+      P('tvChart', 0, 2, 14, 12, { symbol: 'AMEX:SPY', interval: 'D' }),
+      P('tvOverview', 14, 2, 5, 12, { lead: 'indices' }),
+      P('tvCal', 19, 2, 5, 12),
+      P('tvStockHeat', 0, 14, 12, 10),
+      P('tvNews', 12, 14, 6, 10, { market: 'stock' }),
+      P('tvMini', 18, 14, 6, 10, { symbol: 'NASDAQ:NVDA', range: '3M' }),
     ],
     Macro: () => [
-      P('tvTape', 0, 0, 24, 3, { symbols: 'CAPITALCOM:DXY, TVC:GOLD, TVC:USOIL, TVC:US10Y, FOREXCOM:SPXUSD, BITSTAMP:BTCUSD, FX:EURUSD' }),
-      P('tvOverview', 0, 3, 7, 12, { lead: 'indices' }),
-      P('tvCal', 7, 3, 8, 12),
-      P('tvForexHeat', 15, 3, 9, 8),
-      P('vClocks', 15, 11, 9, 4),
-      P('tvChart', 0, 15, 12, 11, { symbol: 'OANDA:XAUUSD', interval: 'D' }),
-      P('tvNews', 12, 15, 6, 11, { market: 'index' }),
-      P('vNotes', 18, 15, 6, 11),
+      P('tvTape', 0, 0, 24, 2, { symbols: 'CAPITALCOM:DXY, TVC:GOLD, TVC:USOIL, TVC:US10Y, FOREXCOM:SPXUSD, BITSTAMP:BTCUSD, FX:EURUSD' }),
+      P('tvOverview', 0, 2, 7, 12, { lead: 'indices' }),
+      P('tvCal', 7, 2, 8, 12),
+      P('tvForexHeat', 15, 2, 9, 8),
+      P('vClocks', 15, 10, 9, 4),
+      P('tvChart', 0, 14, 12, 11, { symbol: 'OANDA:XAUUSD', interval: 'D' }),
+      P('tvNews', 12, 14, 6, 11, { market: 'index' }),
+      P('vNotes', 18, 14, 6, 11),
     ],
   };
   const defaultLayout = (name) => ({ grid: (PRESETS[name] ?? PRESETS.DeFi)() });
@@ -2821,25 +2667,6 @@
               inst.settings.symbols = inst.settings.symbols.replace(/CRYPTO:HYPEUSD/g, 'COINBASE:HYPEUSD');
             if (inst.type === 'tvOverview' && (name === 'TradFi' || name === 'Macro'))
               (inst.settings ??= {}).lead ??= 'indices';
-          }
-          // 2026-07-22 owner: the preset vChart duplicated the chart above it
-          for (const inst of doc.grid ?? []) {
-            if (inst.type === 'vChart' && inst.settings?.command === 'eth 1h ema20 ema55') {
-              inst.type = 'vLiqs';
-              inst.settings = { symbol: 'BTC' };
-            }
-          }
-          // a 2-row tape (60px) can't hold TV's band — grow it and shift the
-          // rows below down, or gridstack resolves the collision by exiling
-          // the tape to the bottom of the board
-          for (const inst of doc.grid ?? []) {
-            if (inst.type !== 'tvTape' || (inst.h ?? 0) >= 3) continue;
-            const d = 3 - inst.h;
-            const edge = inst.y + inst.h;
-            for (const other of doc.grid) {
-              if (other !== inst && other.y >= edge) other.y += d;
-            }
-            inst.h = 3;
           }
         }
         return j;
@@ -3399,7 +3226,6 @@
   }
 
   async function enterFocus(raw, displaySym) {
-    if (currentSection !== 'dash') exitSection(false); // focus renders on the grid canvas
     const meta = focusMeta(raw);
     // no stories for this ticker → skip the news block (needs the deployed
     // /api/vice-headlines proxy; locally we can't know, so news stays)
@@ -3521,9 +3347,8 @@
         const sym = sectionSym();
         const grid = el('div', 'vpage-grid');
         root.appendChild(grid);
-        // our own engine (vchart.js) — candles, <Vice> indicator suite, book heatmap
-        panel(grid, 'vChartPro', { symbol: sym }, 'span2 vp-hero vp-chartpro');
-        panel(grid, 'vScreener', { tab: 'all' }, 'span2 vp-tall');
+        panel(grid, 'tvChart', { symbol: tvSymbolFor(sym), interval: '60' }, 'span2 vp-hero');
+        panel(grid, 'vScreener', { tab: 'all', count: 30 }, 'span2 vp-tall');
       },
     },
   };
@@ -3734,10 +3559,10 @@
         icon: 'layout-grid', label: `Switch layout: ${n}`,
         run: () => switchLayout(n),
       })),
-      { icon: 'pencil', label: editing ? 'Done editing' : 'Edit layout', run: () => { if (currentSection !== 'dash') location.hash = '#/'; $('#hub-edit').click(); } },
+      { icon: 'pencil', label: editing ? 'Done editing' : 'Edit layout', run: () => $('#hub-edit').click() },
       ...Object.entries(HUB_WIDGETS).map(([t, m]) => ({
         icon: m.icon, label: `Add widget: ${m.title}`,
-        run: () => { if (currentSection !== 'dash') location.hash = '#/'; if (!editing) $('#hub-edit').click(); addInstance(t); },
+        run: () => { if (!editing) $('#hub-edit').click(); addInstance(t); },
       })),
       { icon: 'download', label: 'Export layout as JSON', run: exportLayout },
     ];
@@ -3798,7 +3623,7 @@
       if (typing || document.querySelector('.hub-modal-veil, .hub-palette-veil')) return;
       if (e.key === '/') { e.preventDefault(); openPalette(); }
       else if (e.key.toLowerCase() === 'f') { focusMode ? exitFocus() : openFocusSearch(); }
-      else if (e.key.toLowerCase() === 'e') { if (currentSection === 'dash' && !focusMode) $('#hub-edit').click(); }
+      else if (e.key.toLowerCase() === 'e') $('#hub-edit').click();
       else if (/^[1-5]$/.test(e.key)) {
         const name = Object.keys(store.layouts)[Number(e.key) - 1];
         if (name) switchLayout(name);
@@ -3878,7 +3703,6 @@
       if (!gridEl || !gridEl.clientWidth || grid.getColumn() !== GRID_COLS) return;
       const cell = Math.max(30, Math.min(52, Math.round((gridEl.clientWidth / GRID_COLS) * 0.68)));
       if (cell !== grid.getCellHeight()) grid.cellHeight(cell);
-      gridEl.style.setProperty('--hub-cell', `${cell}px`); // edit-grid guides track it
     }
     fitCells();
     // backstop for expand paths that emit no change event

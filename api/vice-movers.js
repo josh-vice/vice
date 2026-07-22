@@ -8,7 +8,7 @@ export default async function handler(req, res) {
   try {
     const r = await fetch(
       'https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc' +
-      '&per_page=250&page=1&sparkline=false&price_change_percentage=24h',
+      '&per_page=250&page=1&sparkline=false&price_change_percentage=24h%2C7d',
       { headers: { accept: 'application/json' }, signal: AbortSignal.timeout(10_000) },
     );
     if (!r.ok) {
@@ -21,7 +21,9 @@ export default async function handler(req, res) {
       n: c.name,
       p: c.current_price,
       c24: c.price_change_percentage_24h_in_currency ?? c.price_change_percentage_24h ?? null,
+      c7d: c.price_change_percentage_7d_in_currency ?? null,
       mc: c.market_cap,
+      fdv: c.fully_diluted_valuation ?? null,
       r: c.market_cap_rank,
       img: c.image ?? null,
     }));
