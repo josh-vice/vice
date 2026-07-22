@@ -1,8 +1,31 @@
 # HANDOFF — Vice Suite (bots + vicesuite.com) · 2026-07-22
 
 The Vice Suite is Vice Terminal's product line: **7 Discord price-ticker bots**, the
-**Vice Charts bot** (`vc` commands), and **Vice Academy** (= liqtheory.com, untouched).
+**Vice Charts bot** (`vc` commands), **Vice Hub** (customizable live dashboard at
+/hub, built this session), and **Vice Academy** (= liqtheory.com, untouched).
 Site: **vicesuite.com** (same Vercel project as liqtheory.com). Everything is free.
+
+## 0. END-OF-SESSION STATE (2026-07-22, read this first)
+
+Shipped today, ALL verified locally, NOTHING deployed (owner runs `vercel --prod`):
+- Bots: launchd persistence (com.vicesuite.*), DEX charts in the vc bot (gt:/addresses
+  via GeckoTerminal), example images regenerated + WebP'd.
+- **Vice Hub** (/hub): the big one — see section 2's Vice Hub blocks for every detail.
+  Final versions: `hub.js v1.14.0`, `hub.css v1.11.2`, `demo.js v1.2.0` (exports
+  ViceChartEngine; loaded on /chartbot AND /hub), `vice.css v2.6.0`.
+  Widgets removed on owner's orders: TV Technical Analysis (tvTA), Fear & Greed
+  (vFng — `api/vice-fng.js` deleted too). Saved layouts referencing them skip
+  gracefully; DeFi preset gives F&G's column to Top Movers (19,2,5,14).
+- API functions: vice-stats, vice-movers (now with `img` icon URLs), vice-news,
+  vice-headlines (NEW). vice-fng.js DELETED.
+- Landing: cards grid reworked (compact Tickers+Charts stack · Hub · Academy).
+- Tickers page: dmock shows all 7 fleet members live.
+
+Post-deploy verification list (first session after the owner deploys):
+vicesuite.com/hub loads + layouts persist · /api/vice-news returns items ·
+/api/vice-headlines?symbol=CRYPTO:SOLUSD returns a count · TV screener widgets
+fill on the real domain (they ghost on localhost — suspected referrer gating) ·
+from a non-US connection the funding table's BIN/BYB columns populate.
 
 ---
 
@@ -246,8 +269,50 @@ Shared: `vice/vice.css` (v2.3.2), `vice/vice.js` (scroll-reveal + server-count),
   Venue chain BINANCE (deep 500-level book; geo-blocked for US IPs — fine, this
   runs in the VISITOR's browser) → Coinbase (level=2 = full aggregated book,
   US-friendly) → Hyperliquid l2Book; first venue that answers is sticky.
-  (A native "Vice Heatmap" treemap was built and REVERTED same night — owner
-  disliked the washed-out translucent tiles; don't rebuild without asking.)
+  (A frosted-translucent "Vice Heatmap" was built and REVERTED — owner disliked
+  the washed-out tiles.)
+- **vHeat REBUILT SOLID + tvTA REMOVED (owner-directed, hub.js v1.11.0)**: TV's
+  crypto-heatmap embed CANNOT cap the universe (tested: unknown dataSource values
+  silently fall back), so "top 100" = native vHeat treemap with SOLID saturated
+  TV-style tiles (dim tone at 0% → full color by ±6%, NO translucency this time),
+  top 50/100/150 setting (default 100), stable/wrapped filter, click-to-link,
+  CoinGecko via /api/vice-movers, in the DeFi preset heatmap slot (tvCryptoHeat
+  still in the tray). TradingView Technical Analysis (tvTA) is DELETED from the
+  registry — DeFi preset gives its slot to a 12-wide Vice Chart; Focus board
+  widened Symbol Info; saved layouts with tvTA skip it gracefully.
+
+- **ICONS + VENUE FUNDING + NEWS-AWARE FOCUS (owner-directed, hub.js v1.12.0 /
+  hub.css v1.10.0)**: (1) coin artwork left of every ticker row (watchlist,
+  movers, funding, alerts) — CoinGecko image URLs now ride the movers proxy
+  (`img` field, shared fetchMarkets() + coinIcons registry, letter-circle
+  fallback). (2) Funding & OI is a PER-VENUE 8h table: HL (hourly×8, live) ·
+  OKX (per-symbol, CORS works everywhere incl US) · BIN · BYB (bulk endpoints,
+  geo-blocked for US visitors → "—" columns there, populate abroad); columns
+  drop via container queries as the block narrows. (3) NEW api/vice-headlines.js
+  proxies TV's news-headlines endpoint (no CORS upstream) → Focus checks story
+  count and OMITS the Top Stories block when a ticker has no news (mini chart
+  widens to 16); locally/proxy-down it defaults to showing news. Verified with
+  a mocked count:0 → newsless SOL board.
+
+- **FOCUS SEARCH v2 + TAPE PURITY (owner-directed, hub.js v1.13.0 / hub.css
+  v1.11.0)**: Focus search is dual-universe — DeFi section (live HL universe,
+  coin artwork, name search via coinNames registry: "solana"→SOL) + TradFi
+  section (curated TRADFI_BOOK: indices/ETFs/mega-caps/metals/FX/yields with
+  embed-safe TV symbols, "apple"→AAPL) + as-typed fallback; the ACTIVE layout's
+  universe lists first; TradFi picks pass a display label so the chip reads
+  "AAPL · exit" not "SPXUSD". DeFi preset tape is now CRYPTO-ONLY (BTC ETH SOL
+  XRP BNB DOGE ADA HYPE ZEC — indices/DXY/gold removed; TradFi tape was already
+  pure; Macro stays cross-asset by design). GOTCHA: a bad splice duplicated the
+  navPrice+focus region (end-marker sat BEFORE start) — repaired; when splicing
+  hub.js verify marker ORDER first.
+
+- **CANDLE CLOSE CLOCK (owner-directed, hub.js v1.13.2 / hub.css v1.11.2)**:
+  the countdown widget now leads with a clock — large UTC time + small
+  "HH:MM:SS <TZ> · your time" (Intl short zone name), hairline divider, then
+  the 1H/4H/1D/1W countdown rows. Also fixed in passing: `.hub-empty[hidden]`
+  needed an explicit display:none (class display:flex beat the hidden
+  attribute — SAME trap as the old .hero-stat bug; watch for it on any
+  flex/grid element that uses the hidden attribute).
 
 ### LT app touchpoint (only one)
 `lt-community.js` v2.1.0: "The Vice Suite" row (flamingo, pink hue) → vicesuite.com.
@@ -256,20 +321,22 @@ Nothing else in the app/course content was touched.
 ---
 
 ## 3. Roadmap / open items
-1. Owner: role perms for the newer tickers **look fixed** (zero "Missing Permissions"
-   since the 2026-07-22 launchd restart — color roles applied cleanly at startup);
-   still pending: upload app icons (coin logos) for ETH/SOL/SPX/HYPE/ZEC/XRP in the portal.
-2. Deploy the latest batch ($ codes, nav spacing, back-btn, favicon, OG removal…
-   **+ 2026-07-22: WebP/regenerated examples, DEX venue on /chartbot page + demo.js v1.1.0,
-   VICE HUB (/hub page + vercel.json rewrite + api/vice-movers|fng|news + nav/card
-   integration, vice.css v2.4.0)**). After deploy verify: vicesuite.com/hub loads,
-   /api/vice-news returns items, and whether the TV screener widgets fill on the real
-   domain (they ghost on localhost — see Hub section).
-3. ~~Bot persistence: launchd~~ **DONE 2026-07-22** (see "Operating the bots"). VPS later
-   (Hetzner+pm2 was the recommendation; Binance/Bybit become available from a non-US VPS).
-4. ~~DEX tokens (GeckoTerminal)~~ **DONE 2026-07-22** (bot + demo). Still open, phase 3+:
-   onchain alerts (needs a slower GT poll lane), mc view, daily/weekly movers, OI,
-   categories, baskets, Polymarket, trade tape. Blocked w/o proprietary data: news system,
-   liq heatmap/SL-TP, treasuries, stocks/TV symbols.
+
+1. **OWNER: deploy** the batch (everything in section 0) — then run the post-deploy
+   verification list. Also still pending owner-side: upload coin-logo app icons for
+   the ETH/SOL/SPX/HYPE/ZEC/XRP ticker apps in the Discord dev portal.
+2. Hub ideas queued (discussed + owner-seen, not yet requested-built): kiosk mode
+   (fullscreen + Screen Wake Lock + auto-rotating layouts), layout sharing via URL
+   hash (no backend needed), Document-PiP pop-out widget, watchlist sparklines /
+   drag-reorder / multiple named lists, watchlist-filtered news, deeper hub↔Discord
+   alert bridge.
+3. Chart-bot phase 3 remainder: onchain alerts (GT rate limit needs a slower poll
+   lane), mc view, daily/weekly movers, OI, categories, baskets, Polymarket, trade
+   tape. Blocked w/o proprietary data: news system, liq heatmap/SL-TP, treasuries,
+   stocks/TV symbols.
+4. Bot hosting: launchd on the mini is DONE; VPS later (Hetzner+pm2 was the rec;
+   Binance/Bybit unlock as bot venues from a non-US VPS).
+5. Nice-to-have: rotate the BTC bot token (passed through chat long ago); flip
+   Vercel primary domain www→apex (suggested, still pending).
 
 Full running history: memory file `lt-discord-bots.md` in the assistant's memory dir.

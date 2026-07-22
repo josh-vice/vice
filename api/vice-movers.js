@@ -23,6 +23,7 @@ export default async function handler(req, res) {
       c24: c.price_change_percentage_24h_in_currency ?? c.price_change_percentage_24h ?? null,
       mc: c.market_cap,
       r: c.market_cap_rank,
+      img: c.image ?? null,
     }));
     res.setHeader('Cache-Control', 's-maxage=120, stale-while-revalidate=600');
     res.setHeader('Access-Control-Allow-Origin', '*');

@@ -147,6 +147,29 @@
   const LINKED = () => F.tog('linked', 'Follow linked symbol', true,
     'Clicking a row in a watchlist, movers, or funding block re-points this widget');
 
+
+  /* ── coin icons + shared markets fetch (CoinGecko via the movers proxy) ── */
+  const coinIcons = {};
+  const coinNames = {};
+  const registerIcons = (rows) => {
+    for (const r of rows ?? []) {
+      if (!r?.s) continue;
+      if (r.img && !coinIcons[r.s]) coinIcons[r.s] = r.img;
+      if (r.n && !coinNames[r.s]) coinNames[r.s] = r.n;
+    }
+  };
+  const iconFor = (sym) => coinIcons[sym]
+    ? `<img class="vic" src="${esc(coinIcons[sym])}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()" />`
+    : `<span class="vic vic-f">${esc((sym ?? '?')[0])}</span>`;
+  const fetchMarkets = async () => {
+    const rows = await viaProxy('/api/vice-movers', async () => {
+      const raw = await getJson('https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=250&page=1&sparkline=false&price_change_percentage=24h');
+      return raw.map((c) => ({ s: (c.symbol || '').toUpperCase(), n: c.name, p: c.current_price, c24: c.price_change_percentage_24h_in_currency ?? c.price_change_percentage_24h ?? null, mc: c.market_cap, img: c.image ?? null }));
+    });
+    registerIcons(rows);
+    return rows;
+  };
+
   /* ── linked symbols: click a row anywhere → linked widgets follow ───── */
   const TV_SYM = { BTC: 'BITSTAMP:BTCUSD', ETH: 'BITSTAMP:ETHUSD' };
   const tvSymbolFor = (sym) => TV_SYM[sym] ?? `CRYPTO:${sym}USD`;
@@ -219,7 +242,7 @@
       w: 24, h: 2, minW: 8, minH: 2,
       settings: [
         F.area('symbols', 'Symbols (comma-separated)',
-          'BITSTAMP:BTCUSD, BITSTAMP:ETHUSD, CRYPTO:SOLUSD, FOREXCOM:SPXUSD, FOREXCOM:NSXUSD, CAPITALCOM:DXY, TVC:GOLD'),
+          'BITSTAMP:BTCUSD, BITSTAMP:ETHUSD, CRYPTO:SOLUSD, CRYPTO:XRPUSD, CRYPTO:BNBUSD, CRYPTO:DOGEUSD, CRYPTO:ADAUSD, CRYPTO:HYPEUSD'),
         F.tog('logos', 'Show symbol logos', true),
       ],
       mount(body, s) {
@@ -365,25 +388,6 @@
           : { feedMode: 'market', market: s.market, displayMode: 'regular' });
       },
     },
-    tvTA: {
-      title: 'Technical Gauge', icon: 'gauge', cat: 'News & data',
-      w: 6, h: 8, minW: 4, minH: 6,
-      settings: [
-        F.text('symbol', 'Symbol', 'BITSTAMP:BTCUSD'),
-        F.sel('interval', 'Interval', '1h', [['15m', '15m'], ['1h', '1h'], ['4h', '4h'], ['1D', '1D'], ['1W', '1W']]),
-        LINKED(),
-      ],
-      link: (s, sym) => ({ symbol: tvSymbolFor(sym) }),
-      label: (s) => s.symbol.split(':').pop(),
-      mount(body, s) {
-        const h = tvEmbed(body, 'technical-analysis', {
-          symbol: s.symbol, interval: s.interval, showIntervalTabs: true, displayMode: 'single',
-        });
-        // TV pads this gauge generously — render it denser than the rest
-        body.querySelector('.tv-wrap')?.classList.add('tv-ta');
-        return h;
-      },
-    },
     tvCal: {
       title: 'Economic Calendar', icon: 'calendar-clock', cat: 'News & data',
       w: 6, h: 10, minW: 4, minH: 6,
@@ -431,11 +435,16 @@
         if (s.shared) localStorage.setItem(LS_WATCH, JSON.stringify(syms));
         const lastPx = {};
         scroll.innerHTML = syms.map((sym) =>
-          `<div class="vrow clickable" data-sym="${esc(sym)}" title="Link charts to ${esc(sym)}"><span class="sym">${esc(sym)}</span><span class="px">—</span><span class="chg">—</span></div>`).join('')
+          `<div class="vrow clickable" data-sym="${esc(sym)}" title="Link charts to ${esc(sym)}"><span class="vic-slot">${iconFor(sym)}</span><span class="sym">${esc(sym)}</span><span class="px">—</span><span class="chg">—</span></div>`).join('')
           || '<div class="hw-note">watchlist is empty — add symbols in settings</div>';
         rowLinker(scroll);
         const unsub = hlFeed.sub((map) => {
           for (const row of scroll.querySelectorAll('.vrow')) {
+            const slot = row.querySelector('.vic-slot');
+            if (slot && !slot.dataset.ok && coinIcons[row.dataset.sym]) {
+              slot.innerHTML = iconFor(row.dataset.sym);
+              slot.dataset.ok = '1';
+            }
             const q = map[row.dataset.sym];
             if (!q) { row.querySelector('.px').textContent = 'n/a'; continue; }
             const pxEl = row.querySelector('.px');
@@ -480,17 +489,14 @@
           const uni = rows.slice(0, Number(s.universe)).filter((c) => c.c24 != null);
           const list = [...uni].sort((a, b) => (tab === 'g' ? b.c24 - a.c24 : a.c24 - b.c24)).slice(0, s.count);
           scroll.innerHTML = list.map((c) =>
-            `<div class="vrow clickable" data-sym="${esc(c.s)}" title="Link charts to ${esc(c.s)}"><span class="sym">${esc(c.s)}</span><span class="name">${esc(c.n)}</span>` +
+            `<div class="vrow clickable" data-sym="${esc(c.s)}" title="Link charts to ${esc(c.s)}"><span class="vic-slot">${iconFor(c.s)}</span><span class="sym">${esc(c.s)}</span><span class="name">${esc(c.n)}</span>` +
             `<span class="px">$${fmtPx(c.p)}</span><span class="chg ${c.c24 >= 0 ? 'up' : 'down'}">${c.c24 >= 0 ? '\u2197' : '\u2198'} ${fmtChg(c.c24)}</span></div>`).join('')
             || '<div class="hw-note">no data yet</div>';
         };
         rowLinker(scroll);
         const load = async () => {
           try {
-            rows = await viaProxy('/api/vice-movers', async () => {
-              const raw = await getJson('https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=250&page=1&sparkline=false&price_change_percentage=24h');
-              return raw.map((c) => ({ s: (c.symbol || '').toUpperCase(), n: c.name, p: c.current_price, c24: c.price_change_percentage_24h_in_currency ?? c.price_change_percentage_24h ?? null }));
-            });
+            rows = await fetchMarkets();
             paint();
           } catch (e) {
             scroll.innerHTML = '';
@@ -507,50 +513,6 @@
         });
         load();
         timer = setInterval(load, 120_000);
-        return { destroy() { clearInterval(timer); }, refresh: load };
-      },
-    },
-    vFng: {
-      title: 'Fear & Greed', icon: 'activity', cat: 'Vice', vice: true,
-      w: 4, h: 5, minW: 3, minH: 3,
-      settings: [],
-      mount(body) {
-        const box = el('div', 'fng');
-        body.appendChild(box);
-        let timer = null;
-        const paint = ({ value, label, yesterday }) => {
-          const angle = -90 + (value / 100) * 180;
-          box.innerHTML = `
-            <svg viewBox="0 0 200 118" aria-hidden="true">
-              <defs><linearGradient id="fngGrad" x1="0" y1="0" x2="1" y2="0">
-                <stop offset="0%" stop-color="#ff6473"/><stop offset="50%" stop-color="#e7b53a"/><stop offset="100%" stop-color="#21d196"/>
-              </linearGradient></defs>
-              <path d="M 14 104 A 86 86 0 0 1 186 104" fill="none" stroke="var(--border2)" stroke-width="13" stroke-linecap="round"/>
-              <path d="M 14 104 A 86 86 0 0 1 186 104" fill="none" stroke="url(#fngGrad)" stroke-width="13" stroke-linecap="round"
-                    stroke-dasharray="${(value / 100) * 270.2} 270.2"/>
-              <g transform="rotate(${angle} 100 104)">
-                <line x1="100" y1="104" x2="100" y2="34" stroke="var(--text)" stroke-width="3" stroke-linecap="round"/>
-                <circle cx="100" cy="104" r="5.5" fill="var(--text)"/>
-              </g>
-            </svg>
-            <div class="val">${value}</div>
-            <div class="lab">${esc(label)}</div>
-            ${yesterday != null ? `<div class="sub">yesterday ${yesterday}</div>` : ''}`;
-        };
-        const load = async () => {
-          try {
-            paint(await viaProxy('/api/vice-fng', async () => {
-              const j = await getJson('https://api.alternative.me/fng/?limit=2');
-              const [t, p] = j?.data ?? [];
-              return { value: Number(t.value), label: t.value_classification, yesterday: p ? Number(p.value) : null };
-            }));
-          } catch (e) {
-            box.innerHTML = '';
-            note(box, 'wifi-off', `index unreachable — ${esc(e.message)}`);
-          }
-        };
-        load();
-        timer = setInterval(load, 3_600_000);
         return { destroy() { clearInterval(timer); }, refresh: load };
       },
     },
@@ -649,7 +611,7 @@
         const paint = () => {
           const active = inst.settings.alerts.map((a, i) =>
             `<div class="valert-row">` +
-            `<span class="sym">${esc(a.sym)}</span>` +
+            `<span class="vic-slot">${iconFor(a.sym)}</span><span class="sym">${esc(a.sym)}</span>` +
             `<span class="cond">${a.dir === 'above' ? '≥' : '≤'} $${fmtPx(a.target)}</span>` +
             `<span class="now">${prices[a.sym]?.px != null ? `$${fmtPx(prices[a.sym].px)}` : ''}</span>` +
             `<button class="hw-btn del" data-copy="${i}" title="Copy the Discord bot command"><i data-lucide="copy"></i></button>` +
@@ -791,38 +753,68 @@
       w: 10, h: 7, minW: 5, minH: 4,
       settings: [
         F.sel('mode', 'Rows', 'watchlist', [['watchlist', 'My watchlist'], ['top', 'Top by open interest']]),
-        F.num('count', 'Max rows', 12, 4, 30),
+        F.num('count', 'Max rows', 10, 4, 20),
       ],
       label: (s) => s.only ?? (s.mode === 'top' ? 'top OI' : 'watchlist'),
       mount(body, s) {
         const scroll = el('div', 'vw-scroll');
         body.appendChild(scroll);
         const readShared = () => { try { return JSON.parse(localStorage.getItem(LS_WATCH)) ?? []; } catch { return []; } };
+        // 8h funding across venues: HL (live feed, hourly ×8), OKX (per-symbol,
+        // CORS everywhere), Binance + Bybit (bulk — geo-blocked for US visitors,
+        // their columns show — there)
+        const rates = { okx: {}, bin: {}, byb: {} };
+        let venueTimer = null;
+        const rowSyms = (map) => s.only ? [s.only]
+          : s.mode === 'watchlist' ? readShared().filter((sym) => map[sym])
+          : Object.entries(map).sort((a, b) => (b[1].oi * b[1].px) - (a[1].oi * a[1].px)).slice(0, s.count).map(([k]) => k);
+        const loadVenues = async () => {
+          const map = hlFeed.snap() ?? {};
+          const syms = rowSyms(map).slice(0, 15);
+          getJson('https://fapi.binance.com/fapi/v1/premiumIndex', 6000).then((j) => {
+            if (!Array.isArray(j)) return;
+            const m = {};
+            for (const r of j) if (r.symbol?.endsWith('USDT')) m[r.symbol.slice(0, -4)] = Number(r.lastFundingRate);
+            rates.bin = m;
+          }).catch(() => { /* geo-blocked — column stays — */ });
+          getJson('https://api.bybit.com/v5/market/tickers?category=linear', 6000).then((j) => {
+            const l = j?.result?.list;
+            if (!Array.isArray(l)) return;
+            const m = {};
+            for (const r of l) if (r.symbol?.endsWith('USDT')) m[r.symbol.slice(0, -4)] = Number(r.fundingRate);
+            rates.byb = m;
+          }).catch(() => { /* geo-blocked — column stays — */ });
+          await Promise.all(syms.map((sym) =>
+            getJson(`https://www.okx.com/api/v5/public/funding-rate?instId=${sym}-USDT-SWAP`, 6000)
+              .then((j) => { const r = j?.data?.[0]?.fundingRate; if (r != null) rates.okx[sym] = Number(r); })
+              .catch(() => { /* not listed on OKX */ })));
+        };
+        const cell = (v, cls) => (v == null || !Number.isFinite(v))
+          ? `<span class="chg fr ${cls}">—</span>`
+          : `<span class="chg fr ${cls} ${v >= 0 ? 'up' : 'down'}">${(v * 100).toFixed(4)}%</span>`;
         const unsub = hlFeed.sub((map) => {
-          let rows = s.only
-            ? [[s.only, map[s.only]]].filter(([, q]) => q)
-            : s.mode === 'watchlist'
-              ? readShared().map((sym) => [sym, map[sym]]).filter(([, q]) => q)
-              : Object.entries(map).sort((a, b) => (b[1].oi * b[1].px) - (a[1].oi * a[1].px));
-          rows = rows.slice(0, s.count);
-          if (s.only && rows.length === 0) {
+          const syms = rowSyms(map);
+          if (s.only && !map[s.only]) {
             scroll.innerHTML = `<div class="hw-note">no Hyperliquid perp for ${esc(s.only)}</div>`;
             return;
           }
           scroll.innerHTML =
-            '<div class="vrow vrow-h"><span class="sym">sym</span><span class="name"></span>' +
-            '<span class="chg">funding/h</span><span class="chg">open int</span><span class="chg">24h vol</span></div>' +
-            rows.map(([sym, q]) => {
-              const f = Number.isFinite(q.funding) ? q.funding : null;
+            '<div class="vrow vrow-h"><span class="vic-slot"></span><span class="sym">sym</span><span class="name"></span>' +
+            '<span class="chg fr">hl</span><span class="chg fr cokx">okx</span><span class="chg fr cbin">bin</span>' +
+            '<span class="chg fr cbyb">byb</span><span class="chg coi">open int</span></div>' +
+            syms.slice(0, s.only ? 1 : s.count).map((sym) => {
+              const q = map[sym];
               return `<div class="vrow clickable" data-sym="${esc(sym)}" title="Link charts to ${esc(sym)}">` +
-                `<span class="sym">${esc(sym)}</span><span class="name"></span>` +
-                `<span class="chg ${f != null && f < 0 ? 'down' : 'up'}">${f != null ? `${(f * 100).toFixed(4)}%` : '—'}</span>` +
-                `<span class="chg">$${fmtCompact(q.oi * q.px)}</span>` +
-                `<span class="chg">$${fmtCompact(q.vol)}</span></div>`;
+                `<span class="vic-slot">${iconFor(sym)}</span><span class="sym">${esc(sym)}</span><span class="name"></span>` +
+                cell(Number.isFinite(q?.funding) ? q.funding * 8 : null, '') +
+                cell(rates.okx[sym], 'cokx') + cell(rates.bin[sym], 'cbin') + cell(rates.byb[sym], 'cbyb') +
+                `<span class="chg coi">$${fmtCompact(q ? q.oi * q.px : null)}</span></div>`;
             }).join('');
         });
         rowLinker(scroll);
-        return { destroy() { unsub(); } };
+        setTimeout(loadVenues, 1200); // let the HL snapshot land first
+        venueTimer = setInterval(loadVenues, 60_000);
+        return { destroy() { unsub(); clearInterval(venueTimer); } };
       },
     },
     vCountdown: {
@@ -842,7 +834,14 @@
         const pad = (n) => String(n).padStart(2, '0');
         const paint = () => {
           const now = Date.now();
-          box.innerHTML = FRAMES.map(({ label, ms, off }) => {
+          const d = new Date(now);
+          const utc = `${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}:${pad(d.getUTCSeconds())}`;
+          const lp = new Intl.DateTimeFormat('en-US', {
+            hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false, timeZoneName: 'short',
+          }).formatToParts(d).reduce((a, p) => ({ ...a, [p.type]: p.value }), {});
+          const clock = `<div class="vcd-clock"><div class="utc">${utc}<span>UTC</span></div>` +
+            `<div class="local">${pad(lp.hour % 24)}:${lp.minute}:${lp.second} ${esc(lp.timeZoneName ?? '')} · your time</div></div>`;
+          box.innerHTML = clock + FRAMES.map(({ label, ms, off }) => {
             const into = (now - off) % ms;
             const left = ms - into;
             const h = Math.floor(left / 3_600_000);
@@ -983,6 +982,85 @@
         return { destroy() { dead = true; clearInterval(timer); ro?.disconnect(); chart?.dispose(); } };
       },
     },
+    vHeat: {
+      title: 'Vice Heatmap', icon: 'blocks', cat: 'Vice', vice: true,
+      w: 12, h: 10, minW: 6, minH: 5,
+      settings: [
+        F.sel('count', 'Coins', '100', [['50', 'Top 50'], ['100', 'Top 100'], ['150', 'Top 150']]),
+        F.tog('clean', 'Hide stablecoins & wrapped assets', true),
+      ],
+      label: (s) => `top ${s.count}`,
+      mount(body, s) {
+        const box = el('div', 'vheat');
+        body.appendChild(box);
+        const NOISE = new Set(['USDT', 'USDC', 'DAI', 'USDE', 'USDS', 'FDUSD', 'PYUSD', 'TUSD', 'USD1', 'USDF',
+          'WBTC', 'WETH', 'STETH', 'WSTETH', 'WEETH', 'WBETH', 'CBBTC', 'RETH', 'LSETH', 'SUSDE', 'BSC-USD', 'USDTB']);
+        // solid, saturated tiles (TV-style): dim tone at 0%, full color by ±6%
+        const mix = (a, b, t) => a.map((v, i) => Math.round(v + (b[i] - v) * t));
+        const tile = (chg) => {
+          const t = 0.22 + 0.78 * Math.min(Math.abs(chg) / 6, 1);
+          const [r, g, b2] = chg >= 0 ? mix([27, 43, 38], [13, 148, 106], t) : mix([48, 27, 32], [201, 55, 68], t);
+          return `rgb(${r},${g},${b2})`;
+        };
+        let chart = null;
+        let timer = null;
+        let ro = null;
+        let dead = false;
+        let tries = 0;
+        const paint = (rows) => {
+          const list = rows.filter((c) => c.mc && (!s.clean || !NOISE.has(c.s))).slice(0, Number(s.count));
+          chart?.setOption({
+            backgroundColor: 'transparent',
+            tooltip: {
+              backgroundColor: '#0d0b18', borderColor: '#363049', borderWidth: 1, padding: [8, 11],
+              textStyle: { color: '#f6f5fb', fontFamily: 'Geist Mono, monospace', fontSize: 12 },
+              formatter: (p) => `<b>${esc(p.data.coin)}</b> · ${esc(p.name)}<br/>$${fmtPx(p.data.px)}  ` +
+                `<span style="color:${p.data.chg >= 0 ? '#21d196' : '#ff6473'}">${fmtChg(p.data.chg)}</span><br/>` +
+                `<span style="color:#8b85a3">mcap $${fmtCompact(p.value)}</span>`,
+            },
+            series: [{
+              type: 'treemap', left: 0, top: 0, right: 0, bottom: 0,
+              roam: false, nodeClick: false, breadcrumb: { show: false },
+              label: {
+                color: 'rgba(255,255,255,0.94)', fontFamily: 'Geist Mono, monospace',
+                fontSize: 11.5, fontWeight: 600, lineHeight: 15, overflow: 'truncate',
+                formatter: (p) => `${p.name}\n${fmtChg(p.data.chg)}`,
+              },
+              itemStyle: { gapWidth: 2, borderWidth: 0, borderColor: '#0d0b18' },
+              emphasis: { label: { color: '#fff' } },
+              data: list.map((c) => ({
+                name: c.s, value: c.mc, chg: c.c24 ?? 0, px: c.p, coin: c.n,
+                itemStyle: { color: tile(c.c24 ?? 0) },
+              })),
+            }],
+          }, { notMerge: true });
+        };
+        const load = async () => {
+          try {
+            const rows = await fetchMarkets();
+            if (!dead) paint(rows);
+          } catch (e) {
+            if (!dead && !chart?.getOption()?.series?.length) { note(body, 'wifi-off', `heatmap feed unreachable — ${esc(e.message)}`); }
+          }
+        };
+        const start = () => {
+          if (dead) return;
+          if (!window.echarts) {
+            if (++tries > 75) { note(body, 'alert-triangle', "the chart engine didn't load — refresh the page"); return; }
+            setTimeout(start, 200);
+            return;
+          }
+          chart = window.echarts.init(box, null, { renderer: 'canvas' });
+          chart.on('click', (p) => { if (p?.name) linkSymbol(p.name); });
+          load();
+          timer = setInterval(load, 120_000);
+          ro = new ResizeObserver(() => chart?.resize());
+          ro.observe(box);
+        };
+        start();
+        return { destroy() { dead = true; clearInterval(timer); ro?.disconnect(); chart?.dispose(); } };
+      },
+    },
     vSuite: {
       title: 'Vice Suite', icon: 'layout-grid', cat: 'Vice', vice: true,
       w: 5, h: 6, minW: 3, minH: 4,
@@ -1004,15 +1082,13 @@
   const P = (type, x, y, w, h, settings = {}) => ({ id: uid(), type, x, y, w, h, settings });
   const PRESETS = {
     DeFi: () => [
-      P('tvTape', 0, 0, 24, 2),
+      P('tvTape', 0, 0, 24, 2, { symbols: 'BITSTAMP:BTCUSD, BITSTAMP:ETHUSD, CRYPTO:SOLUSD, CRYPTO:XRPUSD, CRYPTO:BNBUSD, CRYPTO:DOGEUSD, CRYPTO:ADAUSD, CRYPTO:HYPEUSD, CRYPTO:ZECUSD' }),
       P('tvChart', 0, 2, 14, 14, { symbol: 'BITSTAMP:BTCUSD', interval: '60' }),
       P('vWatch', 14, 2, 5, 8),
-      P('vFng', 19, 2, 5, 5),
-      P('vMovers', 19, 7, 5, 9),
+      P('vMovers', 19, 2, 5, 14),
       P('vNews', 14, 10, 5, 6),
-      P('tvCryptoHeat', 0, 16, 12, 10),
-      P('vChart', 12, 16, 6, 10, { command: 'eth 1h ema20 ema55' }),
-      P('tvTA', 18, 16, 6, 10, { symbol: 'BITSTAMP:BTCUSD' }),
+      P('vHeat', 0, 16, 12, 10),
+      P('vChart', 12, 16, 12, 10, { command: 'eth 1h ema20 ema55' }),
       P('vFunding', 0, 26, 10, 7),
       P('vCountdown', 10, 26, 4, 7),
       P('tvNews', 14, 26, 10, 7, { market: 'crypto' }),
@@ -1549,18 +1625,24 @@
   let focusMode = false;
   let focusSym = null;
 
-  function focusInsts(raw) {
+  function focusMeta(raw) {
     const SYM = raw.trim().toUpperCase();
-    const isCrypto = !!hlFeed.snap()?.[SYM.replace(/^.*:/, '')];
     const coin = SYM.replace(/^.*:/, '');
+    const isCrypto = !!hlFeed.snap()?.[coin];
     const tvSym = raw.includes(':') ? raw.trim() : (isCrypto ? tvSymbolFor(coin) : SYM);
+    return { coin, isCrypto, tvSym };
+  }
+
+  function focusInsts({ coin, isCrypto, tvSym }, hasNews) {
     const base = [
       P('tvChart', 0, 0, 14, 13, { symbol: tvSym, interval: '60' }),
-      P('tvTA', 14, 0, 5, 6, { symbol: tvSym }),
-      P('tvSymInfo', 19, 0, 5, 6, { symbol: tvSym, mode: 'info' }),
-      P('tvNews', 0, 13, 8, 9, { symbol: tvSym }),
-      P('tvMini', 8, 13, 8, 9, { symbol: tvSym, range: '12M' }),
+      P('tvSymInfo', 14, 0, 10, 6, { symbol: tvSym, mode: 'info' }),
     ];
+    if (hasNews) {
+      base.push(P('tvNews', 0, 13, 8, 9, { symbol: tvSym }), P('tvMini', 8, 13, 8, 9, { symbol: tvSym, range: '12M' }));
+    } else {
+      base.push(P('tvMini', 0, 13, 16, 9, { symbol: tvSym, range: '12M' }));
+    }
     if (isCrypto) {
       base.push(
         P('vChart', 14, 6, 10, 7, { command: `${coin.toLowerCase()} 4h ema20 ema55`, linked: false }),
@@ -1573,7 +1655,7 @@
         P('vCountdown', 16, 13, 8, 9),
       );
     }
-    return { sym: coin, insts: base };
+    return base;
   }
 
   function renderInsts(insts) {
@@ -1585,8 +1667,17 @@
     if (empty) empty.hidden = true;
   }
 
-  function enterFocus(raw) {
-    const { sym, insts } = focusInsts(raw);
+  async function enterFocus(raw, displaySym) {
+    const meta = focusMeta(raw);
+    // no stories for this ticker → skip the news block (needs the deployed
+    // /api/vice-headlines proxy; locally we can't know, so news stays)
+    let hasNews = true;
+    try {
+      const j = await getJson(`/api/vice-headlines?symbol=${encodeURIComponent(meta.tvSym)}`, 2500);
+      hasNews = (j.count ?? 1) > 0;
+    } catch { /* proxy unavailable — keep news */ }
+    const insts = focusInsts(meta, hasNews);
+    const sym = displaySym ?? meta.coin;
     focusMode = true;
     focusSym = sym;
     linkedSym = sym; // tab title follows the focused ticker
@@ -1609,17 +1700,48 @@
     icons();
   }
 
+  // the TradFi side of the search book: display label · TV symbol · search keys
+  const TRADFI_BOOK = [
+    ['S&P 500', 'FOREXCOM:SPXUSD', 'spx sp500 index'],
+    ['Nasdaq 100', 'FOREXCOM:NSXUSD', 'ndx nasdaq index'],
+    ['Dow Jones', 'FOREXCOM:DJI', 'dji dow index'],
+    ['VIX', 'TVC:VIX', 'vix volatility index'],
+    ['SPY', 'AMEX:SPY', 'spy etf'],
+    ['QQQ', 'NASDAQ:QQQ', 'qqq etf'],
+    ['GLD', 'AMEX:GLD', 'gld gold etf'],
+    ['TLT', 'NASDAQ:TLT', 'tlt bonds etf'],
+    ['AAPL', 'NASDAQ:AAPL', 'apple'],
+    ['NVDA', 'NASDAQ:NVDA', 'nvidia'],
+    ['MSFT', 'NASDAQ:MSFT', 'microsoft'],
+    ['TSLA', 'NASDAQ:TSLA', 'tesla'],
+    ['AMZN', 'NASDAQ:AMZN', 'amazon'],
+    ['GOOGL', 'NASDAQ:GOOGL', 'google alphabet'],
+    ['META', 'NASDAQ:META', 'facebook'],
+    ['AMD', 'NASDAQ:AMD', 'amd'],
+    ['NFLX', 'NASDAQ:NFLX', 'netflix'],
+    ['COIN', 'NASDAQ:COIN', 'coinbase'],
+    ['MSTR', 'NASDAQ:MSTR', 'microstrategy strategy'],
+    ['HOOD', 'NASDAQ:HOOD', 'robinhood'],
+    ['Gold', 'OANDA:XAUUSD', 'xau metals'],
+    ['Silver', 'OANDA:XAGUSD', 'xag metals'],
+    ['WTI Crude', 'TVC:USOIL', 'oil energy'],
+    ['Dollar Index', 'CAPITALCOM:DXY', 'dxy usd'],
+    ['EUR/USD', 'FX:EURUSD', 'eurusd forex euro'],
+    ['US 10Y', 'TVC:US10Y', 'yields bonds treasury'],
+  ];
+
   function openFocusSearch() {
     if (document.querySelector('.hub-palette-veil')) return;
     const veil = el('div', 'hub-palette-veil');
     const pal = el('div', 'hub-palette');
     const input = el('input', 'hub-palette-input');
-    input.placeholder = 'Focus on a ticker — sol, hype, NASDAQ:AAPL…';
+    input.placeholder = 'Focus — sol, apple, S&P 500, NASDAQ:AAPL…';
     const list = el('div', 'hub-palette-list');
     pal.append(input, list);
     veil.appendChild(pal);
     const close = () => veil.remove();
-    const universe = () => {
+
+    const cryptoUniverse = () => {
       let watch = [];
       try { watch = JSON.parse(localStorage.getItem(LS_WATCH)) ?? []; } catch { /* none */ }
       const rest = Object.entries(hlFeed.snap() ?? {})
@@ -1628,40 +1750,78 @@
         .filter((k) => !watch.includes(k));
       return [...watch, ...rest];
     };
-    let filtered = [];
+    const cryptoMatch = (q) => {
+      const u = cryptoUniverse();
+      if (!q) return u.slice(0, 6);
+      const starts = u.filter((sym) => sym.startsWith(q));
+      const named = u.filter((sym) => !starts.includes(sym) &&
+        (sym.includes(q) || (coinNames[sym] ?? '').toUpperCase().includes(q)));
+      return [...starts, ...named].slice(0, 6);
+    };
+    const tradfiMatch = (q) => {
+      if (!q) return TRADFI_BOOK.slice(0, 6);
+      const ql = q.toLowerCase();
+      const starts = TRADFI_BOOK.filter(([label]) => label.toUpperCase().startsWith(q));
+      const rest = TRADFI_BOOK.filter((e) => !starts.includes(e) &&
+        (`${e[0]} ${e[1]} ${e[2]}`.toLowerCase().includes(ql)));
+      return [...starts, ...rest].slice(0, 6);
+    };
+
+    let flat = []; // [{html, run}] in render order
     let sel = 0;
-    const paint = () => {
-      list.innerHTML = filtered.slice(0, 10).map((sym, i) =>
-        `<button type="button" class="hub-palette-item${i === sel ? ' sel' : ''}" data-sym="${esc(sym)}">` +
-        `<i data-lucide="crosshair"></i>${esc(sym)}</button>`).join('')
-        || '<div class="hub-palette-empty">press enter to focus on what you typed</div>';
+    const build = () => {
+      const q = input.value.trim().toUpperCase();
+      flat = [];
+      const groups = [];
+      const crypto = {
+        title: 'DeFi',
+        items: cryptoMatch(q).map((sym) => ({
+          html: `${iconFor(sym)}<span class="fs-l">${esc(sym)}</span><span class="fs-sub">${esc(coinNames[sym] ?? 'Hyperliquid perp')}</span>`,
+          run: () => enterFocus(sym),
+        })),
+      };
+      const tradfi = {
+        title: 'TradFi',
+        items: tradfiMatch(q).map(([label, tv]) => ({
+          html: `<i data-lucide="landmark"></i><span class="fs-l">${esc(label)}</span><span class="fs-sub">${esc(tv)}</span>`,
+          run: () => enterFocus(tv, label),
+        })),
+      };
+      // honor the active layout: its universe leads
+      groups.push(...(store.active === 'TradFi' ? [tradfi, crypto] : [crypto, tradfi]));
+      if (q && /^[A-Z0-9:._-]{2,20}$/.test(q) &&
+          !groups.some((g) => g.items.some((it) => it.html.includes(`>${q}<`)))) {
+        groups.push({ title: 'Anything else', items: [{
+          html: `<i data-lucide="crosshair"></i><span class="fs-l">${esc(q)}</span><span class="fs-sub">as typed</span>`,
+          run: () => enterFocus(q),
+        }] });
+      }
+      let html = '';
+      for (const g of groups) {
+        if (!g.items.length) continue;
+        html += `<div class="hub-palette-cat">${g.title}</div>`;
+        for (const it of g.items) {
+          html += `<button type="button" class="hub-palette-item${flat.length === sel ? ' sel' : ''}" data-i="${flat.length}">${it.html}</button>`;
+          flat.push(it);
+        }
+      }
+      list.innerHTML = html || '<div class="hub-palette-empty">nothing matches</div>';
       icons();
     };
-    const refilter = () => {
-      const q = input.value.trim().toUpperCase();
-      const u = universe();
-      filtered = q
-        ? [...u.filter((s2) => s2.startsWith(q)), ...u.filter((s2) => !s2.startsWith(q) && s2.includes(q))]
-        : u;
-      if (q && !filtered.includes(q)) filtered = [q, ...filtered];
-      sel = 0;
-      paint();
-    };
+    const refilter = () => { sel = 0; build(); };
     input.addEventListener('input', refilter);
     input.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') { e.stopPropagation(); close(); }
-      else if (e.key === 'ArrowDown') { e.preventDefault(); sel = Math.min(sel + 1, Math.min(filtered.length, 10) - 1); paint(); }
-      else if (e.key === 'ArrowUp') { e.preventDefault(); sel = Math.max(sel - 1, 0); paint(); }
-      else if (e.key === 'Enter') {
-        const pick = filtered[sel] ?? input.value.trim();
-        if (pick) { close(); enterFocus(pick); }
-      }
+      else if (e.key === 'ArrowDown') { e.preventDefault(); sel = Math.min(sel + 1, flat.length - 1); build(); }
+      else if (e.key === 'ArrowUp') { e.preventDefault(); sel = Math.max(sel - 1, 0); build(); }
+      else if (e.key === 'Enter') { const it = flat[sel]; if (it) { close(); it.run(); } }
     });
     list.addEventListener('click', (e) => {
       const b = e.target.closest('.hub-palette-item');
       if (!b) return;
+      const it = flat[Number(b.dataset.i)];
       close();
-      enterFocus(b.dataset.sym);
+      it?.run();
     });
     veil.addEventListener('click', (e) => { if (e.target === veil) close(); });
     document.body.appendChild(veil);

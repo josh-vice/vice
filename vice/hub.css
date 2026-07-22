@@ -400,6 +400,8 @@ body.focused #hub-layout, body.focused #hub-add, body.focused #hub-edit { displa
   display: flex; flex-direction: column; align-items: center; justify-content: center;
   gap: 10px; min-height: 46vh; text-align: center; color: var(--text3); font-size: 13px;
 }
+/* the class display:flex would otherwise beat the hidden attribute */
+.hub-empty[hidden] { display: none; }
 .hub-empty i, .hub-empty svg { width: 26px; height: 26px; stroke-width: 1.25; opacity: 0.5; }
 .hub-empty p { margin: 0; }
 .hub-empty .hub-btn { margin-top: 4px; }
@@ -493,3 +495,37 @@ body.focused #hub-layout, body.focused #hub-add, body.focused #hub-edit { displa
 
 /* liquidity map */
 .vliq { position: absolute; inset: 0; }
+
+/* native heatmap */
+.vheat { position: absolute; inset: 2px; }
+
+/* coin icons in data rows */
+.vic-slot { display: inline-flex; width: 16px; height: 16px; flex: none; align-self: center; }
+.vic { width: 16px; height: 16px; border-radius: 50%; }
+.vic-f {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 16px; height: 16px; border-radius: 50%;
+  background: var(--bg4); color: var(--text3);
+  font-size: 9px; font-weight: 700;
+}
+.vrow-h .vic-slot { visibility: hidden; }
+
+/* funding venue columns — drop columns as the block narrows */
+.vrow .fr { min-width: 62px; font-size: 10.5px; }
+.vrow .coi { min-width: 64px; font-size: 10.5px; }
+@container (max-width: 470px) { .vrow .cbyb { display: none; } }
+@container (max-width: 410px) { .vrow .cbin { display: none; } }
+@container (max-width: 340px) { .vrow .coi { display: none; } }
+@container (max-width: 280px) { .vrow .cokx { display: none; } }
+
+/* candle close: UTC clock + local time */
+.vcd-clock {
+  text-align: center; padding-bottom: 7px; margin-bottom: 2px;
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
+}
+.vcd-clock .utc {
+  color: var(--text); font-size: clamp(17px, 2.6vh, 22px); font-weight: 700;
+  line-height: 1.15; font-variant-numeric: tabular-nums;
+}
+.vcd-clock .utc span { margin-left: 5px; color: var(--text3); font-size: 10px; font-weight: 500; letter-spacing: 0.07em; }
+.vcd-clock .local { margin-top: 1px; color: var(--text3); font-size: 10.5px; font-variant-numeric: tabular-nums; }
