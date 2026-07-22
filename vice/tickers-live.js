@@ -13,7 +13,7 @@ const UP = '#16c784';
 const DOWN = '#ea3943';
 const DOT_UP = '#23a55a';
 const DOT_DOWN = '#f23f43';
-const STATUS_CYCLE = ['change', '🦩 vicesuite.com'];
+const STATUS_CYCLE = ['change', 'change', 'change', '🦩 vicesuite.com'];
 
 let quotes = {}; // key -> { px, prev }
 const lastPx = {}; // key -> last painted price, for the change flash

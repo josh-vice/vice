@@ -19,7 +19,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="vice.css?v=2.1.0" />
+  <link rel="stylesheet" href="vice.css?v=2.3.1" />
 
   <!-- Lucide icons — same pinned build + SRI as the app shell -->
   <script src="https://cdn.jsdelivr.net/npm/lucide@1.23.0/dist/umd/lucide.min.js"
@@ -30,10 +30,12 @@
 </head>
 <body>
 
-  <div class="wrap">
-    <header class="top">
-      <span class="vt-flamingo" role="img" aria-label="Vice Terminal"></span>
-      <span class="top-name">Vice <strong>Suite</strong></span>
+  <header class="top">
+    <div class="wrap top-inner">
+      <a href="https://vicesuite.com/" style="display:flex;align-items:center;gap:10px;">
+        <span class="vt-flamingo" role="img" aria-label="Vice Terminal"></span>
+        <span class="top-name">Vice <strong>Suite</strong></span>
+      </a>
       <nav class="top-right">
         <a class="top-link" href="https://vicesuite.com/pricebots"><i data-lucide="activity"></i><span>Tickers</span></a>
         <a class="top-link" href="https://vicesuite.com/chartbot"><i data-lucide="bar-chart-2"></i><span>Charts</span></a>
@@ -45,7 +47,10 @@
           <span>Discord</span>
         </a>
       </nav>
-    </header>
+    </div>
+  </header>
+
+  <div class="wrap">
 
     <section class="hero">
       <h1 class="reveal d1">The <span class="grad">Vice Suite</span> — market tools where you already are.</h1>
