@@ -189,6 +189,65 @@ Shared: `vice/vice.css` (v2.3.2), `vice/vice.js` (scroll-reveal + server-count),
   button in toolbar (#hub-pal, hidden mobile), Enter submits alert inputs, import
   errors are friendly. Tickers page: dmock member list updated 4→7 (HYPE/ZEC/XRP rows,
   "LIVE PRICE — 7"). Charts demo re-verified (ratio/best/kr:/error paths all clean).
+- **SINGLE-BAR CHROME (owner-directed, hub.css v1.5.1)**: the hub page has NO site
+  header — one 51px toolbar: flamingo (links to vicesuite.com) + "Vice Hub" wordmark
+  + live dot + controls; the four suite links live at the bottom of the ⋮ menu.
+  Do not re-add `<header class="top">` to /hub.
+- **ALWAYS-LIVE GEOMETRY + TRASH (owner-directed, hub.js v1.4.0 / hub.css v1.6.0)**:
+  staticGrid is FALSE permanently — drag (header) and resize (hover-reveal corner
+  grip) work in view mode; Edit mode now only gates the settings gears, Add tray,
+  and grid backdrop. Remove (X) is always available (hover-revealed); removed blocks
+  go to a per-layout `trash` array (cap 10, persisted) and appear as a "Recently
+  removed" section at the top of the Add-widget tray — restore keeps settings + old
+  position (restoreInstance()). Fear & Greed slimmed (manifest 4×5, preset 5×5,
+  smaller gauge CSS; movers gained the row); TA gauge renders denser via
+  `.tv-wrap.tv-ta` (scale .725 / 138% dims).
+- **PER-WIDGET POLISH (hub.js v1.5.0 / hub.css v1.7.1)**: `.hw-body` is a CSS
+  CONTAINER (inline-size) — row widgets adapt to the BLOCK's width: at 250px and
+  under the name column drops + rows tighten, at 210px and under the price drops
+  (sym + change only); no more clipped columns or horizontal scrollbar pills
+  (overflow-x hidden + scrollbar-gutter stable on .vw-scroll). Headers are
+  CONTEXTUAL via manifest `label(s)` fns: "Advanced Chart · SOLUSD",
+  "Vice Chart · <command>", "Funding & OI · watchlist", "Top Stories · Crypto"
+  (set in mountNow, refreshes on remount/link). Watchlist + movers change cells
+  carry the bots' up/down arrows. Session Clocks highlight open markets
+  (.vclock.open green border/label).
+- **DeFi / TradFi TERMS (owner-directed, hub.js v1.6.0)**: preset layouts renamed
+  Crypto→DeFi, Stocks→TradFi (Macro unchanged); load() migrates existing stores
+  (key + active renamed, order preserved). Market Overview gained a `lead` setting
+  (first tab: crypto/indices/forex/futures) — TradFi + Macro presets lead with
+  Indices, DeFi with Crypto; header shows "Market Overview · <lead>". Top Stories
+  stock market now labels as "TradFi" (option text + header suffix). NOTE: layouts
+  migrated from old stores keep their saved settings — only reset/fresh picks up
+  the new lead defaults.
+
+- **FOCUS MODE (owner-directed, hub.js v1.7.0 / hub.css v1.8.0)**: toolbar "Focus"
+  button (or `F`) opens a ticker search (shared watchlist first, then HL universe by
+  OI; free-typed input incl "NASDAQ:AAPL" accepted) → renders an EPHEMERAL
+  single-symbol board: advanced chart, TA gauge, symbol info, symbol-filtered Top
+  Stories (tvNews gained an optional `symbol` setting → feedMode:'symbol'), 12M mini
+  chart, + for HL coins a 4h Vice Chart and single-row Funding & OI (vFunding hidden
+  `only` setting); non-crypto swaps those for a fundamentals block. The saved store
+  is NEVER touched (verified byte-identical): persistence no-ops by id-mismatch,
+  removeInstance short-circuits in focusMode (no trash), switchLayout auto-exits.
+  Button flips to teal "SYM · exit"; layout/add/edit controls hidden while focused;
+  tab title follows the focused symbol; palette ticker queries offer Focus + Link.
+
+- **NAVBAR LIVE PRICE (owner-directed, hub.js v1.8.0 / hub.css v1.9.0)**: the
+  toolbar live-dot is now #hub-price — BTC (HL feed) on every layout except
+  TradFi, which shows SPX via the TV-scanner simple-request trick (10s poll,
+  runs ONLY while TradFi is active; navPriceSync called from renderLayout).
+  Clicking it focuses that market (BTC / FOREXCOM:SPXUSD).
+
+- **LIQUIDITY MAP widget (owner-directed, hub.js v1.10.0 / hub.css v1.9.3)**:
+  tray-only Vice original (not in presets) — order-book depth histogram: 36 price
+  bins across ±1/2/5% of mid, bar = resting $ notional, bids green / asks red,
+  wall alpha scales with size, mid+venue caption, 10s refresh, linked-symbol aware.
+  Venue chain BINANCE (deep 500-level book; geo-blocked for US IPs — fine, this
+  runs in the VISITOR's browser) → Coinbase (level=2 = full aggregated book,
+  US-friendly) → Hyperliquid l2Book; first venue that answers is sticky.
+  (A native "Vice Heatmap" treemap was built and REVERTED same night — owner
+  disliked the washed-out translucent tiles; don't rebuild without asking.)
 
 ### LT app touchpoint (only one)
 `lt-community.js` v2.1.0: "The Vice Suite" row (flamingo, pink hue) → vicesuite.com.

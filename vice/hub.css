@@ -17,13 +17,26 @@
   -webkit-backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--border);
 }
-.hub-bar-title { display: flex; align-items: center; gap: 7px; color: var(--text); font-weight: 700; font-size: 13.5px; letter-spacing: 0.02em; }
-.hub-bar-title i, .hub-bar-title svg { width: 14px; height: 14px; color: var(--teal); }
+.hub-brand { display: inline-flex; align-items: center; }
+.hub-brand .vt-flamingo { width: 22px; height: 22px; transition: transform 160ms var(--ease-out); }
+.hub-brand:hover .vt-flamingo { transform: scale(1.08); }
+.hub-bar-title { color: var(--text); font-weight: 700; font-size: 13.5px; letter-spacing: 0.3px; white-space: nowrap; }
+.hub-bar-title strong { color: var(--text); }
 .hub-bar .spacer { flex: 1; }
 .hub-live {
   display: inline-flex; align-items: center; gap: 6px;
-  color: var(--text3); font-size: 11.5px;
+  color: var(--text2); font-size: 11.5px;
+  background: none; border: 0; padding: 4px 7px; border-radius: var(--radius);
+  font-family: inherit; cursor: pointer;
+  transition: background 140ms var(--ease-out);
 }
+.hub-live:hover { background: var(--bg3); }
+.hub-live:active { transform: scale(0.97); }
+.hp-txt { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.hp-txt b { color: var(--text); font-weight: 600; }
+.hp-txt em { font-style: normal; font-size: 11px; }
+.hp-txt em.up { color: var(--green); }
+.hp-txt em.down { color: #ff6473; }
 .hub-live .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); animation: hubPulse 2.2s ease-in-out infinite; }
 @keyframes hubPulse { 0%,100% { opacity: 1; } 50% { opacity: 0.35; } }
 
@@ -63,14 +76,15 @@
   display: none;
 }
 .hub-menu.open { display: block; }
-.hub-menu button, .hub-menu label {
+.hub-menu button, .hub-menu label, .hub-menu a {
   display: flex; align-items: center; gap: 9px; width: 100%;
   background: none; border: 0; border-radius: var(--radius);
   color: var(--text2); font: inherit; font-size: 12.5px;
   padding: 7px 10px; cursor: pointer; text-align: left;
 }
-.hub-menu button:hover, .hub-menu label:hover { background: var(--bg3); color: var(--text); }
-.hub-menu button i, .hub-menu button svg, .hub-menu label i, .hub-menu label svg { width: 13px; height: 13px; flex: none; }
+.hub-menu button:hover, .hub-menu label:hover, .hub-menu a:hover { background: var(--bg3); color: var(--text); }
+.hub-menu button i, .hub-menu button svg, .hub-menu label i, .hub-menu label svg,
+.hub-menu a i, .hub-menu a svg { width: 13px; height: 13px; flex: none; }
 .hub-menu .sep { height: 1px; margin: 5px 4px; background: var(--border); }
 .hub-menu .danger { color: #ff6473; }
 .hub-menu .danger:hover { color: #ff8b96; }
@@ -122,8 +136,8 @@
   color: var(--text3); transition: color 160ms var(--ease-out);
 }
 .hw:hover .hw-title, .hw:focus-within .hw-title { color: var(--text2); }
-.editing .hw-head { cursor: grab; }
-.editing .hw-head:active { cursor: grabbing; }
+.hw-head { cursor: grab; }
+.hw-head:active { cursor: grabbing; }
 .hw-btns { display: flex; align-items: center; gap: 1px; }
 .hw-btn {
   display: inline-flex; align-items: center; justify-content: center;
@@ -136,8 +150,7 @@
 .hw-btn:active { transform: scale(0.92); }
 .hw-btn:focus-visible { outline: 2px solid var(--teal); outline-offset: -1px; }
 .hw-btn[data-act="remove"]:hover { color: #ff6473; }
-/* view mode hides editing controls */
-body:not(.editing) .hw-btn[data-act="remove"],
+/* view mode hides the settings gear; remove (X) is always one hover away */
 body:not(.editing) .hw-btn[data-act="settings"] { display: none; }
 /* actions fade in on hover (fine pointers only — touch keeps them visible) */
 @media (hover: hover) and (pointer: fine) {
@@ -146,7 +159,18 @@ body:not(.editing) .hw-btn[data-act="settings"] { display: none; }
   body:not(.editing) .hw:focus-within .hw-btns { opacity: 1; }
 }
 
-.hw-body { position: relative; flex: 1; min-height: 0; overflow: hidden; }
+.hw-body { position: relative; flex: 1; min-height: 0; overflow: hidden; container-type: inline-size; }
+/* widget-level responsiveness: rows adapt to the BLOCK's width, not the page's */
+@container (max-width: 250px) {
+  .vrow { padding: 5px 9px; gap: 7px; }
+  .vrow .name { display: none; }
+  .vrow .chg { min-width: 60px; font-size: 11px; }
+  .vrow .sym { min-width: 38px; }
+  .vtabs { padding: 6px 8px; }
+}
+@container (max-width: 210px) {
+  .vrow .px { display: none; }
+}
 /* TV embeds render at full desktop scale — 24px headlines inside 300px blocks.
    Render them at 80% (width/height 125% + scale .8) so their type sits next to
    our 11-12.5px scale instead of shouting over it. */
@@ -156,6 +180,15 @@ body:not(.editing) .hw-btn[data-act="settings"] { display: none; }
   display: flex; flex-direction: column; justify-content: center;
 }
 .grid-stack-item-content.hw:fullscreen .tv-wrap { width: 100%; height: 100%; transform: none; }
+/* TV's TA gauge pads generously — render it denser than the other embeds */
+.hw-body > .tv-wrap.tv-ta { width: 138%; height: 138%; transform: scale(0.725); }
+
+/* resize grip: invisible until the block is hovered, always functional */
+.grid-stack-item > .ui-resizable-handle {
+  opacity: 0;
+  transition: opacity 150ms var(--ease-out);
+}
+.grid-stack-item:hover > .ui-resizable-handle { opacity: 0.55; }
 .tv-wrap:not(.tv-fixed) .tradingview-widget-container,
 .tv-wrap:not(.tv-fixed) .tradingview-widget-container__widget,
 .tv-wrap:not(.tv-fixed) iframe { width: 100% !important; height: 100% !important; }
@@ -187,7 +220,10 @@ body:not(.editing) .hub-btn.edit-only { display: none; }
 .hw-note i, .hw-note svg { width: 16px; height: 16px; }
 
 /* ── vice-native widget internals ──────────────────────────────────────── */
-.vw-scroll { position: absolute; inset: 0; overflow-y: auto; overscroll-behavior: contain; }
+.vw-scroll {
+  position: absolute; inset: 0; overflow-y: auto; overflow-x: hidden;
+  overscroll-behavior: contain; scrollbar-gutter: stable;
+}
 .vw-scroll::-webkit-scrollbar { width: 6px; }
 .vw-scroll::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 4px; }
 .vw-scroll::-webkit-scrollbar-track { background: transparent; }
@@ -202,7 +238,7 @@ body:not(.editing) .hub-btn.edit-only { display: none; }
 .vrow .sym { font-weight: 600; color: var(--text); min-width: 46px; }
 .vrow .name { color: var(--text3); font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
 .vrow .px { margin-left: auto; color: var(--text); font-variant-numeric: tabular-nums; }
-.vrow .chg { min-width: 70px; text-align: right; font-variant-numeric: tabular-nums; font-size: 11.5px; }
+.vrow .chg { min-width: 78px; text-align: right; font-variant-numeric: tabular-nums; font-size: 11.5px; white-space: nowrap; }
 .vrow .chg.up { color: var(--green); }
 .vrow .chg.down { color: #ff6473; }
 .vrow.flash { animation: vFlash 600ms var(--ease-out); }
@@ -222,12 +258,12 @@ body:not(.editing) .hub-btn.edit-only { display: none; }
 .vcol { position: absolute; inset: 0; display: flex; flex-direction: column; }
 .vcol .vw-scroll { position: relative; inset: auto; flex: 1; min-height: 0; }
 
-/* fear & greed gauge */
-.fng { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; padding: 10px; }
-.fng svg { width: min(78%, 240px); height: auto; }
-.fng .val { font-size: clamp(19px, 3vh, 26px); font-weight: 700; color: var(--text); line-height: 1; font-variant-numeric: tabular-nums; }
-.fng .lab { font-size: 11.5px; color: var(--text2); }
-.fng .sub { font-size: 10.5px; color: var(--text3); }
+/* fear & greed gauge — a stat tile, hugs its content */
+.fng { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; padding: 8px; }
+.fng svg { width: min(62%, 170px); height: auto; margin-bottom: -6px; }
+.fng .val { font-size: clamp(17px, 2.4vh, 22px); font-weight: 700; color: var(--text); line-height: 1.1; font-variant-numeric: tabular-nums; }
+.fng .lab { font-size: 11px; color: var(--text2); }
+.fng .sub { font-size: 10px; color: var(--text3); }
 
 /* news list */
 .vnews a {
@@ -250,6 +286,8 @@ body:not(.editing) .hub-btn.edit-only { display: none; }
 /* session clocks */
 .vclocks { position: absolute; inset: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(118px, 1fr)); align-content: center; gap: 8px; padding: 12px; }
 .vclock { text-align: center; padding: 10px 6px; border: 1px solid var(--border); border-radius: var(--radius); }
+.vclock.open { border-color: color-mix(in srgb, var(--green) 40%, var(--border)); }
+.vclock.open .city { color: var(--green); }
 .vclock .city { font-size: 10px; color: var(--text3); letter-spacing: 0.07em; text-transform: uppercase; }
 .vclock .time { font-size: clamp(14px, 2.2vh, 18px); font-weight: 600; color: var(--text); font-variant-numeric: tabular-nums; margin: 3px 0 4px; }
 .vclock .mkt { font-size: 10px; }
@@ -340,6 +378,11 @@ body:not(.editing) .hub-btn.edit-only { display: none; }
 .hub-tray-item:hover i, .hub-tray-item:hover svg { color: var(--teal); }
 .hub-tray-item .d { display: block; margin-top: 2px; color: var(--text3); font-size: 10.5px; font-weight: 400; }
 .hub-tray-item strong { font-weight: 600; }
+
+/* focus mode: one ticker, every angle */
+#hub-focus.focus-on { background: var(--teal); border-color: var(--teal); color: var(--bg); font-weight: 600; }
+#hub-focus.focus-on:hover { filter: brightness(1.08); color: var(--bg); }
+body.focused #hub-layout, body.focused #hub-add, body.focused #hub-edit { display: none; }
 
 /* palette hint + toast action + empty state */
 .hub-pal-hint kbd {
@@ -447,3 +490,6 @@ body:not(.editing) .hub-btn.edit-only { display: none; }
   .hub-live .dot { animation: none; }
   .hub-modal, .hub-toast { animation: none; }
 }
+
+/* liquidity map */
+.vliq { position: absolute; inset: 0; }
