@@ -212,6 +212,20 @@ hub.js 2.10.7 / hub.css 1.26.0):
 - Hub wordmark de-blued (owner: "remove the blue") — neutral text, hover
   = surface only.
 
+**GITHUB PREP (owner request)**: workspace repo slimmed 21,357 → ~1,146
+tracked files. MOVED to ~/.openclaw/workspace-archive/: every Backup-*,
+audit_frames, discord-banners, notes/ (third-party Dalton transcripts —
+must never go public), course*-notes.md, superseded handoffs (07-02/03/04,
+BUILD-PLAN, CHART/UI audit handoffs, OPENCLAW-HANDOFF), the junk `~` dir.
+UNTRACKED-but-kept-on-disk (OpenClaw runtime — gitignored): SOUL/IDENTITY/
+USER/MEMORY/PRODUCT/TOOLS/AGENTS/HEARTBEAT .md, memory/, .agents/.claude/
+.codex/.clawhub/.openclaw, openclaw-workspace-state.json, .anthropic_key.
+Secret scan over tracked content: clean. Site verified serving after moves.
+~/DiscordBots: git init'd w/ .gitignore FIRST (.env tokens + */data/ +
+node_modules excluded; .env.example templates tracked), 28 files staged,
+backups + config.js.bak → ~/DiscordBots-archive/. BOTH repos are STAGED,
+NOT committed — owner commits/pushes. Bots verified still running.
+
 **DEPLOY (owner)**: unchanged — add COINALYZE_API_KEY env → `vercel --prod`.
 Post-deploy adds: /hub serves hub.js 2.9.2 + vchart.js 1.1.1 (cache-bust!),
 #/chart shows OUR chart (candles + toolbar, no TV iframe), indicators fill

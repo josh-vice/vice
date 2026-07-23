@@ -27,3 +27,25 @@ IOSApp/node_modules/
 IOSApp/www/
 IOSApp/ios/App/Pods/
 IOSApp/ios/DerivedData/
+
+# ── OpenClaw assistant runtime + private config (local machine only — the
+#    agent needs these on disk; they are not part of the site) ──
+AGENTS.md
+HEARTBEAT.md
+IDENTITY.md
+MEMORY.md
+PRODUCT.md
+SOUL.md
+TOOLS.md
+USER.md
+openclaw-workspace-state.json
+/memory/
+.agents/
+.clawhub/
+.codex/
+.openclaw/
+.claude/
+.anthropic_key
+
+# session archives live outside the repo (…/.openclaw/workspace-archive)
+Backup-*/

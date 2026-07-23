@@ -1,8 +1,0 @@
-{
-  "course": "4",
-  "file": "13_Trend_Buddy.js",
-  "lessonId": "course4/13_trend_buddy",
-  "edits": [],
-  "alreadyGood": ["chart"],
-  "notes": "Only one CHART beat ('chart', move color_tool scheme trendbuddy, stage all). Its accumulated show already labels the two key teaching events from the say: marker at 'top' = 'colour flips to pink — sellers' (above) and marker at 'bottom' = 'flips to teal — buyers' (below). Both 'top' and 'bottom' are valid point anchors for color_tool and correctly matched to marker kind; neither is redundant with what the move draws. The say's 'muted colour marks indecision in between' has no exposed anchor (color_tool only exposes top/bottom/resLevel/supLevel) and is not a key labelable level — restraint applies, so it is not a noAnchorGap worth recording (no level/event the beat is about). No levels (resLevel/supLevel) are taught. Other three beats (intro, use, recap) are CONCEPT — skipped. Auditor's alreadyComplete verdict confirmed; nothing to add or fix."
-}

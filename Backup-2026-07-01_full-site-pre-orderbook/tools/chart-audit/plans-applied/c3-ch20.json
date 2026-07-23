@@ -1,9 +1,0 @@
-{
-  "course": 3,
-  "chapterId": 20,
-  "title": "Course 3 Recap",
-  "module": "Course Summary",
-  "edits": [],
-  "alreadyGood": ["lessonChart", "quiz.chart"],
-  "notes": "Recap chapter. Both candlestick charts already draw every concrete element the text teaches. lessonChart (legs 100->87->87->117->122) draws M3 DBS Zone (84-89), M1+M2 Entry (87), M2 Stop (82, label 'Liq below at 79'), M4 System Target (117), plus 4 module markPoints — all five modules represented. quiz.chart has cutIndex:9; pre-cut shows decision context (DBS zone, entry, stop) without spoiling; outcome routed to revealMarkPoints (target @12, journal/meditate @14). REJECTED the auditor's only gap: markLine yAxis:79 'M2: Liquidation (below Stop)'. Two reasons. (1) REDUNDANT — the Stop line label already explicitly reads 'M2: Stop (Liq below at 79)', so the liq value 79 and the stop-above-liq relationship (Rule 5) are already taught on the chart in text. (2) COORDINATE CLIP — 79 sits below the stop at 82, which is itself ~9% below the lowest candle body (87); both are phantom levels in dead space at the extreme chart floor with no candle context. A second pink/gold pill stacked at 79 just below the 82 stop pill would crowd and likely clip off-bottom. Auditor self-rated this low confidence and offered the no-change alternative, which is the correct call. No additional gaps found."
-}

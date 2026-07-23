@@ -1,8 +1,0 @@
-{
-  "course": "2",
-  "file": "15_Oscillators.js",
-  "lessonId": "course2/15_oscillators",
-  "edits": [],
-  "alreadyGood": ["ob-os", "divergence"],
-  "notes": "REJECTED the auditor's only proposed gap: trendline from high1 to high2 'bearish divergence' on the 'divergence' beat (auditor's own confidence was 'low'). Anchor TYPE/VALIDITY both pass (high1, high2 are valid rsi point anchors and trendline takes points), but high1 is the RSI lower high in the oscillator SUB-PANEL while high2 is the price higher high in the PRICE panel. A trendline 'from high1 to high2' would be a single diagonal spanning two separate panels — it does not depict the divergence, which is two distinct same-panel slopes (one connecting price highs, one connecting RSI highs). The rsi move exposes only a single high per panel (high1 RSI, high2 price), so neither same-panel slope line can be drawn and no cross-panel line is meaningful. The existing marker on high2 ('price: higher high…') plus note on high1 ('…but RSI: lower high = divergence') already teach the slope disagreement clearly; the cross-panel diagonal would mislead and clutter. ob-os already labels both 70/30 reference levels (markers on high1/oversold) matching the say. No undrawable references warrant a noAnchorGap entry. Lesson needs nothing."
-}

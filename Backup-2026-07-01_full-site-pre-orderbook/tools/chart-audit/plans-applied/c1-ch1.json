@@ -1,9 +1,0 @@
-{
-  "course": 1,
-  "chapterId": 1,
-  "title": "Components of a Market",
-  "module": "Price Action Foundations",
-  "edits": [],
-  "alreadyGood": ["introChart", "lessonChart", "quiz.chart"],
-  "notes": "This is a foundational concept chapter on supply/demand zones; no discrete Entry/Stop/Target prices are taught anywhere in the intro, lesson, or quiz text, so no markLine levels are warranted. introChart: concept fully illustrated — Demand Zone (80-84) and Supply Zone (97.5-101) bands drawn, ping-pong reactions labelled with 5 alternating 'Supply reject'/'Demand bounce' markPoints matching 'price ping-pongs' and 'repeated reactions define the zones'. lessonChart: both zones drawn plus the two diagnostic wick events ('Long lower wick — buyers' idx 4, 'Long upper wick — sellers' idx 10) — directly maps the lesson's two wick bullets; the auditor's own lessonChart 'gap' was a self-cancelling low-priority note recommending no change ('Trade the bounce' is a concept, not a priced trade), so nothing to add. quiz.chart: REJECTED the auditor's proposed pre-cut markPoint {dataIndex:11,'Long lower wick into zone'}. Reasons: (1) the cut candle is the literal [91,90,84,92] at dataIndex 11 (6+5 leg candles = idx 0-10, then idx 11), which is the SAME bar already annotated by revealMarkPoint 'Buyers step in!' (idx 11) — the new pin would stack on the reveal pin and clutter it; (2) the question text already states 'The last candle shows a long lower wick touching the zone', so a chart pin re-labelling that exact diagnostic feature adds no context and steers the student toward the answer pre-reveal, violating the no-spoil rule for a cut scenario. The Demand Zone band (83-90) is the correct and sufficient pre-cut decision context; the bullish outcome correctly lives in revealMarkPoints. No taught-but-undrawn items were missed."
-}
