@@ -1,4 +1,4 @@
-/* Vice Hub — customizable live market dashboard + Velo-style section boards. v2.10.6
+/* Vice Hub — customizable live market dashboard + Velo-style section boards. v2.10.8
    Architecture: a widget REGISTRY (manifest per type: title, sizes, settings
    schema, mount/destroy lifecycle) + a Gridstack canvas (float mode, 24-col
    fine grid). Saved layouts store INSTANCES ({id,type,x,y,w,h,settings}),
@@ -564,7 +564,7 @@
     },
     tvTape: {
       title: 'Ticker Tape', icon: 'move-horizontal', cat: 'Charts', chromeless: true,
-      w: 24, h: 2, minW: 8, minH: 1,
+      w: 24, h: 1, minW: 8, minH: 1, maxH: 1, // a marquee has ONE height
       settings: [
         F.area('symbols', 'Symbols (comma-separated)',
           'BITSTAMP:BTCUSD, BITSTAMP:ETHUSD, CRYPTO:SOLUSD, CRYPTO:XRPUSD, CRYPTO:BNBUSD, CRYPTO:DOGEUSD, CRYPTO:ADAUSD, COINBASE:HYPEUSD'),
@@ -649,9 +649,11 @@
             { s: 'BITSTAMP:BTCUSD', d: 'Bitcoin' }, { s: 'BITSTAMP:ETHUSD', d: 'Ethereum' },
             { s: 'CRYPTO:SOLUSD', d: 'Solana' }, { s: 'CRYPTO:XRPUSD', d: 'XRP' },
             { s: 'CRYPTO:ZECUSD', d: 'Zcash' }, { s: 'COINBASE:HYPEUSD', d: 'Hyperliquid' } ] },
+          // raw index tickers (SP:SPX, DJ:DJI…) return "no data" in this
+          // embed — same gotcha as the tape's TVC:DXY; use CFD proxies
           indices: { title: 'Indices', symbols: [
-            { s: 'SP:SPX', d: 'S&P 500' }, { s: 'NASDAQ:NDX', d: 'Nasdaq 100' },
-            { s: 'DJ:DJI', d: 'Dow 30' }, { s: 'TVC:VIX', d: 'VIX' }, { s: 'TVC:DXY', d: 'Dollar index' } ] },
+            { s: 'FOREXCOM:SPXUSD', d: 'S&P 500' }, { s: 'FOREXCOM:NSXUSD', d: 'Nasdaq 100' },
+            { s: 'FOREXCOM:DJI', d: 'Dow 30' }, { s: 'CAPITALCOM:VIX', d: 'VIX' }, { s: 'CAPITALCOM:DXY', d: 'Dollar index' } ] },
           forex: { title: 'Forex', symbols: [
             { s: 'FX:EURUSD', d: 'EUR/USD' }, { s: 'FX:GBPUSD', d: 'GBP/USD' },
             { s: 'FX:USDJPY', d: 'USD/JPY' }, { s: 'FX:AUDUSD', d: 'AUD/USD' } ] },
@@ -2769,35 +2771,35 @@
   const P = (type, x, y, w, h, settings = {}) => ({ id: uid(), type, x, y, w, h, settings });
   const PRESETS = {
     DeFi: () => [
-      P('tvTape', 0, 0, 24, 2, { symbols: 'BITSTAMP:BTCUSD, BITSTAMP:ETHUSD, CRYPTO:SOLUSD, CRYPTO:XRPUSD, CRYPTO:BNBUSD, CRYPTO:DOGEUSD, CRYPTO:ADAUSD, COINBASE:HYPEUSD, CRYPTO:ZECUSD' }),
-      P('tvChart', 0, 2, 14, 14, { symbol: 'BITSTAMP:BTCUSD', interval: '60' }),
-      P('vWatch', 14, 2, 5, 8),
-      P('vMovers', 19, 2, 5, 14),
-      P('vNews', 14, 10, 5, 6),
-      P('vHeat', 0, 16, 12, 10),
-      P('vLiqs', 12, 16, 12, 10, { symbol: 'BTC' }),
-      P('vFunding', 0, 26, 10, 7),
-      P('vCountdown', 10, 26, 4, 7),
-      P('tvNews', 14, 26, 10, 7, { market: 'crypto' }),
+      P('tvTape', 0, 0, 24, 1, { symbols: 'BITSTAMP:BTCUSD, BITSTAMP:ETHUSD, CRYPTO:SOLUSD, CRYPTO:XRPUSD, CRYPTO:BNBUSD, CRYPTO:DOGEUSD, CRYPTO:ADAUSD, COINBASE:HYPEUSD, CRYPTO:ZECUSD' }),
+      P('tvChart', 0, 1, 14, 14, { symbol: 'BITSTAMP:BTCUSD', interval: '60' }),
+      P('vWatch', 14, 1, 5, 8),
+      P('vMovers', 19, 1, 5, 14),
+      P('vNews', 14, 9, 5, 6),
+      P('vHeat', 0, 15, 12, 10),
+      P('vLiqs', 12, 15, 12, 10, { symbol: 'BTC' }),
+      P('vFunding', 0, 25, 10, 7),
+      P('vCountdown', 10, 25, 4, 7),
+      P('tvNews', 14, 25, 10, 7, { market: 'crypto' }),
     ],
     TradFi: () => [
-      P('tvTape', 0, 0, 24, 2, { symbols: 'FOREXCOM:SPXUSD, FOREXCOM:NSXUSD, TVC:VIX, NASDAQ:AAPL, NASDAQ:NVDA, NASDAQ:TSLA, NASDAQ:MSFT, AMEX:SPY' }),
-      P('tvChart', 0, 2, 14, 12, { symbol: 'AMEX:SPY', interval: 'D' }),
-      P('tvOverview', 14, 2, 5, 12, { lead: 'indices' }),
-      P('tvCal', 19, 2, 5, 12),
-      P('tvStockHeat', 0, 14, 12, 10),
-      P('tvNews', 12, 14, 6, 10, { market: 'stock' }),
-      P('tvMini', 18, 14, 6, 10, { symbol: 'NASDAQ:NVDA', range: '3M' }),
+      P('tvTape', 0, 0, 24, 1, { symbols: 'FOREXCOM:SPXUSD, FOREXCOM:NSXUSD, TVC:VIX, NASDAQ:AAPL, NASDAQ:NVDA, NASDAQ:TSLA, NASDAQ:MSFT, AMEX:SPY' }),
+      P('tvChart', 0, 1, 14, 12, { symbol: 'AMEX:SPY', interval: 'D' }),
+      P('tvOverview', 14, 1, 5, 12, { lead: 'indices' }),
+      P('tvCal', 19, 1, 5, 12),
+      P('tvStockHeat', 0, 13, 12, 10),
+      P('tvNews', 12, 13, 6, 10, { market: 'stock' }),
+      P('tvMini', 18, 13, 6, 10, { symbol: 'NASDAQ:NVDA', range: '3M' }),
     ],
     Macro: () => [
-      P('tvTape', 0, 0, 24, 2, { symbols: 'CAPITALCOM:DXY, TVC:GOLD, TVC:USOIL, TVC:US10Y, FOREXCOM:SPXUSD, BITSTAMP:BTCUSD, FX:EURUSD' }),
-      P('tvOverview', 0, 2, 7, 12, { lead: 'indices' }),
-      P('tvCal', 7, 2, 8, 12),
-      P('tvForexHeat', 15, 2, 9, 8),
-      P('vClocks', 15, 10, 9, 4),
-      P('tvChart', 0, 14, 12, 11, { symbol: 'OANDA:XAUUSD', interval: 'D' }),
-      P('tvNews', 12, 14, 6, 11, { market: 'index' }),
-      P('vNotes', 18, 14, 6, 11),
+      P('tvTape', 0, 0, 24, 1, { symbols: 'CAPITALCOM:DXY, TVC:GOLD, TVC:USOIL, TVC:US10Y, FOREXCOM:SPXUSD, BITSTAMP:BTCUSD, FX:EURUSD' }),
+      P('tvOverview', 0, 1, 7, 12, { lead: 'indices' }),
+      P('tvCal', 7, 1, 8, 12),
+      P('tvForexHeat', 15, 1, 9, 8),
+      P('vClocks', 15, 9, 9, 4),
+      P('tvChart', 0, 13, 12, 11, { symbol: 'OANDA:XAUUSD', interval: 'D' }),
+      P('tvNews', 12, 13, 6, 11, { market: 'index' }),
+      P('vNotes', 18, 13, 6, 11),
     ],
   };
   const defaultLayout = (name) => ({ grid: (PRESETS[name] ?? PRESETS.DeFi)() });
@@ -2829,16 +2831,16 @@
               inst.settings = { symbol: 'BTC' };
             }
           }
-          // tape is a chromeless 2-row strip now — shrink any 3-row tape from
-          // the interim build and pull the rows below back up
+          // tape is a fixed single-row strip — shrink taller tapes from the
+          // interim builds and pull the rows below back up
           for (const inst of doc.grid ?? []) {
-            if (inst.type !== 'tvTape' || (inst.h ?? 0) <= 2) continue;
-            const d = inst.h - 2;
+            if (inst.type !== 'tvTape' || (inst.h ?? 0) <= 1) continue;
+            const d = inst.h - 1;
             const edge = inst.y + inst.h;
             for (const other of doc.grid) {
               if (other !== inst && other.y >= edge) other.y -= d;
             }
-            inst.h = 2;
+            inst.h = 1;
           }
         }
         return j;
@@ -2965,6 +2967,7 @@
     grid.makeWidget(item, {
       x: autoPos ? undefined : inst.x, y: autoPos ? undefined : inst.y,
       w: inst.w, h: inst.h, minW: man.minW, minH: man.minH,
+      ...(man.maxH ? { maxH: man.maxH } : {}),
       autoPosition: autoPos, id: inst.id,
     });
     if (autoPos) {
@@ -3650,11 +3653,41 @@
         (`${e[0]} ${e[1]} ${e[2]}`.toLowerCase().includes(ql)));
       return [...starts, ...rest].slice(0, 6);
     };
+    // live US stock/ETF search — the curated book only covers the majors;
+    // "$NVDA" or "nvidia" should just work (TV scanner, market-cap ranked)
+    let stockHits = [];
+    let stockQ = '';
+    let stockT = null;
+    const searchStocks = (q) => {
+      clearTimeout(stockT);
+      if (!q || q.length < 2) { stockHits = []; stockQ = ''; return; }
+      stockT = setTimeout(async () => {
+        try {
+          const r = await fetch('https://scanner.tradingview.com/america/scan', {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain' }, // simple request — no preflight
+            body: JSON.stringify({
+              filter: [{ left: 'name,description', operation: 'match', right: q }],
+              columns: ['name', 'description', 'close', 'logoid', 'market_cap_basic'],
+              sort: { sortBy: 'market_cap_basic', sortOrder: 'desc' },
+              range: [0, 6],
+            }),
+            signal: AbortSignal.timeout(6000),
+          });
+          const j = await r.json();
+          stockHits = (j?.data ?? []).map((d) => ({
+            tv: d.s, sym: d.d[0], name: d.d[1] ?? '', logoid: d.d[3], px: d.d[2],
+          }));
+          stockQ = q;
+          build();
+        } catch { /* scanner unreachable — curated book still answers */ }
+      }, 220);
+    };
 
     let flat = []; // [{html, run}] in render order
     let sel = 0;
     const build = () => {
-      const q = input.value.trim().toUpperCase();
+      const q = input.value.trim().replace(/^\$/, '').toUpperCase();
       flat = [];
       const groups = [];
       const crypto = {
@@ -3664,13 +3697,18 @@
           run: () => enterFocus(sym),
         })),
       };
-      const tradfi = {
-        title: 'TradFi',
-        items: tradfiMatch(q).map(([label, tv]) => ({
-          html: `<i data-lucide="landmark"></i><span class="fs-l">${esc(label)}</span><span class="fs-sub">${esc(tv)}</span>`,
-          run: () => enterFocus(tv, label),
-        })),
-      };
+      const bookItems = tradfiMatch(q).map(([label, tv]) => ({
+        html: `<i data-lucide="landmark"></i><span class="fs-l">${esc(label)}</span><span class="fs-sub">${esc(tv)}</span>`,
+        run: () => enterFocus(tv, label),
+      }));
+      const liveItems = (q && q === stockQ ? stockHits : [])
+        .filter((h) => !bookItems.some((b) => b.html.includes(`>${h.sym}<`)))
+        .map((h) => ({
+          html: `${h.logoid ? `<img class="fs-logo" src="https://s3-symbol-logo.tradingview.com/${esc(h.logoid)}.svg" alt="">` : '<i data-lucide="landmark"></i>'}` +
+            `<span class="fs-l">${esc(h.sym)}</span><span class="fs-sub">${esc(h.name)}</span>`,
+          run: () => enterFocus(h.tv, h.sym),
+        }));
+      const tradfi = { title: 'TradFi', items: [...liveItems, ...bookItems].slice(0, 8) };
       // honor the active layout: its universe leads
       groups.push(...(store.active === 'TradFi' ? [tradfi, crypto] : [crypto, tradfi]));
       if (q && /^[A-Z0-9:._-]{2,20}$/.test(q) &&
@@ -3692,7 +3730,11 @@
       list.innerHTML = html || '<div class="hub-palette-empty">nothing matches</div>';
       icons();
     };
-    const refilter = () => { sel = 0; build(); };
+    const refilter = () => {
+      sel = 0;
+      searchStocks(input.value.trim().replace(/^\$/, ''));
+      build();
+    };
     input.addEventListener('input', refilter);
     input.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') { e.stopPropagation(); close(); }

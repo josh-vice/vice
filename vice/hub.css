@@ -1,4 +1,4 @@
-/* Vice Hub — dashboard styles. v1.25.0
+/* Vice Hub — dashboard styles. v1.26.0
    Layers on vice.css tokens. PATH RULE: lives in vice/ ROOT (deep pages serve
    at /hub with no directory, so assets resolve at the domain root). */
 
@@ -1063,9 +1063,12 @@ body.in-section .hub-menu .sep { display: none; }
   .hub-menu.open, .hub-modal-veil, .hub-palette-veil, .vcp-search, .vcp-search-box { animation: none; }
 }
 
-/* wordmark is a link home to the dashboard now */
-a.hub-bar-title { text-decoration: none; }
-a.hub-bar-title:hover strong { color: var(--teal); }
+/* wordmark is a link home to the dashboard — and stays NEUTRAL (owner:
+   "remove the blue"); affordance is the hover surface, not a color */
+a.hub-bar-title, a.hub-bar-title strong, a.hub-bar-title:hover,
+a.hub-bar-title:hover strong, a.hub-bar-title:visited { color: var(--text); }
+a.hub-bar-title { text-decoration: none; border-radius: var(--radius); padding: 2px 5px; margin: -2px -5px; }
+a.hub-bar-title:hover { background: var(--bg3); }
 
 /* legend rows shrink-wrap — full-width rows were eating crosshair hovers */
 .vcp-legend { align-items: flex-start; }
@@ -1130,3 +1133,41 @@ body.editing .hw-chromeless .hw-head { display: flex; }
   cursor: pointer;
 }
 .vcp-tfgo:hover { background: var(--border2); }
+
+/* live stock hits in the Focus search carry their TV logos */
+.fs-logo { width: 16px; height: 16px; border-radius: 50%; flex: none; }
+
+/* ── drawing tools rail + overlay ── */
+.vcp-rail {
+  position: absolute; left: 0; top: 0; bottom: 0; z-index: 4;
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  width: 34px; padding: 6px 0; border-right: 1px solid var(--border);
+  background: color-mix(in srgb, var(--bg2) 92%, transparent);
+}
+.vcp-box { left: 34px; }
+.vcp-legend { left: 44px; }
+.vcp-draw { position: absolute; inset: 0; z-index: 2; pointer-events: none; }
+.vcp-tool {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 26px; height: 26px; border: none; border-radius: var(--radius);
+  background: none; color: var(--text3); cursor: pointer;
+  transition: color 120ms var(--ease-out), background 120ms var(--ease-out), transform 120ms var(--ease-out);
+}
+.vcp-tool i, .vcp-tool svg { width: 14px; height: 14px; stroke-width: 1.7; }
+.vcp-tool:hover { color: var(--text); background: var(--bg3); }
+.vcp-tool:active { transform: scale(0.94); }
+.vcp-tool.on { color: var(--teal); background: var(--bg4); }
+.vcp-tool:focus-visible { outline: 2px solid var(--teal); outline-offset: -1px; }
+.vcp-rail-sep { width: 16px; height: 1px; margin: 4px 0; background: var(--border); }
+.vcp-drawtext {
+  position: absolute; z-index: 5; width: 160px; padding: 3px 7px;
+  border: 1px solid var(--teal); border-radius: var(--radius);
+  background: var(--bg2); color: var(--text); font: 500 12px/1.4 var(--mono);
+}
+.vcp-drawtext:focus { outline: none; }
+/* tiny pinned widgets: no room for the rail */
+@container (max-width: 560px) {
+  .vcp-rail { display: none; }
+  .vcp-box { left: 0; }
+  .vcp-legend { left: 10px; }
+}

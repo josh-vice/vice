@@ -156,6 +156,62 @@ now **hub.js 2.10.4 / hub.css 1.21.1 / vice.css 2.7.0**:
   python dev server — a stale index.html serves OLD ?v= asset URLs; hard
   refresh (Cmd+Shift+R) before judging whether a change landed.
 
+**LATE-NIGHT OWNER ROUNDS** (final: vchart.js 1.6.1 / hub.js 2.10.6 /
+hub.css 1.25.0 / vice.css 2.7.1):
+- Indicator menu: re-click TOGGLES OFF (owner rule; removes every instance
+  of that id); hovering an active row reveals a small "+" to add a second
+  instance (EMA 20 + EMA 200 path). Legend rows carry a settings TAG
+  ("EMA 50", "BIN · 8h", "$"/"%", "30 bars") that live-updates — TAGS map
+  in vchart.js.
+- FULL TIMEFRAME SYSTEM: parseTf() accepts any Nm/Nh/Nd/Nw + 1mo; menu
+  groups MINUTES/HOURS/DAYS + CUSTOM input; starrable favorites
+  (setup.tfFavs) render as toolbar chips, current-but-unstarred tf shows
+  as an extra chip. Non-native intervals (10m, 6h, 45m…) aggregate
+  client-side via aggBars() from the largest dividing HL base interval;
+  Coinbase/Kraken spot legs re-bucket to the tf too (cbGranFor/krIntFor).
+  barsFor(ms) sizes the window; czDays/fundDays now threshold on ms.
+- RACE FIX (bug seen live): liveTick interleaving a TF-switch reload
+  merged new-TF candles into the old bars array (chimera chart showing
+  month-old data). liveTick now skips while root.loading and drops its
+  result unless `bars` is the SAME ARRAY it started with (identity guard)
+  — the seq token alone did not cover the swap.
+- vChart widget removed from the DeFi preset (owner: redundant vs Pro) —
+  slot now vLiqs; stored boards migrate ONLY the preset-born instance
+  (command still 'eth 1h ema20 ema55'). vChart stays in the tray (only
+  widget that charts gt: DEX tokens / ratios / best-worst).
+- Ticker tape: CHROMELESS (hw-chromeless — no header in view mode, header
+  returns in edit mode), displayMode 'regular' single-line band, h:2,
+  presets/migrations reverted-and-rebalanced. GOTCHA: growing a stored
+  instance's h without shifting the rows below makes gridstack exile it
+  to the board bottom.
+- Chart page gutters: .hub-sec clamp(8px,2.5vw,56px) + max-width 1760px
+  centered; hub bar rebalanced to ~41px after the 35px round was "way too
+  small"; screener controls compacted to 10.5px scale.
+
+**DRAWING TOOLS + TF-CHIP + STOCK FOCUS ROUND** (final: vchart.js 1.7.0 /
+hub.js 2.10.7 / hub.css 1.26.0):
+- **DRAWING SUITE** (owner sent TV's rail): left rail on the chart —
+  cursor / trend line / horizontal line / vertical line / ruler (Δ$ Δ%
+  bars label) / text / brush, then magnet (OHLC snap, on by default),
+  hide, lock, clear-all. Overlay <canvas class="vcp-draw"> over the stage;
+  objects anchored in (timestamp, price) — survive pan/zoom/TF/reload —
+  persisted per symbol at localStorage `viceHub.vchartDraw.<SYM>`.
+  Select in cursor mode (zr mousedown hit-test), drag endpoints or whole
+  object, Del removes, Esc cancels. paintDrawings() runs after draw(),
+  on datazoom, on resize; coords via convertToPixel/FromPixel with
+  fractional category index (t ↔ idx via bars[0].t + i·tfMs). The canvas
+  spans the stage; chart coords shift by rail width (cvPos/translate).
+  Rail hidden in <560px containers.
+- **Single TF chip** (owner): toolbar shows ONLY the current interval;
+  clicking it opens the menu (full words: "5 minutes", "1 hour"…) with a
+  FAVORITES group pinned on top (stars still work) + custom input.
+- **Focus searches real stocks**: live TV scanner america/scan
+  name,description match (debounced 220ms, market-cap ranked, TV logos),
+  "$NVDA"/"nvidia" resolve; curated TRADFI_BOOK still answers instantly;
+  leading $ stripped.
+- Hub wordmark de-blued (owner: "remove the blue") — neutral text, hover
+  = surface only.
+
 **DEPLOY (owner)**: unchanged — add COINALYZE_API_KEY env → `vercel --prod`.
 Post-deploy adds: /hub serves hub.js 2.9.2 + vchart.js 1.1.1 (cache-bust!),
 #/chart shows OUR chart (candles + toolbar, no TV iframe), indicators fill

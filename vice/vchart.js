@@ -948,8 +948,11 @@
 
     const legend = el('div', 'vcp-legend');
     const box = el('div', 'vcp-box');
+    const rail = el('div', 'vcp-rail');
+    const drawCv = document.createElement('canvas');
+    drawCv.className = 'vcp-draw';
     const stage = el('div', 'vcp-stage');
-    stage.append(box, legend);
+    stage.append(rail, box, drawCv, legend);
     root.appendChild(stage);
     const errStrip = el('div', 'vcp-err');
     root.appendChild(errStrip);
@@ -1070,31 +1073,33 @@
     };
     function paintTfs() {
       tfWrap.innerHTML = '';
-      const shown = setup.tfFavs.includes(tf) ? setup.tfFavs : [...setup.tfFavs, tf];
-      for (const t of shown) {
-        const b = el('button', `vcp-chip${t === tf ? ' on' : ''}`, esc(tfLabel(t)));
-        b.addEventListener('click', () => setTf(t));
-        tfWrap.appendChild(b);
-      }
-      const more = el('button', 'vcp-chip vcp-tfmore', '<i data-lucide="chevron-down"></i>');
-      more.title = 'All timeframes';
-      more.addEventListener('click', (ev) => { ev.stopPropagation(); openTfMenu(); });
-      tfWrap.appendChild(more);
-      icons();
+      const b = el('button', 'vcp-chip on vcp-tfchip', esc(tfLabel(tf)));
+      b.title = 'Change timeframe';
+      b.addEventListener('click', (ev) => { ev.stopPropagation(); openTfMenu(); });
+      tfWrap.appendChild(b);
     }
     let tfMenuEl = null;
     const closeTfMenu = () => { tfMenuEl?.remove(); tfMenuEl = null; };
     function openTfMenu() {
       if (tfMenuEl) { closeTfMenu(); return; }
       tfMenuEl = el('div', 'vcp-menu vcp-tfmenu');
+      const tfWord = (t) => {
+        const d = parseTf(t);
+        const n = parseInt(d.key, 10);
+        const unit = d.key === '1mo' ? 'month' : { m: 'minute', h: 'hour', d: 'day', w: 'week' }[d.key.slice(-1)];
+        return `${n} ${unit}${n === 1 ? '' : 's'}`;
+      };
       const paintMenu = () => {
         tfMenuEl.innerHTML = '';
-        for (const [title, keys] of TF_GROUPS) {
+        const groups = setup.tfFavs.length
+          ? [['FAVORITES', setup.tfFavs], ...TF_GROUPS]
+          : TF_GROUPS;
+        for (const [title, keys] of groups) {
           tfMenuEl.appendChild(el('div', 'vcp-tfcat', title));
           for (const t of keys) {
             const fav = setup.tfFavs.includes(t);
             const row = el('button', `vcp-mrow vcp-tfrow${t === tf ? ' on' : ''}`,
-              `<span>${esc(tfLabel(t))}</span>` +
+              `<span>${esc(tfWord(t))}</span>` +
               `<span class="vcp-tfstar${fav ? ' on' : ''}" data-star="${esc(t)}" title="${fav ? 'Unstar' : 'Star — shows in the toolbar'}">★</span>`);
             row.addEventListener('click', (ev) => {
               const star = ev.target.closest('[data-star]');
@@ -1411,6 +1416,7 @@
       const priceH = avail - (subH + 6) * subs.length;
 
       const grids = [{ left: 6, right: 74, top: TOP, height: priceH }];
+      priceRect = { x: 6, y: TOP, w: W - 6 - 74, h: priceH };
       const xAxes = [];
       const yAxes = [];
       let series = [];
@@ -1507,6 +1513,7 @@
         series,
       }, { notMerge: structural, lazyUpdate: true });
       paintLegend();
+      paintDrawings();
     }
 
     /* ── data lifecycle ───────────────────────────────────────────────── */
@@ -1573,8 +1580,366 @@
     function setSymbol(s) {
       if (s === sym) return;
       sym = s;
+      drawings = loadDrawings();
+      drawSel = null;
+      pending = null;
       reload();
     }
+
+    /* ── drawing layer: TV-style tools, anchored in (time, price) so every
+       object survives pan/zoom/TF switches; persisted per symbol ───────── */
+    const DRAW_KEY = (s) => `viceHub.vchartDraw.${s}`;
+    const TOOLS = [
+      ['cursor', 'mouse-pointer', 'Select / pan'],
+      ['trend', 'trending-up', 'Trend line'],
+      ['hline', 'minus', 'Horizontal line'],
+      ['vline', 'separator-vertical', 'Vertical line'],
+      ['ruler', 'ruler', 'Measure'],
+      ['text', 'type', 'Text'],
+      ['brush', 'brush', 'Brush'],
+    ];
+    let drawTool = 'cursor';
+    let drawings = [];
+    let drawSel = null;
+    let drawMagnet = true;
+    let drawHidden = false;
+    let drawLocked = false;
+    let pending = null; // in-progress object
+    let dragCtx = null; // {id, ptIdx|-1 (whole), startPx, orig}
+    let priceRect = { x: 40, y: 8, w: 600, h: 300 }; // set by draw()
+    let drawSaveT = null;
+
+    const loadDrawings = () => {
+      try {
+        const j = JSON.parse(localStorage.getItem(DRAW_KEY(sym)) ?? 'null');
+        return Array.isArray(j?.items) ? j.items.filter((d) => d && d.type && Array.isArray(d.pts)) : [];
+      } catch { return []; }
+    };
+    const saveDrawings = () => {
+      clearTimeout(drawSaveT);
+      drawSaveT = setTimeout(() => {
+        try { localStorage.setItem(DRAW_KEY(sym), JSON.stringify({ v: 1, items: drawings })); }
+        catch { /* quota */ }
+      }, 250);
+    };
+
+    const t2x = (t) => (t - bars[0].t) / tfMsOf(tf);
+    const x2t = (x) => bars[0].t + x * tfMsOf(tf);
+    const d2px = (pt) => {
+      try { return chart.convertToPixel({ xAxisIndex: 0, yAxisIndex: 0 }, [t2x(pt.t), pt.p]); }
+      catch { return null; }
+    };
+    const px2d = (x, y) => {
+      try {
+        const v = chart.convertFromPixel({ xAxisIndex: 0, yAxisIndex: 0 }, [x, y]);
+        return { t: x2t(v[0]), p: v[1] };
+      } catch { return null; }
+    };
+    const snapPt = (pt, py) => {
+      if (!drawMagnet || !bars.length) return pt;
+      const idx = clamp(Math.round(t2x(pt.t)), 0, bars.length - 1);
+      const k = bars[idx];
+      let best = null;
+      for (const v of [k.o, k.h, k.l, k.c]) {
+        const vy = d2px({ t: pt.t, p: v })?.[1];
+        if (vy == null) continue;
+        if (best == null || Math.abs(vy - py) < Math.abs(best.vy - py)) best = { v, vy };
+      }
+      if (best && Math.abs(best.vy - py) < 9) return { t: k.t, p: best.v };
+      return pt;
+    };
+
+    const distSeg = (px, py, a, b) => {
+      const dx = b[0] - a[0];
+      const dy = b[1] - a[1];
+      const len2 = dx * dx + dy * dy || 1;
+      const u = clamp(((px - a[0]) * dx + (py - a[1]) * dy) / len2, 0, 1);
+      return Math.hypot(px - (a[0] + u * dx), py - (a[1] + u * dy));
+    };
+    function hitTest(px, py) {
+      if (drawHidden) return null;
+      for (let i = drawings.length - 1; i >= 0; i--) {
+        const d = drawings[i];
+        const pts = d.pts.map(d2px);
+        if (pts.some((p) => !p)) continue;
+        if (d.type === 'hline') { if (Math.abs(py - pts[0][1]) < 6) return { d, ptIdx: -1 }; continue; }
+        if (d.type === 'vline') { if (Math.abs(px - pts[0][0]) < 6) return { d, ptIdx: -1 }; continue; }
+        if (d.type === 'text') {
+          if (px >= pts[0][0] - 4 && px <= pts[0][0] + 8 + (d.text?.length ?? 1) * 7 && Math.abs(py - pts[0][1]) < 12) return { d, ptIdx: -1 };
+          continue;
+        }
+        for (let j = 0; j < pts.length; j++) if (Math.hypot(px - pts[j][0], py - pts[j][1]) < 8) return { d, ptIdx: j };
+        for (let j = 0; j + 1 < pts.length; j++) if (distSeg(px, py, pts[j], pts[j + 1]) < 6) return { d, ptIdx: -1 };
+      }
+      return null;
+    }
+
+    function paintDrawings() {
+      const dpr = window.devicePixelRatio || 1;
+      const w = stage.clientWidth;
+      const h = stage.clientHeight;
+      if (drawCv.width !== w * dpr || drawCv.height !== h * dpr) {
+        drawCv.width = w * dpr;
+        drawCv.height = h * dpr;
+      }
+      const ctx = drawCv.getContext('2d');
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.clearRect(0, 0, w, h);
+      if (drawHidden || !chart || !bars.length) return;
+      const railW = rail.offsetWidth;
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(priceRect.x + railW, priceRect.y, priceRect.w, priceRect.h);
+      ctx.translate(railW, 0); // chart canvas sits right of the rail
+      ctx.clip();
+      const items = pending ? [...drawings, pending] : drawings;
+      for (const d of items) {
+        const pts = d.pts.map(d2px);
+        if (!pts.length || pts.some((p) => !p)) continue;
+        const seld = drawSel === d.id;
+        ctx.strokeStyle = seld ? '#f6f5fb' : '#2dd4bf';
+        ctx.fillStyle = ctx.strokeStyle;
+        ctx.lineWidth = d.type === 'brush' ? 1.6 : 1.25;
+        ctx.setLineDash([]);
+        if (d.type === 'hline') {
+          ctx.beginPath();
+          ctx.moveTo(priceRect.x, pts[0][1]);
+          ctx.lineTo(priceRect.x + priceRect.w, pts[0][1]);
+          ctx.stroke();
+          ctx.font = '10px Geist Mono, monospace';
+          ctx.fillText(fmtPx(d.pts[0].p), priceRect.x + 4, pts[0][1] - 4);
+        } else if (d.type === 'vline') {
+          ctx.beginPath();
+          ctx.moveTo(pts[0][0], priceRect.y);
+          ctx.lineTo(pts[0][0], priceRect.y + priceRect.h);
+          ctx.stroke();
+        } else if (d.type === 'text') {
+          ctx.font = '12px Geist Mono, monospace';
+          ctx.fillText(d.text ?? '', pts[0][0], pts[0][1]);
+        } else if (d.type === 'ruler' && pts.length === 2) {
+          const [a, b] = pts;
+          ctx.fillStyle = 'rgba(45,212,191,0.09)';
+          ctx.fillRect(Math.min(a[0], b[0]), Math.min(a[1], b[1]), Math.abs(b[0] - a[0]), Math.abs(b[1] - a[1]));
+          ctx.setLineDash([4, 3]);
+          ctx.strokeRect(Math.min(a[0], b[0]), Math.min(a[1], b[1]), Math.abs(b[0] - a[0]), Math.abs(b[1] - a[1]));
+          ctx.setLineDash([]);
+          const dp = d.pts[1].p - d.pts[0].p;
+          const pct = (dp / d.pts[0].p) * 100;
+          const nb = Math.round((d.pts[1].t - d.pts[0].t) / tfMsOf(tf));
+          const lbl = `${dp >= 0 ? '+' : ''}${fmtPx(dp)}  ${pct >= 0 ? '+' : ''}${pct.toFixed(2)}%  ${nb} bars`;
+          ctx.font = '10.5px Geist Mono, monospace';
+          const tw = ctx.measureText(lbl).width + 12;
+          const lx = clamp((a[0] + b[0]) / 2 - tw / 2, priceRect.x, priceRect.x + priceRect.w - tw);
+          const ly = Math.min(a[1], b[1]) - 20;
+          ctx.fillStyle = '#14121f';
+          ctx.strokeStyle = '#363049';
+          ctx.lineWidth = 1;
+          ctx.fillRect(lx, ly, tw, 16);
+          ctx.strokeRect(lx, ly, tw, 16);
+          ctx.fillStyle = dp >= 0 ? '#21d196' : 'var(--red)'.startsWith('var') ? '#ff6473' : '#ff6473';
+          ctx.fillText(lbl, lx + 6, ly + 11.5);
+        } else { // trend / brush
+          ctx.beginPath();
+          ctx.moveTo(pts[0][0], pts[0][1]);
+          for (let j = 1; j < pts.length; j++) ctx.lineTo(pts[j][0], pts[j][1]);
+          ctx.stroke();
+        }
+        if (seld && d.type !== 'brush') {
+          ctx.fillStyle = '#f6f5fb';
+          for (const p of pts) ctx.fillRect(p[0] - 3, p[1] - 3, 6, 6);
+        }
+      }
+      ctx.restore();
+    }
+
+    const syncDrawUi = () => {
+      rail.querySelectorAll('[data-tool]').forEach((b) => b.classList.toggle('on', b.dataset.tool === drawTool));
+      rail.querySelector('[data-dact="magnet"]')?.classList.toggle('on', drawMagnet);
+      rail.querySelector('[data-dact="hide"]')?.classList.toggle('on', drawHidden);
+      rail.querySelector('[data-dact="lock"]')?.classList.toggle('on', drawLocked);
+      drawCv.style.pointerEvents = (drawTool !== 'cursor' && !drawLocked) || drawSel ? 'auto' : 'none';
+      box.style.cursor = drawTool === 'cursor' ? '' : 'crosshair';
+    };
+    function buildRail() {
+      rail.innerHTML = '';
+      for (const [key, icon, tip] of TOOLS) {
+        const b = el('button', 'vcp-tool', `<i data-lucide="${icon}"></i>`);
+        b.dataset.tool = key;
+        b.title = tip;
+        b.addEventListener('click', () => {
+          if (drawLocked && key !== 'cursor') return;
+          drawTool = drawTool === key ? 'cursor' : key;
+          pending = null;
+          syncDrawUi();
+        });
+        rail.appendChild(b);
+      }
+      rail.appendChild(el('span', 'vcp-rail-sep'));
+      const acts = [
+        ['magnet', 'magnet', 'Snap to OHLC'],
+        ['hide', 'eye', 'Hide drawings'],
+        ['lock', 'lock', 'Lock drawings'],
+        ['clear', 'trash-2', 'Clear all drawings'],
+      ];
+      for (const [key, icon, tip] of acts) {
+        const b = el('button', 'vcp-tool', `<i data-lucide="${icon}"></i>`);
+        b.dataset.dact = key;
+        b.title = tip;
+        b.addEventListener('click', () => {
+          if (key === 'magnet') drawMagnet = !drawMagnet;
+          else if (key === 'hide') { drawHidden = !drawHidden; drawSel = null; }
+          else if (key === 'lock') { drawLocked = !drawLocked; drawSel = null; if (drawLocked) drawTool = 'cursor'; }
+          else if (key === 'clear') { drawings = []; drawSel = null; pending = null; saveDrawings(); }
+          syncDrawUi();
+          paintDrawings();
+        });
+        rail.appendChild(b);
+      }
+      icons();
+      syncDrawUi();
+    }
+
+    const cvPos = (ev) => {
+      const r = drawCv.getBoundingClientRect();
+      const railW = rail.offsetWidth;
+      return [ev.clientX - r.left - railW, ev.clientY - r.top];
+    };
+    function openTextInput(pt, px, py) {
+      const inp = document.createElement('input');
+      inp.className = 'vcp-drawtext';
+      inp.style.left = `${px + rail.offsetWidth}px`;
+      inp.style.top = `${py - 12}px`;
+      inp.maxLength = 60;
+      stage.appendChild(inp);
+      inp.focus();
+      const commit = () => {
+        const v = inp.value.trim();
+        inp.remove();
+        if (v) {
+          const d = { id: mkUid(), type: 'text', pts: [pt], text: v };
+          drawings.push(d);
+          drawSel = d.id;
+          saveDrawings();
+        }
+        drawTool = 'cursor';
+        syncDrawUi();
+        paintDrawings();
+      };
+      inp.addEventListener('keydown', (ev) => {
+        ev.stopPropagation();
+        if (ev.key === 'Enter') commit();
+        if (ev.key === 'Escape') { inp.remove(); drawTool = 'cursor'; syncDrawUi(); }
+      });
+      inp.addEventListener('blur', commit);
+    }
+    drawCv.addEventListener('pointerdown', (ev) => {
+      if (!chart || !bars.length) return;
+      const [x, y] = cvPos(ev);
+      if (drawTool === 'cursor') {
+        const hit = drawLocked ? null : hitTest(x, y);
+        if (hit) {
+          drawSel = hit.d.id;
+          dragCtx = { id: hit.d.id, ptIdx: hit.ptIdx, start: [x, y], orig: JSON.parse(JSON.stringify(hit.d.pts)) };
+          drawCv.setPointerCapture(ev.pointerId);
+        } else {
+          drawSel = null;
+          syncDrawUi();
+        }
+        paintDrawings();
+        return;
+      }
+      let pt = px2d(x, y);
+      if (!pt) return;
+      pt = snapPt(pt, y);
+      if (drawTool === 'hline' || drawTool === 'vline') {
+        const d = { id: mkUid(), type: drawTool, pts: [pt] };
+        drawings.push(d);
+        drawSel = d.id;
+        drawTool = 'cursor';
+        saveDrawings();
+        syncDrawUi();
+        paintDrawings();
+        return;
+      }
+      if (drawTool === 'text') { openTextInput(pt, x, y); return; }
+      pending = { id: mkUid(), type: drawTool, pts: drawTool === 'brush' ? [pt] : [pt, pt] };
+      drawCv.setPointerCapture(ev.pointerId);
+    });
+    drawCv.addEventListener('pointermove', (ev) => {
+      if (!chart || !bars.length) return;
+      const [x, y] = cvPos(ev);
+      if (dragCtx) {
+        const d = drawings.find((q) => q.id === dragCtx.id);
+        if (!d) { dragCtx = null; return; }
+        const from = px2d(dragCtx.start[0], dragCtx.start[1]);
+        const to = px2d(x, y);
+        if (!from || !to) return;
+        if (dragCtx.ptIdx >= 0) {
+          d.pts[dragCtx.ptIdx] = snapPt(to, y);
+        } else {
+          const dt = to.t - from.t;
+          const dp = to.p - from.p;
+          d.pts = dragCtx.orig.map((p) => ({ t: p.t + dt, p: p.p + dp }));
+        }
+        paintDrawings();
+        return;
+      }
+      if (!pending) return;
+      let pt = px2d(x, y);
+      if (!pt) return;
+      pt = snapPt(pt, y);
+      if (pending.type === 'brush') {
+        const last = pending.pts[pending.pts.length - 1];
+        const lp = d2px(last);
+        if (!lp || Math.hypot(x - lp[0], y - lp[1]) > 4) pending.pts.push(pt);
+      } else pending.pts[1] = pt;
+      paintDrawings();
+    });
+    drawCv.addEventListener('pointerup', () => {
+      if (dragCtx) { dragCtx = null; saveDrawings(); return; }
+      if (!pending) return;
+      const done = pending;
+      pending = null;
+      const span = done.pts.length > 1 ? Math.hypot(...(() => {
+        const a = d2px(done.pts[0]);
+        const b = d2px(done.pts[done.pts.length - 1]);
+        return a && b ? [b[0] - a[0], b[1] - a[1]] : [0, 0];
+      })()) : 0;
+      if (done.type !== 'brush' && span < 3) { paintDrawings(); return; } // accidental click
+      drawings.push(done);
+      drawSel = done.id;
+      drawTool = 'cursor';
+      saveDrawings();
+      syncDrawUi();
+      paintDrawings();
+    });
+    const drawKeyHandler = (ev) => {
+      if ((ev.key === 'Delete' || ev.key === 'Backspace') && drawSel
+        && !ev.target.closest?.('input, textarea, select, [contenteditable]')) {
+        drawings = drawings.filter((d) => d.id !== drawSel);
+        drawSel = null;
+        saveDrawings();
+        syncDrawUi();
+        paintDrawings();
+        ev.preventDefault();
+      }
+      if (ev.key === 'Escape' && (pending || drawTool !== 'cursor')) {
+        pending = null;
+        drawTool = 'cursor';
+        syncDrawUi();
+        paintDrawings();
+      }
+    };
+    document.addEventListener('keydown', drawKeyHandler);
+    // cursor-mode selection without stealing the chart's pan: hit-test on zr
+    const zrClickSel = () => {
+      chart.getZr().on('mousedown', (e) => {
+        if (drawTool !== 'cursor' || drawLocked || drawHidden) return;
+        const hit = hitTest(e.offsetX, e.offsetY);
+        if (hit) { drawSel = hit.d.id; syncDrawUi(); paintDrawings(); }
+        else if (drawSel) { drawSel = null; syncDrawUi(); paintDrawings(); }
+      });
+    };
 
     /* boot */
     let tries = 0;
@@ -1587,6 +1952,9 @@
       }
       chart = window.echarts.init(box, null, { renderer: 'canvas' });
       if (window.LTUtils?.echartsZoomShim) window.LTUtils.echartsZoomShim(box);
+      drawings = loadDrawings();
+      buildRail();
+      zrClickSel();
       chart.on('updateAxisPointer', (ev) => {
         const xi = ev.axesInfo?.find((a) => a.axisDim === 'x');
         const next = xi ? clamp(Math.round(xi.value), 0, bars.length - 1) : null;
@@ -1608,6 +1976,7 @@
         follow = endIdx >= bars.length - 2;
         if (follow) zoomSpan = Math.max(20, Math.round((dz.endValue ?? bars.length - 1) - (dz.startValue ?? 0) + 1));
         viewIdx = { s: Math.round(dz.startValue ?? 0), e: Math.round(endIdx) };
+        paintDrawings(); // drawings track the pan/zoom in real time
         if (setup.heat) {
           // the heat clip follows the window — redraw once the gesture settles
           clearTimeout(heatRedraw);
@@ -1646,6 +2015,7 @@
       destroy() {
         dead = true;
         document.removeEventListener('fullscreenchange', onFsChange);
+        document.removeEventListener('keydown', drawKeyHandler);
         if (keyHandler) document.removeEventListener('keydown', keyHandler);
         clearInterval(liveTimer);
         ro?.disconnect();
