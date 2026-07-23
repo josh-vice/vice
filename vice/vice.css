@@ -88,7 +88,7 @@ i[data-lucide] { display: inline-block; width: 1em; height: 1em; }
 .top-inner {
   display: flex; align-items: center; gap: 10px;
   max-width: none; /* nav row spans the full screen, edge to edge */
-  padding-top: 9px; padding-bottom: 9px;
+  padding-top: 12px; padding-bottom: 12px;
 }
 .top > a { display: flex; align-items: center; gap: 10px; }
 .vt-flamingo {
@@ -103,9 +103,9 @@ i[data-lucide] { display: inline-block; width: 1em; height: 1em; }
 .top-name strong { color: var(--pink); }
 .top-right { margin-left: auto; display: flex; align-items: center; gap: 30px; }
 .top-link {
-  font-size: 12.5px; color: var(--text2);
+  font-size: 13px; color: var(--text2);
   display: inline-flex; align-items: center; gap: 6px;
-  padding: 7px 2px;
+  padding: 8px 2px;
   transition: color 150ms ease; white-space: nowrap;
 }
 .top-link:hover { color: var(--teal); }

@@ -1,4 +1,4 @@
-/* Vice Hub — customizable live market dashboard + Velo-style section boards. v2.10.5
+/* Vice Hub — customizable live market dashboard + Velo-style section boards. v2.10.6
    Architecture: a widget REGISTRY (manifest per type: title, sizes, settings
    schema, mount/destroy lifecycle) + a Gridstack canvas (float mode, 24-col
    fine grid). Saved layouts store INSTANCES ({id,type,x,y,w,h,settings}),
@@ -563,8 +563,8 @@
       },
     },
     tvTape: {
-      title: 'Ticker Tape', icon: 'move-horizontal', cat: 'Charts',
-      w: 24, h: 3, minW: 8, minH: 3,
+      title: 'Ticker Tape', icon: 'move-horizontal', cat: 'Charts', chromeless: true,
+      w: 24, h: 2, minW: 8, minH: 1,
       settings: [
         F.area('symbols', 'Symbols (comma-separated)',
           'BITSTAMP:BTCUSD, BITSTAMP:ETHUSD, CRYPTO:SOLUSD, CRYPTO:XRPUSD, CRYPTO:BNBUSD, CRYPTO:DOGEUSD, CRYPTO:ADAUSD, COINBASE:HYPEUSD'),
@@ -2769,35 +2769,35 @@
   const P = (type, x, y, w, h, settings = {}) => ({ id: uid(), type, x, y, w, h, settings });
   const PRESETS = {
     DeFi: () => [
-      P('tvTape', 0, 0, 24, 3, { symbols: 'BITSTAMP:BTCUSD, BITSTAMP:ETHUSD, CRYPTO:SOLUSD, CRYPTO:XRPUSD, CRYPTO:BNBUSD, CRYPTO:DOGEUSD, CRYPTO:ADAUSD, COINBASE:HYPEUSD, CRYPTO:ZECUSD' }),
-      P('tvChart', 0, 3, 14, 14, { symbol: 'BITSTAMP:BTCUSD', interval: '60' }),
-      P('vWatch', 14, 3, 5, 8),
-      P('vMovers', 19, 3, 5, 14),
-      P('vNews', 14, 11, 5, 6),
-      P('vHeat', 0, 17, 12, 10),
-      P('vLiqs', 12, 17, 12, 10, { symbol: 'BTC' }),
-      P('vFunding', 0, 27, 10, 7),
-      P('vCountdown', 10, 27, 4, 7),
-      P('tvNews', 14, 27, 10, 7, { market: 'crypto' }),
+      P('tvTape', 0, 0, 24, 2, { symbols: 'BITSTAMP:BTCUSD, BITSTAMP:ETHUSD, CRYPTO:SOLUSD, CRYPTO:XRPUSD, CRYPTO:BNBUSD, CRYPTO:DOGEUSD, CRYPTO:ADAUSD, COINBASE:HYPEUSD, CRYPTO:ZECUSD' }),
+      P('tvChart', 0, 2, 14, 14, { symbol: 'BITSTAMP:BTCUSD', interval: '60' }),
+      P('vWatch', 14, 2, 5, 8),
+      P('vMovers', 19, 2, 5, 14),
+      P('vNews', 14, 10, 5, 6),
+      P('vHeat', 0, 16, 12, 10),
+      P('vLiqs', 12, 16, 12, 10, { symbol: 'BTC' }),
+      P('vFunding', 0, 26, 10, 7),
+      P('vCountdown', 10, 26, 4, 7),
+      P('tvNews', 14, 26, 10, 7, { market: 'crypto' }),
     ],
     TradFi: () => [
-      P('tvTape', 0, 0, 24, 3, { symbols: 'FOREXCOM:SPXUSD, FOREXCOM:NSXUSD, TVC:VIX, NASDAQ:AAPL, NASDAQ:NVDA, NASDAQ:TSLA, NASDAQ:MSFT, AMEX:SPY' }),
-      P('tvChart', 0, 3, 14, 12, { symbol: 'AMEX:SPY', interval: 'D' }),
-      P('tvOverview', 14, 3, 5, 12, { lead: 'indices' }),
-      P('tvCal', 19, 3, 5, 12),
-      P('tvStockHeat', 0, 15, 12, 10),
-      P('tvNews', 12, 15, 6, 10, { market: 'stock' }),
-      P('tvMini', 18, 15, 6, 10, { symbol: 'NASDAQ:NVDA', range: '3M' }),
+      P('tvTape', 0, 0, 24, 2, { symbols: 'FOREXCOM:SPXUSD, FOREXCOM:NSXUSD, TVC:VIX, NASDAQ:AAPL, NASDAQ:NVDA, NASDAQ:TSLA, NASDAQ:MSFT, AMEX:SPY' }),
+      P('tvChart', 0, 2, 14, 12, { symbol: 'AMEX:SPY', interval: 'D' }),
+      P('tvOverview', 14, 2, 5, 12, { lead: 'indices' }),
+      P('tvCal', 19, 2, 5, 12),
+      P('tvStockHeat', 0, 14, 12, 10),
+      P('tvNews', 12, 14, 6, 10, { market: 'stock' }),
+      P('tvMini', 18, 14, 6, 10, { symbol: 'NASDAQ:NVDA', range: '3M' }),
     ],
     Macro: () => [
-      P('tvTape', 0, 0, 24, 3, { symbols: 'CAPITALCOM:DXY, TVC:GOLD, TVC:USOIL, TVC:US10Y, FOREXCOM:SPXUSD, BITSTAMP:BTCUSD, FX:EURUSD' }),
-      P('tvOverview', 0, 3, 7, 12, { lead: 'indices' }),
-      P('tvCal', 7, 3, 8, 12),
-      P('tvForexHeat', 15, 3, 9, 8),
-      P('vClocks', 15, 11, 9, 4),
-      P('tvChart', 0, 15, 12, 11, { symbol: 'OANDA:XAUUSD', interval: 'D' }),
-      P('tvNews', 12, 15, 6, 11, { market: 'index' }),
-      P('vNotes', 18, 15, 6, 11),
+      P('tvTape', 0, 0, 24, 2, { symbols: 'CAPITALCOM:DXY, TVC:GOLD, TVC:USOIL, TVC:US10Y, FOREXCOM:SPXUSD, BITSTAMP:BTCUSD, FX:EURUSD' }),
+      P('tvOverview', 0, 2, 7, 12, { lead: 'indices' }),
+      P('tvCal', 7, 2, 8, 12),
+      P('tvForexHeat', 15, 2, 9, 8),
+      P('vClocks', 15, 10, 9, 4),
+      P('tvChart', 0, 14, 12, 11, { symbol: 'OANDA:XAUUSD', interval: 'D' }),
+      P('tvNews', 12, 14, 6, 11, { market: 'index' }),
+      P('vNotes', 18, 14, 6, 11),
     ],
   };
   const defaultLayout = (name) => ({ grid: (PRESETS[name] ?? PRESETS.DeFi)() });
@@ -2829,17 +2829,16 @@
               inst.settings = { symbol: 'BTC' };
             }
           }
-          // a 2-row tape (60px) can't hold TV's band — grow it and shift the
-          // rows below down, or gridstack resolves the collision by exiling
-          // the tape to the bottom of the board
+          // tape is a chromeless 2-row strip now — shrink any 3-row tape from
+          // the interim build and pull the rows below back up
           for (const inst of doc.grid ?? []) {
-            if (inst.type !== 'tvTape' || (inst.h ?? 0) >= 3) continue;
-            const d = 3 - inst.h;
+            if (inst.type !== 'tvTape' || (inst.h ?? 0) <= 2) continue;
+            const d = inst.h - 2;
             const edge = inst.y + inst.h;
             for (const other of doc.grid) {
-              if (other !== inst && other.y >= edge) other.y += d;
+              if (other !== inst && other.y >= edge) other.y -= d;
             }
-            inst.h = 3;
+            inst.h = 2;
           }
         }
         return j;
@@ -2884,6 +2883,7 @@
     const item = el('div', 'grid-stack-item');
     item.dataset.hid = inst.id;
     const content = el('div', 'grid-stack-item-content hw');
+    if (man.chromeless) content.classList.add('hw-chromeless');
     const head = el('div', 'hw-head');
     // focus boards + section boards are ephemeral — their blocks offer a pin
     // that copies {type, settings} into the active dashboard layout

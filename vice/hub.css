@@ -1,4 +1,4 @@
-/* Vice Hub — dashboard styles. v1.21.1
+/* Vice Hub — dashboard styles. v1.25.0
    Layers on vice.css tokens. PATH RULE: lives in vice/ ROOT (deep pages serve
    at /hub with no directory, so assets resolve at the domain root). */
 
@@ -9,8 +9,8 @@
 /* ── toolbar ────────────────────────────────────────────────────────────── */
 .hub-bar {
   position: sticky; top: 0; z-index: 60;
-  display: flex; align-items: center; gap: 5px; flex-wrap: wrap;
-  padding: 4px 16px;
+  display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+  padding: 6px 16px;
   margin: 0 -16px 10px;
   background: color-mix(in srgb, var(--bg) 82%, transparent);
   backdrop-filter: blur(12px);
@@ -18,15 +18,15 @@
   border-bottom: 1px solid var(--border);
 }
 .hub-brand { display: inline-flex; align-items: center; }
-.hub-brand .vt-flamingo { width: 18px; height: 18px; transition: transform 160ms var(--ease-out); }
+.hub-brand .vt-flamingo { width: 20px; height: 20px; transition: transform 160ms var(--ease-out); }
 @media (hover: hover) and (pointer: fine) { .hub-brand:hover .vt-flamingo { transform: scale(1.08); } }
-.hub-bar-title { color: var(--text); font-weight: 700; font-size: 12px; letter-spacing: 0.2px; white-space: nowrap; }
+.hub-bar-title { color: var(--text); font-weight: 700; font-size: 12.5px; letter-spacing: 0.2px; white-space: nowrap; }
 .hub-bar-title strong { color: var(--text); }
 .hub-bar .spacer { flex: 1; }
 .hub-live {
   display: inline-flex; align-items: center; gap: 6px;
-  color: var(--text2); font-size: 11px;
-  background: none; border: 0; padding: 3px 6px; border-radius: var(--radius);
+  color: var(--text2); font-size: 11.5px;
+  background: none; border: 0; padding: 4px 7px; border-radius: var(--radius);
   font-family: inherit; cursor: pointer;
   transition: background 140ms var(--ease-out), transform 140ms var(--ease-out);
 }
@@ -44,7 +44,7 @@
   appearance: none; -webkit-appearance: none;
   background: none; color: var(--text2);
   border: none; border-radius: var(--radius);
-  font: inherit; font-size: 11.5px; padding: 5px 24px 5px 8px;
+  font: inherit; font-size: 12px; padding: 5px 24px 5px 8px;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23a8a3bb' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
   background-repeat: no-repeat; background-position: right 7px center;
   cursor: pointer;
@@ -56,7 +56,7 @@
   display: inline-flex; align-items: center; gap: 6px;
   background: none; color: var(--text3);
   border: none; border-radius: var(--radius);
-  font: inherit; font-size: 11.5px; padding: 5px 8px; cursor: pointer;
+  font: inherit; font-size: 12px; padding: 5px 9px; cursor: pointer;
   transition: color 140ms var(--ease-out), background 140ms var(--ease-out), transform 140ms var(--ease-out);
 }
 .hub-btn i, .hub-btn svg { width: 13px; height: 13px; flex: none; }
@@ -544,7 +544,7 @@ body.focused #hub-layout, body.focused #hub-add, body.focused #hub-edit { displa
 .hub-nav a {
   display: inline-flex; align-items: center; flex: none;
   color: var(--text3); text-decoration: none; white-space: nowrap;
-  font-size: 11.5px; padding: 4px 10px; border-radius: var(--radius);
+  font-size: 12px; padding: 4px 11px; border-radius: var(--radius);
   transition: color 160ms var(--ease-out), background 160ms var(--ease-out);
 }
 .hub-nav a i, .hub-nav a svg { display: none; }
@@ -573,7 +573,10 @@ body.in-section #hub-add { display: none; }
 .hw-btn.hw-pin:hover { color: var(--teal); border-color: var(--teal); }
 
 /* ── v1.12.0: section replica pages (static panels, no gridstack) ─────── */
-.hub-sec { padding: 0 0 20px; }
+.hub-sec {
+  padding: 0 clamp(8px, 2.5vw, 56px) 28px;
+  max-width: 1760px; margin: 0 auto;
+}
 /* pages glide in instead of popping — barely-there, honest about motion */
 .hub-sec > .vpage-grid, .hub-sec > .vpage-bar { animation: hubPageIn 220ms var(--ease-out) both; }
 @keyframes hubPageIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
@@ -592,8 +595,8 @@ body.in-section #hub-add { display: none; }
 .vpage-chip:active { transform: scale(0.96); }
 .vpage-chip.on { color: var(--text); background: var(--bg4); border-color: var(--border3); font-weight: 600; }
 .vpage-grid {
-  display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
-  padding-top: 8px;
+  display: grid; grid-template-columns: 1fr 1fr; gap: 16px;
+  padding-top: 10px;
 }
 .vpage-grid > .span2 { grid-column: 1 / -1; }
 .vpanel {
@@ -948,7 +951,7 @@ body.in-section #hub-add { display: none; }
 
 /* ── UX audit pass (owner: snappy/compact/polished) ──────────────────── */
 /* the chart IS the page — fill the viewport instead of a fixed strip */
-.vpanel.vp-chartpro { height: calc(100dvh - 104px); min-height: 460px; }
+.vpanel.vp-chartpro { height: calc(100dvh - 114px); min-height: 460px; }
 @media (max-width: 900px) { .vpanel.vp-chartpro { height: calc(100dvh - 110px); min-height: 420px; } }
 
 /* section pages hide the dashboard-only controls — they do nothing there */
@@ -1067,3 +1070,63 @@ a.hub-bar-title:hover strong { color: var(--teal); }
 /* legend rows shrink-wrap — full-width rows were eating crosshair hovers */
 .vcp-legend { align-items: flex-start; }
 .vcp-lrow { width: max-content; max-width: 100%; }
+
+
+/* chromeless widgets (ticker tape): the strip IS the content — no title bar
+   in view mode; edit mode brings it back for drag/settings/remove */
+.hw-chromeless .hw-head { display: none; }
+body.editing .hw-chromeless .hw-head { display: flex; }
+
+/* legend settings tag — which EMA / venue / window this row is */
+.vcp-ltag { color: var(--text3); font-size: 10px; white-space: nowrap; }
+.vcp-ltag:empty { display: none; }
+
+/* indicator menu: active rows show check + a small "+" for a 2nd instance */
+.vcp-mact { display: inline-flex; align-items: center; gap: 6px; }
+.vcp-madd {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 16px; height: 16px; border-radius: var(--radius);
+  background: var(--bg4); color: var(--text2); font-size: 12px; line-height: 1;
+  opacity: 0; transition: opacity 120ms var(--ease-out), color 120ms;
+}
+.vcp-mrow:hover .vcp-madd { opacity: 1; }
+.vcp-madd:hover { color: var(--teal); }
+@media (pointer: coarse) { .vcp-madd { opacity: 1; } }
+
+/* ── timeframe menu: grouped list, starrable, custom interval ── */
+.vcp-tfmore { padding: 3px 4px; }
+.vcp-tfmore i, .vcp-tfmore svg { width: 12px; height: 12px; }
+.vcp-menu.vcp-tfmenu {
+  left: 110px; right: auto; grid-template-columns: 1fr; min-width: 180px;
+  max-width: 220px; transform-origin: top left;
+}
+.vcp-tfcat {
+  padding: 6px 9px 3px; color: var(--text3); font-size: 9px;
+  letter-spacing: 0.08em; font-weight: 600;
+}
+.vcp-tfrow { display: flex; align-items: center; justify-content: space-between; }
+.vcp-tfrow.on > span:first-child { color: var(--teal); font-weight: 700; }
+.vcp-tfstar {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 22px; height: 22px; margin: -4px -4px -4px 0; border-radius: var(--radius);
+  color: var(--text3); opacity: 0.25; font-size: 12px;
+  transition: opacity 120ms var(--ease-out), color 120ms;
+}
+.vcp-tfrow:hover .vcp-tfstar { opacity: 0.75; }
+.vcp-tfstar.on { color: #e7b53a; opacity: 1; }
+.vcp-tfstar:hover { color: #e7b53a; }
+@media (pointer: coarse) { .vcp-tfstar { opacity: 0.7; } }
+.vcp-tfcustom { display: flex; gap: 5px; padding: 4px 6px 6px; }
+.vcp-tfcustom input {
+  flex: 1; min-width: 0; padding: 4px 8px; border: 1px solid var(--border);
+  border-radius: var(--radius); background: var(--bg3); color: var(--text);
+  font: 500 11px/1.4 var(--mono);
+}
+.vcp-tfcustom input:focus { outline: none; border-color: var(--teal); }
+.vcp-tfcustom input.bad { border-color: var(--red); }
+.vcp-tfgo {
+  padding: 4px 10px; border: none; border-radius: var(--radius);
+  background: var(--bg4); color: var(--text); font: 600 10.5px/1.5 var(--mono);
+  cursor: pointer;
+}
+.vcp-tfgo:hover { background: var(--border2); }

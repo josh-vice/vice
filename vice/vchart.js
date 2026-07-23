@@ -1,4 +1,4 @@
-/* Vice Chart Pro — the hub's own chart engine. v1.4.0
+/* Vice Chart Pro — the hub's own chart engine. v1.6.0
    Velo-style: candles + stacked indicator panes + an order-book depth
    heatmap (Toggle Heatmap). All indicators are our own implementations of
    the <Velo> set (docs.velo.xyz/web-app/chart), fed by the same sources the
@@ -62,26 +62,72 @@
   };
 
   /* ── timeframes ─────────────────────────────────────────────────────── */
-  const TFS = { '5m': 300e3, '15m': 900e3, '1h': 3.6e6, '4h': 14.4e6, '1d': 86.4e6 };
-  const HL_TF = { '5m': '5m', '15m': '15m', '1h': '1h', '4h': '4h', '1d': '1d' };
-  // candle window per TF — sized so the venue aggregates (30d max on the free
+  /* Timeframes: any Nm/Nh/Nd/Nw plus 1mo. Non-native intervals (10m, 6h,
+     45m…) aggregate client-side from the largest Hyperliquid interval that
+     divides them. */
+  const TF_UNIT_MS = { m: 60e3, h: 3.6e6, d: 86.4e6, w: 604.8e6 };
+  function parseTf(raw) {
+    const s = String(raw ?? '').trim().toLowerCase();
+    if (s === '1mo') return { key: '1mo', label: '1M', ms: 2592e6, base: '1M', agg: 1 };
+    const m = /^(\d{1,3})([mhdw])$/.exec(s);
+    if (!m) return null;
+    const n = Number(m[1]);
+    const u = m[2];
+    if (!(n >= 1)) return null;
+    const ms = n * TF_UNIT_MS[u];
+    if (ms < 60e3 || ms > 92 * 86.4e6) return null;
+    const bases = { m: [30, 15, 5, 3, 1], h: [12, 8, 4, 2, 1], d: [3, 1], w: [1] }[u];
+    const b = bases.find((x) => n % x === 0) ?? bases[bases.length - 1];
+    const base = u === 'd' ? (b === 3 ? '3d' : '1d') : u === 'w' ? '1w' : `${b}${u}`;
+    const label = u === 'd' ? `${n}D` : u === 'w' ? `${n}W` : `${n}${u}`;
+    return { key: `${n}${u}`, label, ms, base, agg: n / b };
+  }
+  const tfMsOf = (tf) => parseTf(tf)?.ms ?? 3.6e6;
+  const tfLabel = (tf) => parseTf(tf)?.label ?? tf;
+  const TF_GROUPS = [
+    ['MINUTES', ['1m', '5m', '10m', '15m', '30m']],
+    ['HOURS', ['1h', '2h', '4h', '6h', '12h']],
+    ['DAYS', ['1d', '1w', '1mo']],
+  ];
+  const DEFAULT_TF_FAVS = ['5m', '15m', '1h', '4h', '1d'];
+  // candle window — sized so the venue aggregates (30d max on the free
   // Coinalyze tier) cover most of what's on screen
-  const BARS_FOR = { '5m': 620, '15m': 620, '1h': 620, '4h': 400, '1d': 365 };
+  function barsFor(ms) {
+    const days = ms / 86.4e6;
+    if (ms < 3.6e6) return 620;
+    if (ms < 86.4e6) return Math.max(200, Math.min(620, Math.round(70 / days)));
+    if (ms < 604.8e6) return 365;
+    if (ms < 2592e6) return 156;
+    return 60;
+  }
+  // merge fine candles into coarser buckets (10m from 5m, 6h from 2h, …)
+  function aggBars(rows, ms) {
+    const out = new Map();
+    for (const k of rows) {
+      const t = Math.floor(k.t / ms) * ms;
+      const a = out.get(t);
+      if (!a) out.set(t, { t, o: k.o, h: k.h, l: k.l, c: k.c, v: k.v, n: k.n ?? 0 });
+      else { a.c = k.c; a.h = Math.max(a.h, k.h); a.l = Math.min(a.l, k.l); a.v += k.v; a.n += k.n ?? 0; }
+    }
+    return [...out.values()].sort((x, y) => x.t - y.t);
+  }
   const YR_MS = 31_536_000_000;
 
   /* ── data: candles ──────────────────────────────────────────────────── */
   async function hlCandles(sym, tf, sinceMs) {
     const rows = await hlInfo({
       type: 'candleSnapshot',
-      req: { coin: sym, interval: HL_TF[tf], startTime: sinceMs, endTime: Date.now() },
+      req: { coin: sym, interval: parseTf(tf).base, startTime: sinceMs, endTime: Date.now() },
     });
     if (!Array.isArray(rows) || !rows.length) return null;
-    return rows.map((k) => ({
+    const def = parseTf(tf);
+    const mapped = rows.map((k) => ({
       t: k.t, o: +k.o, h: +k.h, l: +k.l, c: +k.c, v: +k.v, n: +k.n || 0,
     }));
+    return def.agg > 1 ? aggBars(mapped, def.ms) : mapped;
   }
   // Coinbase spot legs (premium / spot volume). 4h aggregated from 1h.
-  const CB_GRAN = { '5m': 300, '15m': 900, '1h': 3600, '4h': 3600, '1d': 86400 };
+  const cbGranFor = (ms) => [86400, 3600, 900, 300, 60].find((g) => g * 1000 <= ms && ms % (g * 1000) === 0) ?? 60;
   const spotCache = new Map(); // `${venue}:${sym}:${tf}` -> {t, p} (60s)
   function spotCached(venue, sym, tf, fn) {
     const key = `${venue}:${sym}:${tf}`;
@@ -94,7 +140,8 @@
   }
   const cbCandles = (sym, tf, sinceMs) => spotCached('cb', sym, tf, () => cbCandlesRaw(sym, tf, sinceMs));
   async function cbCandlesRaw(sym, tf, sinceMs) {
-    const gran = CB_GRAN[tf];
+    const tfms = tfMsOf(tf);
+    const gran = cbGranFor(tfms);
     const out = [];
     let end = Date.now();
     for (let page = 0; page < 4 && end > sinceMs; page++) {
@@ -108,26 +155,21 @@
       end = start;
     }
     if (!out.length) return null;
-    if (tf !== '4h') return out;
-    const agg = new Map();
-    for (const k of out) {
-      const t = Math.floor(k.t / TFS['4h']) * TFS['4h'];
-      const a = agg.get(t);
-      if (!a) agg.set(t, { ...k, t });
-      else { a.c = k.c; a.h = Math.max(a.h, k.h); a.l = Math.min(a.l, k.l); a.v += k.v; }
-    }
-    return [...agg.values()].sort((a, b) => a.t - b.t);
+    return gran * 1000 === tfms ? out : aggBars(out, tfms);
   }
   // Kraken spot (volume + per-bar trade COUNT — the one spot venue that serves it)
-  const KR_INT = { '5m': 5, '15m': 15, '1h': 60, '4h': 240, '1d': 1440 };
+  const krIntFor = (ms) => [1440, 240, 60, 30, 15, 5, 1].find((i) => i * 60e3 <= ms) ?? 1;
   const KR_BASE = { BTC: 'XBT', DOGE: 'XDG' };
   const krCandles = (sym, tf) => spotCached('kr', sym, tf, () => krCandlesRaw(sym, tf));
   async function krCandlesRaw(sym, tf) {
-    const j = await getJson(`https://api.kraken.com/0/public/OHLC?pair=${KR_BASE[sym] ?? sym}USD&interval=${KR_INT[tf]}`, 9000).catch(() => null);
+    const tfms = tfMsOf(tf);
+    const iv = krIntFor(tfms);
+    const j = await getJson(`https://api.kraken.com/0/public/OHLC?pair=${KR_BASE[sym] ?? sym}USD&interval=${iv}`, 9000).catch(() => null);
     if (!j || j.error?.length) return null;
     const key = Object.keys(j.result ?? {}).find((k) => k !== 'last');
     if (!key) return null;
-    return j.result[key].map((r) => ({ t: r[0] * 1000, o: +r[1], h: +r[2], l: +r[3], c: +r[4], v: +r[6], n: +r[7] || 0 }));
+    const rows = j.result[key].map((r) => ({ t: r[0] * 1000, o: +r[1], h: +r[2], l: +r[3], c: +r[4], v: +r[6], n: +r[7] || 0 }));
+    return iv * 60e3 === tfms ? rows : aggBars(rows, tfms);
   }
 
   /* ── data: Coinalyze kinds (shared, cached) ─────────────────────────── */
@@ -231,9 +273,27 @@
   const FUND_DIV = { '1h': 8760, '8h': 1095, '24h': 365, '1y': 1 };
   const fundScale = (apr, win) => (apr == null ? null : apr / FUND_DIV[win]);
   // free-tier depth: oi/liqs/volume 30d, funding 14d, cvd 7d
-  const czDays = (tf) => (tf === '5m' || tf === '15m' ? 7 : 30);
-  const fundDays = (tf) => (tf === '5m' || tf === '15m' ? 7 : 14);
+  const czDays = (tf) => (tfMsOf(tf) < 3.6e6 ? 7 : 30);
+  const fundDays = (tf) => (tfMsOf(tf) < 3.6e6 ? 7 : 14);
 
+  // short settings label per instance — "which EMA is this" at a glance
+  const TAGS = {
+    ma: (s) => (s.type === 'vwap' ? 'VWAP' : `${s.type === 'oiwma' ? 'OIWMA' : s.type.toUpperCase()} ${s.len}`),
+    agg_funding: (s) => s.win,
+    funding: (s) => `${s.venue} · ${s.win}`,
+    oi: (s) => s.venue,
+    liqs: (s) => s.venue,
+    agg_liqs: (s) => (s.side === 'both' ? '' : s.side),
+    agg_oi: (s) => (s.mode === 'stack' ? 'venues' : s.mode),
+    agg_vol: (s) => (s.mode === 'stack' ? 'venues' : s.mode),
+    vol: (s) => (s.units === 'coin' ? 'coins' : '$'),
+    premium: (s) => (s.units === 'usd' ? '$' : '%'),
+    cb_premium: (s) => (s.units === 'usd' ? '$' : '%'),
+    tape: (s) => (s.mode === 'speed' ? 'per min' : ''),
+    spot_tape: (s) => (s.mode === 'speed' ? 'per min' : ''),
+    returns: (s) => `${s.n} bar${s.n === '1' ? '' : 's'} · ${s.units === 'abs' ? 'abs' : '%'}`,
+    rvol: (s) => `${s.win} bars`,
+  };
   const INDICATORS = {
     ma: {
       title: 'Moving Average', pane: 'price',
@@ -824,6 +884,9 @@
     try {
       const j = JSON.parse(localStorage.getItem(SETUP_KEY) ?? 'null');
       if (j && Array.isArray(j.active)) {
+        if (!parseTf(j.tf)) j.tf = '1h';
+        j.tfFavs = (Array.isArray(j.tfFavs) ? j.tfFavs : DEFAULT_TF_FAVS).filter((t) => parseTf(t));
+        if (!j.tfFavs.length) j.tfFavs = DEFAULT_TF_FAVS.slice();
         // validate entries (ids churn between versions) + migrate to uids so
         // the same indicator can run twice (EMA 20 + EMA 200 is table stakes)
         j.active = j.active
@@ -832,7 +895,7 @@
         return j;
       }
     } catch { /* defaults */ }
-    return { tf: '1h', heat: false, heatAlpha: 70, active: [{ uid: mkUid(), id: 'vol', settings: {} }] };
+    return { tf: '1h', heat: false, heatAlpha: 70, tfFavs: DEFAULT_TF_FAVS.slice(), active: [{ uid: mkUid(), id: 'vol', settings: {} }] };
   }
   const saveSetup = (setup) => {
     try { localStorage.setItem(SETUP_KEY, JSON.stringify(setup)); } catch { /* fine */ }
@@ -845,7 +908,7 @@
 
     const setup = loadSetup();
     let sym = (opts.symbol ?? 'BTC').toUpperCase();
-    let tf = TFS[setup.tf] ? setup.tf : '1h';
+    let tf = parseTf(setup.tf) ? setup.tf : '1h';
     let bars = [];
     let chart = null;
     let dead = false;
@@ -996,13 +1059,84 @@
       paint();
     }
     symBtn.addEventListener('click', openSymSearch);
+    const setTf = (t) => {
+      const def = parseTf(t);
+      if (!def || def.key === tf) return;
+      tf = def.key;
+      setup.tf = def.key;
+      saveSetup(setup);
+      paintTfs();
+      reload();
+    };
     function paintTfs() {
       tfWrap.innerHTML = '';
-      for (const t of Object.keys(TFS)) {
-        const b = el('button', `vcp-chip${t === tf ? ' on' : ''}`, t);
-        b.addEventListener('click', () => { if (t !== tf) { tf = t; setup.tf = t; saveSetup(setup); reload(); } });
+      const shown = setup.tfFavs.includes(tf) ? setup.tfFavs : [...setup.tfFavs, tf];
+      for (const t of shown) {
+        const b = el('button', `vcp-chip${t === tf ? ' on' : ''}`, esc(tfLabel(t)));
+        b.addEventListener('click', () => setTf(t));
         tfWrap.appendChild(b);
       }
+      const more = el('button', 'vcp-chip vcp-tfmore', '<i data-lucide="chevron-down"></i>');
+      more.title = 'All timeframes';
+      more.addEventListener('click', (ev) => { ev.stopPropagation(); openTfMenu(); });
+      tfWrap.appendChild(more);
+      icons();
+    }
+    let tfMenuEl = null;
+    const closeTfMenu = () => { tfMenuEl?.remove(); tfMenuEl = null; };
+    function openTfMenu() {
+      if (tfMenuEl) { closeTfMenu(); return; }
+      tfMenuEl = el('div', 'vcp-menu vcp-tfmenu');
+      const paintMenu = () => {
+        tfMenuEl.innerHTML = '';
+        for (const [title, keys] of TF_GROUPS) {
+          tfMenuEl.appendChild(el('div', 'vcp-tfcat', title));
+          for (const t of keys) {
+            const fav = setup.tfFavs.includes(t);
+            const row = el('button', `vcp-mrow vcp-tfrow${t === tf ? ' on' : ''}`,
+              `<span>${esc(tfLabel(t))}</span>` +
+              `<span class="vcp-tfstar${fav ? ' on' : ''}" data-star="${esc(t)}" title="${fav ? 'Unstar' : 'Star — shows in the toolbar'}">★</span>`);
+            row.addEventListener('click', (ev) => {
+              const star = ev.target.closest('[data-star]');
+              if (star) {
+                const key = star.dataset.star;
+                setup.tfFavs = setup.tfFavs.includes(key)
+                  ? setup.tfFavs.filter((x) => x !== key)
+                  : [...setup.tfFavs, key];
+                if (!setup.tfFavs.length) setup.tfFavs = [key];
+                saveSetup(setup);
+                paintTfs();
+                paintMenu();
+                return;
+              }
+              closeTfMenu();
+              setTf(t);
+            });
+            tfMenuEl.appendChild(row);
+          }
+        }
+        tfMenuEl.appendChild(el('div', 'vcp-tfcat', 'CUSTOM'));
+        const cRow = el('div', 'vcp-tfcustom');
+        const cInp = document.createElement('input');
+        cInp.placeholder = 'e.g. 45m, 3h, 2d';
+        cInp.maxLength = 5;
+        const apply = () => {
+          const def = parseTf(cInp.value);
+          if (!def) { cInp.classList.add('bad'); setTimeout(() => cInp.classList.remove('bad'), 900); return; }
+          closeTfMenu();
+          setTf(def.key);
+        };
+        cInp.addEventListener('keydown', (ev) => { if (ev.key === 'Enter') apply(); if (ev.key === 'Escape') closeTfMenu(); ev.stopPropagation(); });
+        const go = el('button', 'vcp-tfgo', 'Set');
+        go.addEventListener('click', apply);
+        cRow.append(cInp, go);
+        tfMenuEl.appendChild(cRow);
+      };
+      paintMenu();
+      bar.appendChild(tfMenuEl);
+      setTimeout(() => document.addEventListener('click', function h(ev) {
+        if (!tfMenuEl?.contains(ev.target)) { closeTfMenu(); document.removeEventListener('click', h); }
+      }), 0);
     }
 
     heatBtn.addEventListener('click', () => {
@@ -1040,8 +1174,15 @@
       for (const [id, name] of MENU) {
         const n = setup.active.filter((a) => a.id === id).length;
         const row = el('button', `vcp-mrow${n ? ' on' : ''}`,
-          `<span>&lt;Vice&gt; ${esc(name)}</span>${n ? `<em class="vcp-mn">${n}</em>` : ''}`);
-        row.addEventListener('click', () => { addIndicator(id); closeMenu(); });
+          `<span>&lt;Vice&gt; ${esc(name)}</span>` +
+          (n ? '<span class="vcp-mact"><span class="vcp-madd" title="Add another">+</span><i data-lucide="check"></i></span>' : ''));
+        row.addEventListener('click', (ev) => {
+          // re-click = off (owner rule); the little + adds a second instance
+          if (ev.target.closest('.vcp-madd')) { addIndicator(id); closeMenu(); return; }
+          if (n) setup.active.filter((a) => a.id === id).map((a) => a.uid).forEach(removeIndicator);
+          else addIndicator(id);
+          closeMenu();
+        });
         menuEl.appendChild(row);
       }
       bar.appendChild(menuEl);
@@ -1091,6 +1232,8 @@
         const def = INDICATORS[a.id];
         const row = el('div', 'vcp-lrow',
           `<span class="vcp-lname">&lt;Vice&gt; ${esc(def.title)}</span>`);
+        const tag = el('span', 'vcp-ltag');
+        row.appendChild(tag);
         const val = el('span', 'vcp-lval', '…');
         row.appendChild(val);
         const btns = el('span', 'vcp-lbtns',
@@ -1102,7 +1245,7 @@
           ev.stopPropagation();
           openSettings(a, row);
         });
-        legendRows.items.set(a.uid, val);
+        legendRows.items.set(a.uid, { val, tag });
         legend.appendChild(row);
       }
       icons();
@@ -1122,23 +1265,29 @@
           ` <em class="${cls}">${chg >= 0 ? '+' : ''}${chg.toFixed(2)}%</em></span>`;
       }
       for (const a of setup.active) {
-        const valEl = legendRows.items.get(a.uid);
-        if (!valEl) continue;
+        const slot = legendRows.items.get(a.uid);
+        if (!slot) continue;
+        const tagTxt = TAGS[a.id]?.(mergedSettings(a)) ?? '';
+        if (slot.tag.textContent !== tagTxt) slot.tag.textContent = tagTxt;
         const st = indData.get(a.uid);
-        if (st?.err) { valEl.className = 'vcp-lerr'; valEl.textContent = st.err; }
-        else if (st?.d) { valEl.className = 'vcp-lval'; valEl.textContent = INDICATORS[a.id].value(st.d, i).replace(/&nbsp;/g, ' '); }
-        else { valEl.className = 'vcp-lval'; valEl.textContent = '…'; }
+        if (st?.err) { slot.val.className = 'vcp-lerr'; slot.val.textContent = st.err; }
+        else if (st?.d) { slot.val.className = 'vcp-lval'; slot.val.textContent = INDICATORS[a.id].value(st.d, i).replace(/&nbsp;/g, ' '); }
+        else { slot.val.className = 'vcp-lval'; slot.val.textContent = '…'; }
       }
     }
 
     /* indicator lifecycle */
     function ctx() {
-      return { sym, tf, tfMs: TFS[tf], bars, times: bars.map((k) => k.t) };
+      return { sym, tf, tfMs: tfMsOf(tf), bars, times: bars.map((k) => k.t) };
+    }
+    function mergedSettings(a) {
+      const merged = {};
+      for (const [key, , defVal] of INDICATORS[a.id].opts ?? []) merged[key] = a.settings[key] ?? defVal;
+      return merged;
     }
     async function refreshIndicator(a) {
       const def = INDICATORS[a.id];
-      const merged = {};
-      for (const [key, , defVal] of def.opts ?? []) merged[key] = a.settings[key] ?? defVal;
+      const merged = mergedSettings(a);
       if (!bars.length) { indData.set(a.uid, { err: 'waiting for candles…', s: merged }); return; }
       const seq = loadSeq;
       const mySeq = (a._seq = (a._seq ?? 0) + 1); // settings flips race too
@@ -1241,7 +1390,7 @@
       const labels = times.map((t) => {
         const d = new Date(t);
         const pad = (n) => String(n).padStart(2, '0');
-        return tf === '1d'
+        return tfMsOf(tf) >= 86.4e6
           ? `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}`
           : `${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())} ${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}`;
       });
@@ -1373,7 +1522,7 @@
       const wantTf = tf;
       root.classList.add('loading');
       try {
-        const since = Date.now() - TFS[tf] * BARS_FOR[tf];
+        const since = Date.now() - tfMsOf(tf) * barsFor(tfMsOf(tf));
         const rows = await hlCandles(sym, tf, since);
         if (dead || seq !== loadSeq) return; // a newer switch superseded this fetch
         if (!rows) throw new Error(`${sym} isn't on Hyperliquid — try the search list`);
@@ -1398,19 +1547,20 @@
     }
 
     async function liveTick() {
-      if (dead) return;
+      if (dead || root.classList.contains('loading')) return; // reload owns bars right now
       if (!bars.length) { // first load failed — keep trying instead of dying
-        if (!root.classList.contains('loading')) reload();
+        reload();
         return;
       }
       const seq = loadSeq;
+      const myBars = bars; // identity guard — a reload swaps the array wholesale
       try {
-        const rows = await hlCandles(sym, tf, bars[bars.length - 1].t - TFS[tf]);
-        if (dead || seq !== loadSeq || !rows?.length) return;
+        const rows = await hlCandles(sym, tf, bars[bars.length - 1].t - tfMsOf(tf));
+        if (dead || seq !== loadSeq || bars !== myBars || !rows?.length) return;
         for (const k of rows) {
           const last = bars[bars.length - 1];
           if (k.t === last.t) bars[bars.length - 1] = k;
-          else if (k.t > last.t) { bars.push(k); if (bars.length > BARS_FOR[tf] + 40) bars.shift(); }
+          else if (k.t > last.t) { bars.push(k); if (bars.length > barsFor(tfMsOf(tf)) + 40) bars.shift(); }
         }
         // keep every indicator aligned with the live bar — candle-derived ones
         // recompute locally, venue aggregates ride the 2-minute promise cache
