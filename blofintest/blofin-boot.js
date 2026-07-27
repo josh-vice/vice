@@ -121,6 +121,11 @@
     var area = document.getElementById('content-area');
     if (!area) return;
     var swap = function () {
+      /* course/tool views must keep the fixed Next/Back bar visible: any
+         body scroll (focus-scrolling, a leftover position from reading the
+         footer on Home) would slide the site footer up over it — pin the
+         window to the top whenever we're NOT on the Home hub */
+      if (!area.querySelector('.lt-home-hero') && window.scrollY > 0) window.scrollTo(0, 0);
       var walker = document.createTreeWalker(area, NodeFilter.SHOW_TEXT);
       var n;
       while ((n = walker.nextNode())) {
@@ -154,5 +159,26 @@
     };
     new MutationObserver(swap).observe(area, { childList: true, subtree: true });
     swap();
+    /* body scroll exists only to reach the site footer below the app — that
+       is a Home-hub affordance; everywhere else snap back so the fixed
+       Next/Back bar is always on screen */
+    window.addEventListener('scroll', function () {
+      if (window.scrollY > 0 && !area.querySelector('.lt-home-hero')) window.scrollTo(0, 0);
+    }, { passive: true });
+
+    /* size the app to (viewport − masthead) EMPIRICALLY: the display-scale
+       body{zoom} tiers mix zoomed and physical pixels, so a pure CSS calc
+       can't be right on every tier — measure the rendered masthead instead */
+    var sizeApp = function () {
+      var mast = document.querySelector('.bf-masthead');
+      var app = document.querySelector('.app-layout');
+      if (!mast || !app) return;
+      var mh = mast.getBoundingClientRect().height;      /* visual px */
+      var zoom = parseFloat(getComputedStyle(document.body).zoom) || 1;
+      app.style.setProperty('height', ((window.innerHeight - mh) / zoom) + 'px', 'important');
+    };
+    sizeApp();
+    window.addEventListener('resize', sizeApp);
+    setTimeout(sizeApp, 300);   /* after fonts settle */
   });
 })();

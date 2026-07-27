@@ -30,7 +30,7 @@
   <!-- v2 animated-lessons player chrome (scoped to .ltp2*; see lessons-v2/) -->
   <link rel="stylesheet" href="/blofintest/lessons-v2/player.css?v=1.20.0-blofin5" />
   <!-- BloFin re-skin — MUST come after lt-styles.css so its !important overrides win -->
-  <link rel="stylesheet" href="/blofintest/blofin-theme.css?v=2.2.1" />
+  <link rel="stylesheet" href="/blofintest/blofin-theme.css?v=2.3.2" />
 
   <!-- CDN deps — pinned exact versions + SRI so a compromised/drifting CDN can't
        inject code. To upgrade: bump the version, re-download, recompute
@@ -120,7 +120,7 @@
   <!-- Main engine — boots on DOMContentLoaded -->
   <script src="/lt-engine.js?v=3.152.1" defer></script>
   <!-- BloFin JS-side skin — deferred after the engine (globals exist, boot hasn't run) -->
-  <script src="/blofintest/blofin-boot.js?v=1.7.0" defer></script>
+  <script src="/blofintest/blofin-boot.js?v=1.9.1" defer></script>
   <!-- Vercel Analytics -->
   <script>window.va=window.va||function(){(window.vaq=window.vaq||[]).push(arguments);};</script>
   <script defer src="/_vercel/insights/script.js"></script>

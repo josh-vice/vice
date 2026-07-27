@@ -214,17 +214,28 @@ body, .app-layout, .app-layout *, .toast, .sidebar-overlay,
 }
 .bf-mast-signup:hover { filter: brightness(1.08); }
 
-/* App fills the viewport minus the masthead (respect the display-scale zoom) */
+/* App fills the viewport minus the masthead. blofin-boot.js sets the exact
+   pixel height empirically (the body{zoom} display-scale tiers mix zoomed and
+   physical px, so a static calc can't hit every tier); this calc is the
+   no-JS fallback. Sidebar/main-wrap hardcode their own 100dvh in lt-styles —
+   they must inherit the shortened app instead or the Next/Back bar lands
+   below the fold. */
 .app-layout {
   height: calc(100vh / var(--app-zoom, 1) - 56px) !important;
   height: calc(100dvh / var(--app-zoom, 1) - 56px) !important;
+}
+.app-layout .sidebar,
+.app-layout .main-wrap {
+  height: 100% !important;
 }
 
 @media (max-width: 900px) { .bf-mast-nav { display: none; } }
 @media (max-width: 520px) { .bf-mast-login { display: none; } }
 
-/* ── Replica site footer (blofin.com foot: pure black, 90/60/120 padding) ──
-   The page scrolls past the app viewport to reach it — visual only. */
+/* ── Replica site footer (blofin.com foot: pure black) ──
+   Sits BELOW the app viewport; scroll past the app to reach it. Inside course
+   views blofin-boot.js pins the window to the top on every render, so the
+   footer can never ride up over the Next/Back bar. */
 html, body { height: auto !important; overflow-y: auto !important; }
 
 .bf-foot {
@@ -380,10 +391,18 @@ html, body { height: auto !important; overflow-y: auto !important; }
   border-radius: 999px !important;
 }
 
-/* focus ring: brand orange, replaces any legacy teal outline */
+/* focus ring: brand orange, replaces any legacy teal outline — but NOT on
+   text inputs whose container already shows focus via its border (the header
+   search pill was double-ringed) */
 .app-layout :focus-visible, .bf-masthead :focus-visible {
   outline: 2px solid rgba(255, 136, 2, 0.75) !important;
   outline-offset: 2px;
+}
+.header-search input:focus-visible,
+.header-search input:focus,
+input[type="text"]:focus-visible, input[type="search"]:focus-visible,
+textarea:focus-visible {
+  outline: none !important;
 }
 
 /* toast: pill, glassy */
