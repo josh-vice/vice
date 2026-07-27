@@ -29,6 +29,14 @@
       "source": "/:path*",
       "has": [{ "type": "host", "value": "(www\\.)?vicesuite\\.com" }],
       "destination": "/vice/:path*"
+    },
+    {
+      "source": "/blofintest",
+      "destination": "/blofintest/index.html"
+    },
+    {
+      "source": "/blofintest/:path*",
+      "destination": "/:path*"
     }
   ],
   "headers": [
