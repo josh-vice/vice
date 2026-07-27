@@ -89,10 +89,11 @@
 .lt-settings-row:has(#lt-color-cyan),
 .lt-settings-row:has(#lt-bear-pink) { display: none !important; }
 
-/* Glossary figures draw candles with var(--teal)/var(--bear) (lt-glossary.js
-   _GT/_GR). Inside figure SVGs only, teal means BULLISH → market green; the
-   glossary's buttons/links around them keep the orange accent. */
-.gl-fig-frame svg, .gl-lightbox svg {
+/* Glossary/flashcard figures draw candles with var(--teal)/var(--bear)
+   (lt-glossary.js _GT/_GR; lt-flashcards.js reuses the same figures inside
+   .fc-figure). Inside figure SVGs only, teal means BULLISH → market green;
+   the buttons/links around them keep the orange accent. */
+.gl-fig-frame svg, .gl-lightbox svg, .fc-figure svg {
   --teal: #04b97d;
   --teal-dim: rgba(4, 185, 125, 0.10);
   --teal-glow: rgba(4, 185, 125, 0.22);
