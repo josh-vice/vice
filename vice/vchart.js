@@ -284,6 +284,7 @@
   // short settings label per instance — "which EMA is this" at a glance
   const TAGS = {
     ma: (s) => (s.type === 'vwap' ? 'VWAP' : `${s.type === 'oiwma' ? 'OIWMA' : s.type.toUpperCase()} ${s.len}`),
+    cme_gaps: (s) => (s.show === 'all' ? 'all gaps' : 'unfilled'),
     agg_funding: (s) => s.win,
     funding: (s) => `${s.venue} · ${s.win}`,
     oi: (s) => s.venue,
@@ -331,6 +332,74 @@
         return [{ name: d.lbl, type: 'line', xAxisIndex: grid.x, yAxisIndex: grid.y, data: d.line, showSymbol: false, z: 4, lineStyle: { color: grid.color, width: 1.4 }, itemStyle: { color: grid.color } }];
       },
       value: (d, i) => fmtPx(d.line[i]),
+    },
+
+    cme_gaps: {
+      title: 'CME Gaps', pane: 'price',
+      opts: [
+        ['show', 'Show', 'open', [['open', 'Unfilled only'], ['all', 'Unfilled + filled']]],
+        ['span', 'Look back', '180', [['90', '3 months'], ['180', '6 months'], ['365', '1 year']]],
+      ],
+      note: 'CME halts Fri 16:00, reopens Sun 17:00 America/Chicago — the gap is spot’s move across the halt; it clears when price trades back to the Friday close',
+      async load(ctx, s) {
+        // gap edges need hourly precision regardless of the chart TF
+        const hours = await hlCandles(ctx.sym, '1h', Date.now() - Number(s.span) * 86_400_000);
+        if (!hours?.length) throw new Error('no hourly history for gap detection');
+        const chi = new Intl.DateTimeFormat('en-US', { timeZone: 'America/Chicago', weekday: 'short', hour: '2-digit', hour12: false });
+        const key = (t) => {
+          const p = chi.formatToParts(t).reduce((a, x) => ({ ...a, [x.type]: x.value }), {});
+          return `${p.weekday}-${Number(p.hour) % 24}`;
+        };
+        const gaps = [];
+        let fri = null;
+        for (const k of hours) {
+          const kk = key(k.t);
+          if (kk === 'Fri-15') fri = k.c;
+          else if (kk === 'Sun-17' && fri != null) {
+            const pctG = ((k.o - fri) / fri) * 100;
+            if (Math.abs(pctG) >= 0.1) gaps.push({ from: fri, to: k.o, t: k.t, up: k.o > fri, pct: pctG, filledAt: null });
+            fri = null;
+          }
+          for (const g of gaps) {
+            if (g.filledAt || k.t <= g.t) continue;
+            if (g.up ? k.l <= g.from : k.h >= g.from) g.filledAt = k.t;
+          }
+        }
+        const unfilled = gaps.filter((g) => !g.filledAt);
+        const px = hours[hours.length - 1].c;
+        const near = unfilled.length
+          ? unfilled.reduce((a, g) => (Math.abs((g.from + g.to) / 2 - px) < Math.abs((a.from + a.to) / 2 - px) ? g : a))
+          : null;
+        return { gaps, unfilled, near };
+      },
+      series(ctx, s, d, grid) {
+        const idxAt = (t) => {
+          const i = ctx.times.findIndex((bt) => bt + ctx.tfMs > t);
+          return i < 0 ? ctx.times.length - 1 : i;
+        };
+        const last = ctx.times.length - 1;
+        const areas = [];
+        for (const g of d.gaps) {
+          const open = !g.filledAt;
+          if (!open && s.show !== 'all') continue;
+          const i1 = open ? last : idxAt(g.filledAt);
+          if (!open && g.filledAt < ctx.times[0]) continue; // closed before the window
+          const i0 = g.t < ctx.times[0] ? 0 : idxAt(g.t);
+          areas.push([{
+            xAxis: i0, yAxis: Math.min(g.from, g.to),
+            itemStyle: open
+              ? { color: g.up ? 'rgba(0,212,212,0.12)' : 'rgba(255,46,136,0.11)', borderColor: g.up ? 'rgba(0,212,212,0.5)' : 'rgba(255,46,136,0.5)', borderWidth: 1, borderType: 'dashed' }
+              : { color: 'rgba(139,133,163,0.07)', borderColor: 'rgba(139,133,163,0.22)', borderWidth: 1, borderType: 'dashed' },
+          }, { xAxis: i1, yAxis: Math.max(g.from, g.to) }]);
+        }
+        return [{
+          name: 'CME gaps', type: 'line', xAxisIndex: grid.x, yAxisIndex: grid.y,
+          data: [], silent: true, markArea: { silent: true, data: areas },
+        }];
+      },
+      value: (d) => (d.unfilled.length
+        ? `${d.unfilled.length} unfilled · nearest ${fmtPx(Math.min(d.near.from, d.near.to))}–${fmtPx(Math.max(d.near.from, d.near.to))}`
+        : 'none unfilled'),
     },
 
     total_return: {
@@ -811,7 +880,8 @@
     ['agg_funding', 'Aggregated Funding'], ['agg_liqs', 'Aggregated Liquidations'],
     ['agg_oi', 'Aggregated Open Interest'], ['spot_tape', 'Aggregated Spot Tape'],
     ['spot_vol', 'Aggregated Spot Volume'], ['agg_tape', 'Aggregated Tape'],
-    ['agg_vol', 'Aggregated Volume'], ['cb_premium', 'Coinbase Premium'],
+    ['agg_vol', 'Aggregated Volume'], ['cme_gaps', 'CME Gaps'],
+    ['cb_premium', 'Coinbase Premium'],
     ['x_funding', 'Cross Exchange Funding'], ['funding', 'Funding'],
     ['liqs', 'Liquidations'], ['ma', 'Moving Average'], ['oi', 'Open Interest'],
     ['premium', 'Premium'], ['rvol', 'Realized Vol'], ['returns', 'Returns'],

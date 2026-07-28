@@ -1,4 +1,4 @@
-/* Vice Hub — customizable live market dashboard + Velo-style section boards. v2.14.0
+/* Vice Hub — customizable live market dashboard + Velo-style section boards. v2.16.0
    Architecture: a widget REGISTRY (manifest per type: title, sizes, settings
    schema, mount/destroy lifecycle) + a Gridstack canvas (float mode, 24-col
    fine grid). Saved layouts store INSTANCES ({id,type,x,y,w,h,settings}),
@@ -448,6 +448,17 @@
       const pm = pageMounts.find((m) => m.type === 'vChartPro');
       if (pm?.handle?.setSymbol) { pm.settings.symbol = linkedSym; pm.handle.setSymbol(linkedSym); }
       else renderSection();
+      // the URL carries the symbol — refresh and share keep the chart's state
+      // (applyRoute decodes it back). Display labels like "S&P 500" can't
+      // round-trip enterSection's symbol check — never write a broken promise.
+      if (/^[A-Z0-9:]{2,16}$/i.test(linkedSym)) {
+        history.replaceState(null, '', `#/chart/${encodeURIComponent(linkedSym)}`);
+      }
+      return;
+    }
+    // linking a symbol while ON the Scanner scopes the board to it live
+    if (currentSection === 'scanner') {
+      pageMounts.find((m) => m.handle?.setScope)?.handle.setScope(linkedSym);
       return;
     }
     if (hits) toast(`linked ${hits} block${hits === 1 ? '' : 's'} to ${linkedSym}`);
@@ -3263,6 +3274,109 @@
         }, 120_000);
       },
     },
+    /* — CME Gap Tracker: weekend futures gaps on the price chart. CME's BTC
+       futures halt Fri 16:00 and reopen Sun 17:00 America/Chicago; the gap
+       is spot's move across that halt, and it stays shaded until price
+       trades back to the Friday close ("filled"). — */
+    vCmeGap: {
+      title: 'CME Gap Tracker', icon: 'ruler', cat: 'Futures', vice: true,
+      w: 12, h: 9, minW: 5, minH: 5,
+      settings: [
+        F.text('symbol', 'Symbol', 'BTC', 'CME lists BTC and ETH futures — gaps are computed from price at the CME close and reopen'),
+        F.sel('days', 'Window', '90', [['30', '1 month'], ['90', '3 months'], ['180', '6 months']]),
+        F.tog('showFilled', 'Show filled gaps too', false, 'Filled gaps draw as faint bands ending where price closed them'),
+        { ...LINKED(), def: false },
+      ],
+      controls: [CTL('days', [['30', '1M'], ['90', '3M'], ['180', '6M']])],
+      link: (s, sym) => ({ symbol: sym }),
+      label: (s) => `${s.symbol.trim().toUpperCase()} · weekend gaps`,
+      mount(body, s) {
+        const SYM = s.symbol.trim().toUpperCase();
+        const days = Number(s.days);
+        const chi = new Intl.DateTimeFormat('en-US', { timeZone: 'America/Chicago', weekday: 'short', hour: '2-digit', hour12: false });
+        const chiKey = (t) => {
+          const p = chi.formatToParts(t).reduce((a, x) => ({ ...a, [x.type]: x.value }), {});
+          return `${p.weekday}-${Number(p.hour) % 24}`; // hour12:false can emit "24"
+        };
+        return chartMount(body, async (chart) => {
+          const rows = await hlInfo({ type: 'candleSnapshot', req: { coin: SYM, interval: '1h', startTime: Date.now() - days * 86_400_000, endTime: Date.now() } });
+          if (!Array.isArray(rows) || rows.length < 24 * 8) throw new Error(`not enough ${SYM} hourly history for gap tracking`);
+          const cs = rows.map((r) => ({ t: +r.t, o: +r.o, h: +r.h, l: +r.l, c: +r.c }));
+          const gaps = [];
+          let friClose = null; // { px } — the 15:00-16:00 CT Friday bar's close
+          for (let i = 0; i < cs.length; i++) {
+            const k = chiKey(cs[i].t);
+            if (k === 'Fri-15') friClose = cs[i].c;
+            else if (k === 'Sun-17' && friClose != null) {
+              const open = cs[i].o;
+              const gapPct = ((open - friClose) / friClose) * 100;
+              // sub-0.1% "gaps" are noise, not levels
+              if (Math.abs(gapPct) >= 0.1) {
+                gaps.push({ from: friClose, to: open, t: cs[i].t, up: open > friClose, pct: gapPct, filledAt: null });
+              }
+              friClose = null;
+            }
+            for (const g of gaps) {
+              if (g.filledAt || cs[i].t <= g.t) continue;
+              if (g.up ? cs[i].l <= g.from : cs[i].h >= g.from) g.filledAt = cs[i].t;
+            }
+          }
+          const now = cs[cs.length - 1];
+          const unfilled = gaps.filter((g) => !g.filledAt);
+          const lastGap = gaps[gaps.length - 1];
+          const areas = [];
+          for (const g of gaps) {
+            const lo = Math.min(g.from, g.to);
+            const hi = Math.max(g.from, g.to);
+            if (!g.filledAt) {
+              areas.push([{
+                xAxis: g.t, yAxis: lo,
+                itemStyle: {
+                  color: g.up ? 'rgba(0,212,212,0.13)' : 'rgba(255,46,136,0.12)',
+                  borderColor: g.up ? 'rgba(0,212,212,0.55)' : 'rgba(255,46,136,0.55)',
+                  borderWidth: 1, borderType: 'dashed',
+                },
+                label: {
+                  show: true, position: g.up ? 'insideBottomRight' : 'insideTopRight',
+                  color: '#8b85a3', fontSize: 9, fontFamily: 'Geist Mono, monospace',
+                  formatter: `${g.pct > 0 ? '+' : ''}${g.pct.toFixed(1)}%`,
+                },
+              }, { xAxis: now.t, yAxis: hi }]);
+            } else if (s.showFilled) {
+              areas.push([{
+                xAxis: g.t, yAxis: lo,
+                itemStyle: { color: 'rgba(139,133,163,0.07)', borderColor: 'rgba(139,133,163,0.25)', borderWidth: 1, borderType: 'dashed' },
+              }, { xAxis: g.filledAt, yAxis: hi }]);
+            }
+          }
+          const nearest = unfilled.length
+            ? unfilled.reduce((a, g) => (Math.abs((g.from + g.to) / 2 - now.c) < Math.abs((a.from + a.to) / 2 - now.c) ? g : a))
+            : null;
+          const lead = nearest
+            ? `${unfilled.length} unfilled · nearest ${fmtPx(Math.min(nearest.from, nearest.to))}–${fmtPx(Math.max(nearest.from, nearest.to))} (${((((nearest.from + nearest.to) / 2) - now.c) / now.c * 100).toFixed(1)}% away)`
+            : 'no unfilled weekend gaps in this window';
+          const last = lastGap
+            ? `last gap ${lastGap.pct > 0 ? '+' : ''}${lastGap.pct.toFixed(2)}% · ${lastGap.filledAt ? 'filled' : 'still open'}`
+            : '';
+          chart.setOption({
+            backgroundColor: 'transparent',
+            grid: { left: 8, right: 8, top: 34, bottom: 6, containLabel: true },
+            tooltip: { ...TIP_BOX, trigger: 'axis', valueFormatter: (v) => `$${fmtPx(v)}` },
+            graphic: [{
+              type: 'text', left: 10, top: 6, silent: true,
+              style: { text: `${lead}${last ? `\n${last}` : ''}`, fill: '#8b85a3', fontSize: 10, lineHeight: 14, fontFamily: 'Geist Mono, monospace' },
+            }],
+            xAxis: { type: 'time', axisLabel: AXIS_LBL, axisLine: AXIS_LINE, splitLine: { show: false } },
+            yAxis: { type: 'value', scale: true, axisLabel: { ...AXIS_LBL, formatter: (v) => `$${fmtCompact(v)}` }, splitLine: AXIS_SPLIT },
+            series: [{
+              type: 'line', data: cs.map((k2) => [k2.t, k2.c]), showSymbol: false,
+              lineStyle: { width: 1.3, color: '#5aa7f7' }, itemStyle: { color: '#5aa7f7' },
+              markArea: { silent: false, data: areas },
+            }],
+          }, { notMerge: true });
+        }, 600_000);
+      },
+    },
   };
 
   /* ── element descriptions (gallery + add tray) — one line, what it DOES ── */
@@ -3324,6 +3438,7 @@
     vPositioning: 'How the top-100 Hyperliquid books lean on one symbol — short %, average entries, average liq levels.',
     vSuite: 'Quick links to the rest of the Vice Suite.',
     vMetric: 'Build your own block: any metric × symbol × window × style — price, OI, funding, CVD, volume, liquidations.',
+    vCmeGap: 'Weekend CME futures gaps on the price chart — unfilled gaps stay shaded until price fills them.',
   };
   for (const [t, m] of Object.entries(HUB_WIDGETS)) m.desc ??= WIDGET_DESC[t] ?? '';
 
@@ -3343,7 +3458,7 @@
     vIvTerm: 'line', vTopOpts: 'bars', vOiStrike: 'bars', vOiExpiry: 'bars', vChanges: 'line',
     vScreener: 'screener', vFundHeat: 'heat', vSectors: 'line', vOiCvd: 'line',
     vMktVol: 'bars', vMktOI: 'area', vFng: 'gauge', vSuite: 'links', vPositioning: 'meter',
-    vMetric: 'area',
+    vMetric: 'area', vCmeGap: 'area',
   };
   const WIDGET_SRC = {
     vWatch: 'Hyperliquid live feed · 5s', vMovers: 'CoinGecko top-250 · 2m',
@@ -3358,6 +3473,7 @@
     vSessionRet: 'Hyperliquid history · 1m', vPrice: 'Hyperliquid history',
     vSectors: 'Hyperliquid history · equal-weight', vChanges: 'HL candles / venue OI aggregate',
     vMetric: 'HL history / multi-venue aggregate · 2m',
+    vCmeGap: 'Hyperliquid history · CME sessions in America/Chicago',
   };
   const srcFor = (t, m) => WIDGET_SRC[t] ?? (m.vice
     ? ({ Futures: 'multi-venue aggregate · BIN OKX BYB HL DER', Options: 'Deribit public API', Markets: 'multi-venue aggregate' })[m.cat] ?? 'Vice native'
@@ -3816,7 +3932,8 @@
     grid.batchUpdate();
     for (const inst of activeGrid()) addToGrid(inst);
     grid.batchUpdate(false);
-    $('#hub-layout').value = store.active;
+    const layName = $('#hub-layout-name');
+    if (layName) layName.textContent = store.active;
     updateEmpty();
     navPriceSync?.();
   }
@@ -4311,19 +4428,34 @@
     }
     store.active = name;
     persist();
+    closeBarMenus();
     renderLayout();
     window.scrollTo(0, 0);
   }
 
+  // the layout switcher is a designed menu, not a raw <select> — the last
+  // OS-styled control in the bar died here
   function refreshLayoutSelect() {
-    const sel = $('#hub-layout');
-    sel.innerHTML = '';
-    for (const name of Object.keys(store.layouts)) {
-      const o = el('option', null, esc(name));
-      o.value = name;
-      if (name === store.active) o.selected = true;
-      sel.appendChild(o);
-    }
+    const nameEl = $('#hub-layout-name');
+    if (nameEl) nameEl.textContent = store.active;
+    const menu = $('#hub-layout-menu');
+    if (!menu) return;
+    menu.innerHTML = Object.keys(store.layouts).map((n, i) =>
+      `<button role="menuitemradio" aria-checked="${n === store.active}" data-lay="${esc(n)}" type="button">` +
+      `<i data-lucide="${n === store.active ? 'check' : 'layout-grid'}"></i><span class="lay-n">${esc(n)}</span>` +
+      (i < 5 ? `<kbd class="hub-lay-kbd">${i + 1}</kbd>` : '') + '</button>').join('') +
+      '<div class="sep" role="separator"></div><button role="menuitem" data-lay-new type="button"><i data-lucide="file-plus-2"></i>New layout…</button>';
+    icons();
+  }
+
+  function newLayoutFlow() {
+    promptModal('New layout', 'My layout', (name) => {
+      name = name.slice(0, 40);
+      if (store.layouts[name]) { toast('a layout with that name already exists'); return; }
+      store.layouts[name] = defaultLayout('DeFi');
+      switchLayout(name);
+      refreshLayoutSelect();
+    });
   }
 
   // any export counts as a backup — the nudge in ⋮ keys off this stamp
@@ -4527,20 +4659,28 @@
       P('tvChart', 0, 0, 14, 13, { symbol: tvSym, interval: '60' }),
       P('tvSymInfo', 14, 0, 10, 6, { symbol: tvSym, mode: 'info' }),
     ];
-    if (hasNews) {
-      base.push(P('news', 0, 13, 8, 9, { tab: 'symbol', symbol: tvSym }), P('tvMini', 8, 13, 8, 9, { symbol: tvSym, range: '12M' }));
-    } else {
-      base.push(P('tvMini', 0, 13, 16, 9, { symbol: tvSym, range: '12M' }));
-    }
     if (isCrypto) {
       base.push(
-        P('vChart', 14, 6, 10, 7, { command: `${coin.toLowerCase()} 4h ema20 ema55`, linked: false }),
-        P('vFunding', 16, 13, 8, 4, { only: coin }),
-        P('vCountdown', 16, 17, 8, 5),
-        // the Scanner's crowd for this exact symbol — the focus board's edge
-        P('vPositioning', 0, 22, 16, 8, { symbol: coin, linked: false }),
+        // the Scanner's crowd is the focus board's edge — it sits in the right
+        // rail directly under the quote, not stretched across the page bottom
+        P('vPositioning', 14, 6, 10, 9, { symbol: coin, linked: false }),
+        P('vChart', 14, 15, 10, 8, { command: `${coin.toLowerCase()} 4h ema20 ema55`, linked: false }),
+      );
+      if (hasNews) {
+        base.push(P('news', 0, 13, 7, 10, { tab: 'symbol', symbol: tvSym }), P('tvMini', 7, 13, 7, 10, { symbol: tvSym, range: '12M' }));
+      } else {
+        base.push(P('tvMini', 0, 13, 14, 10, { symbol: tvSym, range: '12M' }));
+      }
+      base.push(
+        P('vFunding', 0, 23, 14, 5, { only: coin }),
+        P('vCountdown', 14, 23, 10, 5),
       );
     } else {
+      if (hasNews) {
+        base.push(P('news', 0, 13, 8, 9, { tab: 'symbol', symbol: tvSym }), P('tvMini', 8, 13, 8, 9, { symbol: tvSym, range: '12M' }));
+      } else {
+        base.push(P('tvMini', 0, 13, 16, 9, { symbol: tvSym, range: '12M' }));
+      }
       base.push(
         P('tvSymInfo', 14, 6, 10, 7, { symbol: tvSym, mode: 'fundamentals' }),
         P('vCountdown', 16, 13, 8, 9),
@@ -4562,6 +4702,7 @@
 
   let focusSeq = 0; // stale-probe guard: navigation during the await must win
   async function enterFocus(raw, displaySym) {
+    closeBarMenus();
     if (editing) $('#hub-edit').click(); // focus boards are for reading, not editing
     if (currentSection !== 'dash') {
       exitSection(false); // focus renders on the grid canvas
@@ -4622,7 +4763,11 @@
      a pin button that copies {type, settings} into the active layout. ── */
   let currentSection = 'dash';
   let scannerBootAddr = null; // #/scanner/0x… deep link → inspector on arrival
-  const sectionSym = () => (linkedSym && hlFeed.snap()?.[linkedSym] ? linkedSym : 'BTC');
+  let scannerBootSym = null; // #/scanner/ETH deep link or Focus carry → scoped board
+  // one rule at every moment (boot, post-tick, re-render): trust a
+  // format-valid symbol — the chart engine and scoped boards surface unknowns
+  // honestly themselves, and snapshot-validation used to flip deep links to BTC
+  const sectionSym = () => (linkedSym && /^[A-Z0-9:]{2,16}$/i.test(linkedSym) ? linkedSym : 'BTC');
 
   let pageMounts = []; // live panels on the current section page
 
@@ -4726,20 +4871,61 @@
         search.appendChild(inp);
         const modeEl = el('div', 'vgal-chips');
         const winEl = el('div', 'vgal-chips');
-        bar.append(search, modeEl, el('span', 'vsc-sp'), winEl);
+        const scopeEl = el('div', 'vsc-scopewrap');
+        bar.append(scopeEl, search, modeEl, el('span', 'vsc-sp'), winEl);
         const scroll = el('div', 'vsc-scroll');
         const trackedEl = el('div', 'vsc-tracked');
         wrap.append(intro, viewsEl, aggEl, bar, scroll, trackedEl);
 
         const MODES = [['all', 'All'], ['crypto', 'Crypto'], ['tradfi', 'TradFi']];
         const WINS = [['day', '24h'], ['week', '7d'], ['month', '30d'], ['all', 'All-time']];
-        const state = { view: 'board', mode: 'all', win: 'month', sort: 'pnl', dir: -1, rows: [], loading: true, err: null };
-        const enrich = new Map(); // addr -> { upl, uplPct, cls, value, npos, coins, ln, sn, book }
+        // a board that arrives scoped sorts by position size, like setScope does
+        const state = { view: 'board', mode: 'all', win: 'month', sort: scannerBootSym ? 'upl' : 'pnl', dir: -1, rows: [], loading: true, err: null, scope: scannerBootSym };
+        scannerBootSym = null;
+        const enrich = new Map(); // addr -> { upl, uplPct, cls, value, npos, coins, ln, sn, book, positions }
         let enrichRun = 0;
         let dead = false;
         let trackedTimer = null;
+
+        /* ── symbol scope: Focus on ETH → ETH traders, ETH positions, ETH
+           sentiment. Set by #/scanner/ETH, the Focus carry, or linking a
+           symbol while here; cleared with the chip. ── */
+        const scopePos = (e) => (e?.positions ?? []).filter((p) =>
+          p.coin === state.scope || p.coin === `k${state.scope}`); // kPEPE is 1000×PEPE
+        const scopeMeta = (e) => {
+          let ntl = 0; let upl = 0; let side = 0; let enNum = 0; let enDen = 0; let lev = null;
+          for (const p of scopePos(e)) {
+            const n = Math.abs(Number(p.positionValue) || 0);
+            ntl += n;
+            upl += Number(p.unrealizedPnl) || 0;
+            side += (Number(p.szi) >= 0 ? 1 : -1) * n;
+            const en = Number(p.entryPx);
+            if (en > 0) { enNum += en * n; enDen += n; }
+            lev ??= Number(p.leverage?.value) || null;
+          }
+          return { ntl, upl, side, entry: enDen > 0 ? enNum / enDen : null, lev };
+        };
+        const paintScope = () => {
+          scopeEl.innerHTML = state.scope
+            ? `<span class="vsc-scope">${coinIconFor(state.scope)}<b>${esc(state.scope)}</b> traders` +
+              '<button type="button" data-unscope title="Show every wallet"><i data-lucide="x"></i></button></span>'
+            : '';
+          icons();
+        };
+        const setScope = (sym) => {
+          const next = sym ? String(sym).toUpperCase() : null;
+          if (next === state.scope) return;
+          state.scope = next;
+          if (next && state.sort === 'pnl') { state.sort = 'upl'; state.dir = -1; } // biggest books first
+          if (currentSection === 'scanner') {
+            history.replaceState(null, '', next ? `#/scanner/${encodeURIComponent(next)}` : '#/scanner');
+          }
+          paintScope();
+          paint();
+        };
+        scopeEl.addEventListener('click', (e) => { if (e.target.closest('[data-unscope]')) setScope(null); });
         // closeWallet is declared below — destroy only runs at teardown, long after
-        pageMounts.push({ handle: { destroy() { dead = true; clearInterval(trackedTimer); closeWallet(); } } });
+        pageMounts.push({ handle: { destroy() { dead = true; clearInterval(trackedTimer); closeWallet(); }, setScope } });
 
         // TradFi on Hyperliquid: builder-dex markets carry a "dex:COIN" name;
         // bare equity/metal tickers cover the pre-HIP-3 unit listings
@@ -4790,6 +4976,49 @@
           // switches and would otherwise mix retired rows into the stats
           const es = state.rows.map((r) => enrich.get(r.a)).filter(Boolean);
           if (state.loading || es.length < 8) { aggEl.innerHTML = ''; return; }
+          const card = (label, body2, sub) =>
+            `<div class="vsc-card"><label>${label}</label><div class="v">${body2}</div>${sub ? `<div class="s">${sub}</div>` : ''}</div>`;
+          if (state.scope) {
+            // symbol sentiment: the cohort's book in ONE coin
+            const S = state.scope;
+            const holders = es.map((e) => ({ e, ps: scopePos(e) })).filter((x) => x.ps.length);
+            if (!holders.length) { aggEl.innerHTML = ''; return; }
+            let ln2 = 0; let sn2 = 0; let upl2 = 0; let enL = 0; let enLd = 0; let enS = 0; let enSd = 0;
+            let inP = 0; let longW = 0;
+            let big = null; // largest single position
+            for (const { e, ps } of holders) {
+              let wSide = 0; let wUpl = 0;
+              for (const p of ps) {
+                const n = Math.abs(Number(p.positionValue) || 0);
+                const en = Number(p.entryPx);
+                const u = Number(p.unrealizedPnl) || 0;
+                wUpl += u; upl2 += u;
+                if (Number(p.szi) >= 0) { ln2 += n; if (en > 0) { enL += en * n; enLd += n; } }
+                else { sn2 += n; if (en > 0) { enS += en * n; enSd += n; } }
+                wSide += (Number(p.szi) >= 0 ? 1 : -1) * n;
+                if (!big || n > big.n) big = { n, long: Number(p.szi) >= 0, en, e };
+              }
+              if (wUpl > 0) inP++;
+              if (wSide >= 0) longW++;
+            }
+            const tot = ln2 + sn2;
+            const shortPct2 = tot > 0 ? Math.round((sn2 / tot) * 100) : 0;
+            const avgL = enLd > 0 ? enL / enLd : null;
+            const avgS = enSd > 0 ? enS / enSd : null;
+            const bigWho = big ? (state.rows.find((r) => enrich.get(r.a) === big.e)?.n
+              ?? shortA(state.rows.find((r) => enrich.get(r.a) === big.e)?.a ?? '')) : '';
+            aggEl.innerHTML =
+              card(`${esc(S)} bias · ${holders.length} of ${es.length} books`,
+                `<span class="vposn-meter slim"><span class="l" style="width:${100 - shortPct2}%"></span><span class="s" style="width:${shortPct2}%"></span></span>`,
+                `<b class="${shortPct2 >= 50 ? 'down' : 'up'}">${shortPct2 >= 50 ? `${shortPct2}% short` : `${100 - shortPct2}% long`}</b> by notional · ${longW}/${holders.length} wallets net long`) +
+              card(`${esc(S)} open interest here`, `<b>${fmtSign(tot)}</b>`,
+                `${avgL ? `longs @ ${fmtPx(avgL)}` : ''}${avgL && avgS ? ' · ' : ''}${avgS ? `shorts @ ${fmtPx(avgS)}` : ''}` || ' ') +
+              card(`${esc(S)} crowd upl`, `<b class="${cls2(upl2)}">${fmtSign(upl2)}</b>`,
+                `${inP}/${holders.length} books in profit`) +
+              card('largest position', big ? `<b class="${big.long ? 'up' : 'down'}">${big.long ? 'LONG' : 'SHORT'} ${fmtSign(big.n)}</b>` : '—',
+                big ? `${esc(bigWho)}${big.en ? ` · in @ ${fmtPx(big.en)}` : ''}` : '');
+            return;
+          }
           const withPos = es.filter((e) => e.npos > 0);
           const ln = es.reduce((a, e) => a + (e.ln ?? 0), 0);
           const sn = es.reduce((a, e) => a + (e.sn ?? 0), 0);
@@ -4804,8 +5033,6 @@
           const t10pnl = t10.reduce((a, r) => a + r[state.win].pnl, 0);
           const t10vlm = t10.reduce((a, r) => a + r[state.win].vlm, 0);
           const winLab = WINS.find(([k]) => k === state.win)?.[1] ?? '';
-          const card = (label, body2, sub) =>
-            `<div class="vsc-card"><label>${label}</label><div class="v">${body2}</div>${sub ? `<div class="s">${sub}</div>` : ''}</div>`;
           aggEl.innerHTML =
             card(`cohort bias · ${es.length} books`,
               `<span class="vposn-meter slim"><span class="l" style="width:${100 - shortPct}%"></span><span class="s" style="width:${shortPct}%"></span></span>`,
@@ -4830,9 +5057,17 @@
         const visibleRows = () => {
           let rows = state.rows.map((r) => ({ ...r, e: enrich.get(r.a) }));
           if (state.mode !== 'all') rows = rows.filter((r) => r.e?.cls === state.mode);
+          if (state.scope) {
+            rows = rows.map((r) => ({ ...r, sm: r.e ? scopeMeta(r.e) : null }))
+              .filter((r) => r.sm && r.sm.ntl > 0);
+          }
+          // scoped boards re-point the upl columns at the scoped position:
+          // 'upl' sorts its size, 'uplpct' its open pnl
           const key = {
             value: (r) => r.v, pnl: (r) => r[state.win].pnl, roi: (r) => r[state.win].roi,
-            vlm: (r) => r[state.win].vlm, upl: (r) => r.e?.upl, uplpct: (r) => r.e?.uplPct,
+            vlm: (r) => r[state.win].vlm,
+            upl: (r) => (state.scope ? r.sm?.ntl : r.e?.upl),
+            uplpct: (r) => (state.scope ? r.sm?.upl : r.e?.uplPct),
           }[state.sort];
           rows.sort((a, b) => {
             const av = key(a);
@@ -4858,31 +5093,43 @@
             return;
           }
           const rows = visibleRows();
+          const S = state.scope;
           scroll.innerHTML =
             '<div class="vsc-r vsc-h">' +
             '<span class="st"></span><span class="rk">#</span><span class="who">trader</span>' +
             `<button class="num sortable" data-s="value" type="button">equity${arrow('value')}</button>` +
             `<button class="num sortable" data-s="pnl" type="button">pnl${arrow('pnl')}</button>` +
             `<button class="num sortable cvol" data-s="vlm" type="button">volume${arrow('vlm')}</button>` +
-            `<button class="num sortable cupl" data-s="upl" type="button">upl $${arrow('upl')}</button>` +
-            `<button class="num sortable cupct" data-s="uplpct" type="button">upl %${arrow('uplpct')}</button>` +
+            `<button class="num sortable cupl" data-s="upl" type="button">${S ? `${esc(S.toLowerCase())} size` : 'upl $'}${arrow('upl')}</button>` +
+            `<button class="num sortable cupct" data-s="uplpct" type="button">${S ? `${esc(S.toLowerCase())} upl` : 'upl %'}${arrow('uplpct')}</button>` +
             '<span class="cls"></span></div>' +
             (rows.map((r, i) => {
               const e = r.e;
               const roi = r[state.win].roi;
+              // scoped rows speak about the scoped position: side · lev · entry
+              const sub = S && r.sm
+                ? `<span class="${r.sm.side >= 0 ? 'up' : 'down'}">${r.sm.side >= 0 ? 'long' : 'short'}${r.sm.lev ? ` ${r.sm.lev}x` : ''}</span>${r.sm.entry ? ` @ ${fmtPx(r.sm.entry)}` : ''}`
+                : `${pct(roi)} ${WINS.find(([k]) => k === state.win)?.[1] ?? ''} roi`;
+              const c4 = S && r.sm
+                ? `<span class="num cupl ${r.sm.side >= 0 ? 'up' : 'down'}">$${fmtCompact(r.sm.ntl)}</span>`
+                : `<span class="num cupl ${cls2(e?.upl)}">${e ? fmtSign(e.upl) : '…'}</span>`;
+              const c5 = S && r.sm
+                ? `<span class="num cupct ${cls2(r.sm.upl)}">${fmtSign(r.sm.upl)}</span>`
+                : `<span class="num cupct ${cls2(e?.uplPct)}">${e ? pct(e.uplPct) : '…'}</span>`;
               return `<div class="vsc-r clickable" data-a="${esc(r.a)}" tabindex="0" role="button" aria-label="Inspect ${esc(r.n ?? shortA(r.a))}">` +
                 `<span class="st">${starBtn(r.a)}</span>` +
                 `<span class="rk${i < 3 ? ' top' : ''}">${i + 1}</span>` +
-                `<span class="who"><b>${esc(r.n ?? shortA(r.a))}</b><span class="sub">${pct(roi)} ${WINS.find(([k]) => k === state.win)?.[1] ?? ''} roi</span></span>` +
+                `<span class="who"><b>${esc(r.n ?? shortA(r.a))}</b><span class="sub">${sub}</span></span>` +
                 `<span class="num">$${fmtCompact(r.v)}</span>` +
                 `<span class="num ${cls2(r[state.win].pnl)}">${fmtSign(r[state.win].pnl)}</span>` +
                 `<span class="num cvol">$${fmtCompact(r[state.win].vlm)}</span>` +
-                `<span class="num cupl ${cls2(e?.upl)}">${e ? fmtSign(e.upl) : '…'}</span>` +
-                `<span class="num cupct ${cls2(e?.uplPct)}">${e ? pct(e.uplPct) : '…'}</span>` +
+                c4 + c5 +
                 `<span class="cls">${e?.coins?.length ? `<span class="vsc-coins" title="${esc(e.coins.join(' · '))}">${e.coins.map(coinIconFor).join('')}</span>` : ''}` +
                 `${e ? (e.cls === 'flat' ? '<i class="t3">flat</i>' : `<i class="${e.cls}">${e.cls === 'crypto' ? 'CRYPTO' : e.cls === 'tradfi' ? 'TRADFI' : 'MIX'}</i>`) : ''}</span>` +
                 '</div>';
-            }).join('') || `<div class="vgal-none">no ${esc(state.mode)} wallets in this slice yet — classification is still filling in</div>`);
+            }).join('') || `<div class="vgal-none">${S
+              ? `no ${esc(state.mode === 'all' ? '' : `${state.mode} `)}wallets holding ${esc(S)} found yet — books are still being read`
+              : `no ${esc(state.mode)} wallets in this slice yet — classification is still filling in`}</div>`);
         }
 
         const classify = (positions) => {
@@ -5242,6 +5489,7 @@
         });
         paintViews();
         paintBars();
+        paintScope();
         syncView();
         paint();
         loadBoard();
@@ -5274,7 +5522,7 @@
         const listEl = el('div', 'vgal-list');
         wrap.append(intro, bar, listEl);
         const CATS = ['All', 'Featured', 'Charts', 'Markets', 'Futures', 'Options', 'Screeners', 'News & data', 'Vice'];
-        const FEATURED = ['vMetric', 'vChartPro', 'vPositioning', 'vScreener', 'news', 'vHeat', 'vLiqMap', 'vFunding', 'vFng'];
+        const FEATURED = ['vCmeGap', 'vMetric', 'vChartPro', 'vPositioning', 'vScreener', 'news', 'vHeat', 'vLiqMap', 'vFunding', 'vFng'];
         let cat = 'All';
         let q = '';
         const onBoard = () => {
@@ -5403,6 +5651,13 @@
   };
 
 
+  // dropdown hygiene: route/layout/focus transitions close any open bar menu
+  // (a hidden-but-open menu used to swallow the next Esc)
+  function closeBarMenus() {
+    document.querySelectorAll('.hub-menu.open').forEach((m) => m.classList.remove('open'));
+    $('#hub-layout')?.setAttribute('aria-expanded', 'false');
+  }
+
   function navSync() {
     document.querySelectorAll('#hub-nav a').forEach((a) => {
       const on = (a.dataset.sec ?? 'dash') === currentSection;
@@ -5421,10 +5676,16 @@
 
   function enterSection(name, sym) {
     if (!SECTION_META[name]) return;
+    closeBarMenus();
     if (editing) $('#hub-edit').click(); // sections are static pages — Customize is dashboard business
+    // Focus carries its symbol into the Scanner: focused on ETH → ETH traders
+    if (name === 'scanner' && !sym && focusMode && /^[A-Z0-9:]{2,16}$/i.test(focusSym ?? '')) sym = focusSym;
     if (focusMode) exitFocus(false);
     if (name === 'scanner' && /^0x[0-9a-fA-F]{40}$/.test(sym ?? '')) scannerBootAddr = sym.toLowerCase();
-    else if (sym && /^[A-Z0-9]{2,12}$/i.test(sym)) linkedSym = sym.toUpperCase();
+    else if (sym && /^[A-Z0-9:]{2,16}$/i.test(sym)) {
+      linkedSym = sym.toUpperCase();
+      if (name === 'scanner') scannerBootSym = linkedSym;
+    }
     currentSection = name;
     document.body.classList.add('in-section');
     navSync();
@@ -5445,7 +5706,10 @@
   function applyRoute() {
     const [seg, arg] = location.hash.replace(/^#\/?/, '').split('/');
     const name = (seg ?? '').toLowerCase();
-    if (SECTION_META[name]) enterSection(name, arg);
+    // linkSymbol writes encoded symbols (builder-dex coins carry a colon)
+    let dec = arg;
+    try { dec = arg == null ? arg : decodeURIComponent(arg); } catch { /* raw */ }
+    if (SECTION_META[name]) enterSection(name, dec);
     else {
       // leaving via hash (brand link, back button): a live Focus board must
       // rerender to the dashboard, not linger as a ghost with focusMode off
@@ -5730,7 +5994,9 @@
       // drawers (gallery preview, wallet inspector, block inspector) own Esc
       if (typing || document.querySelector('.hub-modal-veil, .hub-palette-veil, .vgal-veil')) return;
       if (e.key === 'Escape') {
-        if (document.querySelector('.hw-max')) unmaxAll();
+        // open dropdown menus close first, then maximized blocks, then Customize
+        if (document.querySelector('.hub-menu.open')) closeBarMenus();
+        else if (document.querySelector('.hw-max')) unmaxAll();
         else if (editing) $('#hub-edit').click();
         return;
       }
@@ -5843,7 +6109,31 @@
 
     /* toolbar wiring */
     refreshLayoutSelect();
-    $('#hub-layout').addEventListener('change', (e) => switchLayout(e.target.value));
+    const layBtn = $('#hub-layout');
+    const layMenu = $('#hub-layout-menu');
+    const closeLayMenu = () => {
+      layMenu?.classList.remove('open');
+      layBtn?.setAttribute('aria-expanded', 'false');
+    };
+    layBtn?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      $('#hub-menu')?.classList.remove('open'); // one menu at a time
+      refreshLayoutSelect();
+      const open = layMenu.classList.toggle('open');
+      layBtn.setAttribute('aria-expanded', String(open));
+      if (open) {
+        // left-anchored by default; flip when the viewport's right edge is close
+        const r = layBtn.getBoundingClientRect();
+        layMenu.classList.toggle('flip', r.left + (layMenu.offsetWidth || 210) > window.innerWidth - 8);
+      }
+    });
+    layMenu?.addEventListener('click', (e) => {
+      if (e.target.closest('[data-lay-new]')) { closeLayMenu(); newLayoutFlow(); return; }
+      const b = e.target.closest('[data-lay]');
+      if (!b) return;
+      closeLayMenu();
+      if (b.dataset.lay !== store.active) switchLayout(b.dataset.lay);
+    });
 
     // first-visit coach-mark: nothing on the page said it was editable (audit §6)
     let coachEl = null;
@@ -5898,6 +6188,7 @@
     };
     menuBtn.addEventListener('click', (e) => {
       e.stopPropagation();
+      closeLayMenu(); // one menu at a time
       menu.classList.toggle('open');
       syncBackupHint();
       // smart anchoring: when the wrapped bar parks ⋮ near the left edge, a
@@ -5907,20 +6198,17 @@
         menu.classList.toggle('flip', r.right - (menu.offsetWidth || 240) < 8);
       }
     });
-    document.addEventListener('click', (e) => { if (!menu.contains(e.target)) menu.classList.remove('open'); });
+    document.addEventListener('click', (e) => {
+      if (!menu.contains(e.target)) menu.classList.remove('open');
+      if (!layMenu?.contains(e.target)) closeLayMenu();
+    });
 
     menu.addEventListener('click', (e) => {
       const act = e.target.closest('[data-menu]')?.dataset.menu;
       if (!act) return;
       menu.classList.remove('open');
       if (act === 'new') {
-        promptModal('New layout', 'My layout', (name) => {
-          name = name.slice(0, 40);
-          if (store.layouts[name]) { toast('a layout with that name already exists'); return; }
-          store.layouts[name] = defaultLayout('DeFi');
-          switchLayout(name);
-          refreshLayoutSelect();
-        });
+        newLayoutFlow();
       } else if (act === 'dup') {
         let name = `${store.active} copy`;
         while (store.layouts[name]) name += ' 2';

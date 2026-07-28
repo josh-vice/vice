@@ -1,4 +1,4 @@
-/* Vice Hub — dashboard styles. v1.30.0
+/* Vice Hub — dashboard styles. v1.32.0
    Layers on vice.css tokens. PATH RULE: lives in vice/ ROOT (deep pages serve
    at /hub with no directory, so assets resolve at the domain root). */
 
@@ -39,18 +39,6 @@
 .hp-txt em.down { color: var(--red); }
 .hub-live .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); animation: hubPulse 2.2s ease-in-out infinite; }
 @keyframes hubPulse { 0%,100% { opacity: 1; } 50% { opacity: 0.35; } }
-
-.hub-select {
-  appearance: none; -webkit-appearance: none;
-  background: none; color: var(--text2);
-  border: none; border-radius: var(--radius);
-  font: inherit; font-size: 12px; padding: 5px 24px 5px 8px;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23a8a3bb' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
-  background-repeat: no-repeat; background-position: right 7px center;
-  cursor: pointer;
-}
-.hub-select:hover { background-color: var(--bg3); color: var(--text); }
-.hub-select:focus-visible { outline: 2px solid var(--teal); outline-offset: 1px; }
 
 .hub-btn {
   display: inline-flex; align-items: center; gap: 6px;
@@ -385,7 +373,7 @@ body:not(.editing) .hub-btn.edit-only { display: none; }
 /* focus mode: one ticker, every angle */
 #hub-focus.focus-on { background: var(--teal); border-color: var(--teal); color: var(--bg); font-weight: 600; }
 #hub-focus.focus-on:hover { filter: brightness(1.08); color: var(--bg); }
-body.focused #hub-layout, body.focused #hub-add, body.focused #hub-edit, body.focused #hub-tidy { display: none; }
+body.focused #hub-layout-wrap, body.focused #hub-add, body.focused #hub-edit, body.focused #hub-tidy { display: none; }
 
 /* toast action + empty state */
 .hub-toast { display: flex; align-items: center; gap: 12px; }
@@ -563,7 +551,7 @@ body.focused #hub-layout, body.focused #hub-add, body.focused #hub-edit, body.fo
 #hub-focus, #hub-pal { padding: 5px 6px; }
 
 /* section boards are ephemeral — layout controls are dashboard-only */
-body.in-section #hub-layout,
+body.in-section #hub-layout-wrap,
 body.in-section #hub-edit,
 body.in-section #hub-add,
 body.in-section #hub-tidy { display: none; }
@@ -1867,5 +1855,59 @@ body.in-section .hub-menu button[data-menu="keys"] { display: flex; }
 /* mobile bar: two tidy rows — the % change yields, the select stays compact */
 @media (max-width: 768px) {
   .hp-txt em { display: none; }
-  .hub-select { max-width: 96px; overflow: hidden; text-overflow: ellipsis; }
+  /* the layout name IS the control's content — it survives the icon-only bar */
+  .hub-bar .hub-layout-btn span { display: inline; }
 }
+
+/* ── v1.31.0: navigation overhaul — the layout switcher becomes a designed
+   menu (the last OS-styled control in the bar), family mark on the footer ── */
+.hub-layout-btn { color: var(--text2); font-weight: 600; }
+.hub-layout-btn:hover { color: var(--text); }
+.hub-layout-btn > span {
+  max-width: 130px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.hub-layout-btn .chev {
+  width: 11px !important; height: 11px !important; color: var(--text3);
+  transition: transform 160ms var(--ease-out);
+}
+.hub-layout-btn[aria-expanded="true"] .chev { transform: rotate(180deg); }
+#hub-layout-menu { left: 0; right: auto; min-width: 200px; max-height: min(60vh, 420px); overflow-y: auto; }
+#hub-layout-menu.open { transform-origin: top left; }
+/* near the viewport's right edge the menu flips to right-anchored */
+#hub-layout-menu.flip { left: auto; right: 0; }
+#hub-layout-menu.open.flip { transform-origin: top right; }
+#hub-layout-menu .lay-n { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#hub-layout-menu [aria-checked="true"] { color: var(--text); }
+#hub-layout-menu [aria-checked="true"] i, #hub-layout-menu [aria-checked="true"] svg { color: var(--teal); }
+.hub-lay-kbd {
+  flex: none; padding: 0 5px;
+  border: 1px solid var(--border2); border-radius: var(--radius-sm);
+  color: var(--text3); font: 600 9.5px/1.6 var(--mono);
+}
+@media (max-width: 768px) { .hub-layout-btn > span { max-width: 92px; } }
+
+/* Scanner symbol scope: Focus on ETH → ETH traders. The chip names the
+   filter and clears it in one click. */
+.vsc-scopewrap:empty { display: none; }
+.vsc-scope {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 4px 5px 4px 10px;
+  border: 1px solid color-mix(in srgb, var(--teal) 45%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--teal) 9%, transparent);
+  color: var(--text2); font-size: 11.5px;
+}
+.vsc-scope b { color: var(--text); font-weight: 700; }
+.vsc-scope .vic, .vsc-scope .vic-f { width: 15px; height: 15px; font-size: 8px; flex: none; }
+.vsc-scope button {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 18px; height: 18px; border: none; border-radius: 50%;
+  background: none; color: var(--text3); cursor: pointer;
+  transition: color 120ms var(--ease-out), background 120ms var(--ease-out);
+}
+.vsc-scope button:hover { color: var(--text); background: color-mix(in srgb, var(--teal) 18%, transparent); }
+.vsc-scope button:focus-visible { outline: 2px solid var(--teal); outline-offset: 1px; }
+.vsc-scope button i, .vsc-scope button svg { width: 11px; height: 11px; }
+
+/* CME gap tracker: unfilled gap bands carry a light label */
+.hw-body .vgap-note { position: absolute; left: 10px; top: 6px; z-index: 3; color: var(--text3); font-size: 10px; pointer-events: none; }
