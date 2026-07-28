@@ -30,7 +30,9 @@ async function cz(path, key) {
 }
 
 async function markets(key) {
-  if (meta.byVenue && Date.now() - meta.t < 6 * 3_600_000) return meta.byVenue;
+  // an EMPTY map must never count as a hit — a degraded upstream answer would
+  // otherwise poison every request from this warm instance for 6 hours
+  if (meta.byVenue && Object.keys(meta.byVenue).length && Date.now() - meta.t < 6 * 3_600_000) return meta.byVenue;
   const [exch, mkts] = await Promise.all([cz('/exchanges', key), cz('/future-markets', key)]);
   const codeToVenue = {};
   for (const e of exch ?? []) if (WANTED[e.name]) codeToVenue[e.code] = WANTED[e.name];
@@ -45,7 +47,7 @@ async function markets(key) {
     base.all.push(entry);
     if (m.quote_asset === 'USDT') base.primary = entry; // USDT market leads
   }
-  meta = { t: Date.now(), byVenue };
+  if (Object.keys(byVenue).length) meta = { t: Date.now(), byVenue };
   return byVenue;
 }
 

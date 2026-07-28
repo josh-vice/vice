@@ -209,15 +209,20 @@
   function sumTo(times, tfMs, pts, col = 1, srcMs = 3.6e6) {
     const out = new Array(times.length).fill(null);
     if (!pts.length) return out;
-    const frac = tfMs < srcMs ? tfMs / srcMs : 1;
     let j = 0;
     for (let i = 0; i < times.length; i++) {
       const t0 = times[i];
       const t1 = t0 + tfMs;
       let acc = null;
       if (tfMs < srcMs) {
+        // weight EVERY overlapping source point by its true overlap with the
+        // bar — a fixed first-point fraction double-counted on TFs that don't
+        // divide the source hour (45m bars showed 150%/75% hours)
         while (j < pts.length && pts[j][0] + srcMs <= t0) j++;
-        if (j < pts.length && pts[j][0] < t1) acc = (pts[j][col] ?? 0) * frac;
+        for (let k = j; k < pts.length && pts[k][0] < t1; k++) {
+          const ov = Math.min(t1, pts[k][0] + srcMs) - Math.max(t0, pts[k][0]);
+          if (ov > 0) acc = (acc ?? 0) + (pts[k][col] ?? 0) * (ov / srcMs);
+        }
       } else {
         while (j < pts.length && pts[j][0] < t0) j++;
         while (j < pts.length && pts[j][0] < t1) { acc = (acc ?? 0) + (pts[j][col] ?? 0); j++; }
@@ -1196,10 +1201,15 @@
     });
     const closeMenu = () => { menuEl?.remove(); menuEl = null; };
 
-    /* settings popover for one active indicator */
+    /* settings popover for one active indicator — a second gear click toggles
+       instead of stacking another copy (stopPropagation kept the doc-click
+       closer from ever seeing repeat clicks) */
     function openSettings(a, anchor) {
       const def = INDICATORS[a.id];
       if (!def.opts?.length) return;
+      const already = anchor.querySelector('.vcp-pop');
+      root.querySelectorAll('.vcp-pop').forEach((p) => p.remove());
+      if (already) return;
       const pop = el('div', 'vcp-pop');
       for (const [key, label, defVal, options] of def.opts) {
         const row = el('label', 'vcp-poprow', `<span>${esc(label)}</span>`);
@@ -1736,7 +1746,7 @@
           ctx.lineWidth = 1;
           ctx.fillRect(lx, ly, tw, 16);
           ctx.strokeRect(lx, ly, tw, 16);
-          ctx.fillStyle = dp >= 0 ? '#21d196' : 'var(--red)'.startsWith('var') ? '#ff6473' : '#ff6473';
+          ctx.fillStyle = dp >= 0 ? '#21d196' : '#ff6473';
           ctx.fillText(lbl, lx + 6, ly + 11.5);
         } else { // trend / brush
           ctx.beginPath();
@@ -1993,7 +2003,6 @@
         if (t.closest?.('input, textarea, select, [contenteditable]')) return;
         if (!root.closest('body')) return;
         if (stage.querySelector('.vcp-search')) return;
-        if (!root.matches(':hover') && document.activeElement !== document.body) return;
         if (!root.matches(':hover')) return;
         openSymSearch();
         const inp = stage.querySelector('.vcp-search-inp');

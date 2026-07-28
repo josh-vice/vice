@@ -14,6 +14,7 @@ export default async function handler(req, res) {
   try {
     const r = await fetch('https://discord.com/api/v10/applications/@me', {
       headers: { Authorization: `Bot ${token}` },
+      signal: AbortSignal.timeout(8_000),
     });
     if (!r.ok) {
       res.status(502).json({ error: `discord ${r.status}` });

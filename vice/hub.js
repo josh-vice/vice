@@ -1,4 +1,4 @@
-/* Vice Hub — customizable live market dashboard + Velo-style section boards. v2.12.0
+/* Vice Hub — customizable live market dashboard + Velo-style section boards. v2.14.0
    Architecture: a widget REGISTRY (manifest per type: title, sizes, settings
    schema, mount/destroy lifecycle) + a Gridstack canvas (float mode, 24-col
    fine grid). Saved layouts store INSTANCES ({id,type,x,y,w,h,settings}),
@@ -68,6 +68,7 @@
   }
 
   /* ── shared Hyperliquid poller (one 5s loop for every subscriber) ───── */
+  let hlTickAt = 0; // last successful feed tick — the bar dot keys honesty off it
   const hlFeed = (() => {
     const subs = new Set();
     let timer = null;
@@ -95,6 +96,7 @@
           };
         });
         last = map;
+        hlTickAt = Date.now();
         subs.forEach((fn) => { try { fn(map); } catch { /* widget's problem */ } });
       } catch { /* transient — next tick */ }
     }
@@ -280,28 +282,38 @@
   }
 
   // ECharts lifecycle shared by the native analytics widgets: wait for the
-  // library, init, poll, resize, surface errors in the vchart error strip
+  // library, init, poll, resize, surface errors in the vchart error strip.
+  // A shimmer skeleton holds the space until the first draw settles, and every
+  // successful draw stamps freshness for the header staleness dot.
   function chartMount(body, draw, pollMs) {
     const box = el('div', 'vchart');
     const err = el('div', 'vchart-err');
-    body.append(box, err);
+    let skel = el('div', 'hw-skel', '<span></span><span></span><span></span><span></span>');
+    body.append(box, skel, err);
+    const hw = body.closest('.hw, .vpanel');
+    if (hw && pollMs) hw.dataset.staleAfter = String(Math.max(pollMs * 2.5, 90_000));
     let chart = null;
     let timer = null;
     let ro = null;
     let dead = false;
     let tries = 0;
+    const settle = () => { skel?.remove(); skel = null; };
     const run = async () => {
       try {
         await draw(chart);
-        if (!dead) err.classList.remove('on');
+        if (!dead) {
+          settle();
+          err.classList.remove('on');
+          if (hw) { hw.dataset.freshAt = String(Date.now()); hw.classList.remove('hw-stale'); }
+        }
       } catch (e) {
-        if (!dead) { err.textContent = e.message; err.classList.add('on'); }
+        if (!dead) { settle(); err.textContent = e.message; err.classList.add('on'); }
       }
     };
     const start = () => {
       if (dead) return;
       if (!window.echarts) {
-        if (++tries > 75) { note(body, 'alert-triangle', "the chart engine didn't load — refresh the page"); return; }
+        if (++tries > 75) { settle(); note(body, 'alert-triangle', "the chart engine didn't load — refresh the page"); return; }
         setTimeout(start, 200);
         return;
       }
@@ -520,8 +532,11 @@
 
   // seasonality bars (avg return by UTC hour / weekday over the last month)
   const seasonalityWidget = (byHour) => ({
-    title: byHour ? '1m Average Return By Hour (UTC)' : '1m Average Return By Day (UTC)',
+    // titles diverge early — "1m Average Retur…" twice in a truncated card
+    // told nobody which was which
+    title: byHour ? 'Avg Return by Hour (1m)' : 'Avg Return by Day (1m)',
     icon: byHour ? 'clock-4' : 'calendar', cat: 'Futures', vice: true,
+    label: () => 'UTC',
     w: 8, h: 7, minW: 4, minH: 5,
     settings: [
       F.text('symbol', 'Symbol', 'BTC', 'Coin ticker (Hyperliquid history)'),
@@ -562,6 +577,9 @@
       }, 900_000);
     },
   });
+
+  // Custom Metric window ceilings (mirror api/vice-coinalyze maxDays)
+  const VMETRIC_MAXD = { price: 30, oi: 30, funding: 14, cvd: 7, vol: 30, liqs: 30 };
 
   const HUB_WIDGETS = {
 
@@ -767,9 +785,8 @@
         { ...LINKED(), def: false },
       ],
       link: (s, sym) => ({ symbol: tvSymbolFor(sym), tab: 'symbol' }),
-      label: (s) => (s.tab === 'symbol' && s.symbol
-        ? s.symbol.split(':').pop()
-        : { all: 'all sources', rss: 'RSS', tv: ({ crypto: 'Crypto', stock: 'TradFi', index: 'Indices', forex: 'Forex' })[s.market] ?? 'TV', symbol: 'symbol' }[s.tab] ?? 'all sources'),
+      // no label: the source tabs on the face already carry that state — a
+      // header suffix duplicated them and orphaned into "· all so…" when tight
       mount(body, s, inst) {
         const READ_KEY = 'viceHub.newsRead';
         const read = (() => { try { return new Set(JSON.parse(localStorage.getItem(READ_KEY)) ?? []); } catch { return new Set(); } })();
@@ -801,7 +818,8 @@
           const seen = new Set();
           const list = pool.filter((it) => {
             const k = (it.t ?? '').toLowerCase();
-            if (!k || seen.has(k)) return false;
+            // hostile feed hardening: only real web links render as links
+            if (!k || seen.has(k) || !/^https?:\/\//i.test(it.u ?? '')) return false;
             seen.add(k);
             return true;
           }).sort((a, b) => (b.ts ?? 0) - (a.ts ?? 0)).slice(0, s.max);
@@ -813,7 +831,7 @@
             note(scroll, tab === 'symbol' && !symNow() ? 'crosshair' : 'rss',
               tab === 'symbol' && !symNow()
                 ? 'set a symbol in settings — or turn on “follow linked symbol” and click any ticker row'
-                : 'no headlines yet — feeds go through the /api proxies and light up on vicesuite.com');
+                : 'no headlines right now — the feeds refresh every few minutes');
           }
         };
         const load = async (force) => {
@@ -918,11 +936,15 @@
         });
         return { destroy() { unsub(); } };
       },
-      // shared-list edits flow back to localStorage when settings are saved
-      onSettingsSaved(s) {
+      // shared-list edits flow back to localStorage when settings are saved —
+      // and every other mounted watchlist follows (the help text promises it)
+      onSettingsSaved(s, inst) {
         if (s.shared) {
           const syms = s.symbols.split(',').map((x) => x.trim().toUpperCase()).filter(Boolean);
           localStorage.setItem(LS_WATCH, JSON.stringify(syms));
+          for (const [oid, orec] of live) {
+            if (orec.inst !== inst && orec.inst.type === 'vWatch') remount(oid);
+          }
         }
       },
     },
@@ -988,7 +1010,11 @@
           t = setTimeout(() => { inst.settings.text = ta.value; persist(); }, 400);
         });
         body.appendChild(ta);
-        return { destroy() { clearTimeout(t); } };
+        return { destroy() {
+          clearTimeout(t);
+          // flush the debounce window — teardown must never eat keystrokes
+          if (inst.settings.text !== ta.value) { inst.settings.text = ta.value; persist(); }
+        } };
       },
     },
     vClocks: {
@@ -1057,7 +1083,9 @@
                 `<span class="cond">crossed $${fmtPx(h.target)}</span>` +
                 `<span class="now">${ago(h.at)}</span></div>`).join('')
             : '';
-          scroll.innerHTML = (active || '<div class="hw-note">no alerts — add one above.<br/>notification + sound when crossed; targets take 70k or +5% too.</div>') + hist;
+          // the empty note must flow inline — the absolute .hw-note blanketed
+          // the fired-history list below it and ate its clear button
+          scroll.innerHTML = (active || '<div class="hw-note hw-note-flow">no alerts — add one above.<br/>notification + sound when crossed; targets take 70k or +5% too.</div>') + hist;
           icons();
         };
         const parseTarget = (raw, now) => {
@@ -1118,9 +1146,13 @@
             dirty = true;
             inst.settings.history.unshift({ sym: a.sym, target: a.target, at: Date.now() });
             inst.settings.history = inst.settings.history.slice(0, s.keep);
-            if ('Notification' in window && Notification.permission === 'granted') {
-              new Notification(`${a.sym} crossed $${fmtPx(a.target)}`, { body: `now $${fmtPx(px)} — Vice Hub` });
-            }
+            // Android Chrome throws from the bare constructor even when
+            // granted — a throw here would wedge the filter and re-fire forever
+            try {
+              if ('Notification' in window && Notification.permission === 'granted') {
+                new Notification(`${a.sym} crossed $${fmtPx(a.target)}`, { body: `now $${fmtPx(px)} — Vice Hub` });
+              }
+            } catch { /* the beep + row still deliver it */ }
             if (s.sound) beep();
             return false;
           });
@@ -1189,7 +1221,9 @@
       mount(body, s) {
         const box = el('div', 'vchart');
         const err = el('div', 'vchart-err');
-        body.append(box, err);
+        let skel = el('div', 'hw-skel', '<span></span><span></span><span></span><span></span>');
+        body.append(box, skel, err);
+        const settle = () => { skel?.remove(); skel = null; };
         let chart = null;
         let timer = null;
         let ro = null;
@@ -1203,17 +1237,18 @@
             // IS the brand; keep only text graphics (the NOT REAL joke stamp)
             if (Array.isArray(option.graphic)) option.graphic = option.graphic.filter((g) => g.type === 'text');
             if (!dead && chart) {
+              settle();
               chart.setOption(option, { notMerge: true });
               err.classList.remove('on');
             }
           } catch (e) {
-            if (!dead) { err.textContent = e.message; err.classList.add('on'); }
+            if (!dead) { settle(); err.textContent = e.message; err.classList.add('on'); }
           }
         };
         const start = () => {
           if (dead) return;
           if (!window.echarts || !window.ViceChartEngine) {
-            if (++tries > 75) { note(body, 'alert-triangle', "the chart engine didn't load — refresh the page"); return; }
+            if (++tries > 75) { settle(); note(body, 'alert-triangle', "the chart engine didn't load — refresh the page"); return; }
             setTimeout(start, 200);
             return;
           }
@@ -1295,6 +1330,11 @@
             scroll.innerHTML = `<div class="hw-note">no Hyperliquid perp for ${esc(s.only)}</div>`;
             return;
           }
+          if (!s.only && !syms.length) {
+            // a bare header row over nothing read as broken — say why it's empty
+            scroll.innerHTML = '<div class="hw-note hw-note-flow">watchlist is empty — add symbols in a Vice Watchlist block, or switch Rows to “Top by open interest” in settings</div>';
+            return;
+          }
           // short venue codes — the full names clipped the last column at the
           // preset width ("DERIBIT" → "DERIE"); codes match every futures legend
           scroll.innerHTML =
@@ -1371,7 +1411,9 @@
       label: (s) => s.symbol.toUpperCase(),
       mount(body, s) {
         const box = el('div', 'vliq');
-        body.appendChild(box);
+        let skel = el('div', 'hw-skel', '<span></span><span></span><span></span><span></span>');
+        body.append(box, skel);
+        const settle = () => { skel?.remove(); skel = null; };
         const SYM = s.symbol.trim().toUpperCase();
         let chart = null;
         let timer = null;
@@ -1458,18 +1500,23 @@
             }],
           }, { notMerge: true });
         };
+        let noteEl = null; // ONE error note, cleared on recovery — they used to stack every poll
         const load = async () => {
           try {
             const book = await fetchBook();
-            if (!dead) paint(book);
+            if (!dead) { settle(); noteEl?.remove(); noteEl = null; paint(book); }
           } catch (e) {
-            if (!dead && !chart?.getOption()?.series?.length) { note(body, 'wifi-off', esc(e.message)); }
+            if (!dead && !chart?.getOption()?.series?.length) {
+              settle();
+              if (noteEl) noteEl.querySelector('span').textContent = e.message;
+              else noteEl = note(body, 'wifi-off', esc(e.message));
+            }
           }
         };
         const start = () => {
           if (dead) return;
           if (!window.echarts) {
-            if (++tries > 75) { note(body, 'alert-triangle', "the chart engine didn't load — refresh the page"); return; }
+            if (++tries > 75) { settle(); note(body, 'alert-triangle', "the chart engine didn't load — refresh the page"); return; }
             setTimeout(start, 200);
             return;
           }
@@ -1495,7 +1542,9 @@
       label: (s) => `top ${s.count} · ${s.metric}`,
       mount(body, s) {
         const box = el('div', 'vheat');
-        body.appendChild(box);
+        let skel = el('div', 'hw-skel', '<span></span><span></span><span></span><span></span>');
+        body.append(box, skel);
+        const settle = () => { skel?.remove(); skel = null; };
         const NOISE = new Set(['USDT', 'USDC', 'DAI', 'USDE', 'USDS', 'FDUSD', 'PYUSD', 'TUSD', 'USD1', 'USDF',
           'WBTC', 'WETH', 'STETH', 'WSTETH', 'WEETH', 'WBETH', 'CBBTC', 'RETH', 'LSETH', 'SUSDE', 'BSC-USD', 'USDTB']);
         // solid, saturated tiles (TV-style): dim tone at 0%, full color by ±6%
@@ -1539,18 +1588,23 @@
             }],
           }, { notMerge: true });
         };
+        let noteEl = null; // single reusable error note (same fix as vLiqMap)
         const load = async () => {
           try {
             const rows = await fetchMarkets();
-            if (!dead) paint(rows);
+            if (!dead) { settle(); noteEl?.remove(); noteEl = null; paint(rows); }
           } catch (e) {
-            if (!dead && !chart?.getOption()?.series?.length) { note(body, 'wifi-off', `heatmap feed unreachable — ${esc(e.message)}`); }
+            if (!dead && !chart?.getOption()?.series?.length) {
+              settle();
+              if (noteEl) noteEl.querySelector('span').textContent = `heatmap feed unreachable — ${e.message}`;
+              else noteEl = note(body, 'wifi-off', `heatmap feed unreachable — ${esc(e.message)}`);
+            }
           }
         };
         const start = () => {
           if (dead) return;
           if (!window.echarts) {
-            if (++tries > 75) { note(body, 'alert-triangle', "the chart engine didn't load — refresh the page"); return; }
+            if (++tries > 75) { settle(); note(body, 'alert-triangle', "the chart engine didn't load — refresh the page"); return; }
             setTimeout(start, 200);
             return;
           }
@@ -1685,6 +1739,10 @@
           if (agg?.venues?.length) {
             for (const v of agg.venues) push(v.venue, v.points.map((p) => [p[0], p[1]]));
           }
+          // the aggregator serves aligned hourly stamps, safe to stack; the
+          // direct-venue fallback mixes cadences — stacked-by-index it drew
+          // wrong totals, so that path renders honest overlapping lines
+          const aligned = series.length > 0;
           if (!series.length) await Promise.allSettled([
             // rubik has no CORS — the vice-okx proxy answers in prod, direct is
             // the (local-only, usually blocked) fallback
@@ -1710,9 +1768,9 @@
             xAxis: { type: 'time', axisLabel: AXIS_LBL, axisLine: AXIS_LINE, splitLine: { show: false } },
             yAxis: { type: 'value', axisLabel: { ...AXIS_LBL, formatter: (v) => `$${fmtCompact(v)}` }, splitLine: AXIS_SPLIT },
             series: series.map(([name, pts]) => ({
-              name, type: 'line', data: pts, showSymbol: false, stack: 'oi',
-              lineStyle: { width: 1, color: VENUE_C[name] }, itemStyle: { color: VENUE_C[name] },
-              areaStyle: { color: VENUE_C[name], opacity: 0.55 },
+              name, type: 'line', data: pts, showSymbol: false, stack: aligned ? 'oi' : undefined,
+              lineStyle: { width: aligned ? 1 : 1.4, color: VENUE_C[name] }, itemStyle: { color: VENUE_C[name] },
+              areaStyle: { color: VENUE_C[name], opacity: aligned ? 0.55 : 0.18 },
             })),
           }, { notMerge: true });
         }, 120_000);
@@ -2260,7 +2318,8 @@
               formatter: (ps) => {
                 const p = ps.find((x) => x.seriesType === 'candlestick') ?? ps[0];
                 const [o, c, l, h] = p.data.slice(1);
-                return `<b>${new Date(p.axisValue).toUTCString().slice(5, 22)}</b><br/>O ${o.toFixed(2)} H ${h.toFixed(2)} L ${l.toFixed(2)} C ${c.toFixed(2)}`;
+                // axisValue is the category STRING — Date needs the number back
+                return `<b>${new Date(Number(p.axisValue)).toUTCString().slice(5, 22)}</b><br/>O ${o.toFixed(2)} H ${h.toFixed(2)} L ${l.toFixed(2)} C ${c.toFixed(2)}`;
               },
             },
             xAxis: { type: 'category', data: rows.map((r) => r[0]), axisLabel: { ...AXIS_LBL, formatter: (t) => new Date(Number(t)).toISOString().slice(5, 10) }, axisLine: AXIS_LINE, axisTick: { show: false } },
@@ -2485,11 +2544,12 @@
       // default, per-exchange pairs when filtered, TradFi quote book, TV
       // logos, favorites, watchlist filter, search, sortable columns, and a
       // News mode that swaps the table for the aggregated feed.
-      mount(body, s) {
+      mount(body, s, inst) {
         const FAVS_KEY = 'viceHub.scrFavs';
         // the venues TradingView's crypto scanner actually indexes (no HL there)
         const EXCHANGES = [['', 'All Exchanges'], ['BINANCE', 'Binance'], ['BYBIT', 'Bybit'], ['OKX', 'OKX'], ['COINBASE', 'Coinbase'], ['KRAKEN', 'Kraken'], ['KUCOIN', 'KuCoin'], ['BITGET', 'Bitget'], ['HTX', 'HTX']];
-        const AUTO = [['15000', 'Auto'], ['5000', '5s'], ['15000', '15s'], ['60000', '60s']];
+        // honest refresh choices — "Auto" was a duplicate of 15s in disguise
+        const AUTO = [['15000', '15s'], ['5000', '5s'], ['60000', '60s']];
         const readFavs = () => { try { return new Set(JSON.parse(localStorage.getItem(FAVS_KEY)) ?? []); } catch { return new Set(); } };
         const favs = readFavs();
         const saveFavs = () => { try { localStorage.setItem(FAVS_KEY, JSON.stringify([...favs])); } catch { /* fine */ } };
@@ -2525,6 +2585,7 @@
           const b = el('button', `vscr2-tab${ui.tab === t ? ' on' : ''}`, t === 'all' ? 'All' : t === 'crypto' ? 'Crypto' : 'TradFi');
           b.addEventListener('click', () => {
             ui.tab = t;
+            if (inst) { inst.settings.tab = t; persist(); } // the face tab IS the setting — survive reloads
             tabs.querySelectorAll('.vscr2-tab').forEach((x) => x.classList.toggle('on', x === b));
             paint();
           });
@@ -2602,8 +2663,8 @@
           if (!dead) paint();
         }
         const loadNews = () => getJson('/api/vice-news', 9000).then((j) => {
-          // proxy shape: [{ t: title, u: url, src, ts }]
-          newsItems = (Array.isArray(j) ? j : []).slice(0, 40);
+          // proxy shape: [{ t: title, u: url, src, ts }] — web links only
+          newsItems = (Array.isArray(j) ? j : []).filter((n) => /^https?:\/\//i.test(n?.u ?? '')).slice(0, 40);
           if (!dead) paint();
         }).catch(() => { /* local preview — news needs the proxy */ });
 
@@ -2637,9 +2698,9 @@
           const arrow = (key) => (ui.sortKey === key ? (ui.sortDir === -1 ? ' ↓' : ' ↑') : '');
           scroll.innerHTML =
             `<div class="vscr2-r vscr2-h"><span class="vscr2-star"></span><span class="vscr2-sym">Symbol</span>` +
-            `<span class="vscr2-c fr" data-k="px">Price${arrow('px')}</span>` +
-            `<span class="vscr2-c fr" data-k="chg">24h Chg${arrow('chg')}</span>` +
-            `<span class="vscr2-c fr cvol" data-k="vol">24h Volume${arrow('vol')}</span></div>` +
+            `<button class="vscr2-c fr" data-k="px" type="button">Price${arrow('px')}</button>` +
+            `<button class="vscr2-c fr" data-k="chg" type="button">24h Chg${arrow('chg')}</button>` +
+            `<button class="vscr2-c fr cvol" data-k="vol" type="button">24h Volume${arrow('vol')}</button></div>` +
             (rows.map((r) =>
               `<div class="vscr2-r clickable" data-sym="${esc(r.sym)}" data-kind="${r.kind}">` +
               `<button class="vscr2-star${favs.has(r.sym) ? ' on' : ''}" data-fav="${esc(r.sym)}" title="Favorite">★</button>` +
@@ -2670,7 +2731,12 @@
           const r = ev.target.closest('.vscr2-r.clickable');
           if (r?.dataset.sym) linkSymbol(r.dataset.sym);
         });
-        const loadAll = () => { loadCrypto(); loadTradfi(); };
+        let newsAt = 0;
+        const loadAll = () => {
+          loadCrypto(); loadTradfi();
+          // news mode must not ossify — refresh on the edge-cache cadence
+          if (ui.news && Date.now() - newsAt > 120_000) { newsAt = Date.now(); loadNews(); }
+        };
         const schedule = () => { clearInterval(timer); timer = setInterval(loadAll, ui.ms); };
         loadAll();
         schedule();
@@ -2902,6 +2968,9 @@
         body.appendChild(box);
         let timer = null;
         let dead = false;
+        let painted = false;
+        // scanning 100 books takes a while — a blank body read as broken
+        note(box, 'users', `reading the top-100 Hyperliquid books for ${esc(SYM)}…`);
         const money = (v) => `${v < 0 ? '-' : ''}$${fmtCompact(Math.abs(v))}`;
         const wAvg = (rows, key) => {
           let num = 0;
@@ -2948,10 +3017,12 @@
             const total = ln + sn;
             const n = longs.length + shorts.length;
             if (!n) {
+              painted = true;
               box.innerHTML = '';
               note(box, 'users', `none of the top ${scanned} HL traders holds a ${esc(SYM)} perp right now`);
               return;
             }
+            painted = true;
             const shortPct = Math.round((sn / total) * 100);
             const mark = hlFeed.snap()?.[SYM]?.px ?? null;
             // distance from mark — beyond ±150% it's noise, not information
@@ -2997,7 +3068,10 @@
                   `<span class="num ${r.upl >= 0 ? 'up' : 'down'}">${money(r.upl)}</span></button>`;
               }).join('') + '</div>';
           } catch (e) {
-            if (!dead && !box.innerHTML) note(box, 'wifi-off', `positioning feed unreachable — ${esc(e.message)}`);
+            if (!dead && !painted) {
+              box.innerHTML = ''; // swap the loading note for the error
+              note(box, 'wifi-off', `positioning feed unreachable — ${esc(e.message)}`);
+            }
           }
         };
         box.addEventListener('click', (ev) => {
@@ -3039,12 +3113,16 @@
             `<div class="lab">${esc(rows[0].value_classification ?? '')}</div>` +
             `<div class="sub">${prev ? `yesterday ${esc(prev.value)} · ${esc((prev.value_classification ?? '').toLowerCase())}` : ''}</div>`;
         };
+        let noteEl = null; // single error note in the box — cleared when the dial paints
         const load = async () => {
           try {
             const j = await getJson('https://api.alternative.me/fng/?limit=2', 9000);
-            if (!dead && j?.data?.length) paint(j.data);
+            if (!dead && j?.data?.length) { noteEl?.remove(); noteEl = null; paint(j.data); }
           } catch (e) {
-            if (!dead && !box.innerHTML) note(body, 'wifi-off', `fear & greed feed unreachable — ${esc(e.message)}`);
+            if (!dead && !box.innerHTML) {
+              if (noteEl) noteEl.querySelector('span').textContent = `fear & greed feed unreachable — ${e.message}`;
+              else noteEl = note(box, 'wifi-off', `fear & greed feed unreachable — ${esc(e.message)}`);
+            }
           }
         };
         load();
@@ -3065,6 +3143,124 @@
         body.appendChild(box);
         icons();
         return {};
+      },
+    },
+    /* — the element builder's first slice: metric × symbol × window × style.
+       Every leg reuses plumbing that already exists (HL candles, the
+       coinalyze aggregator) — this widget is pure composition. — */
+    vMetric: {
+      title: 'Custom Metric', icon: 'sliders-horizontal', cat: 'Vice', vice: true,
+      // per-metric window ceilings mirror the aggregator's maxDays — every
+      // surface (pills, inspector, chart) must tell the same clamped truth
+      w: 10, h: 8, minW: 4, minH: 5,
+      settings: [
+        F.text('symbol', 'Symbol', 'BTC', 'Coin ticker'),
+        F.sel('metric', 'Metric', 'price', [
+          ['price', 'Price'], ['oi', 'Open interest ($, all venues)'],
+          ['funding', 'Funding APR (per venue)'], ['cvd', 'Taker CVD ($, all venues)'],
+          ['vol', 'Hourly volume ($, all venues)'], ['liqs', 'Liquidations ($/h, all venues)']]),
+        // (funding always draws per-venue lines; CVD holds 1 week, funding 2)
+        F.sel('days', 'Window', '7', [['2', '2 days'], ['7', '1 week'], ['14', '2 weeks'], ['30', '1 month']]),
+        F.sel('style', 'Style', 'line', [['line', 'Line'], ['area', 'Area'], ['bars', 'Bars']]),
+        LINKED(),
+      ],
+      controls: [
+        {
+          key: 'days',
+          opts: [['2', '2d'], ['7', '1W'], ['14', '2W'], ['30', '1M']],
+          set: (s, v) => ({ days: String(Math.min(Number(v), VMETRIC_MAXD[s.metric] ?? 30)) }),
+          is: (s, v) => Math.min(Number(s.days), VMETRIC_MAXD[s.metric] ?? 30) === Number(v),
+        },
+        {
+          key: 'style',
+          opts: [['line', 'L'], ['area', 'A'], ['bars', 'B']],
+          set: (s, v) => ({ style: s.metric === 'funding' ? 'line' : v }),
+          is: (s, v) => (s.metric === 'funding' ? v === 'line' : s.style === v),
+        },
+      ],
+      // switching to a shorter-history metric clamps the stored window so the
+      // pills, the inspector and the chart never disagree
+      onSettingsSaved(s) {
+        const cap = VMETRIC_MAXD[s.metric] ?? 30;
+        if (Number(s.days) > cap) s.days = String(cap);
+      },
+      link: (s, sym) => ({ symbol: sym }),
+      label: (s) => `${s.symbol.trim().toUpperCase()} · ${({ price: 'price', oi: 'OI $', funding: 'funding APR', cvd: 'CVD $', vol: 'vol $/h', liqs: 'liqs $/h' })[s.metric] ?? s.metric}`,
+      mount(body, s) {
+        const SYM = s.symbol.trim().toUpperCase();
+        const days = Math.min(Number(s.days), VMETRIC_MAXD[s.metric] ?? 30);
+        const isMoney = s.metric !== 'funding';
+        const seriesStyle = (name, pts, color) => (s.style === 'bars' && s.metric !== 'funding'
+          ? { name, type: 'bar', barMaxWidth: 10, data: pts, itemStyle: { color } }
+          : {
+            name, type: 'line', data: pts, showSymbol: false,
+            lineStyle: { width: 1.4, color }, itemStyle: { color },
+            ...(s.style === 'area' && s.metric !== 'funding' ? {
+              areaStyle: { color: { type: 'linear', x: 0, y: 0, x2: 0, y2: 1, colorStops: [
+                { offset: 0, color: `${color}55` }, { offset: 1, color: `${color}08` }] } },
+            } : {}),
+          });
+        const sumVenues = (venues, map = (p) => p[1]) => {
+          const total = new Map();
+          for (const v of venues) for (const p of v.points) total.set(p[0], (total.get(p[0]) ?? 0) + map(p));
+          return [...total.entries()].sort((a, b) => a[0] - b[0]);
+        };
+        return chartMount(body, async (chart) => {
+          let series = [];
+          if (s.metric === 'price') {
+            const rows = await hlInfo({ type: 'candleSnapshot', req: { coin: SYM, interval: days > 7 ? '4h' : '1h', startTime: Date.now() - days * 86_400_000, endTime: Date.now() } });
+            if (!Array.isArray(rows) || rows.length < 2) throw new Error(`no Hyperliquid history for ${SYM}`);
+            series = [seriesStyle('price', rows.map((r) => [Number(r.t), Number(r.c)]), '#5aa7f7')];
+          } else {
+            const agg = await getJson(`/api/vice-coinalyze?kind=${s.metric === 'vol' ? 'volh' : s.metric}&sym=${SYM}&days=${days}`, 20000).catch(() => null);
+            if (agg?.noKey) throw new Error('needs the aggregator key (fills on vicesuite.com)');
+            if (!agg?.venues?.length) throw new Error(`no ${s.metric} series for ${SYM} yet — aggregator may be warming up`);
+            if (s.metric === 'funding') {
+              series = agg.venues.slice().sort(byVenueOrder((v) => v.venue))
+                .map((v) => seriesStyle(v.venue, v.points, VENUE_C[v.venue]));
+            } else if (s.metric === 'cvd') {
+              let acc = 0;
+              series = [seriesStyle('CVD', sumVenues(agg.venues).map(([t, d]) => [t, (acc += d)]), '#2dd4bf')];
+            } else if (s.metric === 'liqs') {
+              // liq points are [t, long$, short$] — chart the hourly total
+              series = [seriesStyle('liqs', sumVenues(agg.venues, (p) => (p[1] ?? 0) + (p[2] ?? 0)), '#ff6473')];
+            } else if (s.metric === 'oi') {
+              // forward-fill each venue across feed gaps — a missing
+              // venue-hour used to read as a multi-billion-dollar OI crash
+              const stamps = [...new Set(agg.venues.flatMap((v) => v.points.map((p) => p[0])))].sort((a, b) => a - b);
+              const filled = stamps.map((t) => [t, 0]);
+              for (const v of agg.venues) {
+                const m = new Map(v.points);
+                let last = null;
+                stamps.forEach((t, i) => {
+                  if (m.has(t)) last = m.get(t);
+                  if (last != null) filled[i][1] += last;
+                });
+              }
+              series = [seriesStyle('OI', filled, '#b47aff')];
+            } else {
+              series = [seriesStyle('volume', sumVenues(agg.venues), '#e7b53a')];
+            }
+          }
+          chart.setOption({
+            backgroundColor: 'transparent',
+            grid: { left: 8, right: 8, top: 12, bottom: s.metric === 'funding' ? 22 : 6, containLabel: true },
+            tooltip: {
+              ...TIP_BOX, trigger: 'axis',
+              valueFormatter: (v) => (v == null ? '—'
+                : s.metric === 'price' ? `$${fmtPx(v)}` // full precision — 3 sig figs hid the whole move
+                : isMoney ? `${v < 0 ? '-' : ''}$${fmtCompact(Math.abs(v))}` : `${Number(v).toFixed(1)}% APR`),
+            },
+            ...(s.metric === 'funding' ? { legend: { bottom: 0, itemWidth: 14, itemHeight: 2, icon: 'rect', textStyle: { ...AXIS_LBL, fontSize: 10 } } } : {}),
+            xAxis: { type: 'time', axisLabel: AXIS_LBL, axisLine: AXIS_LINE, splitLine: { show: false } },
+            yAxis: {
+              type: 'value', scale: s.metric === 'price' || s.metric === 'oi',
+              axisLabel: { ...AXIS_LBL, formatter: (v) => (isMoney ? `${v < 0 ? '-' : ''}$${fmtCompact(Math.abs(v))}` : `${v}%`) },
+              splitLine: AXIS_SPLIT,
+            },
+            series,
+          }, { notMerge: true });
+        }, 120_000);
       },
     },
   };
@@ -3089,7 +3285,7 @@
     vNotes: 'A plain scratchpad that survives reloads — trade plans, levels, reminders.',
     vClocks: 'World session clocks with open/closed state for NYSE, LSE, TSE, ASX.',
     vAlerts: 'Price alerts with sound + notification — targets take 70000, 70k or +5%.',
-    vChartPro: 'The native Vice chart engine: candles, indicator suite, order-book heatmap.',
+    vChartPro: 'The native Vice chart engine: candles, indicator suite, liquidation heatmap.',
     vChart: 'A vc chart-bot panel — full command syntax, 21 indicators, ratios, compares.',
     vFunding: 'Live 8h funding across Binance, OKX, Bybit, Hyperliquid and Deribit.',
     vCountdown: 'Candle-close countdowns for 1H, 4H, 1D and 1W plus a UTC clock.',
@@ -3127,6 +3323,7 @@
     vFng: 'The crypto Fear & Greed index as a dial — extremes mark a crowded boat.',
     vPositioning: 'How the top-100 Hyperliquid books lean on one symbol — short %, average entries, average liq levels.',
     vSuite: 'Quick links to the rest of the Vice Suite.',
+    vMetric: 'Build your own block: any metric × symbol × window × style — price, OI, funding, CVD, volume, liquidations.',
   };
   for (const [t, m] of Object.entries(HUB_WIDGETS)) m.desc ??= WIDGET_DESC[t] ?? '';
 
@@ -3146,6 +3343,7 @@
     vIvTerm: 'line', vTopOpts: 'bars', vOiStrike: 'bars', vOiExpiry: 'bars', vChanges: 'line',
     vScreener: 'screener', vFundHeat: 'heat', vSectors: 'line', vOiCvd: 'line',
     vMktVol: 'bars', vMktOI: 'area', vFng: 'gauge', vSuite: 'links', vPositioning: 'meter',
+    vMetric: 'area',
   };
   const WIDGET_SRC = {
     vWatch: 'Hyperliquid live feed · 5s', vMovers: 'CoinGecko top-250 · 2m',
@@ -3155,6 +3353,11 @@
     vFng: 'alternative.me index · daily', vScreener: 'TradingView scanner · 15s',
     vAlerts: 'Hyperliquid live feed · 5s', vFundHeat: 'Hyperliquid history',
     vPositioning: 'top-100 HL trader books · 3m',
+    // provenance must be exact — these are Hyperliquid-only, not 5-venue
+    vRetHour: 'Hyperliquid history · 1m', vRetDay: 'Hyperliquid history · 1m',
+    vSessionRet: 'Hyperliquid history · 1m', vPrice: 'Hyperliquid history',
+    vSectors: 'Hyperliquid history · equal-weight', vChanges: 'HL candles / venue OI aggregate',
+    vMetric: 'HL history / multi-venue aggregate · 2m',
   };
   const srcFor = (t, m) => WIDGET_SRC[t] ?? (m.vice
     ? ({ Futures: 'multi-venue aggregate · BIN OKX BYB HL DER', Options: 'Deribit public API', Markets: 'multi-venue aggregate' })[m.cat] ?? 'Vice native'
@@ -3216,6 +3419,9 @@
       P('tvStockHeat', 0, 13, 12, 10),
       P('news', 12, 13, 6, 10, { tab: 'tv', market: 'stock' }),
       P('tvMini', 18, 13, 6, 10, { symbol: 'NASDAQ:NVDA', range: '3M' }),
+      // the one native analytics row on the TradFi board — the preset was
+      // all iframes and ended in a blank band (audit M2)
+      P('vScreener', 0, 23, 24, 9, { tab: 'tradfi' }),
     ],
     Macro: () => [
       P('tvTape', 0, 0, 24, 1, { symbols: 'CAPITALCOM:DXY, TVC:GOLD, TVC:USOIL, TVC:US10Y, FOREXCOM:SPXUSD, BITSTAMP:BTCUSD, FX:EURUSD' }),
@@ -3252,8 +3458,11 @@
 
   let store;
   let storeRecovered = false; // B6: an unreadable store recovers silently — flag it for a toast
+  // storage access itself can throw (blocked third-party context, some private
+  // modes) — reads must never kill the boot
+  const lsGet = (k) => { try { return localStorage.getItem(k); } catch { return null; } };
   function load() {
-    const raw = localStorage.getItem(LS_KEY);
+    const raw = lsGet(LS_KEY);
     try {
       const j = JSON.parse(raw);
       if (j && j.v === SCHEMA_V && j.layouts && j.layouts[j.active]) {
@@ -3333,6 +3542,13 @@
       catch { /* storage full/blocked — dashboard still works, just won't stick */ }
     }, 250);
   }
+  // a tab closed inside the 250ms debounce must not eat the last edit
+  window.addEventListener('pagehide', () => {
+    if (!saveT) return;
+    clearTimeout(saveT);
+    saveT = null;
+    try { localStorage.setItem(LS_KEY, JSON.stringify(store)); } catch { /* best effort */ }
+  });
 
   // gentle backup nudge (audit C4): edited layouts + no export for 14 days →
   // one toast, at most weekly
@@ -3421,7 +3637,9 @@
       ctls +
       '<span class="hw-btns">' +
       '<button class="hw-btn" data-act="refresh" title="Refresh"><i data-lucide="rotate-cw"></i></button>' +
-      (man.settings?.length ? '<button class="hw-btn" data-act="settings" title="Settings"><i data-lucide="settings-2"></i></button>' : '') +
+      // every block gets the gear in Customize — the inspector carries size
+      // presets and actions even when a widget has no settings of its own
+      (ephemeral ? '' : '<button class="hw-btn" data-act="settings" title="Inspect — settings, size, actions"><i data-lucide="settings-2"></i></button>') +
       (ephemeral ? '' : '<button class="hw-btn" data-act="dup" title="Duplicate"><i data-lucide="copy"></i></button>') +
       (ephemeral ? '<button class="hw-btn hw-pin" data-act="pin" title="Pin to my Dashboard"><i data-lucide="pin"></i></button>' : '') +
       '<button class="hw-btn" data-act="expand" title="Fullscreen"><i data-lucide="maximize-2"></i></button>' +
@@ -3448,15 +3666,9 @@
       ev.preventDefault();
       const act = btn.dataset.act;
       if (act === 'refresh') remount(inst.id);
-      else if (act === 'settings') openSettings(inst.id);
-      else if (act === 'dup') {
-        if (focusMode || currentSection !== 'dash') return;
-        const copy = { id: uid(), type: inst.type, x: inst.x, y: inst.y + inst.h, w: inst.w, h: inst.h, settings: JSON.parse(JSON.stringify(inst.settings ?? {})) };
-        activeGrid().push(copy);
-        addToGrid(copy, true);
-        persist();
-        toast(`duplicated ${man.title}`);
-      } else if (act === 'expand') expandEl(content);
+      else if (act === 'settings') openInspector(inst.id);
+      else if (act === 'dup') duplicateInstance(inst);
+      else if (act === 'expand') expandEl(content);
       else if (act === 'pin') pinInstance(inst);
       else if (act === 'remove') removeInstance(inst.id);
     });
@@ -3475,7 +3687,7 @@
     if (titleEl) {
       const suffix = man.label?.(settings);
       titleEl.innerHTML = `<span class="hw-t1">${esc(man.title)}</span>` +
-        (suffix ? `<span class="hw-t2">· ${esc(suffix)}</span>` : '');
+        (suffix ? `<span class="hw-t2">${esc(suffix)}</span>` : ''); // the "· " lives in CSS ::before — it can never orphan
       titleEl.title = suffix ? `${man.title} · ${suffix}` : man.title;
     }
     syncControls(rec);
@@ -3528,9 +3740,20 @@
     icons();
   }
 
+  function duplicateInstance(inst) {
+    if (focusMode || currentSection !== 'dash') return;
+    const man = HUB_WIDGETS[inst.type];
+    const copy = { id: uid(), type: inst.type, x: inst.x, y: inst.y + inst.h, w: inst.w, h: inst.h, settings: JSON.parse(JSON.stringify(inst.settings ?? {})) };
+    activeGrid().push(copy);
+    addToGrid(copy, true);
+    persist();
+    toast(`duplicated ${man.title}`);
+  }
+
   function removeInstance(id) {
     const rec = live.get(id);
     if (!rec) return;
+    if (inspector?.id === id) closeInspector(); // the drawer must not outlive its block
     if (focusMode || currentSection !== 'dash') { // ephemeral boards — no trash, no undo, no store
       unmount(rec);
       observer.unobserve(rec.body);
@@ -3564,9 +3787,10 @@
     if (i < 0) return;
     const inst = doc.trash.splice(i, 1)[0];
     doc.grid.push(inst);
-    addToGrid(inst, false);
+    // only materialize onto the dashboard canvas — a restore triggered while a
+    // Focus board is up (undo toast outliving the switch) must not join it
+    if (!focusMode && currentSection === 'dash') { addToGrid(inst, false); updateEmpty(); }
     persist();
-    updateEmpty();
   }
 
   function updateEmpty() {
@@ -3576,6 +3800,7 @@
 
   function clearCanvas() {
     unmaxAll(); // an in-page-maximized block must never outlive its canvas
+    closeInspector(); // neither must the inspector drawer
     for (const rec of live.values()) {
       unmount(rec);
       observer.unobserve(rec.body);
@@ -3751,6 +3976,10 @@
   function modal(title, icon, bodyEl, foot) {
     const veil = el('div', 'hub-modal-veil');
     const box = el('div', 'hub-modal');
+    box.setAttribute('role', 'dialog');
+    box.setAttribute('aria-modal', 'true');
+    box.setAttribute('aria-label', title);
+    box.tabIndex = -1;
     const head = el('div', 'hub-modal-head',
       `<i data-lucide="${icon}"></i>${esc(title)}<button class="hw-btn x" title="Close"><i data-lucide="x"></i></button>`);
     const body = el('div', 'hub-modal-body');
@@ -3762,12 +3991,19 @@
       box.appendChild(f);
     }
     veil.appendChild(box);
-    const close = () => { veil.remove(); document.removeEventListener('keydown', onKey); };
+    const prevFocus = document.activeElement; // keyboard users get their place back
+    const close = () => {
+      veil.remove();
+      document.removeEventListener('keydown', onKey);
+      if (prevFocus?.isConnected) prevFocus.focus?.();
+    };
     const onKey = (e) => { if (e.key === 'Escape') close(); };
     veil.addEventListener('click', (e) => { if (e.target === veil) close(); });
     head.querySelector('.x').addEventListener('click', close);
     document.addEventListener('keydown', onKey);
     document.body.appendChild(veil);
+    // land focus on the first field if there is one, else the dialog itself
+    (box.querySelector('input, textarea, select') ?? box).focus();
     icons();
     return { veil, box, close };
   }
@@ -3823,37 +4059,186 @@
     return { form, read };
   }
 
-  function openSettings(id) {
+  // sanitize: blank required text falls back to the default, numbers clamp
+  function sanitizeValues(man, values) {
+    for (const f of man.settings ?? []) {
+      const v = values[f.key];
+      if ((f.kind === 'text' || f.kind === 'textarea') && typeof v === 'string' && !v.trim()) {
+        values[f.key] = f.def ?? v;
+      } else if (f.kind === 'number') {
+        let n = Number(v);
+        if (!Number.isFinite(n)) n = f.def;
+        if (f.min != null) n = Math.max(f.min, n);
+        if (f.max != null) n = Math.min(f.max, n);
+        values[f.key] = n;
+      }
+    }
+    return values;
+  }
+
+  /* ── Tier-2 inspector: the settings surface is a live-apply side drawer —
+     select a block in Customize, every change previews instantly on the
+     canvas. The old save-button modal died here. ─────────────────────────── */
+  let inspector = null; // { id, veil, elItem, onKey, prevFocus, flush }
+  function closeInspector() {
+    if (!inspector) return;
+    const insp = inspector;
+    inspector = null; // re-entrancy guard — flush may persist/remount
+    insp.flush?.(); // a pending typed edit lands instead of dying with the timer
+    document.removeEventListener('keydown', insp.onKey);
+    insp.elItem?.querySelector('.hw')?.classList.remove('hw-inspected');
+    insp.veil.remove();
+    if (insp.prevFocus?.isConnected) insp.prevFocus.focus?.();
+  }
+  function openInspector(id) {
+    if (focusMode || currentSection !== 'dash') return;
+    // a native-fullscreened block would render the drawer invisible under the
+    // top layer while its form silently ate keystrokes — leave fullscreen first
+    if (document.fullscreenElement) document.exitFullscreen()?.catch?.(() => {});
     const rec = live.get(id);
     if (!rec) return;
+    if (inspector?.id === id) { closeInspector(); return; } // gear toggles
+    closeInspector();
     const man = HUB_WIDGETS[rec.inst.type];
-    if (!man.settings?.length) { toast('this widget has no settings'); return; }
-    const { form, read } = buildForm(man.settings, { ...defaults(man), ...rec.inst.settings });
-    const cancel = el('button', 'hub-btn', 'Cancel');
-    const save = el('button', 'hub-btn primary', 'Save');
-    const m = modal(`${man.title} — settings`, 'settings-2', form, [cancel, save]);
-    cancel.addEventListener('click', m.close);
-    save.addEventListener('click', () => {
-      // sanitize: blank required text falls back to the default, numbers clamp
-      const values = read();
-      for (const f of man.settings) {
-        const v = values[f.key];
-        if ((f.kind === 'text' || f.kind === 'textarea') && typeof v === 'string' && !v.trim()) {
-          values[f.key] = f.def ?? v;
-        } else if (f.kind === 'number') {
-          let n = Number(v);
-          if (!Number.isFinite(n)) n = f.def;
-          if (f.min != null) n = Math.max(f.min, n);
-          if (f.max != null) n = Math.min(f.max, n);
-          values[f.key] = n;
+    const veil = el('div', 'vgal-veil hub-insp-veil');
+    const pane = el('div', 'vgal-drawer hub-insp');
+    pane.setAttribute('role', 'dialog');
+    pane.setAttribute('aria-modal', 'true');
+    pane.setAttribute('aria-label', `${man.title} — inspector`);
+    pane.tabIndex = -1;
+    veil.appendChild(pane);
+    document.body.appendChild(veil);
+
+    pane.appendChild(el('div', 'vgal-d-head',
+      `<i data-lucide="${man.icon}"></i><b>${esc(man.title)}</b>` +
+      `<span class="vgal-badge${man.vice ? ' vice' : ''}">${man.vice ? 'Vice' : 'TV'}</span>` +
+      '<button class="hw-btn x" data-x title="Close (Esc)"><i data-lucide="x"></i></button>'));
+    pane.appendChild(el('div', 'vgal-d-meta',
+      `<span><label>data</label>${esc(srcFor(rec.inst.type, man))}</span>`));
+
+    let form = null;
+    let flush = null;
+    if (man.settings?.length) {
+      pane.appendChild(el('div', 'hub-insp-sec', 'settings · apply live'));
+      const built = buildForm(man.settings, { ...defaults(man), ...rec.inst.settings });
+      form = built.form;
+      pane.appendChild(form);
+      let t = null;
+      let dirty = false;
+      const apply = () => {
+        dirty = false;
+        if (!live.has(id)) return; // a late timer must never touch a removed block
+        const values = sanitizeValues(man, built.read());
+        rec.inst.settings = { ...rec.inst.settings, ...values };
+        man.onSettingsSaved?.(rec.inst.settings, rec.inst);
+        persist();
+        remount(id);
+      };
+      // selects/toggles land instantly; typed fields settle for 650ms first
+      form.addEventListener('change', () => { clearTimeout(t); apply(); });
+      form.addEventListener('input', (ev) => {
+        const f = (man.settings ?? []).find((x) => x.key === ev.target?.dataset?.k);
+        if (!f || f.kind === 'select' || f.kind === 'toggle') return;
+        dirty = true;
+        clearTimeout(t);
+        t = setTimeout(apply, 650);
+      });
+      flush = () => { clearTimeout(t); if (dirty) apply(); };
+    } else {
+      pane.appendChild(el('div', 'hub-insp-sec', 'no settings — size and actions below'));
+    }
+
+    pane.appendChild(el('div', 'hub-insp-sec', 'size'));
+    const sizes = el('div', 'hub-insp-row');
+    const SIZES = [
+      ['Small', () => [man.minW, man.minH]],
+      ['Default', () => [man.w, man.h]],
+      ['Large', () => [Math.min(GRID_COLS, Math.round(man.w * 1.5)), Math.round(man.h * 1.4)]],
+    ];
+    for (const [lab, fn] of SIZES) {
+      const b = el('button', 'vgal-btn', lab);
+      b.type = 'button';
+      b.addEventListener('click', () => {
+        const [w, h] = fn();
+        if (grid.getColumn() === GRID_COLS) {
+          grid.update(rec.elItem, { w, h }); // the change event persists geometry
+        } else {
+          // collapsed grids (mobile/narrow) discard live geometry — write the
+          // store directly so the size takes on the next desktop render
+          rec.inst.w = w;
+          rec.inst.h = h;
+          persist();
+          toast('size saved — applies at desktop width');
         }
-      }
-      rec.inst.settings = { ...rec.inst.settings, ...values };
-      man.onSettingsSaved?.(rec.inst.settings);
-      persist();
-      m.close();
-      remount(id);
-    });
+      });
+      sizes.appendChild(b);
+    }
+    pane.appendChild(sizes);
+
+    pane.appendChild(el('div', 'hub-insp-sec', 'actions'));
+    const acts = el('div', 'hub-insp-row');
+    const dup = el('button', 'vgal-btn', '<i data-lucide="copy"></i>Duplicate');
+    dup.type = 'button';
+    dup.addEventListener('click', () => duplicateInstance(rec.inst));
+    const rem = el('button', 'vgal-btn hub-insp-danger', '<i data-lucide="trash-2"></i>Remove');
+    rem.type = 'button';
+    rem.addEventListener('click', () => { closeInspector(); removeInstance(id); });
+    acts.append(dup, rem);
+    pane.appendChild(acts);
+
+    const onKey = (e) => { if (e.key === 'Escape') { e.stopPropagation(); closeInspector(); } };
+    document.addEventListener('keydown', onKey);
+    veil.addEventListener('click', (e) => { if (e.target === veil) closeInspector(); });
+    pane.querySelector('[data-x]').addEventListener('click', closeInspector);
+    rec.elItem.querySelector('.hw')?.classList.add('hw-inspected');
+    inspector = { id, veil, elItem: rec.elItem, onKey, prevFocus: document.activeElement, flush };
+    icons();
+    (form?.querySelector('input, select, textarea') ?? pane).focus();
+  }
+
+  /* ── in-UI prompt/confirm — native dialogs were the one unstyled surface
+     left in the product (and some embedded contexts block them outright) ── */
+  function promptModal(title, def, cb) {
+    const wrap = el('div');
+    const inp = el('input', 'hf-input');
+    inp.value = def ?? '';
+    inp.maxLength = 40;
+    wrap.appendChild(inp);
+    const cancel = el('button', 'hub-btn', 'Cancel');
+    const ok = el('button', 'hub-btn primary', 'Save');
+    const m = modal(title, 'pen-line', wrap, [cancel, ok]);
+    cancel.addEventListener('click', m.close);
+    const submit = () => { const v = inp.value.trim(); m.close(); if (v) cb(v); };
+    ok.addEventListener('click', submit);
+    inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') submit(); });
+    inp.select();
+  }
+  function confirmModal(title, bodyText, danger, cb) {
+    const wrap = el('div', null, `<p style="margin:0;color:var(--text2);font-size:12.5px;line-height:1.6;">${esc(bodyText)}</p>`);
+    const cancel = el('button', 'hub-btn', 'Cancel');
+    const ok = el('button', `hub-btn ${danger ? 'danger-solid' : 'primary'}`, danger ? 'Delete' : 'Confirm');
+    const m = modal(title, danger ? 'trash-2' : 'help-circle', wrap, [cancel, ok]);
+    cancel.addEventListener('click', m.close);
+    ok.addEventListener('click', () => { m.close(); cb(); });
+    ok.focus();
+  }
+
+  /* ── keyboard shortcuts sheet (⋮ menu or "?") — the shortcuts existed,
+     nothing taught them ─────────────────────────────────────────────────── */
+  function openShortcuts() {
+    if (document.querySelector('.hub-modal-veil')) return;
+    const mac = /Mac|iPhone|iPad/i.test(navigator.userAgentData?.platform ?? navigator.platform ?? '');
+    const rows = [
+      [mac ? '⌘ K' : 'Ctrl K', 'Command palette — actions, layouts, widgets, tickers'],
+      ['/', 'Command palette'],
+      ['F', 'Focus on a ticker (an instant one-symbol desk)'],
+      ['E', 'Customize the layout — drag, resize, add'],
+      ['1 – 5', 'Switch between your layouts'],
+      ['Esc', 'Close dialogs · exit Customize · restore an expanded block'],
+      ['?', 'This sheet'],
+    ];
+    const grid = el('div', 'hub-keys', rows.map(([k, d]) => `<kbd>${esc(k)}</kbd><span>${esc(d)}</span>`).join(''));
+    modal('Keyboard shortcuts', 'keyboard', grid);
   }
 
   /* ── add-widget tray: the quick picker (the Gallery section is the deep
@@ -3927,6 +4312,7 @@
     store.active = name;
     persist();
     renderLayout();
+    window.scrollTo(0, 0);
   }
 
   function refreshLayoutSelect() {
@@ -3976,6 +4362,7 @@
   function importLayout(file) {
     file.text().then((txt) => {
       const doc = JSON.parse(txt);
+      if (focusMode) exitFocus(false); // the import lands on the dashboard canvas
       // whole-store backups restore every layout (fresh names when they clash)
       if (doc?.all && doc.layouts) {
         let added = 0;
@@ -4081,7 +4468,14 @@
     if (!btn) return;
     const txt = btn.querySelector('.hp-txt');
     let spx = null;
+    let spxAt = 0;
     let spxTimer = null;
+    // the dot only glows when the feed actually ticks — an honest pulse
+    const dot = btn.querySelector('.dot');
+    setInterval(() => {
+      const age = Date.now() - (store.active === 'TradFi' ? spxAt : hlTickAt);
+      dot?.classList.toggle('stale', age > 25_000);
+    }, 5000);
     const wantSPX = () => store.active === 'TradFi';
     const paint = () => {
       const sym = wantSPX() ? 'S&P 500' : 'BTC';
@@ -4101,7 +4495,7 @@
           signal: AbortSignal.timeout(9000),
         });
         const d = (await res.json())?.data?.[0]?.d;
-        if (d) { spx = { px: Number(d[0]), chg: Number(d[1]) }; paint(); }
+        if (d) { spx = { px: Number(d[0]), chg: Number(d[1]) }; spxAt = Date.now(); paint(); }
       } catch { /* keep the last quote */ }
     };
     navPriceSync = () => {
@@ -4166,8 +4560,16 @@
     if (empty) empty.hidden = true;
   }
 
+  let focusSeq = 0; // stale-probe guard: navigation during the await must win
   async function enterFocus(raw, displaySym) {
-    if (currentSection !== 'dash') exitSection(false); // focus renders on the grid canvas
+    if (editing) $('#hub-edit').click(); // focus boards are for reading, not editing
+    if (currentSection !== 'dash') {
+      exitSection(false); // focus renders on the grid canvas
+      // the section's hash must not survive into Focus — a reload would land
+      // back in the section, and the nav link for it would read active-but-dead
+      if (location.hash) history.replaceState(null, '', location.pathname + location.search);
+    }
+    const myReq = ++focusSeq;
     const meta = focusMeta(raw);
     // no stories for this ticker → skip the news block (needs the deployed
     // /api/vice-headlines proxy; locally we can't know, so news stays)
@@ -4176,6 +4578,8 @@
       const j = await getJson(`/api/vice-headlines?symbol=${encodeURIComponent(meta.tvSym)}`, 2500);
       hasNews = (j.count ?? 1) > 0;
     } catch { /* proxy unavailable — keep news */ }
+    // the user may have navigated somewhere else while the probe ran
+    if (myReq !== focusSeq || currentSection !== 'dash') return;
     const insts = focusInsts(meta, hasNews);
     const sym = displaySym ?? meta.coin;
     if (!focusMode) preFocusLinked = linkedSym; // refocusing keeps the ORIGINAL restore point
@@ -4188,10 +4592,12 @@
     btn.classList.add('focus-on');
     btn.innerHTML = `<i data-lucide="crosshair"></i><span>${esc(sym)} · exit</span>`;
     renderInsts(insts);
+    window.scrollTo(0, 0);
     icons();
   }
 
   function exitFocus(rerender = true) {
+    focusSeq++; // cancel any in-flight enterFocus probe
     focusMode = false;
     focusSym = null;
     linkedSym = preFocusLinked; // B1: the focus feed used to leak into the tab title forever
@@ -4202,7 +4608,10 @@
     btn.classList.remove('focus-on');
     btn.innerHTML = '<i data-lucide="crosshair"></i><span>Focus</span>';
     // leaving focus lands back where the user was: section board or dashboard
-    if (rerender) (currentSection !== 'dash' ? renderSection() : renderLayout());
+    if (rerender) {
+      (currentSection !== 'dash' ? renderSection() : renderLayout());
+      window.scrollTo(0, 0);
+    }
     icons();
   }
 
@@ -4865,7 +5274,7 @@
         const listEl = el('div', 'vgal-list');
         wrap.append(intro, bar, listEl);
         const CATS = ['All', 'Featured', 'Charts', 'Markets', 'Futures', 'Options', 'Screeners', 'News & data', 'Vice'];
-        const FEATURED = ['vChartPro', 'vPositioning', 'vScreener', 'news', 'vHeat', 'vLiqMap', 'vFunding', 'vFng'];
+        const FEATURED = ['vMetric', 'vChartPro', 'vPositioning', 'vScreener', 'news', 'vHeat', 'vLiqMap', 'vFunding', 'vFng'];
         let cat = 'All';
         let q = '';
         const onBoard = () => {
@@ -4874,7 +5283,7 @@
           return counts;
         };
         const card = (t, m, counts) =>
-          `<button class="vgal-card" data-t="${t}" type="button">` +
+          `<button class="vgal-card" data-t="${t}" type="button" title="${esc(m.title)} — ${esc(m.desc)}">` +
           thumbSvg(WIDGET_THUMB[t]) +
           '<span class="vgal-main">' +
           `<span class="vgal-head"><b>${esc(m.title)}</b>` +
@@ -4961,6 +5370,9 @@
             paint();
           });
           drawer = { t, veil, handle, onKey };
+          // section teardown must reap the drawer too — its document keydown
+          // listener used to outlive the Gallery page
+          pageMounts.push({ handle: { destroy: closeDrawer } });
           icons();
         };
         chips.addEventListener('click', (ev) => {
@@ -4993,7 +5405,9 @@
 
   function navSync() {
     document.querySelectorAll('#hub-nav a').forEach((a) => {
-      a.classList.toggle('active', (a.dataset.sec ?? 'dash') === currentSection);
+      const on = (a.dataset.sec ?? 'dash') === currentSection;
+      a.classList.toggle('active', on);
+      if (on) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
     });
   }
 
@@ -5007,6 +5421,7 @@
 
   function enterSection(name, sym) {
     if (!SECTION_META[name]) return;
+    if (editing) $('#hub-edit').click(); // sections are static pages — Customize is dashboard business
     if (focusMode) exitFocus(false);
     if (name === 'scanner' && /^0x[0-9a-fA-F]{40}$/.test(sym ?? '')) scannerBootAddr = sym.toLowerCase();
     else if (sym && /^[A-Z0-9]{2,12}$/i.test(sym)) linkedSym = sym.toUpperCase();
@@ -5014,6 +5429,7 @@
     document.body.classList.add('in-section');
     navSync();
     renderSection();
+    window.scrollTo(0, 0); // a page switch starts at the top, never mid-scroll
   }
 
   function exitSection(rerender = true) {
@@ -5023,14 +5439,21 @@
     teardownPage();
     showCanvas('grid');
     navSync();
-    if (rerender && was) renderLayout();
+    if (rerender && was) { renderLayout(); window.scrollTo(0, 0); }
   }
 
   function applyRoute() {
     const [seg, arg] = location.hash.replace(/^#\/?/, '').split('/');
     const name = (seg ?? '').toLowerCase();
     if (SECTION_META[name]) enterSection(name, arg);
-    else { if (focusMode) exitFocus(false); exitSection(); }
+    else {
+      // leaving via hash (brand link, back button): a live Focus board must
+      // rerender to the dashboard, not linger as a ghost with focusMode off
+      const wasFocus = focusMode;
+      if (focusMode) exitFocus(false);
+      exitSection(!wasFocus);
+      if (wasFocus) { renderLayout(); window.scrollTo(0, 0); }
+    }
   }
 
   function pinInstance(inst) {
@@ -5240,7 +5663,12 @@
       { icon: 'wand-2', label: 'Tidy layout (pack + trim blank space)', run: () => { if (currentSection !== 'dash') location.hash = '#/'; setTimeout(tidyLayout, 100); } },
       ...Object.entries(HUB_WIDGETS).map(([t, m]) => ({
         icon: m.icon, label: `Add widget: ${m.title}`,
-        run: () => { if (currentSection !== 'dash') location.hash = '#/'; if (!editing) $('#hub-edit').click(); addInstance(t); },
+        run: () => {
+          if (focusMode) exitFocus(); // adds are dashboard business, never the focus board
+          if (currentSection !== 'dash') location.hash = '#/';
+          if (!editing) $('#hub-edit').click();
+          addInstance(t);
+        },
       })),
       { icon: 'download', label: 'Export layout as JSON', run: exportLayout },
     ];
@@ -5292,21 +5720,26 @@
     document.addEventListener('keydown', (e) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault();
-        openPalette();
+        // never over an open modal OR drawer — stacked surfaces fight over Esc
+        if (!document.querySelector('.hub-modal-veil, .vgal-veil')) openPalette();
         return;
       }
       if (e.metaKey || e.ctrlKey || e.altKey) return;
       const a = document.activeElement;
       const typing = a && (a.tagName === 'INPUT' || a.tagName === 'TEXTAREA' || a.tagName === 'SELECT' || a.isContentEditable);
-      if (typing || document.querySelector('.hub-modal-veil, .hub-palette-veil')) return;
+      // drawers (gallery preview, wallet inspector, block inspector) own Esc
+      if (typing || document.querySelector('.hub-modal-veil, .hub-palette-veil, .vgal-veil')) return;
       if (e.key === 'Escape') {
         if (document.querySelector('.hw-max')) unmaxAll();
         else if (editing) $('#hub-edit').click();
         return;
       }
       if (e.key === '/') { e.preventDefault(); openPalette(); }
-      else if (e.key.toLowerCase() === 'f') { focusMode ? exitFocus() : openFocusSearch(); }
-      else if (e.key.toLowerCase() === 'e') { if (currentSection === 'dash' && !focusMode) $('#hub-edit').click(); }
+      else if (e.key === '?') { e.preventDefault(); openShortcuts(); }
+      // preventDefault: without it the released key lands as text in the
+      // search input these shortcuts focus (F used to open pre-typed "f")
+      else if (e.key.toLowerCase() === 'f') { e.preventDefault(); focusMode ? exitFocus() : openFocusSearch(); }
+      else if (e.key.toLowerCase() === 'e') { e.preventDefault(); if (currentSection === 'dash' && !focusMode) $('#hub-edit').click(); }
       else if (/^[1-5]$/.test(e.key)) {
         const name = Object.keys(store.layouts)[Number(e.key) - 1];
         if (name) switchLayout(name);
@@ -5419,7 +5852,7 @@
       coachEl = null;
       if (remember) { try { localStorage.setItem('viceHub.coached', '1'); } catch { /* fine */ } }
     };
-    if (!localStorage.getItem('viceHub.coached') && !storeRecovered) {
+    if (!lsGet('viceHub.coached') && !storeRecovered) {
       coachEl = el('div', 'hub-coach',
         '<i data-lucide="hand"></i><span>This whole page is yours — drag, resize and add blocks with <b>Customize</b>.</span>');
       const gotIt = el('button', 'hub-coach-x', '<i data-lucide="x"></i>');
@@ -5439,6 +5872,7 @@
         : '<i data-lucide="pencil"></i><span>Customize</span>';
       grid.setStatic(!editing);
       if (editing) dismissCoach(true);
+      else closeInspector(); // leaving Customize closes the inspector with it
       icons();
     });
     $('#hub-add').addEventListener('click', openTray);
@@ -5449,11 +5883,10 @@
       if (!editing) $('#hub-edit').click();
       openTray();
     });
-    // navigator.platform is deprecated/empty in spots — ask userAgentData first
-    if (!/Mac|iPhone|iPad/i.test(navigator.userAgentData?.platform ?? navigator.platform ?? '')) {
-      const kbd = $('#hub-pal kbd');
-      if (kbd) kbd.textContent = 'Ctrl K';
-    }
+    // the shortcut lives in the tooltip (the bar stays quiet); platform-correct
+    // combo via userAgentData first — navigator.platform is deprecated/empty in spots
+    const isMac = /Mac|iPhone|iPad/i.test(navigator.userAgentData?.platform ?? navigator.platform ?? '');
+    $('#hub-pal')?.setAttribute('title', `Command palette (${isMac ? '⌘K' : 'Ctrl K'})`);
 
     const menuBtn = $('#hub-more');
     const menu = $('#hub-menu');
@@ -5463,7 +5896,17 @@
       const t = store.meta?.lastExport;
       hint.textContent = t ? `backed up ${ago(t)}` : 'layouts live only in this browser';
     };
-    menuBtn.addEventListener('click', (e) => { e.stopPropagation(); menu.classList.toggle('open'); syncBackupHint(); });
+    menuBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      menu.classList.toggle('open');
+      syncBackupHint();
+      // smart anchoring: when the wrapped bar parks ⋮ near the left edge, a
+      // right-anchored menu rendered mostly off-screen — flip it
+      if (menu.classList.contains('open')) {
+        const r = menuBtn.getBoundingClientRect();
+        menu.classList.toggle('flip', r.right - (menu.offsetWidth || 240) < 8);
+      }
+    });
     document.addEventListener('click', (e) => { if (!menu.contains(e.target)) menu.classList.remove('open'); });
 
     menu.addEventListener('click', (e) => {
@@ -5471,12 +5914,13 @@
       if (!act) return;
       menu.classList.remove('open');
       if (act === 'new') {
-        const name = (prompt('Name for the new layout:', 'My layout') ?? '').trim().slice(0, 40);
-        if (!name) return;
-        if (store.layouts[name]) { toast('a layout with that name already exists'); return; }
-        store.layouts[name] = defaultLayout('DeFi');
-        switchLayout(name);
-        refreshLayoutSelect();
+        promptModal('New layout', 'My layout', (name) => {
+          name = name.slice(0, 40);
+          if (store.layouts[name]) { toast('a layout with that name already exists'); return; }
+          store.layouts[name] = defaultLayout('DeFi');
+          switchLayout(name);
+          refreshLayoutSelect();
+        });
       } else if (act === 'dup') {
         let name = `${store.active} copy`;
         while (store.layouts[name]) name += ' 2';
@@ -5486,31 +5930,39 @@
         refreshLayoutSelect();
         toast(`duplicated as "${name}"`);
       } else if (act === 'rename') {
-        const name = (prompt('Rename layout:', store.active) ?? '').trim().slice(0, 40);
-        if (!name || name === store.active) return;
-        if (store.layouts[name]) { toast('a layout with that name already exists'); return; }
-        store.layouts[name] = store.layouts[store.active];
-        delete store.layouts[store.active];
-        store.active = name;
-        persist();
-        refreshLayoutSelect();
+        promptModal('Rename layout', store.active, (name) => {
+          name = name.slice(0, 40);
+          if (name === store.active) return;
+          if (store.layouts[name]) { toast('a layout with that name already exists'); return; }
+          store.layouts[name] = store.layouts[store.active];
+          delete store.layouts[store.active];
+          store.active = name;
+          persist();
+          refreshLayoutSelect();
+        });
       } else if (act === 'delete') {
         if (Object.keys(store.layouts).length <= 1) { toast("can't delete the last layout"); return; }
-        if (!confirm(`Delete layout "${store.active}"?`)) return;
-        delete store.layouts[store.active];
-        store.active = Object.keys(store.layouts)[0];
-        persist();
-        refreshLayoutSelect();
-        renderLayout();
+        confirmModal('Delete layout', `Delete "${store.active}" permanently? Its blocks and their settings go with it.`, true, () => {
+          if (focusMode) exitFocus(false); // never rebuild the canvas under a live focus board
+          delete store.layouts[store.active];
+          store.active = Object.keys(store.layouts)[0];
+          persist();
+          refreshLayoutSelect();
+          renderLayout();
+        });
       } else if (act === 'reset') {
-        if (!confirm(`Reset "${store.active}" to its default?`)) return;
-        store.layouts[store.active] = defaultLayout(PRESETS[store.active] ? store.active : 'DeFi');
-        persist();
-        renderLayout();
+        confirmModal('Reset layout', `Put "${store.active}" back to its default arrangement? Blocks you added here will be removed.`, false, () => {
+          if (focusMode) exitFocus(false);
+          store.layouts[store.active] = defaultLayout(PRESETS[store.active] ? store.active : 'DeFi');
+          persist();
+          renderLayout();
+        });
       } else if (act === 'export') {
         exportLayout();
       } else if (act === 'exportall') {
         exportAll();
+      } else if (act === 'keys') {
+        openShortcuts();
       }
     });
     $('#hub-import').addEventListener('change', (e) => {
@@ -5530,6 +5982,14 @@
     startShortcuts();
     startWakeRefresh();
     startWalletAlerts();
+    // staleness sweep: chart widgets stamp data-fresh-at on every good draw;
+    // one gone quiet past ~2.5× its cadence wears an amber header dot
+    setInterval(() => {
+      document.querySelectorAll('.hw[data-fresh-at], .vpanel[data-fresh-at]').forEach((hw) => {
+        const after = Number(hw.dataset.staleAfter) || 300_000;
+        hw.classList.toggle('hw-stale', Date.now() - Number(hw.dataset.freshAt) > after);
+      });
+    }, 15_000);
     icons();
     // B6: recovery must never be silent — the store existed and couldn't be read
     if (storeRecovered) {

@@ -12,6 +12,7 @@ This server fills them in:
   /api/vice-deribit    implemented here (mirrors api/vice-deribit.js)
   /api/vice-headlines  implemented here (mirrors api/vice-headlines.js —
                        prod may lag the full=1 items mode until deployed)
+  /api/vice-hlboard    implemented here (mirrors api/vice-hlboard.js)
   /api/*  (anything else) forwarded to https://vicesuite.com (already live)
   everything else      static files from the workspace root
 
@@ -30,6 +31,14 @@ from urllib.request import Request, urlopen
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PORT = int(sys.argv[1]) if len(sys.argv) > 1 else int(os.environ.get('PORT', 5323))
+
+
+def qint(q, key, default):
+    # prod's Number()||default never 502s on garbage — neither do we
+    try:
+        return int((q.get(key) or [str(default)])[0] or default)
+    except (TypeError, ValueError):
+        return default
 
 
 def load_key():
@@ -191,7 +200,7 @@ def _coinalyze_uncached(q, kind, sym):
     if not spec or (kind not in MARKET_KINDS and not re.fullmatch(r'[A-Z0-9]{2,12}', sym)):
         return 400, {'error': 'bad request'}
     path, interval, usd_conv, max_days, snap = spec
-    days = min(max(int((q.get('days') or [str(max_days)])[0] or max_days), 1), max_days)
+    days = min(max(qint(q, 'days', max_days), 1), max_days)
     if not KEY:
         return 200, {'noKey': True}
     wanted = []
@@ -248,7 +257,7 @@ def api_okx(q):
     kind = (q.get('kind') or [''])[0]
     period = (q.get('period') or ['1H'])[0]
     period = period if period in ('5m', '1H', '1D') else '1H'
-    limit = min(max(int((q.get('limit') or ['100'])[0] or 100), 1), 100)
+    limit = min(max(qint(q, 'limit', 100), 1), 100)
     if kind == 'oi':
         inst = (q.get('instId') or [''])[0]
         if not re.fullmatch(r'[A-Z0-9]{2,12}-USDT-SWAP', inst):
@@ -265,7 +274,8 @@ def api_okx(q):
         uly = (q.get('uly') or [''])[0]
         if not re.fullmatch(r'[A-Z0-9]{2,12}-USDT', uly):
             return 400, {'error': 'bad request'}
-        params = {'instType': 'SWAP', 'uly': uly, 'state': 'filled', 'limit': 100}
+        # parity with api/vice-okx.js: period rides along, limit honors the query
+        params = {'instType': 'SWAP', 'uly': uly, 'state': 'filled', 'period': period, 'limit': limit}
         path = '/api/v5/public/liquidation-orders'
     else:
         return 400, {'error': 'bad request'}
@@ -275,7 +285,7 @@ def api_okx(q):
 # ── deribit (mirrors api/vice-deribit.js) ──────────────────────────────────
 def api_deribit(q):
     instrument = (q.get('instrument') or [''])[0]
-    days = min(max(int((q.get('days') or ['7'])[0] or 7), 1), 31)
+    days = min(max(qint(q, 'days', 7), 1), 31)
     if not re.fullmatch(r'[A-Z0-9_]{2,10}-(PERPETUAL|\d{1,2}[A-Z]{3}\d{2}(-\d+-[CP])?)', instrument):
         return 400, {'error': 'bad instrument'}
     end = int(time.time() * 1000)
@@ -355,7 +365,7 @@ def api_hlboard(q):
     win = win if win in ('day', 'week', 'month', 'all') else 'month'
     sort = (q.get('sort') or ['pnl'])[0]
     sort = sort if sort in ('pnl', 'roi', 'vlm', 'value') else 'pnl'
-    limit = min(max(int((q.get('limit') or ['100'])[0] or 100), 10), 250)
+    limit = min(max(qint(q, 'limit', 100), 10), 250)
     rows = _hlboard_rows()
     pool = [r for r in rows if r[win]['vlm'] > 0]  # traders, not idle vaults
     if sort == 'roi':

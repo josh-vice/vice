@@ -14,7 +14,9 @@
   <meta property="og:title" content="Vice Tickers — live prices in your Discord member list" />
   <meta property="og:description" content="Always-on price tickers in your server's sidebar. Green when up, red when down, updated every few seconds. Free." />
   <meta property="og:url" content="https://vicesuite.com/pricebots" />
+  <meta property="og:image" content="https://vicesuite.com/apple-touch-icon.png" />
   <meta name="twitter:card" content="summary" />
+  <meta name="twitter:image" content="https://vicesuite.com/apple-touch-icon.png" />
 
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -25,7 +27,7 @@
           integrity="sha384-ouAVEJVCMsf8Svzn+BwqbaBhxBEA0xgeVBhHnxmWd+Wqyv18yhWCQwGegFD/OHLq"
           crossorigin="anonymous" defer></script>
 
-  <script src="../tickers-live.js?v=1.5.0" defer></script>
+  <script src="../tickers-live.js?v=1.6.0" defer></script>
 
   <script src="../vice.js?v=1.2.0" defer></script>
 </head>
@@ -233,7 +235,7 @@
           </div>
         </div>
       </div>
-      <p class="dmock-note reveal d5">Live data — real prices from Hyperliquid, updating every few seconds, rendered exactly as the bots show them in Discord.</p>
+      <p class="dmock-note sr">Live data — real prices from Hyperliquid, updating every few seconds, rendered exactly as the bots show them in Discord.</p>
     </section>
 
     <section class="section">
@@ -244,20 +246,20 @@
       <div class="steps">
         <div class="step sr">
           <div class="step-num">01</div>
-          <h4>Invite the ticker</h4>
+          <h3>Invite the ticker</h3>
           <p>One click, two permissions: change its own nickname and manage its two
           color roles. It can't read messages, and it never posts.</p>
         </div>
         <div class="step sr sr-d1">
           <div class="step-num">02</div>
-          <h4>It sets itself up</h4>
+          <h3>It sets itself up</h3>
           <p>On arrival it creates two roles — Ticker Green and Ticker Red — and takes
           whichever matches the day. When the market flips, it swaps roles and the
           name changes color everywhere at once.</p>
         </div>
         <div class="step sr sr-d2">
           <div class="step-num">03</div>
-          <h4>Prices, around the clock</h4>
+          <h3>Prices, around the clock</h3>
           <p>The price refreshes every few seconds. The nickname carries the live
           price, the status dot is green or red with the day, and the status line
           rotates the move from previous close with community links.</p>
@@ -271,13 +273,13 @@
       </div>
       <div class="ref-grid">
         <div class="ref-card sr">
-          <h4>The nickname</h4>
+          <h3>The nickname</h3>
           <div class="ref-sub">the sidebar line itself</div>
           <div class="cmd-row"><code>BTC ↗ $66,355</code><span class="right">live price + direction arrow</span></div>
           <div class="cmd-row"><span>Green name on an up day, red on a down day — via its self-managed color roles.</span></div>
         </div>
         <div class="ref-card sr sr-d1">
-          <h4>The status line</h4>
+          <h3>The status line</h3>
           <div class="ref-sub">rotates every 15 seconds</div>
           <div class="cmd-row"><code>Up $1,151.48 (+1.77%) from prev. close</code></div>
           <div class="cmd-row"><span>Shows the live change three quarters of the time, <code>vicesuite.com</code> the rest.</span></div>

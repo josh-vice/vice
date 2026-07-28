@@ -147,12 +147,18 @@ async function fetchCandles(symbol, timeframe, limit) {
     throw new Error(`${symbol.venue === 'kc' ? 'KuCoin' : 'Kraken'} data isn't reachable from a browser — the real bot in Discord covers it`);
   }
   if (symbol.venue !== 'cb') {
-    const candles = await hyperliquid(base, timeframe, limit);
+    // explicit hl: keeps its real error; auto falls through to Coinbase on ANY
+    // failure (unsupported TF like 6h, geo-block, timeout) — an HL throw used
+    // to kill the whole chart even though the TF table carries cb:21600 for it
+    const candles = symbol.venue === 'hl'
+      ? await hyperliquid(base, timeframe, limit)
+      : await hyperliquid(base, timeframe, limit).catch(() => null);
     if (candles) return { candles, venueLabel: 'Hyperliquid', name: base, pair: `${base} PERP` };
     if (symbol.venue === 'hl') throw new Error(`${base} isn't listed on Hyperliquid`);
   }
-  const candles = await coinbase(base, timeframe, Math.min(limit, 580));
-  if (!candles) throw new Error(`can't find ${base} on Hyperliquid or Coinbase — check the ticker`);
+  const candles = await coinbase(base, timeframe, Math.min(limit, 580))
+    .catch((e) => { if (symbol.venue === 'cb') throw e; return null; });
+  if (!candles) throw new Error(`can't find ${base} ${timeframe} on Hyperliquid or Coinbase — check the ticker`);
   return { candles, venueLabel: 'Coinbase', name: base, pair: `${base}/USD` };
 }
 
@@ -767,7 +773,16 @@ function candleOption(cmd, dataset, H) {
   const { venueLabel, pair } = dataset;
   let candles = dataset.candles;
   if (cmd.fromTs) candles = candles.filter((k) => k.t >= cmd.fromTs - tfMs(cmd.timeframe));
+  // raw = filtered but unscaled — pane indicators must index the SAME array
+  // the display offset is computed from, or from: shifts their values in time
+  const rawCandles = candles;
+  const rawCloses = rawCandles.map((k) => k.c);
   let display = candles.slice(-cmd.count);
+  if (!display.length) {
+    throw new Error(cmd.fromTs
+      ? `no candles on or after ${new Date(cmd.fromTs).toISOString().slice(0, 10)} — is that date in the future?`
+      : 'no candles came back for that market');
+  }
   const realCount = display.length;
   let pctBase = null;
   if (cmd.percent) {
@@ -838,8 +853,7 @@ function candleOption(cmd, dataset, H) {
     data: shown.map((k) => ({ value: k.v, itemStyle: { color: k.c >= k.o ? THEME.volUp : THEME.volDown } })),
     barWidth: '70%',
   });
-  const rawCloses = cmd.percent ? dataset.candles.map((k) => k.c) : candles.map((k) => k.c);
-  const rawCandles = dataset.candles;
+  // rawCloses/rawCandles were captured above, right after the from: filter
   for (let p = 0; p < panes.length; p++) {
     const ind = panes[p];
     const isLast = p === panes.length - 1;

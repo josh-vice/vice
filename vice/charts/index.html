@@ -14,7 +14,9 @@
   <meta property="og:title" content="Vice Charts — professional charts, on demand, in Discord" />
   <meta property="og:description" content="Type vc btc 15m ema20 and get a chart back in seconds. 21 indicators, alerts, movers, multichart. Free." />
   <meta property="og:url" content="https://vicesuite.com/chartbot" />
+  <meta property="og:image" content="https://vicesuite.com/apple-touch-icon.png" />
   <meta name="twitter:card" content="summary" />
+  <meta name="twitter:image" content="https://vicesuite.com/apple-touch-icon.png" />
 
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -29,7 +31,7 @@
   <script src="https://cdn.jsdelivr.net/npm/echarts@5.6.0/dist/echarts.min.js"
           integrity="sha384-pPi0zxBAoDu6+JXW/C68UZLvBUUtU+7zonhif43rqj7pxsGyqyqzcian2Rj37Rss"
           crossorigin="anonymous" defer></script>
-  <script type="module" src="../demo.js?v=1.2.1"></script>
+  <script type="module" src="../demo.js?v=1.3.0"></script>
 
   <script src="../vice.js?v=1.2.0" defer></script>
 </head>
@@ -173,7 +175,7 @@
 
       <div class="ref-grid">
         <div class="ref-card sr">
-          <h4>Charts</h4>
+          <h3>Charts</h3>
           <div class="ref-sub">candles + volume, any timeframe</div>
           <div class="cmd-row"><code>vc btc</code><span class="right">15m chart, defaults</span></div>
           <div class="cmd-row"><code>vc eth 4h</code><span class="right">any timeframe, 1m → 1mo</span></div>
@@ -183,7 +185,7 @@
         </div>
 
         <div class="ref-card sr sr-d1">
-          <h4>Indicators</h4>
+          <h3>Indicators</h3>
           <div class="ref-sub">21 available — stack freely, custom lengths</div>
           <div class="cmd-row"><code>vc btc 1h ema20 ema55</code><span class="right">moving averages</span></div>
           <div class="cmd-row"><code>vc btc 1h bb20 supertrend</code><span class="right">overlays</span></div>
@@ -192,7 +194,7 @@
         </div>
 
         <div class="ref-card sr">
-          <h4>Compare &amp; ratios</h4>
+          <h3>Compare &amp; ratios</h3>
           <div class="ref-sub">relative strength at a glance</div>
           <div class="cmd-row"><code>vc btc,eth,sol 1h</code><span class="right">up to 10 symbols, % scale</span></div>
           <div class="cmd-row"><code>vc btc/eth 4h</code><span class="right">ratio of any two markets</span></div>
@@ -201,7 +203,7 @@
         </div>
 
         <div class="ref-card sr sr-d1">
-          <h4>Multichart &amp; markers</h4>
+          <h3>Multichart &amp; markers</h3>
           <div class="ref-sub">context on the chart itself</div>
           <div class="cmd-row"><code>vc btc 15m | eth 15m ema20</code><span class="right">stack up to 4 charts</span></div>
           <div class="cmd-row"><code>vc btc 5m &lt;X link&gt;</code><span class="right">mark a post's exact moment · Δ between two</span></div>
@@ -211,7 +213,7 @@
         </div>
 
         <div class="ref-card sr">
-          <h4>Price alerts</h4>
+          <h3>Price alerts</h3>
           <div class="ref-sub">checked every few seconds · survive restarts</div>
           <div class="cmd-row"><code>vc alert btc 100000</code><span class="right">direction auto-detected</span></div>
           <div class="cmd-row"><code>vc alert btc 72k, 75k, 80k</code><span class="right">several at once</span></div>
@@ -222,7 +224,7 @@
         </div>
 
         <div class="ref-card sr sr-d1">
-          <h4>Venues &amp; timeframes</h4>
+          <h3>Venues &amp; timeframes</h3>
           <div class="ref-sub">prefix before the symbol picks the data source</div>
           <div class="cmd-row"><code>vc btc</code><span class="right">Hyperliquid perps (default)</span></div>
           <div class="cmd-row"><code>vc kc:btc</code><span class="right">KuCoin Spot (auto-fallback)</span></div>
