@@ -23,7 +23,7 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gridstack@12.6.0/dist/gridstack.min.css"
         integrity="sha384-v0+pyCGvaIDMe1HS4sAK/N5W4dvvEUFvTvAW9CmGumaXgHxaYO56Ow3DULWhd/kO"
         crossorigin="anonymous" />
-  <link rel="stylesheet" href="../hub.css?v=1.26.0" />
+  <link rel="stylesheet" href="../hub.css?v=1.28.0" />
 
   <script src="https://cdn.jsdelivr.net/npm/lucide@1.23.0/dist/umd/lucide.min.js"
           integrity="sha384-ouAVEJVCMsf8Svzn+BwqbaBhxBEA0xgeVBhHnxmWd+Wqyv18yhWCQwGegFD/OHLq"
@@ -38,7 +38,7 @@
           crossorigin="anonymous" defer></script>
   <script type="module" src="../demo.js?v=1.2.1"></script>
   <script src="../vchart.js?v=1.7.0" defer></script>
-  <script src="../hub.js?v=2.10.8" defer></script>
+  <script src="../hub.js?v=2.12.0" defer></script>
   <script src="../vice.js?v=1.2.0" defer></script>
 </head>
 <body class="hub-page">
@@ -53,6 +53,8 @@
       <nav id="hub-nav" class="hub-nav" aria-label="Hub sections">
         <a href="#/" data-sec="dash" title="Your customizable dashboard"><i data-lucide="layout-dashboard"></i><span>Dashboard</span></a>
         <a href="#/chart" data-sec="chart" title="Full-page charting"><i data-lucide="candlestick-chart"></i><span>Chart</span></a>
+        <a href="#/scanner" data-sec="scanner" title="Vice Scanner — track the top Hyperliquid wallets"><i data-lucide="radar"></i><span>Scanner</span></a>
+        <a href="#/gallery" data-sec="gallery" title="Every element, live-previewable"><i data-lucide="shapes"></i><span>Gallery</span></a>
       </nav>
       <span class="spacer"></span>
       <button id="hub-focus" class="hub-btn" type="button" title="Focus on one ticker (F)"><i data-lucide="crosshair"></i><span>Focus</span></button>
@@ -60,7 +62,8 @@
       <label for="hub-layout" class="visually-hidden" style="position:absolute;left:-9999px;">Layout</label>
       <select id="hub-layout" class="hub-select" title="Switch layout"></select>
       <button id="hub-add" class="hub-btn edit-only" type="button" title="Add a widget"><i data-lucide="plus"></i><span>Add widget</span></button>
-      <button id="hub-edit" class="hub-btn" type="button" title="Toggle edit mode"><i data-lucide="pencil"></i><span>Edit</span></button>
+      <button id="hub-tidy" class="hub-btn edit-only" type="button" title="Tidy — pack the grid and trim blank space"><i data-lucide="wand-2"></i><span>Tidy</span></button>
+      <button id="hub-edit" class="hub-btn" type="button" title="Customize the layout — drag, resize, add (E)"><i data-lucide="pencil"></i><span>Customize</span></button>
       <span class="hub-menu-wrap">
         <button id="hub-more" class="hub-btn" type="button" title="Layout options"><i data-lucide="more-vertical"></i></button>
         <div id="hub-menu" class="hub-menu">
@@ -68,16 +71,18 @@
           <button data-menu="dup" type="button"><i data-lucide="copy"></i>Duplicate current</button>
           <button data-menu="rename" type="button"><i data-lucide="pen-line"></i>Rename…</button>
           <div class="sep"></div>
-          <button data-menu="export" type="button"><i data-lucide="download"></i>Export as JSON</button>
+          <button data-menu="export" type="button"><i data-lucide="download"></i>Export this layout</button>
+          <button data-menu="exportall" type="button"><i data-lucide="archive"></i>Export all layouts</button>
           <label><i data-lucide="upload"></i>Import from JSON<input id="hub-import" type="file" accept="application/json,.json" style="display:none;" /></label>
-          <div class="sep"></div>
-          <button data-menu="reset" type="button"><i data-lucide="rotate-ccw"></i>Reset to default</button>
-          <button data-menu="delete" class="danger" type="button"><i data-lucide="trash-2"></i>Delete layout…</button>
+          <div id="hub-backup-hint" class="hub-menu-hint"></div>
           <div class="sep"></div>
           <a href="https://vicesuite.com/"><i data-lucide="layout-grid"></i>The Vice Suite</a>
           <a href="https://vicesuite.com/pricebots"><i data-lucide="activity"></i>Vice Tickers</a>
           <a href="https://vicesuite.com/chartbot"><i data-lucide="bar-chart-2"></i>Vice Charts</a>
           <a href="https://liqtheory.com/" target="_blank" rel="noopener noreferrer"><i data-lucide="book-open"></i>Vice Academy</a>
+          <div class="sep"></div>
+          <button data-menu="reset" type="button"><i data-lucide="rotate-ccw"></i>Reset to default</button>
+          <button data-menu="delete" class="danger" type="button"><i data-lucide="trash-2"></i>Delete layout…</button>
         </div>
       </span>
     </div>

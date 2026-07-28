@@ -30,7 +30,7 @@
   <!-- v2 animated-lessons player chrome (scoped to .ltp2*; see lessons-v2/) -->
   <link rel="stylesheet" href="/blofintest/lessons-v2/player.css?v=1.20.0-blofin5" />
   <!-- BloFin re-skin — MUST come after lt-styles.css so its !important overrides win -->
-  <link rel="stylesheet" href="/blofintest/blofin-theme.css?v=2.3.2" />
+  <link rel="stylesheet" href="/blofintest/blofin-theme.css?v=2.4.0" />
 
   <!-- CDN deps — pinned exact versions + SRI so a compromised/drifting CDN can't
        inject code. To upgrade: bump the version, re-download, recompute
@@ -120,7 +120,7 @@
   <!-- Main engine — boots on DOMContentLoaded -->
   <script src="/lt-engine.js?v=3.152.1" defer></script>
   <!-- BloFin JS-side skin — deferred after the engine (globals exist, boot hasn't run) -->
-  <script src="/blofintest/blofin-boot.js?v=1.9.1" defer></script>
+  <script src="/blofintest/blofin-boot.js?v=1.10.1" defer></script>
   <!-- Vercel Analytics -->
   <script>window.va=window.va||function(){(window.vaq=window.vaq||[]).push(arguments);};</script>
   <script defer src="/_vercel/insights/script.js"></script>
@@ -215,7 +215,9 @@
       </div>
 
       <!-- Live BTC price (Binance, streaming) -->
-      <div class="btc-ticker" id="btc-ticker" title="Live BTC">
+      <div class="btc-ticker" id="btc-ticker" title="Open the live BTC chart in the Practice Simulator" role="button" tabindex="0"
+           onclick="typeof bfOpenLiveBTC==='function'&&bfOpenLiveBTC()"
+           onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();typeof bfOpenLiveBTC==='function'&&bfOpenLiveBTC();}">
         <span class="btc-ticker-dot" aria-hidden="true"></span>
         <span class="btc-ticker-sym">BTC</span>
         <span class="btc-ticker-price" id="btc-ticker-price">—</span>

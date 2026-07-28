@@ -10,6 +10,8 @@ This server fills them in:
                        OUTSIDE the deploy tree so it can never ship
   /api/vice-okx        implemented here (mirrors api/vice-okx.js)
   /api/vice-deribit    implemented here (mirrors api/vice-deribit.js)
+  /api/vice-headlines  implemented here (mirrors api/vice-headlines.js —
+                       prod may lag the full=1 items mode until deployed)
   /api/*  (anything else) forwarded to https://vicesuite.com (already live)
   everything else      static files from the workspace root
 
@@ -283,7 +285,89 @@ def api_deribit(q):
         f'&end_timestamp={end}&resolution=60')
 
 
-LOCAL_APIS = {'vice-coinalyze': api_coinalyze, 'vice-okx': api_okx, 'vice-deribit': api_deribit}
+# ── tradingview headlines (mirrors api/vice-headlines.js) ─────────────────
+HEADLINE_MARKETS = {'crypto', 'stock', 'index', 'forex', 'economy'}
+
+
+def api_headlines(q):
+    symbol = (q.get('symbol') or [''])[0][:40]
+    market = (q.get('market') or [''])[0][:12]
+    full = (q.get('full') or [''])[0] == '1'
+    if symbol:
+        if not re.fullmatch(r'[A-Za-z0-9:._-]+', symbol):
+            return 400, {'error': 'bad symbol'}
+        qs = f'symbol={quote(symbol, safe="")}'
+    elif market in HEADLINE_MARKETS:
+        qs = f'category={market}'
+    else:
+        return 400, {'error': 'bad request'}
+    j = fetch_json('https://news-headlines.tradingview.com/v2/headlines'
+                   f'?client=overview&lang=en&{qs}', timeout=8)
+    items = j.get('items') if isinstance(j, dict) else None
+    items = items if isinstance(items, list) else []
+    if not full:
+        return 200, {'count': len(items)}
+    out = []
+    for it in items[:40]:
+        t = str(it.get('title') or '')[:300]
+        u = it.get('link') or (
+            f"https://www.tradingview.com{it['storyPath']}" if it.get('storyPath') else None)
+        ts = it.get('published')
+        if t and u:
+            out.append({'t': t, 'u': u, 'src': it.get('source') or it.get('provider') or 'TradingView',
+                        'ts': ts * 1000 if isinstance(ts, (int, float)) else None})
+    return 200, {'items': out}
+
+
+# ── hyperliquid leaderboard (mirrors api/vice-hlboard.js) ─────────────────
+_hlboard = {'t': 0, 'rows': None}
+_hlboard_lock = threading.Lock()
+
+
+def _hlboard_rows():
+    with _hlboard_lock:
+        if _hlboard['rows'] and time.time() - _hlboard['t'] < 15 * 60:
+            return _hlboard['rows']
+        j = fetch_json('https://stats-data.hyperliquid.xyz/Mainnet/leaderboard', timeout=60)
+        rows = []
+        for row in j.get('leaderboardRows') or []:
+            w = dict(row.get('windowPerformances') or [])
+
+            def num(x):
+                try:
+                    return float(x)
+                except (TypeError, ValueError):
+                    return 0.0
+
+            def slot(k):
+                s = w.get(k) or {}
+                return {'pnl': num(s.get('pnl')), 'roi': num(s.get('roi')), 'vlm': num(s.get('vlm'))}
+            rows.append({'a': row.get('ethAddress'), 'n': row.get('displayName'),
+                         'v': num(row.get('accountValue')),
+                         'day': slot('day'), 'week': slot('week'),
+                         'month': slot('month'), 'all': slot('allTime')})
+        _hlboard.update(t=time.time(), rows=rows)
+        return rows
+
+
+def api_hlboard(q):
+    win = (q.get('window') or ['month'])[0]
+    win = win if win in ('day', 'week', 'month', 'all') else 'month'
+    sort = (q.get('sort') or ['pnl'])[0]
+    sort = sort if sort in ('pnl', 'roi', 'vlm', 'value') else 'pnl'
+    limit = min(max(int((q.get('limit') or ['100'])[0] or 100), 10), 250)
+    rows = _hlboard_rows()
+    pool = [r for r in rows if r[win]['vlm'] > 0]  # traders, not idle vaults
+    if sort == 'roi':
+        pool = [r for r in pool if r['v'] >= 100_000]
+    key = (lambda r: r['v']) if sort == 'value' else (lambda r: r[win][sort])
+    top = sorted(pool, key=key, reverse=True)[:limit]
+    return 200, {'rows': top}
+
+
+LOCAL_APIS = {'vice-coinalyze': api_coinalyze, 'vice-okx': api_okx,
+              'vice-deribit': api_deribit, 'vice-headlines': api_headlines,
+              'vice-hlboard': api_hlboard}
 
 
 class Handler(SimpleHTTPRequestHandler):

@@ -114,6 +114,25 @@
     };
   } catch (e) {}
 
+  /* header live-BTC ticker → jump straight to the simulator's Live BTC feed
+     (the source button renders with the sim view, so retry until it exists) */
+  window.bfOpenLiveBTC = function () {
+    try { if (typeof showSimulator === 'function') showSimulator(); } catch (e) { return; }
+    var tries = 0;
+    var t = setInterval(function () {
+      tries++;
+      var btns = document.querySelectorAll('#content-area button');
+      for (var i = 0; i < btns.length; i++) {
+        if (btns[i].textContent.trim() === 'Live BTC') {
+          btns[i].click();
+          clearInterval(t);
+          return;
+        }
+      }
+      if (tries > 20) clearInterval(t);
+    }, 150);
+  };
+
   /* "Liquidity Theory" the CONCEPT (Course 4's name, the methodology taught,
      glossary prose) is KEPT — the website was named after the course, not the
      other way round (owner ruling). Only the SITE-brand greeting is swapped. */
@@ -132,6 +151,10 @@
         if (n.nodeValue.indexOf('Welcome to Liquidity Theory') !== -1) {
           n.nodeValue = n.nodeValue.replace(/Welcome to Liquidity Theory/g, 'Welcome to BloFin Academy');
         }
+        /* the settings "Share ..." row names the SITE, not the course concept */
+        if (n.nodeValue.indexOf('Share Liquidity Theory') !== -1) {
+          n.nodeValue = n.nodeValue.replace(/Share Liquidity Theory/g, 'Share BloFin Academy');
+        }
       }
       /* mascots: original pepes (recovered from backup history) replace the
          flamingo set — sips on this Mac can't write webp, so the stage keeps
@@ -142,6 +165,19 @@
         if (src.indexOf('.webp') === -1) continue;   /* already retargeted */
         imgs[i].src = src.replace(/^.*perpingo-([a-z]+)-160\.webp.*$/, '/blofintest/perpingo-$1-160.png');
       }
+      /* Settings brand foot: "A Vice Terminal product" + flamingo → BloFin
+         mark + their tagline (idempotent via data flag) */
+      var brand = area.querySelector('.lt-settings-brand:not([data-blofin])');
+      if (brand) {
+        brand.setAttribute('data-blofin', '1');
+        brand.innerHTML =
+          '<svg viewBox="0 0 24 24" fill="none" style="width:16px;height:16px;flex-shrink:0" aria-label="BloFin">' +
+            '<path d="M18.491 5.66919L15.1386 8.18853L11.1748 11.162V14.4308L19.4167 8.24191C19.4167 8.2296 19.4187 8.2183 19.4187 8.20598C19.4187 7.1773 19.1095 6.33239 18.491 5.66919Z" fill="#FF8802"/>' +
+            '<path d="M18.3813 12.3085C18.2477 12.2356 18.106 12.1709 17.956 12.1103L15.408 14.0086C15.6803 14.2796 15.8179 14.641 15.8179 15.0937C15.8179 15.6235 15.6361 16.0485 15.2703 16.3216C14.9056 16.5947 14.359 16.7312 13.6296 16.7312H8.9699V7.15996H13.3779C13.9553 7.15996 14.4073 7.3006 14.734 7.58087C14.9262 7.74513 15.0597 7.9484 15.1388 8.18761L18.4912 5.66827C18.2899 5.45268 18.0566 5.25556 17.7895 5.07898C16.7025 4.36035 15.1173 4 13.0358 4H5.07959V19.9127H12.9669C15.2775 19.9127 17.0395 19.5257 18.256 18.7536C19.4714 17.9806 20.0796 16.8595 20.0796 15.3894C20.0796 14.6769 19.9388 14.064 19.6573 13.5476C19.3758 13.0323 18.9505 12.6196 18.3803 12.3095L18.3813 12.3085Z" fill="currentColor"/>' +
+          '</svg>' +
+          '<span>Where <strong style="color:#ff8802">Whales</strong> Are Made</span>';
+      }
+
       /* engine-inline colours: lt-engine templates carry hardcoded LT hexes in
          style/fill/stroke attributes (the engine file itself is shared with
          prod, so it can't be recolored) — remap them in the rendered DOM */

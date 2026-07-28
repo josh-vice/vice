@@ -405,6 +405,10 @@ textarea:focus-visible {
   outline: none !important;
 }
 
+/* header BTC ticker doubles as the shortcut into the simulator's live chart */
+.btc-ticker { cursor: pointer; transition: background .15s; border-radius: 8px; }
+.btc-ticker:hover { background: rgba(255, 255, 255, 0.06); }
+
 /* toast: pill, glassy */
 :root:not(.theme-light) .toast {
   background: rgba(20, 23, 29, 0.85) !important;
