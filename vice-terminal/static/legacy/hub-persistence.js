@@ -70,7 +70,8 @@
   async function restoreLegacySnapshot() {
     // localStorage remains authoritative while it exists; never overwrite a
     // current or corrupt record with a mirror during normal startup.
-    if (readLegacySnapshot()) return false;
+    try { if (localStorage.getItem(LEGACY_KEY) !== null) return false; }
+    catch { return false; }
     const db = await openDatabase();
     try {
       const record = await new Promise((resolve, reject) => {
