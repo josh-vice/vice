@@ -27,6 +27,14 @@ export const nativeWidgetPorts = {
 		nativeRoute: '/hub/native/notes',
 		provenance: 'Device-local notes with one-time legacy Hub scratchpad import',
 		status: 'ported'
+	},
+	vClocks: {
+		legacyId: 'vClocks',
+		title: 'Session Clocks',
+		story: 'US-014',
+		nativeRoute: '/hub/native/session-clocks',
+		provenance: 'Browser clock with explicit IANA time zones and regular exchange hours',
+		status: 'ported'
 	}
 } as const;
 

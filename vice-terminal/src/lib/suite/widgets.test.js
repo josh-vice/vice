@@ -34,4 +34,15 @@ describe('native widget ports', () => {
 			status: 'ported'
 		});
 	});
+
+	test('maps regular-hours session clocks to their native route', () => {
+		expect(nativeWidgetPorts.vClocks).toEqual({
+			legacyId: 'vClocks',
+			title: 'Session Clocks',
+			story: 'US-014',
+			nativeRoute: '/hub/native/session-clocks',
+			provenance: 'Browser clock with explicit IANA time zones and regular exchange hours',
+			status: 'ported'
+		});
+	});
 });
