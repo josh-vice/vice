@@ -11,6 +11,14 @@ export const nativeWidgetPorts = {
 		nativeRoute: '/hub/native/watchlist',
 		provenance: 'Hyperliquid canonical public market registry',
 		status: 'ported'
+	},
+	vAlerts: {
+		legacyId: 'vAlerts',
+		title: 'Price Alerts',
+		story: 'US-014',
+		nativeRoute: '/hub/native/watchlist',
+		provenance: 'Hyperliquid canonical public market registry (browser-local alerts)',
+		status: 'ported'
 	}
 } as const;
 

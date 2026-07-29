@@ -28,6 +28,6 @@ As a dashboard user, I want every available widget to be truthful, configurable,
 
 ## Current evidence
 
-- `vWatch` is the first native Svelte port at `/hub/native/watchlist`. It reuses the terminal's existing virtualized `MarketWatchlist`, canonical public registry, selected-market store, local-only favorites/collapse preferences, and local alert UI. It creates no second feed, account, signer, order, or execution path; the legacy Hub remains available as rollback.
-- The explicit port manifest maps `vWatch` to US-014 and declares its public provenance. Coverage: `suite/widgets.test.js`, `components/nativeWatchlistPortSurface.test.js`, existing watchlist tests, widget catalog/migration tests, source typecheck, Svelte check, and production build.
+- `vWatch` and `vAlerts` are native Svelte ports at `/hub/native/watchlist`. The route reuses the terminal's existing virtualized `MarketWatchlist`, canonical public registry, selected-market store, local-only favorites/collapse preferences, and local alert UI. It starts the existing browser-local alert monitor against the shared registry; it creates no second feed, account, signer, order, or execution path. The legacy Hub remains available as rollback.
+- The explicit port manifest maps both widget identities to US-014 and declares their public provenance. Coverage: `suite/widgets.test.js`, `components/nativeWatchlistPortSurface.test.js`, existing watchlist and price-alert tests, widget catalog/migration tests, source typecheck, Svelte check, and production build.
 - This is local component/build evidence. Per-widget visual, accessibility, resize, cleanup, migration, memory-soak, browser, and funded handoff evidence remains open for all 58 widgets.
