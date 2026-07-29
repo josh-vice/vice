@@ -23,4 +23,15 @@ describe('native widget ports', () => {
 			status: 'ported'
 		});
 	});
+
+	test('maps device-local notes to their own native route', () => {
+		expect(nativeWidgetPorts.vNotes).toEqual({
+			legacyId: 'vNotes',
+			title: 'Notes',
+			story: 'US-014',
+			nativeRoute: '/hub/native/notes',
+			provenance: 'Device-local notes with one-time legacy Hub scratchpad import',
+			status: 'ported'
+		});
+	});
 });

@@ -19,6 +19,14 @@ export const nativeWidgetPorts = {
 		nativeRoute: '/hub/native/watchlist',
 		provenance: 'Hyperliquid canonical public market registry (browser-local alerts)',
 		status: 'ported'
+	},
+	vNotes: {
+		legacyId: 'vNotes',
+		title: 'Notes',
+		story: 'US-014',
+		nativeRoute: '/hub/native/notes',
+		provenance: 'Device-local notes with one-time legacy Hub scratchpad import',
+		status: 'ported'
 	}
 } as const;
 
