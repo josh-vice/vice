@@ -37,6 +37,14 @@ await expect('preserved Hub island', `${frontend}/legacy/hub/index.html`, (_resp
 	body.includes('Vice Hub') && body.includes('../suite-bridge.js') && body.includes('../hub.js')
 );
 
+await expect('SSR Scanner shell', `${frontend}/scanner`, (_response, body) =>
+	body.includes('data-hub-section="scanner"') && body.includes('index.html#/scanner')
+);
+
+await expect('SSR Gallery shell', `${frontend}/gallery`, (_response, body) =>
+	body.includes('data-hub-section="gallery"') && body.includes('index.html#/gallery')
+);
+
 await expect('local execution session policy', `${frontend}/api/hl/session`, (_response, body) => {
 	const session = JSON.parse(body);
 	return session.tradingMode === 'local-encrypted-agent' && session.serverSigning === false;

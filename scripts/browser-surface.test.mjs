@@ -10,6 +10,8 @@ describe('SSR browser-surface smoke boundary', () => {
 		expect(script).toContain('SSR suite shell');
 		expect(script).toContain('SSR Hub shell');
 		expect(script).toContain('preserved Hub island');
+		expect(script).toContain('SSR Scanner shell');
+		expect(script).toContain('SSR Gallery shell');
 		expect(script).toContain('`${frontend}/trade`');
 		expect(script).toContain('/review/blofin');
 		expect(script).toContain('https://openapi.blofin.com');
