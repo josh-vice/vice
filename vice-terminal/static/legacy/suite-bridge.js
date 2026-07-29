@@ -30,6 +30,15 @@
     if (event.origin !== window.location.origin || !validContext(event.data) || event.data.type !== TYPE) return;
     window.viceSuitePublicContext = Object.freeze(event.data.context);
     window.dispatchEvent(new CustomEvent(TYPE, { detail: window.viceSuitePublicContext }));
+
+    const market = window.viceSuitePublicContext.market.market;
+    const trade = document.getElementById('hub-open-trade');
+    if (!trade || !market || market.tradingAvailability === 'metadataOnly' || market.instrument?.venue !== 'hyperliquid') return;
+    const handoff = { version: VERSION, venue: 'hyperliquid', marketKey: market.marketKey, apiCoin: market.apiCoin, kind: market.kind };
+    trade.disabled = false;
+    trade.onclick = () => {
+      window.top.location.assign(`/trade?handoff=${encodeURIComponent(JSON.stringify(handoff))}`);
+    };
   });
 
   if (window.parent !== window) {

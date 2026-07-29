@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { selectedMarket, orderBook, orderSide, chartTimeframe, setChartTimeframe, marketContextStatus } from '$lib/stores';
+	import { selectedMarket, orderBook, orderSide, chartTimeframe, setChartTimeframe, marketContextStatus, marketRegistry, selectMarket } from '$lib/stores';
 	import { startPriceAlertMonitoring } from '$lib/priceAlerts';
 	import { startSoundNotifications } from '$lib/soundNotifications';
 	import { loadPrivacyMode } from '$lib/privacyMode';
@@ -7,6 +7,7 @@
 	import { formatFundingCountdown } from '$lib/marketStats';
 	import { healthLabel } from '$lib/productionTruth';
 	import { onMount } from 'svelte';
+	import { get } from 'svelte/store';
 	import Navbar from '$lib/components/Navbar.svelte';
 	import MarketWatchlist from '$lib/components/MarketWatchlist.svelte';
 	import Chart from '$lib/components/Chart.svelte';
@@ -19,6 +20,7 @@
 	import { formatPrice } from '$lib/format';
 	import { describeMarketClass } from '$lib/marketClass';
 	import { BarChart3, LineChart } from 'lucide-svelte';
+	import { parseTradeHandoff, resolveTradeHandoff } from '$lib/suite/handoff';
 
 	type MobileTab = 'markets' | 'trade';
 
@@ -37,6 +39,7 @@
 	// Bottom sheet for order entry
 	let orderSheetOpen = false;
 	let statsNow = Date.now();
+	let handoffMessage = '';
 	$: marketClass = describeMarketClass($selectedMarket);
 
 	const mobileTabs: { id: MobileTab; label: string; icon: any }[] = [
@@ -50,10 +53,26 @@
 		const stopAlerts = startPriceAlertMonitoring();
 		const stopSounds = startSoundNotifications();
 		const timer = setInterval(() => { statsNow = Date.now(); }, 1_000);
+		const rawHandoff = new URLSearchParams(window.location.search).get('handoff');
+		const handoff = parseTradeHandoff(rawHandoff);
+		let stopHandoff: (() => void) | undefined;
+		if (rawHandoff && !handoff) handoffMessage = 'Trade context was rejected because it was incomplete or invalid.';
+		if (handoff) {
+			const apply = (markets: Parameters<typeof resolveTradeHandoff>[0]) => {
+				const market = resolveTradeHandoff(markets, handoff);
+				if (!market) return;
+				selectMarket(market);
+				handoffMessage = `Trade context loaded: ${market.symbol}.`;
+				stopHandoff?.();
+			};
+			apply(get(marketRegistry));
+			if (!handoffMessage) stopHandoff = marketRegistry.subscribe(apply);
+		}
 		return () => {
 			stopAlerts();
 			stopSounds();
 			clearInterval(timer);
+			stopHandoff?.();
 		};
 	});
 </script>
@@ -61,6 +80,7 @@
 <div data-testid="terminal-shell" class="h-screen flex flex-col overflow-hidden bg-terminal-bg">
 	<!-- Navbar - 44px -->
 	<Navbar />
+	{#if handoffMessage}<div data-testid="trade-handoff-status" class="border-b border-terminal-border bg-terminal-bg-secondary px-3 py-1 text-2xs text-terminal-cyan">{handoffMessage}</div>{/if}
 
 	<!-- Market Info Bar -->
 	{#if $selectedMarket}

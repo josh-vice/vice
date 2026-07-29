@@ -14,10 +14,12 @@ describe('Vice Hub SvelteKit migration boundary', () => {
 		expect(island).toContain("type: 'vice-suite-context'");
 		expect(hub).toContain('../suite-bridge.js');
 		expect(hub).toContain('hub-suite-context');
+		expect(hub).toContain('hub-open-trade');
 		expect(hubScript).toContain("window.addEventListener('vice-suite-context'");
 		expect(hubScript).toContain('linkSymbol(market.apiCoin)');
 		expect(bridge).toContain("event.origin !== window.location.origin");
 		expect(bridge).toContain('marketKey');
+		expect(bridge).toContain('window.top.location.assign');
 		expect(bridge).not.toContain('walletAddress');
 		expect(bridge).not.toContain('context.account');
 	});
