@@ -2,14 +2,14 @@ import { describe, expect, test } from 'bun:test';
 
 describe('US-003 mobile chart parity', () => {
 	test('mobile timeframe controls use the shared chart timeframe action', async () => {
-		const source = await Bun.file(new URL('../routes/+page.svelte', import.meta.url)).text();
+		const source = await Bun.file(new URL('./components/TerminalWorkspace.svelte', import.meta.url)).text();
 		expect(source).toContain('chartTimeframe, setChartTimeframe');
 		expect(source).toContain('tf === $chartTimeframe');
 		expect(source).toContain('onclick={() => setChartTimeframe(tf)}');
 	});
 
 	test('mobile trading uses the shared chart, market data, and order ticket surfaces', async () => {
-		const source = await Bun.file(new URL('../routes/+page.svelte', import.meta.url)).text();
+		const source = await Bun.file(new URL('./components/TerminalWorkspace.svelte', import.meta.url)).text();
 		const sheet = await Bun.file(new URL('./components/MobileOrderSheet.svelte', import.meta.url)).text();
 
 		expect(source).toContain("import Chart from '$lib/components/Chart.svelte'");
