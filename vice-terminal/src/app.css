@@ -1,0 +1,170 @@
+@import './lib/styles/dither.css';
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+	--font-terminal-sans: Inter, "SF Pro Display", -apple-system, BlinkMacSystemFont, sans-serif;
+	--font-terminal-mono: "JetBrains Mono", "SF Mono", Monaco, Inconsolata, "Fira Mono", monospace;
+}
+
+@layer base {
+	* {
+		@apply border-terminal-border;
+	}
+
+	html, body {
+		@apply bg-terminal-bg text-terminal-text h-full;
+		font-size: 14px;
+		font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+		-webkit-font-smoothing: antialiased;
+		-moz-osx-font-smoothing: grayscale;
+	}
+
+	/* Custom scrollbar - FTX style thin */
+	::-webkit-scrollbar {
+		width: 5px;
+		height: 5px;
+	}
+
+	::-webkit-scrollbar-track {
+		@apply bg-transparent;
+	}
+
+	::-webkit-scrollbar-thumb {
+		@apply bg-terminal-border-light rounded;
+	}
+
+	::-webkit-scrollbar-thumb:hover {
+		@apply bg-terminal-text-muted;
+	}
+
+	/* Number input no arrows */
+	input[type='number']::-webkit-inner-spin-button,
+	input[type='number']::-webkit-outer-spin-button {
+		-webkit-appearance: none;
+		margin: 0;
+	}
+
+	input[type='number'] {
+		-moz-appearance: textfield;
+	}
+}
+
+@layer components {
+	/* FTX-style input */
+	.terminal-input {
+		@apply bg-terminal-bg border border-terminal-border rounded px-2 py-1.5 text-xs font-mono
+			   focus:outline-none focus:border-terminal-blue/60
+			   placeholder:text-terminal-text-muted transition-colors duration-100;
+	}
+
+	/* FTX-style buttons */
+	.terminal-btn {
+		@apply px-3 py-1.5 rounded text-xs font-medium transition-all duration-100
+			   focus:outline-none active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed;
+	}
+
+	.terminal-btn-primary {
+		@apply terminal-btn bg-terminal-green text-terminal-bg hover:bg-terminal-green-dim;
+	}
+
+	.terminal-btn-danger {
+		@apply terminal-btn bg-terminal-red text-white hover:bg-terminal-red-dim;
+	}
+
+	.terminal-btn-ghost {
+		@apply terminal-btn bg-transparent text-terminal-text-secondary hover:bg-terminal-bg-hover hover:text-terminal-text;
+	}
+
+	/* FTX panel style */
+	.terminal-panel {
+		@apply bg-terminal-bg-secondary;
+	}
+
+	.terminal-panel-header {
+		@apply h-8 px-2 border-b border-terminal-border flex items-center justify-between
+			   text-2xs font-medium text-terminal-text-secondary;
+	}
+
+	/* FTX tab style */
+	.terminal-tab {
+		@apply px-2.5 py-1 text-2xs font-medium rounded transition-colors duration-100
+			   text-terminal-text-secondary hover:text-terminal-text cursor-pointer select-none;
+	}
+
+	.terminal-tab-active {
+		color: #4fd6f7;
+		background-color: #17172a;
+	}
+
+	/* Price colors */
+	.price-positive {
+		@apply text-terminal-green;
+	}
+
+	.price-negative {
+		@apply text-terminal-red;
+	}
+
+	.flash-positive {
+		animation: flashGreen 0.3s ease-out;
+	}
+
+	.flash-negative {
+		animation: flashRed 0.3s ease-out;
+	}
+
+	/* Order book depth bars */
+	.depth-bar-bid {
+		@apply absolute inset-y-0 right-0;
+		background-color: rgba(46, 230, 194, 0.1);
+	}
+
+	/* Order book depth bars */
+	.depth-bar-ask {
+		@apply absolute inset-y-0 left-0;
+		background-color: rgba(255, 61, 154, 0.1);
+	}
+
+	/* Option chain ITM/ATM styles */
+	.itm-call {
+		background-color: rgba(46, 230, 194, 0.1);
+	}
+
+	.itm-put {
+		background-color: rgba(255, 61, 154, 0.1);
+	}
+
+	.atm-strike {
+		background-color: rgba(155, 87, 255, 0.15);
+	}
+
+	/* Table cell sizing */
+	.cell-sm {
+		@apply px-1.5 py-1;
+	}
+
+	.cell-md {
+		@apply px-2 py-1.5;
+	}
+}
+
+@layer utilities {
+	.text-balance {
+		text-wrap: balance;
+	}
+
+	.tabular-nums {
+		font-variant-numeric: tabular-nums;
+	}
+
+	/* Scrollbar hide */
+	.scrollbar-none {
+		-ms-overflow-style: none;
+		scrollbar-width: none;
+	}
+	.scrollbar-none::-webkit-scrollbar {
+		display: none;
+	}
+}

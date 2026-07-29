@@ -1,0 +1,30 @@
+{
+  "name": "derive-trading-terminal",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "bun --bun vite dev",
+    "build": "bun --bun vite build",
+    "preview": "bun --bun vite preview",
+    "test": "bun test src/lib"
+  },
+  "dependencies": {
+    "@nktkas/hyperliquid": "^0.32.2",
+    "dockview": "^7.0.4",
+    "lightweight-charts": "5.2.0",
+    "lucide-svelte": "^0.511.0",
+    "viem": "^2.52.2"
+  },
+  "devDependencies": {
+    "@sveltejs/adapter-auto": "^4.0.0",
+    "@sveltejs/kit": "^2.21.0",
+    "@sveltejs/vite-plugin-svelte": "^5.1.0",
+    "autoprefixer": "^10.4.21",
+    "postcss": "^8.5.4",
+    "svelte": "^5.33.15",
+    "tailwindcss": "^3.4.17",
+    "typescript": "^5.8.3",
+    "vite": "^6.3.5"
+  }
+}

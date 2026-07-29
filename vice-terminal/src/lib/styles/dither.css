@@ -1,0 +1,139 @@
+/*
+ * Vice dither kit — ordered (Bayer) dithering utilities.
+ *
+ * Every pattern is a repeating 1-bit SVG used as a CSS mask, so the visible
+ * color always comes from `background-color` (or `color` via currentColor
+ * borders) and stays in sync with the terminal theme tokens.
+ *
+ * Density scale (approximate ink coverage of a 4x4 Bayer matrix):
+ *   .dither-6   1/16  — barely-there texture (large surfaces)
+ *   .dither-12  2/16  — subtle panel texture
+ *   .dither-25  4/16  — visible tone (headers, depth bars)
+ *   .dither-50  8/16  — half tone (emphasis, stale overlays)
+ *   .dither-75 12/16  — heavy tone (disabled / halted states)
+ *
+ * Composite helpers:
+ *   .dither-fade-b / -t / -r / -l — dither that dissolves toward an edge
+ *   .dither-overlay               — absolutely-positioned decorative layer
+ *   .dither-stale                 — non-live data veil (pairs with aria state)
+ */
+
+/* 4x4 Bayer tiles, 1 SVG px per cell, rendered at 4px tile size for crispness
+   on 1x displays while staying square on retina. */
+:root {
+	--dither-tile: 4px;
+	--dither-6: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4'%3E%3Crect x='0' y='0' width='1' height='1' fill='%23000'/%3E%3C/svg%3E");
+	--dither-12: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4'%3E%3Crect x='0' y='0' width='1' height='1' fill='%23000'/%3E%3Crect x='2' y='2' width='1' height='1' fill='%23000'/%3E%3C/svg%3E");
+	--dither-25: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4'%3E%3Crect x='0' y='0' width='1' height='1' fill='%23000'/%3E%3Crect x='2' y='0' width='1' height='1' fill='%23000'/%3E%3Crect x='0' y='2' width='1' height='1' fill='%23000'/%3E%3Crect x='2' y='2' width='1' height='1' fill='%23000'/%3E%3C/svg%3E");
+	--dither-50: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4'%3E%3Crect x='0' y='0' width='1' height='1' fill='%23000'/%3E%3Crect x='2' y='0' width='1' height='1' fill='%23000'/%3E%3Crect x='1' y='1' width='1' height='1' fill='%23000'/%3E%3Crect x='3' y='1' width='1' height='1' fill='%23000'/%3E%3Crect x='0' y='2' width='1' height='1' fill='%23000'/%3E%3Crect x='2' y='2' width='1' height='1' fill='%23000'/%3E%3Crect x='1' y='3' width='1' height='1' fill='%23000'/%3E%3Crect x='3' y='3' width='1' height='1' fill='%23000'/%3E%3C/svg%3E");
+	--dither-75: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4'%3E%3Crect x='0' y='0' width='4' height='4' fill='%23000'/%3E%3Crect x='1' y='0' width='1' height='1' fill='%23fff'/%3E%3Crect x='3' y='2' width='1' height='1' fill='%23fff'/%3E%3Crect x='1' y='2' width='1' height='1' fill='%23fff'/%3E%3Crect x='3' y='0' width='1' height='1' fill='%23fff'/%3E%3C/svg%3E");
+}
+
+/* Base: color comes from background-color; pattern is the mask. */
+.dither-6,
+.dither-12,
+.dither-25,
+.dither-50,
+.dither-75 {
+	-webkit-mask-repeat: repeat;
+	mask-repeat: repeat;
+	-webkit-mask-size: var(--dither-tile) var(--dither-tile);
+	mask-size: var(--dither-tile) var(--dither-tile);
+}
+
+.dither-6 {
+	-webkit-mask-image: var(--dither-6);
+	mask-image: var(--dither-6);
+}
+.dither-12 {
+	-webkit-mask-image: var(--dither-12);
+	mask-image: var(--dither-12);
+}
+.dither-25 {
+	-webkit-mask-image: var(--dither-25);
+	mask-image: var(--dither-25);
+}
+.dither-50 {
+	-webkit-mask-image: var(--dither-50);
+	mask-image: var(--dither-50);
+}
+.dither-75 {
+	-webkit-mask-image: var(--dither-75);
+	mask-image: var(--dither-75);
+}
+
+/* Edge fades: Bayer pattern multiplied by a linear-gradient alpha ramp,
+   producing the classic dissolve-to-nothing dither gradient. */
+.dither-fade-b,
+.dither-fade-t,
+.dither-fade-r,
+.dither-fade-l {
+	-webkit-mask-repeat: repeat, no-repeat;
+	mask-repeat: repeat, no-repeat;
+	-webkit-mask-size: var(--dither-tile) var(--dither-tile), 100% 100%;
+	mask-size: var(--dither-tile) var(--dither-tile), 100% 100%;
+	-webkit-mask-composite: source-in;
+	mask-composite: intersect;
+}
+
+.dither-fade-b {
+	-webkit-mask-image: var(--dither-50), linear-gradient(to bottom, #000, transparent);
+	mask-image: var(--dither-50), linear-gradient(to bottom, #000, transparent);
+}
+.dither-fade-t {
+	-webkit-mask-image: var(--dither-50), linear-gradient(to top, #000, transparent);
+	mask-image: var(--dither-50), linear-gradient(to top, #000, transparent);
+}
+.dither-fade-r {
+	-webkit-mask-image: var(--dither-50), linear-gradient(to right, #000, transparent);
+	mask-image: var(--dither-50), linear-gradient(to right, #000, transparent);
+}
+.dither-fade-l {
+	-webkit-mask-image: var(--dither-50), linear-gradient(to left, #000, transparent);
+	mask-image: var(--dither-50), linear-gradient(to left, #000, transparent);
+}
+
+/* Header rule: a thin dithered strip that dissolves to the right — used
+   after panel titles. Colored via currentColor so it follows the text tone. */
+.dither-rule {
+	flex: 1 1 auto;
+	height: 5px;
+	min-width: 12px;
+	background-color: currentColor;
+	opacity: 0.3;
+	-webkit-mask-image: var(--dither-25), linear-gradient(to right, #000 40%, transparent);
+	mask-image: var(--dither-25), linear-gradient(to right, #000 40%, transparent);
+	-webkit-mask-repeat: repeat, no-repeat;
+	mask-repeat: repeat, no-repeat;
+	-webkit-mask-size: var(--dither-tile) var(--dither-tile), 100% 100%;
+	mask-size: var(--dither-tile) var(--dither-tile), 100% 100%;
+	-webkit-mask-composite: source-in;
+	mask-composite: intersect;
+}
+
+/* Decorative layer that never intercepts pointer events. */
+.dither-overlay {
+	position: absolute;
+	inset: 0;
+	pointer-events: none;
+}
+
+/* Non-live data veil: readable but unmistakably not-live. Pair with the
+   existing stale/degraded status labels — this is reinforcement, not the
+   sole signal. */
+.dither-stale {
+	position: relative;
+}
+.dither-stale::after {
+	content: '';
+	position: absolute;
+	inset: 0;
+	pointer-events: none;
+	background-color: rgba(10, 10, 18, 0.55);
+	-webkit-mask-image: var(--dither-50);
+	mask-image: var(--dither-50);
+	-webkit-mask-repeat: repeat;
+	mask-repeat: repeat;
+	-webkit-mask-size: var(--dither-tile) var(--dither-tile);
+	mask-size: var(--dither-tile) var(--dither-tile);
+}

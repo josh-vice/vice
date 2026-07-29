@@ -53,7 +53,10 @@ Backup-*/
 
 # assistant/session tooling — never part of the site
 /skills/
-/scripts/
 skills-lock.json
 tmp_audit*/
 sweep_report.md
+
+# Local build output for the integrated terminal and gateway
+/vice-terminal/.svelte-kit/
+/vice-backend/target/
