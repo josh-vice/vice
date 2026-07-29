@@ -6,7 +6,7 @@
 <main data-testid="suite-shell" class="min-h-screen bg-[#08070d] px-5 py-6 text-white sm:px-8 lg:px-12">
 	<nav class="mx-auto flex max-w-6xl items-center justify-between gap-4 border-b border-white/10 pb-5">
 		<a href="/" class="flex items-center gap-3 font-semibold tracking-tight"><img src="/flamingo.png" alt="Vice Suite" class="h-8 w-8 rounded-lg ring-1 ring-pink-400/40" />Vice <span class="text-pink-400">Suite</span></a>
-		<div class="hidden items-center gap-4 text-sm text-[#aaa5ba] md:flex"><a href="/hub" class="hover:text-white">Hub</a><a href="/scanner" class="hover:text-white">Scanner</a><a href="/gallery" class="hover:text-white">Gallery</a><a href="/docs" class="hover:text-white">Academy</a></div>
+		<div class="hidden items-center gap-4 text-sm text-[#aaa5ba] md:flex"><a href="/hub" class="hover:text-white">Hub</a><a href="/scanner" class="hover:text-white">Scanner</a><a href="/gallery" class="hover:text-white">Gallery</a><a href="https://liqtheory.com/academy" class="hover:text-white" target="_blank" rel="noreferrer">Academy</a></div>
 		<a href="/trade" class="rounded-md bg-[#16e9d0] px-4 py-2 text-sm font-semibold text-[#08070d] transition hover:bg-[#8dfff4]">Open Trade</a>
 	</nav>
 
