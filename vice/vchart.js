@@ -1,4 +1,4 @@
-/* Vice Chart Pro — the hub's own chart engine. v1.6.0
+/* Vice Chart Pro — the hub's own chart engine. v1.10.0
    Velo-style: candles + stacked indicator panes + an order-book depth
    heatmap (Toggle Heatmap). All indicators are our own implementations of
    the <Velo> set (docs.velo.xyz/web-app/chart), fed by the same sources the
@@ -1664,6 +1664,10 @@
       drawSel = null;
       pending = null;
       reload();
+      // the host page mirrors the symbol (hash, stat strip, context rail) —
+      // fire AFTER state settles; hosts must not call setSymbol back with
+      // the same value (the s === sym guard above breaks any echo anyway)
+      try { opts.onSymbol?.(sym); } catch { /* host's problem */ }
     }
 
     /* ── drawing layer: TV-style tools, anchored in (time, price) so every

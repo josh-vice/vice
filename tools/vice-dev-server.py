@@ -388,6 +388,12 @@ class Handler(SimpleHTTPRequestHandler):
             self.end_headers()
             return None
         if not parsed.path.startswith('/api/'):
+            # prod rewrites /academy/:path* → /:path* (runtime lazy loads from
+            # the generated /academy shell) — mirror it for local previews
+            if parsed.path.startswith('/academy/'):
+                probe = os.path.join(ROOT, unquote(parsed.path).lstrip('/'))
+                if not os.path.exists(probe):
+                    self.path = self.path.replace('/academy/', '/', 1)
             return super().do_GET()
         name = parsed.path[5:].strip('/')
         q = parse_qs(parsed.query)

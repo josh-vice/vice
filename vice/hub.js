@@ -1,4 +1,4 @@
-/* Vice Hub — customizable live market dashboard + Velo-style section boards. v2.16.0
+/* Vice Hub — customizable live market dashboard + Velo-style section boards. v2.24.0
    Architecture: a widget REGISTRY (manifest per type: title, sizes, settings
    schema, mount/destroy lifecycle) + a Gridstack canvas (float mode, 24-col
    fine grid). Saved layouts store INSTANCES ({id,type,x,y,w,h,settings}),
@@ -130,12 +130,26 @@
   // Positioning widget read the SAME books instead of double-hitting the API
   const hlWalletState = (() => {
     const cache = new Map(); // addr -> { t, p }
-    return (addr) => {
+    return (addr, ttl = 180_000) => {
       const hit = cache.get(addr);
-      if (hit && Date.now() - hit.t < 180_000) return hit.p;
+      if (hit && Date.now() - hit.t < ttl) return hit.p;
       const p = hlInfo({ type: 'clearinghouseState', user: addr });
       cache.set(addr, { t: Date.now(), p });
       p.catch(() => cache.delete(addr));
+      return p;
+    };
+  })();
+  // per-wallet fills, cached 60s — the Scanner's Flow tape, the trade-alert
+  // poller and the wallet inspector read the SAME feed (userFills is the
+  // heaviest info query; never triple-hit it for one wallet)
+  const hlFills = (() => {
+    const cache = new Map(); // addr -> { t, p }
+    return (addr, ttl = 60_000) => {
+      const hit = cache.get(addr);
+      if (hit && Date.now() - hit.t < ttl) return hit.p;
+      const p = hlInfo({ type: 'userFills', user: addr });
+      cache.set(addr, { t: Date.now(), p });
+      p.catch(() => { if (cache.get(addr)?.p === p) cache.delete(addr); });
       return p;
     };
   })();
@@ -445,12 +459,19 @@
     // the chart page follows the new symbol in place — a full renderSection()
     // teardown refetched everything and dropped indicator/zoom state
     if (currentSection === 'chart') {
-      const pm = pageMounts.find((m) => m.type === 'vChartPro');
-      if (pm?.handle?.setSymbol) { pm.settings.symbol = linkedSym; pm.handle.setSymbol(linkedSym); }
-      else renderSection();
-      // the URL carries the symbol — refresh and share keep the chart's state
-      // (applyRoute decodes it back). Display labels like "S&P 500" can't
-      // round-trip enterSection's symbol check — never write a broken promise.
+      // the desk re-points whichever hero engine is up (Vice/TV/HL) and owns
+      // the strip + context band; the bare-vChartPro path is the desk-less
+      // fallback. The URL carries the symbol — refresh and share keep the
+      // chart's state (applyRoute decodes it back). Display labels like
+      // "S&P 500" can't round-trip enterSection's check — never write a
+      // broken promise.
+      const desk = pageMounts.find((m) => m.handle?.setChartSym);
+      if (desk) desk.handle.setChartSym(linkedSym);
+      else {
+        const pm = pageMounts.find((m) => m.type === 'vChartPro');
+        if (pm?.handle?.setSymbol) { pm.settings.symbol = linkedSym; pm.handle.setSymbol(linkedSym); }
+        else renderSection();
+      }
       if (/^[A-Z0-9:]{2,16}$/i.test(linkedSym)) {
         history.replaceState(null, '', `#/chart/${encodeURIComponent(linkedSym)}`);
       }
@@ -1196,7 +1217,15 @@
             setTimeout(start, 200);
             return;
           }
-          handle = window.VChartPro.mount(body, { symbol: s.symbol.trim().toUpperCase() });
+          handle = window.VChartPro.mount(body, {
+            symbol: s.symbol.trim().toUpperCase(),
+            // picks made inside the engine keep the chart desk honest — the
+            // strip, rail, watchlist and #/chart/SYM all follow (no echo:
+            // setChartSym never calls back into the engine)
+            onSymbol: (s2) => {
+              if (currentSection === 'chart') pageMounts.find((m) => m.handle?.setChartSym)?.handle.setChartSym(s2);
+            },
+          });
         };
         start();
         return {
@@ -3849,8 +3878,16 @@
       autoPosition: autoPos, id: inst.id,
     });
     if (autoPos) {
-      const n = item.gridstackNode;
-      if (n) { inst.x = n.x; inst.y = n.y; }
+      // collapsed-grid coordinates (6/2/1-col phone layouts) must NEVER be
+      // read back into the authoritative 24-col store — the change-event
+      // guard protects drags; this is the add/duplicate path (same bug)
+      if (grid.getColumn() === GRID_COLS) {
+        const n = item.gridstackNode;
+        if (n) { inst.x = n.x; inst.y = n.y; }
+      } else {
+        inst.x = 0;
+        inst.y = Math.max(0, ...activeGrid().filter((i) => i !== inst).map((i) => (i.y ?? 0) + (i.h ?? 1)));
+      }
     }
     observer.observe(body);
     icons();
@@ -3936,6 +3973,7 @@
     if (layName) layName.textContent = store.active;
     updateEmpty();
     navPriceSync?.();
+    packCollapsed?.(); // fresh paints on a collapsed grid start packed
   }
 
   function addInstance(type) {
@@ -4051,7 +4089,7 @@
       const watch = readWalletWatch().slice(0, 30);
       for (const addr of watch) {
         try {
-          const fills = await hlInfo({ type: 'userFills', user: addr });
+          const fills = await hlFills(addr, 75_000);
           if (!Array.isArray(fills) || !fills.length) continue;
           const latest = Number(fills[0].time) || 0;
           const last = seen[addr];
@@ -4595,6 +4633,7 @@
 
   /* ── navbar live price: BTC on DeFi, S&P 500 on TradFi ─────────────── */
   let navPriceSync = null;
+  let packCollapsed = null; // boot wires this — phones pack the collapsed grid tight
   function startNavPrice() {
     const btn = $('#hub-price');
     if (!btn) return;
@@ -4756,6 +4795,470 @@
     icons();
   }
 
+  /* ── Wallpaper Mode: the chart desk as an ambient TV display ──────────
+     Art direction: a Kenwood DPX-440 head unit — the full-dot-matrix
+     multicolour VFD of the DPX family. Everything renders on one cell
+     grid: a dim unlit dot lattice, phosphor-glow lit dots (pre-rendered
+     sprites, no per-dot shadowBlur), chunky 5×7 pixel type, a dotted
+     rounded-outline clock badge (the "P-TIME" chip), the price series
+     drawn as the demo-mode mountain landscape, a dancing spectrum
+     analyzer with falling peak caps, and a scrolling stats ticker.
+     Live numbers ride the shared hlFeed poller; the landscape and the
+     analyzer weights come from candleSnapshot. The whole grid drifts
+     ±1 cell on a slow orbit so a real TV never burns in. Esc, leaving
+     fullscreen, or the fade-in exit chip closes it. ── */
+  const VWALL_FONT = (() => {
+    const raw = {
+      '0': '01110 10001 10011 10101 11001 10001 01110',
+      '1': '00100 01100 00100 00100 00100 00100 01110',
+      '2': '01110 10001 00001 00010 00100 01000 11111',
+      '3': '11111 00010 00100 00010 00001 10001 01110',
+      '4': '00010 00110 01010 10010 11111 00010 00010',
+      '5': '11111 10000 11110 00001 00001 10001 01110',
+      '6': '00110 01000 10000 11110 10001 10001 01110',
+      '7': '11111 00001 00010 00100 01000 01000 01000',
+      '8': '01110 10001 10001 01110 10001 10001 01110',
+      '9': '01110 10001 10001 01111 00001 00010 01100',
+      A: '01110 10001 10001 11111 10001 10001 10001',
+      B: '11110 10001 10001 11110 10001 10001 11110',
+      C: '01110 10001 10000 10000 10000 10001 01110',
+      D: '11100 10010 10001 10001 10001 10010 11100',
+      E: '11111 10000 10000 11110 10000 10000 11111',
+      F: '11111 10000 10000 11110 10000 10000 10000',
+      G: '01110 10001 10000 10111 10001 10001 01111',
+      H: '10001 10001 10001 11111 10001 10001 10001',
+      I: '01110 00100 00100 00100 00100 00100 01110',
+      J: '00111 00010 00010 00010 00010 10010 01100',
+      K: '10001 10010 10100 11000 10100 10010 10001',
+      L: '10000 10000 10000 10000 10000 10000 11111',
+      M: '10001 11011 10101 10101 10001 10001 10001',
+      N: '10001 10001 11001 10101 10011 10001 10001',
+      O: '01110 10001 10001 10001 10001 10001 01110',
+      P: '11110 10001 10001 11110 10000 10000 10000',
+      Q: '01110 10001 10001 10001 10101 10010 01101',
+      R: '11110 10001 10001 11110 10100 10010 10001',
+      S: '01111 10000 10000 01110 00001 00001 11110',
+      T: '11111 00100 00100 00100 00100 00100 00100',
+      U: '10001 10001 10001 10001 10001 10001 01110',
+      V: '10001 10001 10001 10001 10001 01010 00100',
+      W: '10001 10001 10001 10101 10101 10101 01010',
+      X: '10001 10001 01010 00100 01010 10001 10001',
+      Y: '10001 10001 01010 00100 00100 00100 00100',
+      Z: '11111 00001 00010 00100 01000 10000 11111',
+      $: '00100 01111 10100 01110 00101 11110 00100',
+      '%': '11001 11010 00010 00100 01000 01011 10011',
+      '+': '00000 00100 00100 11111 00100 00100 00000',
+      '-': '00000 00000 00000 11111 00000 00000 00000',
+      '.': '00000 00000 00000 00000 00000 01100 01100',
+      ',': '00000 00000 00000 00000 00110 00100 01000',
+      ':': '00000 01100 01100 00000 01100 01100 00000',
+      '/': '00001 00010 00010 00100 01000 01000 10000',
+      '·': '00000 00000 00000 00110 00110 00000 00000',
+      '▲': '00100 00100 01110 01110 11111 11111 00000',
+      '▼': '11111 11111 01110 01110 00100 00100 00000',
+      ' ': '00000 00000 00000 00000 00000 00000 00000',
+    };
+    const f = {};
+    for (const [ch, s] of Object.entries(raw)) f[ch] = s.split(' ').map((r) => parseInt(r, 2));
+    return f;
+  })();
+
+  function openWallpaper(coinNow) {
+    if ($('.vwall')) return;
+    const wrap = el('div', 'vwall');
+    const cv = document.createElement('canvas');
+    const chrome = el('div', 'vwall-chrome');
+    const gearB = el('button', 'vwall-chip', '<i data-lucide="settings-2"></i><span>display</span>');
+    gearB.type = 'button';
+    const exitB = el('button', 'vwall-chip', '<i data-lucide="x"></i><span>exit wallpaper</span>');
+    exitB.type = 'button';
+    chrome.append(gearB, exitB);
+    const panel = el('div', 'vwall-panel');
+    wrap.append(cv, chrome, panel);
+    document.body.appendChild(wrap);
+    icons();
+    const ctx = cv.getContext('2d');
+
+    /* viewer settings: ticker · timeframe · clarity (dot density). The
+       ticker follows the desk symbol on open; tf + clarity persist. */
+    const LS_WALL = 'viceHub.wall';
+    const TF_HOURS = { '5m': 10, '15m': 40, '1h': 168, '4h': 672, '1d': 4320 }; // lookback per interval
+    const CLARITY = { soft: [105, 64], std: [150, 92], sharp: [215, 132] }; // grid divisors
+    const stored = (() => { try { return JSON.parse(localStorage.getItem(LS_WALL)) ?? {}; } catch { return {}; } })();
+    let tf = TF_HOURS[stored.tf] ? stored.tf : '15m';
+    let clarity = CLARITY[stored.clarity] ? stored.clarity : 'std';
+    const saveWall = () => { try { localStorage.setItem(LS_WALL, JSON.stringify({ tf, clarity })); } catch { /* fine */ } };
+
+    let coin = coinNow(); // HL key, e.g. BTC / kPEPE
+    let base = String(coin).replace(/^k/, '');
+    const PAL = { cyan: '#41e3ff', blue: '#3a6bff', mag: '#e14dff', red: '#ff3b57', grn: '#2fe08e', amb: '#ffb63d', wht: '#eef8ff' };
+
+    /* ── live + historical data ── */
+    let dead = false;
+    let px = null; let chg = null; let vol = null; let oi = null; let fund = null;
+    let flashAt = -1e9; let flashUp = true;
+    let closes = []; let vols = [];
+    const unsub = hlFeed.sub((map) => {
+      const d = map?.[coin];
+      if (!d) return;
+      if (px != null && d.px !== px) { flashAt = performance.now(); flashUp = d.px > px; kick(); }
+      px = d.px; chg = d.chg; vol = d.vol; oi = d.oi * d.px; fund = d.funding;
+    });
+    let candleSeq = 0; // stale responses from a swapped ticker/tf never land
+    async function loadCandles() {
+      const run = ++candleSeq;
+      try {
+        const end = Date.now();
+        const ks = await hlInfo({ type: 'candleSnapshot', req: { coin, interval: tf, startTime: end - TF_HOURS[tf] * 3600_000, endTime: end } });
+        if (dead || run !== candleSeq || !Array.isArray(ks) || ks.length < 8) return;
+        closes = ks.map((k) => Number(k.c));
+        vols = ks.map((k) => Number(k.v) * Number(k.c)); // notional per candle
+      } catch { /* keep the last landscape */ }
+    }
+    loadCandles();
+    const candleTimer = setInterval(loadCandles, 90_000);
+    const setCoin = (next) => {
+      if (next === coin) return;
+      coin = next;
+      base = String(coin).replace(/^k/, '');
+      closes = []; vols = [];
+      const d = hlFeed.snap()?.[coin];
+      px = d?.px ?? null; chg = d?.chg ?? null; vol = d?.vol ?? null;
+      oi = d ? d.oi * d.px : null; fund = d?.funding ?? null;
+      loadCandles();
+    };
+
+    /* ── the cell grid + phosphor sprites ── */
+    let W = 0; let H = 0; let cell = 8; let cols = 0; let rows = 0;
+    const m = 3; // outer margin, in cells
+    let latt = null; // the unlit lattice, pre-rendered once per resize
+    const sprites = new Map(); // color -> glow sprite (core dot + radial halo)
+    const sprite = (color) => {
+      let s = sprites.get(color);
+      if (!s) {
+        const r = cell * 1.6;
+        s = document.createElement('canvas');
+        s.width = s.height = Math.ceil(r * 2);
+        const g = s.getContext('2d');
+        const grad = g.createRadialGradient(r, r, 0, r, r, r);
+        grad.addColorStop(0, `${color}c8`);
+        grad.addColorStop(0.35, `${color}50`);
+        grad.addColorStop(1, `${color}00`);
+        g.fillStyle = grad;
+        g.fillRect(0, 0, s.width, s.height);
+        g.fillStyle = color;
+        g.beginPath();
+        g.arc(r, r, cell * 0.3, 0, Math.PI * 2);
+        g.fill();
+        sprites.set(color, s);
+      }
+      return s;
+    };
+    const fit = () => {
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      W = wrap.clientWidth || innerWidth;
+      H = wrap.clientHeight || innerHeight;
+      cv.width = Math.round(W * dpr);
+      cv.height = Math.round(H * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      const [dw, dh] = CLARITY[clarity];
+      cell = Math.max(4, Math.min(W / dw, H / dh));
+      cols = Math.floor(W / cell);
+      rows = Math.floor(H / cell);
+      sprites.clear();
+      latt = document.createElement('canvas');
+      latt.width = cv.width;
+      latt.height = cv.height;
+      const g = latt.getContext('2d');
+      g.setTransform(dpr, 0, 0, dpr, 0, 0);
+      g.fillStyle = 'rgba(82, 106, 168, 0.13)';
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+          g.beginPath();
+          g.arc((c + 0.5) * cell, (r + 0.5) * cell, cell * 0.26, 0, Math.PI * 2);
+          g.fill();
+        }
+      }
+    };
+
+    let ox = 0; let oy = 0; // burn-in drift offset, in cells
+    const dot = (c, r, color, a = 1) => {
+      if (c < -1 || r < -1 || c > cols || r > rows) return;
+      const s = sprite(color);
+      ctx.globalAlpha = a;
+      ctx.drawImage(s, (c + ox + 0.5) * cell - s.width / 2, (r + oy + 0.5) * cell - s.height / 2);
+      ctx.globalAlpha = 1;
+    };
+    const glyph = (ch) => VWALL_FONT[ch] ?? VWALL_FONT[' '];
+    const text = (str, c0, r0, scale, color, a = 1) => {
+      let c = c0;
+      for (const ch of String(str)) {
+        const g = glyph(ch);
+        for (let r = 0; r < 7; r++) {
+          for (let b = 0; b < 5; b++) {
+            if (!(g[r] & (16 >> b))) continue;
+            for (let sy = 0; sy < scale; sy++) for (let sx = 0; sx < scale; sx++) dot(c + b * scale + sx, r0 + r * scale + sy, color, a);
+          }
+        }
+        c += 6 * scale;
+      }
+      return c - c0;
+    };
+    const textW = (str, scale) => String(str).length * 6 * scale - scale;
+    // the DPX "P-TIME" chip: a dotted rounded outline hugging its label
+    const badge = (str, right, r0, color) => {
+      const w = textW(str, 1) + 6;
+      const h = 11;
+      const c0 = right - w;
+      for (let c = c0 + 2; c <= c0 + w - 3; c++) { dot(c, r0, color, 0.8); dot(c, r0 + h - 1, color, 0.8); }
+      for (let r = r0 + 2; r <= r0 + h - 3; r++) { dot(c0, r, color, 0.8); dot(c0 + w - 1, r, color, 0.8); }
+      dot(c0 + 1, r0 + 1, color, 0.8); dot(c0 + w - 2, r0 + 1, color, 0.8);
+      dot(c0 + 1, r0 + h - 2, color, 0.8); dot(c0 + w - 2, r0 + h - 2, color, 0.8);
+      text(str, c0 + 3, r0 + 2, 1, color);
+      return c0;
+    };
+
+    /* ── the spectrum analyzer state ── */
+    const bars = { n: 0, h: [], pk: [], pkAt: [], kick: [] };
+    function kick() { // a live tick punches a few random bands, EQ-demo style
+      for (let i = 0; i < bars.n; i++) if (Math.random() < 0.3) bars.kick[i] = Math.min(1, bars.kick[i] + 0.35 + Math.random() * 0.4);
+    }
+
+    /* ── the frame ── */
+    let raf = 0;
+    let last = 0;
+    let marq = 0; let marqAt = 0;
+    let sweepAt = performance.now() + 2500;
+    const t0 = performance.now();
+    function frame(t) {
+      if (dead) return;
+      raf = requestAnimationFrame(frame);
+      if (t - last < 31 || document.hidden) return; // ~32fps reads as phosphor
+      last = t;
+      const drift = Math.floor((t - t0) / 240_000) % 4;
+      ox = [0, 1, 1, 0][drift];
+      oy = [0, 0, 1, 1][drift];
+
+      ctx.fillStyle = '#010108';
+      ctx.fillRect(0, 0, W, H);
+      ctx.drawImage(latt, 0, 0, W, H);
+
+      /* vertical layout, top to bottom */
+      const marqTop = rows - m - 7;
+      const specBot = marqTop - 3;
+      const specH = Math.max(10, Math.round(rows * 0.24));
+      const specTop = specBot - specH;
+      const ridgeBot = specTop - 2;
+      const ridgeTop = Math.min(ridgeBot - 6, Math.round(rows * 0.36));
+
+      /* sky sparkles — the demo scene's idle glitter */
+      for (let i = 0; i < 26; i++) {
+        const c = Math.floor((((i * 631) % 997) / 997) * cols);
+        const r = m + Math.floor((((i * 389) % 499) / 499) * Math.max(4, ridgeTop - m - 2));
+        const tw = 0.5 + 0.5 * Math.sin(t / 900 + i * 2.1);
+        dot(c, r, i % 5 ? PAL.cyan : PAL.wht, 0.08 + 0.22 * tw);
+      }
+
+      /* header: brand + market, clock chip + feed light */
+      text('VICE SUITE', m, m, 1, PAL.cyan, 0.7);
+      text(`${base}-USD PERP`, m, m + 9, 1, PAL.wht, 0.5);
+      const now = new Date();
+      const bLeft = badge(`${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`, cols - m, m, PAL.cyan);
+      const liveOk = Date.now() - hlTickAt < 20_000;
+      const lab = liveOk ? 'LIVE' : 'NO FEED';
+      const lcol = liveOk ? PAL.grn : PAL.red;
+      if (!liveOk || Math.sin(t / 480) > 0) dot(bLeft - textW(lab, 1) - 8, m + 5, lcol, 0.9);
+      text(lab, bLeft - textW(lab, 1) - 5, m + 2, 1, lcol, 0.75);
+
+      /* the price: big segmented digits, tick-flash green/red */
+      const pr0 = m + 20;
+      const pxStr = px != null ? `$${fmtPx(px)}` : '$-----';
+      const flashing = t - flashAt < 650;
+      text(pxStr, m, pr0, 2, flashing ? (flashUp ? PAL.grn : PAL.red) : PAL.wht);
+      if (chg != null) {
+        const chStr = `${chg >= 0 ? '▲' : '▼'}${fmtChg(chg)}`;
+        text(chStr, m + textW(pxStr, 2) + 6, pr0 + 7, 1, chg >= 0 ? PAL.grn : PAL.red, 0.95);
+      }
+
+      /* the landscape: 40h of price is the mountain range. A softer magenta
+         horizon trails behind it for depth; fills are checkerboard-dithered
+         like the demo scene's shading */
+      if (closes.length > 8) {
+        let lo = Infinity; let hi = -Infinity;
+        for (const v of closes) { if (v < lo) lo = v; if (v > hi) hi = v; }
+        const span = hi - lo || 1;
+        const inW = cols - 2 * m;
+        let pB = null;
+        for (let c = m; c < cols - m; c++) {
+          const f = (c - m) / inW;
+          const hB = (closes[Math.floor(f * (closes.length - 1) * 0.8)] - lo) / span;
+          const rB = Math.round(ridgeBot - hB * (ridgeBot - ridgeTop) * 0.55) - 4;
+          dot(c, rB, PAL.mag, 0.3);
+          if (pB != null) for (let r = Math.min(pB, rB) + 1; r < Math.max(pB, rB); r++) dot(c, r, PAL.mag, 0.2);
+          pB = rB;
+          for (let r = rB + 1; r <= ridgeBot; r++) if ((c + r) % 2 === 0) dot(c, r, PAL.mag, 0.06);
+        }
+        let p2 = null;
+        for (let c = m; c < cols - m; c++) {
+          const f = (c - m) / inW;
+          const h2 = (closes[Math.floor(f * (closes.length - 1))] - lo) / span;
+          const r2 = Math.round(ridgeBot - h2 * (ridgeBot - ridgeTop));
+          dot(c, r2, PAL.cyan, 0.95);
+          if (p2 != null) for (let r = Math.min(p2, r2) + 1; r < Math.max(p2, r2); r++) dot(c, r, PAL.cyan, 0.6);
+          p2 = r2;
+          for (let r = r2 + 1; r <= ridgeBot; r++) if ((c + r) % 2 === 0) dot(c, r, PAL.blue, 0.15);
+        }
+        const hL = (closes[closes.length - 1] - lo) / span;
+        dot(cols - m - 1, Math.round(ridgeBot - hL * (ridgeBot - ridgeTop)), PAL.wht, 0.5 + 0.5 * Math.sin(t / 300));
+      }
+
+      /* the spectrum analyzer: candle volumes set each band's weight, a
+         slow interference wave makes them dance, live ticks kick them */
+      const bw = 3; const gap = 1;
+      const n = Math.max(8, Math.floor((cols - 2 * m + gap) / (bw + gap)));
+      if (bars.n !== n) { bars.n = n; bars.h = Array(n).fill(0); bars.pk = Array(n).fill(0); bars.pkAt = Array(n).fill(0); bars.kick = Array(n).fill(0); }
+      const tail = vols.slice(-n);
+      let vHi = 0;
+      for (const v of tail) if (v > vHi) vHi = v;
+      for (let i = 0; i < n; i++) {
+        const w = tail.length === n && vHi > 0 ? Math.sqrt(tail[i] / vHi) : 0.6;
+        const wave = 0.5 + 0.5 * Math.sin(t / 430 + i * 0.9) * Math.sin(t / 1170 + i * 0.35);
+        bars.kick[i] *= 0.94;
+        const target = Math.min(1, w * (0.28 + 0.62 * wave) + bars.kick[i]);
+        bars.h[i] += (target - bars.h[i]) * (target > bars.h[i] ? 0.38 : 0.1);
+        const hC = Math.round(bars.h[i] * specH);
+        const c0 = m + i * (bw + gap);
+        for (let r = 0; r < hC; r++) {
+          const f = r / specH;
+          const col = f < 0.45 ? PAL.blue : f < 0.7 ? PAL.cyan : f < 0.88 ? PAL.mag : PAL.red;
+          for (let b = 0; b < bw; b++) dot(c0 + b, specBot - r, col, 0.9);
+        }
+        if (bars.h[i] * specH >= bars.pk[i]) { bars.pk[i] = bars.h[i] * specH; bars.pkAt[i] = t; }
+        else if (t - bars.pkAt[i] > 420) bars.pk[i] = Math.max(0, bars.pk[i] - 0.24);
+        const capCol = bars.pk[i] / specH > 0.85 ? PAL.wht : PAL.red;
+        for (let b = 0; b < bw; b++) dot(c0 + b, specBot - Math.round(bars.pk[i]) - 1, capCol, 0.95);
+      }
+
+      /* the ticker: whole-cell steps — chunky, like the real scroll */
+      if (t - marqAt > 85) { marq += 1; marqAt = t; }
+      const msg = (` ${base}-USD $${px != null ? fmtPx(px) : '-----'} ` +
+        (chg != null ? `${chg >= 0 ? '▲' : '▼'}${fmtChg(chg)} ` : '') +
+        `· 24H VOL $${fmtCompact(vol) === '—' ? '--' : fmtCompact(vol)} · OPEN INT $${fmtCompact(oi) === '—' ? '--' : fmtCompact(oi)} ` +
+        (fund != null ? `· FUNDING ${(fund * 100).toFixed(4)}%/H ` : '') +
+        '· HYPERLIQUID PERPS · VICE SUITE ·').toUpperCase();
+      const total = msg.length * 6;
+      const off = marq % total;
+      for (let k = 0; k < 2; k++) {
+        let c = m - off + k * total;
+        for (const ch of msg) {
+          if (c > -6 && c < cols) text(ch, c, marqTop, 1, PAL.amb, 0.85);
+          c += 6;
+        }
+      }
+
+      /* the demo sweep: a soft white wash crosses the glass now and then */
+      if (t > sweepAt) {
+        const p = (t - sweepAt) / 1600;
+        if (p >= 1) sweepAt = t + 34_000 + Math.random() * 10_000;
+        else {
+          const sc = Math.floor(p * (cols + 20)) - 10;
+          for (let r = 0; r < rows; r++) {
+            for (let dc = -2; dc <= 2; dc++) {
+              if ((r + sc + dc) % 2 === 0) dot(sc + dc, r, PAL.wht, 0.14 * (1 - Math.abs(dc) / 3));
+            }
+          }
+        }
+      }
+    }
+
+    /* ── chrome + lifecycle ── */
+    let wakeT = 0;
+    const wake = () => {
+      wrap.classList.add('awake');
+      clearTimeout(wakeT);
+      wakeT = setTimeout(() => { if (!panel.classList.contains('open')) wrap.classList.remove('awake'); }, 2600);
+    };
+
+    /* the display panel: ticker · timeframe · clarity */
+    const seg = (k, opts, cur) => `<span class="vwall-seg" data-k="${k}">${opts.map(([v, lab]) =>
+      `<button type="button" data-v="${v}"${v === cur ? ' class="on"' : ''}>${lab}</button>`).join('')}</span>`;
+    panel.innerHTML =
+      '<label>ticker</label><input class="vwall-sym" maxlength="12" spellcheck="false" autocomplete="off" ' +
+      'aria-label="Tracked symbol" placeholder="BTC">' +
+      `<label>timeframe</label>${seg('tf', [['5m', '5M'], ['15m', '15M'], ['1h', '1H'], ['4h', '4H'], ['1d', '1D']], tf)}` +
+      `<label>clarity</label>${seg('clarity', [['soft', 'Soft'], ['std', 'Standard'], ['sharp', 'Sharp']], clarity)}`;
+    const symInp = panel.querySelector('.vwall-sym');
+    symInp.value = base;
+    const applySym = () => {
+      const v = symInp.value.trim().toUpperCase();
+      if (!v) return;
+      const snap = hlFeed.snap();
+      const key = snap ? (snap[v] ? v : snap[`k${v}`] ? `k${v}` : null) : v; // pre-first-tick: optimistic
+      if (!key) {
+        symInp.classList.add('bad');
+        setTimeout(() => symInp.classList.remove('bad'), 800);
+        return;
+      }
+      symInp.value = key.replace(/^k/, '');
+      setCoin(key);
+    };
+    symInp.addEventListener('keydown', (ev) => {
+      ev.stopPropagation(); // the wallpaper's Esc handler must not eat typing
+      if (ev.key === 'Enter') applySym();
+      if (ev.key === 'Escape') { panel.classList.remove('open'); wake(); }
+    });
+    symInp.addEventListener('change', applySym);
+    panel.addEventListener('click', (ev) => {
+      const b = ev.target.closest('.vwall-seg button');
+      if (!b) return;
+      const k = b.closest('.vwall-seg').dataset.k;
+      if (b.dataset.v === (k === 'tf' ? tf : clarity)) return;
+      for (const o of b.closest('.vwall-seg').children) o.classList.toggle('on', o === b);
+      if (k === 'tf') { tf = b.dataset.v; loadCandles(); }
+      else { clarity = b.dataset.v; fit(); }
+      saveWall();
+    });
+    gearB.addEventListener('click', () => {
+      panel.classList.toggle('open');
+      wake();
+      if (panel.classList.contains('open')) symInp.focus();
+    });
+    cv.addEventListener('pointerdown', () => { panel.classList.remove('open'); });
+
+    const onKey = (ev) => {
+      if (ev.key !== 'Escape') return;
+      ev.stopPropagation();
+      if (panel.classList.contains('open')) { panel.classList.remove('open'); wake(); return; }
+      close();
+    };
+    const onFs = () => { if (!document.fullscreenElement) close(); };
+    function close() {
+      if (dead) return;
+      dead = true;
+      cancelAnimationFrame(raf);
+      clearInterval(candleTimer);
+      clearTimeout(wakeT);
+      unsub();
+      window.removeEventListener('keydown', onKey, true);
+      document.removeEventListener('fullscreenchange', onFs);
+      ro.disconnect();
+      wrap.remove();
+      if (document.fullscreenElement) document.exitFullscreen().catch(() => { /* fine */ });
+    }
+    wrap.addEventListener('pointermove', wake);
+    exitB.addEventListener('click', close);
+    window.addEventListener('keydown', onKey, true);
+    document.addEventListener('fullscreenchange', onFs);
+    const ro = new ResizeObserver(fit);
+    ro.observe(wrap);
+
+    fit();
+    raf = requestAnimationFrame(frame);
+    wake();
+    const fs = wrap.requestFullscreen?.();
+    if (fs?.catch) fs.catch(() => { /* the in-page overlay is fine */ });
+  }
+
   /* ── sections: Velo-style replica pages — the Dashboard stays the custom
      gridstack canvas, untouched. Each section is a STATIC page (no drag, no
      cells): a control bar + a fixed 2-col grid of panels. Panels host the
@@ -4810,7 +5313,9 @@
         '<button class="hw-btn hw-pin" data-act="pin" title="Pin to my Dashboard"><i data-lucide="pin"></i></button>' +
         '<button class="hw-btn" data-act="expand" title="Fullscreen"><i data-lucide="maximize-2"></i></button></span>';
       bodyEl.innerHTML = '';
-      try { pm.handle = man.mount(bodyEl, merged) ?? {}; }
+      // third arg: widgets written for the dashboard read inst.settings —
+      // the panel-mount records double as that instance (pm.settings is live)
+      try { pm.handle = man.mount(bodyEl, merged, pm) ?? {}; }
       catch (e) { note(bodyEl, 'alert-triangle', `panel failed to start — ${esc(e.message)}`); pm.handle = {}; }
     };
     pm.remount = () => { try { pm.handle?.destroy?.(); } catch { /* gone */ } mountIt(); icons(); };
@@ -4840,58 +5345,391 @@
   }
 
   const SECTION_META = {
+    // the Chart desk: a live symbol strip over the full-bleed engine, the
+    // screener below, then a "symbol context" band (top-trader positioning ·
+    // symbol news · cross-venue funding) — kept OFF the dashboard's turf per
+    // the owner: nothing here is draggable/pinnable, panels are static, and
+    // the context band sits under the screener. Symbol changes sync every
+    // direction — the engine's own picker, screener rows, #/chart/SYM links.
     chart: {
       title: 'Chart', icon: 'candlestick-chart',
       render(root) {
-        const sym = sectionSym();
-        const grid = el('div', 'vpage-grid');
-        root.appendChild(grid);
-        // our own engine (vchart.js) — candles, <Vice> indicator suite, book heatmap
-        panel(grid, 'vChartPro', { symbol: sym }, 'span2 vp-hero vp-chartpro');
-        panel(grid, 'vScreener', { tab: 'all' }, 'span2 vp-tall');
+        let sym = sectionSym();
+        const desk = el('div', 'vdesk');
+        root.appendChild(desk);
+        const strip = el('div', 'vdesk-strip');
+        const main = el('div', 'vdesk-main');
+        const below = el('div', 'vpage-grid vdesk-ctx');
+        desk.append(strip, main, below);
+
+        let dead = false;
+        let lastPx = null;
+        let lastHlKey; // undefined = not resolved yet (distinct from null = not on HL)
+
+        const coinIconFor = (coin) => {
+          const c = String(coin).replace(/^.*:/, '');
+          for (const k of [c, c.replace(/^k/, ''), c.replace(/^U/, '')]) {
+            if (coinIcons[k]) return iconFor(k);
+          }
+          return iconFor(c);
+        };
+        const baseOf = (s) => s.replace(/^k/, '').replace(/^.*:/, '');
+        // HL resolution: PEPE arrives from screeners, the book calls it kPEPE;
+        // before the first feed tick be optimistic about plain tickers
+        const hlKeyFor = (s, map) => {
+          if (map) return map[s] ? s : map[`k${s}`] ? `k${s}` : null;
+          return s.includes(':') ? null : s;
+        };
+        const hlKeyNow = () => hlKeyFor(sym, hlFeed.snap());
+        const newsSymFor = (s) => (s.includes(':') ? s : tvSymbolFor(baseOf(s)));
+
+        /* ── the strip: one contained bar of everything that frames the chart ── */
+        const stripSym = el('div', 'vdesk-sym');
+        const stripStats = el('div', 'vdesk-stats');
+        const stripActs = el('div', 'vdesk-acts');
+        strip.append(stripSym, stripStats, stripActs);
+        const readWl = () => { try { return JSON.parse(localStorage.getItem(LS_WATCH)) ?? []; } catch { return []; } };
+        const saveWl = (arr) => { try { localStorage.setItem(LS_WATCH, JSON.stringify(arr.slice(0, 30))); } catch { /* fine */ } };
+        const inWl = () => { const k = hlKeyNow(); return !!k && readWl().includes(k); };
+        const paintStripSym = () => {
+          stripSym.innerHTML = `${coinIconFor(sym)}<span class="id"><b>${esc(sym)}</b>` +
+            `<span class="nm">${esc(coinNames[baseOf(sym)] ?? (sym.includes(':') ? sym.split(':')[0] : 'Hyperliquid perp'))}</span></span>`;
+        };
+        const paintActs = () => {
+          const k = hlKeyNow();
+          stripActs.innerHTML =
+            `<span class="vdesk-eng" role="group" aria-label="Chart engine">${ENGINES.map(([k2, lab]) =>
+              `<button class="${engine === k2 ? 'on' : ''}" data-eng="${k2}" type="button" title="${
+                k2 === 'vice' ? 'Vice Chart — the native engine' : 'TradingView chart'}">${lab}</button>`).join('')}</span>` +
+            '<button class="vdesk-wall" data-wall type="button" title="Wallpaper Mode — a full-screen ambient display, made for a TV">' +
+            '<i data-lucide="tv"></i><span>Wallpaper</span></button>' +
+            `<button class="vsc-star lg${inWl() ? ' on' : ''}" data-wstar type="button" aria-pressed="${inWl()}" ` +
+            `title="${inWl() ? 'Remove from the dashboard watchlist' : 'Add to the dashboard watchlist'}"${k ? '' : ' disabled'}>★</button>`;
+          icons();
+        };
+        stripStats.innerHTML =
+          '<span class="grp gpx"><span class="px" data-px>—</span><span class="chg" data-chg></span></span>' +
+          '<span class="grp" data-gcrowd hidden><label>top-100 books</label><span class="crowd">' +
+          '<span class="vsc-mini big"><span class="l"></span><span class="s"></span></span><b data-cb></b></span></span>' +
+          '<span class="grp" data-gvol hidden><label>24h volume</label><b data-v></b></span>' +
+          '<span class="grp" data-goi hidden><label>open interest</label><b data-o></b></span>' +
+          '<span class="grp" data-gfund hidden><label>funding · <i class="cd" data-cd></i></label><b data-f></b></span>' +
+          '<span class="grp offhl" data-offhl hidden>not a Hyperliquid market — live stats unavailable</span>';
+        const sEl = (q) => stripStats.querySelector(q);
+        const flash = (node, up) => {
+          node.classList.remove('pop-up', 'pop-dn');
+          void node.offsetWidth; // restart the animation
+          node.classList.add(up ? 'pop-up' : 'pop-dn');
+        };
+        const paintStats = (map) => {
+          const key = hlKeyFor(sym, map);
+          const on = !!(key && map?.[key]);
+          sEl('[data-offhl]').hidden = on || !map;
+          for (const q of ['[data-gvol]', '[data-goi]', '[data-gfund]']) sEl(q).hidden = !on;
+          if (!on) {
+            sEl('[data-px]').textContent = '—';
+            sEl('[data-chg]').textContent = '';
+            sEl('[data-gcrowd]').hidden = true;
+            return;
+          }
+          const d = map[key];
+          const pxEl = sEl('[data-px]');
+          pxEl.textContent = `$${fmtPx(d.px)}`;
+          if (lastPx != null && d.px !== lastPx) flash(pxEl, d.px > lastPx);
+          lastPx = d.px;
+          const chgEl = sEl('[data-chg]');
+          chgEl.textContent = fmtChg(d.chg);
+          chgEl.className = `chg ${d.chg >= 0 ? 'up' : 'down'}`;
+          sEl('[data-v]').textContent = `$${fmtCompact(d.vol)}`;
+          sEl('[data-o]').textContent = `$${fmtCompact(d.oi * d.px)}`;
+          const apr = d.funding * 24 * 365 * 100;
+          sEl('[data-f]').textContent = `${(d.funding * 100).toFixed(4)}%/h · ${apr >= 0 ? '' : '-'}${Math.abs(apr).toFixed(1)}% apr`;
+          sEl('[data-f]').className = d.funding >= 0 ? 'up' : 'down';
+        };
+        /* the crowd: how the top-100 Hyperliquid books lean on THIS symbol —
+           the same cached wallet reads the Scanner and the Positioning panel
+           use, so a warm page answers instantly */
+        const crowdCache = new Map(); // hlKey -> { t, longPct, books }
+        let crowdSeq = 0;
+        async function loadCrowd() {
+          const key = hlKeyNow();
+          if (!key) { sEl('[data-gcrowd]').hidden = true; return; }
+          const run = ++crowdSeq;
+          const hit = crowdCache.get(key);
+          if (!hit || Date.now() - hit.t > 180_000) {
+            try {
+              const addrs = (await hlTopTraders()).slice(0, 100);
+              let ln = 0;
+              let sn = 0;
+              let books = 0;
+              for (let i = 0; i < addrs.length && !dead && run === crowdSeq; i += 10) {
+                await Promise.allSettled(addrs.slice(i, i + 10).map(async (a) => {
+                  const ch = await hlWalletState(a);
+                  let held = false;
+                  for (const ap of ch?.assetPositions ?? []) {
+                    const p = ap.position;
+                    if (!p || String(p.coin) !== key) continue;
+                    const ntl = Math.abs(Number(p.positionValue) || 0);
+                    if (!(ntl > 0)) continue;
+                    if (Number(p.szi) >= 0) ln += ntl; else sn += ntl;
+                    held = true;
+                  }
+                  if (held) books++;
+                }));
+              }
+              if (dead || run !== crowdSeq) return;
+              crowdCache.set(key, {
+                t: Date.now(),
+                longPct: ln + sn > 0 ? Math.round((ln / (ln + sn)) * 100) : null,
+                books,
+              });
+            } catch { /* the group just stays hidden */ }
+          }
+          if (!dead && run === crowdSeq) paintCrowd();
+        }
+        function paintCrowd() {
+          const key = hlKeyNow();
+          const c = key && crowdCache.get(key);
+          const g = sEl('[data-gcrowd]');
+          if (!c || c.longPct == null) { g.hidden = true; return; }
+          g.hidden = false;
+          g.title = `${c.books} of the top 100 hold ${key} — ${c.longPct}% long / ${100 - c.longPct}% short by notional`;
+          g.querySelector('.l').style.width = `${c.longPct}%`;
+          g.querySelector('.s').style.width = `${100 - c.longPct}%`;
+          const b = g.querySelector('[data-cb]');
+          b.textContent = c.longPct >= 50 ? `${c.longPct}% long` : `${100 - c.longPct}% short`;
+          b.className = c.longPct >= 50 ? 'up' : 'down';
+        }
+        // funding pays hourly on the hour — a live clock makes it tangible
+        const cdTimer = setInterval(() => {
+          const el2 = sEl('[data-cd]');
+          if (!el2 || el2.closest('[hidden]')) return;
+          const left = 3600_000 - (Date.now() % 3600_000);
+          const m = Math.floor(left / 60000);
+          const s2 = Math.floor((left % 60000) / 1000);
+          el2.textContent = `next in ${m}:${String(s2).padStart(2, '0')}`;
+        }, 1000);
+
+        /* ── the hero: pick your engine — Vice (native), TradingView, or
+           Hyperliquid's own board (embedded, with an escape-hatch link) ── */
+        const ENGINES = [['vice', 'Vice'], ['tv', 'TV']];
+        const ENG_KEY = 'viceHub.chartEngine';
+        let engine = (() => {
+          try { const v = localStorage.getItem(ENG_KEY); return ENGINES.some(([k2]) => k2 === v) ? v : 'vice'; }
+          catch { return 'vice'; }
+        })();
+        let hero = null; // { kind, pm, el }
+        const dropHero = () => {
+          if (!hero) return;
+          try { hero.pm?.handle?.destroy?.(); } catch { /* gone */ }
+          const i = hero.pm ? pageMounts.indexOf(hero.pm) : -1;
+          if (i >= 0) pageMounts.splice(i, 1);
+          hero.el?.remove();
+          hero = null;
+        };
+        const mountHero = () => {
+          dropHero();
+          if (engine === 'vice') {
+            const p = panel(main, 'vChartPro', { symbol: sym }, 'vp-chartpro vdesk-hero');
+            hero = { kind: 'vice', pm: pageMounts.at(-1), el: p };
+          } else {
+            const p = panel(main, 'tvChart', { symbol: newsSymFor(sym) }, 'vdesk-hero vdesk-tv');
+            hero = { kind: 'tv', pm: pageMounts.at(-1), el: p };
+          }
+        };
+        const heroSym = () => {
+          if (!hero) return;
+          if (hero.kind === 'vice') hero.pm?.handle?.setSymbol?.(sym);
+          else {
+            hero.pm.settings = { ...hero.pm.settings, symbol: newsSymFor(sym) };
+            hero.pm.remount();
+          }
+        };
+        mountHero();
+
+        /* ── below: the screener first, then the symbol-context band ── */
+        panel(below, 'vScreener', { tab: 'all' }, 'span2 vp-tall');
+        // module slots keep a stable order while HL-only panels come and go
+        const slots = { posn: el('div', 'vdesk-slot'), news: el('div', 'vdesk-slot'), fund: el('div', 'vdesk-slot span2') };
+        below.append(slots.posn, slots.news, slots.fund);
+        const mods = { posn: null, news: null, fund: null };
+        const setMod = (key2, want, type, settings, cls) => {
+          const cur = mods[key2];
+          if (!want) {
+            if (cur) {
+              try { cur.pm.handle?.destroy?.(); } catch { /* gone */ }
+              const i = pageMounts.indexOf(cur.pm);
+              if (i >= 0) pageMounts.splice(i, 1);
+              slots[key2].innerHTML = '';
+              mods[key2] = null;
+            }
+            return;
+          }
+          if (!cur) {
+            const p = panel(slots[key2], type, settings, cls);
+            mods[key2] = { el: p, pm: pageMounts.at(-1) };
+            icons();
+            return;
+          }
+          cur.pm.settings = { ...cur.pm.settings, ...settings };
+          cur.pm.remount();
+        };
+        const ensureCtx = () => {
+          const k = hlKeyNow();
+          setMod('posn', !!k, 'vPositioning', { symbol: k ?? 'BTC' }, 'vdesk-posn');
+          setMod('news', true, 'news', { tab: 'symbol', symbol: newsSymFor(sym), density: 'compact', max: 25 }, 'vdesk-news');
+          setMod('fund', !!k, 'vFunding', { only: k ?? 'BTC' }, 'vdesk-fund');
+          // no HL data → news is the only tile on its row; let it breathe
+          slots.news.classList.toggle('span2', !k);
+        };
+
+        /* ── wiring ── */
+        strip.addEventListener('click', (ev) => {
+          const eng = ev.target.closest('[data-eng]');
+          if (eng) {
+            if (eng.dataset.eng !== engine) {
+              engine = eng.dataset.eng;
+              try { localStorage.setItem(ENG_KEY, engine); } catch { /* fine */ }
+              paintActs();
+              mountHero();
+            }
+            return;
+          }
+          if (ev.target.closest('[data-wstar]')) {
+            const k = hlKeyNow();
+            if (!k) return;
+            const list = readWl();
+            const i = list.indexOf(k);
+            if (i >= 0) list.splice(i, 1); else list.unshift(k);
+            saveWl(list);
+            paintActs();
+            toast(i >= 0 ? `${k} removed from the watchlist` : `${k} on the dashboard watchlist`);
+            return;
+          }
+          if (ev.target.closest('[data-wall]')) { openWallpaper(() => hlKeyNow() ?? 'BTC'); return; }
+          if (ev.target.closest('[data-scan]')) location.hash = `#/scanner/${encodeURIComponent(baseOf(sym))}`;
+        });
+
+        // one entry point for every symbol change: the engine's own picker
+        // (via onSymbol), linkSymbol (screener rows), deep links
+        const setChartSym = (next) => {
+          const s2 = String(next).toUpperCase();
+          if (s2 === sym || dead) return;
+          sym = s2;
+          linkedSym = s2;
+          lastPx = null;
+          if (/^[A-Z0-9:]{2,16}$/i.test(s2)) history.replaceState(null, '', `#/chart/${encodeURIComponent(s2)}`);
+          titleSync();
+          paintStripSym();
+          paintActs();
+          paintStats(hlFeed.snap());
+          paintCrowd();
+          loadCrowd();
+          heroSym();
+          ensureCtx();
+        };
+        const unsub = hlFeed.sub((map) => {
+          if (dead) return;
+          const key = hlKeyFor(sym, map);
+          paintStats(map);
+          // first resolution (or a delist) changes what the context can show
+          if (key !== lastHlKey) {
+            lastHlKey = key;
+            paintActs();
+            loadCrowd();
+            ensureCtx();
+          }
+        });
+        pageMounts.push({ handle: { destroy() { dead = true; unsub(); clearInterval(cdTimer); }, setChartSym } });
+
+        // sections mount no market widgets — warm the icon/name cache ourselves
+        fetchMarkets().then(() => { if (!dead) paintStripSym(); }).catch(() => { /* letter avatars */ });
+        paintStripSym();
+        paintActs();
+        paintStats(hlFeed.snap());
+        loadCrowd();
+        ensureCtx();
       },
     },
     // Vice Scanner (owner ask): the Hyperliquid wallet tracker — leaderboard
-    // with live UPL + crowd aggregates, starred wallets with live positions
-    // and trade alerts, and a full inspector for any address
+    // with live UPL + crowd aggregates, a Positioning view (the cohort's book
+    // by symbol), a Flow tape (what the top wallets just did), starred wallets
+    // with live positions + trade alerts, and a deep inspector for any address
     scanner: {
       title: 'Scanner', icon: 'radar',
       render(root) {
         const wrap = el('div', 'vsc');
         root.appendChild(wrap);
-        const intro = el('div', 'vgal-intro',
-          '<b>Vice Scanner</b><span>the sharpest wallets on Hyperliquid — or paste any address. Star a trader to track their book and get trade alerts.</span>');
+
+        /* ── chrome: status header, view tabs, aggregate strip, control bar ── */
+        const headEl = el('div', 'vsc-head');
         const viewsEl = el('div', 'vsc-views');
         const aggEl = el('div', 'vsc-agg');
         const bar = el('div', 'vsc-bar');
+        const scopeEl = el('div', 'vsc-scopewrap');
+        const actEl = el('div', 'vgal-chips');
         const search = el('div', 'vgal-search vsc-search', '<i data-lucide="search"></i>');
         const inp = document.createElement('input');
-        inp.placeholder = 'Any wallet address — 0x…';
-        inp.setAttribute('aria-label', 'Wallet address');
+        inp.placeholder = 'trader · 0x address · symbol';
+        inp.setAttribute('aria-label', 'Filter traders, paste a wallet address, or type a symbol to scope');
         search.appendChild(inp);
-        const modeEl = el('div', 'vgal-chips');
+        const flowCtl = el('div', 'vsc-flowctl');
         const winEl = el('div', 'vgal-chips');
-        const scopeEl = el('div', 'vsc-scopewrap');
-        bar.append(scopeEl, search, modeEl, el('span', 'vsc-sp'), winEl);
+        bar.append(scopeEl, search, actEl, flowCtl, el('span', 'vsc-sp'), winEl);
         const scroll = el('div', 'vsc-scroll');
+        const coinsEl = el('div', 'vsc-coinrail');
         const trackedEl = el('div', 'vsc-tracked');
-        wrap.append(intro, viewsEl, aggEl, bar, scroll, trackedEl);
+        wrap.append(headEl, viewsEl, aggEl, bar, coinsEl, scroll, trackedEl);
 
-        const MODES = [['all', 'All'], ['crypto', 'Crypto'], ['tradfi', 'TradFi']];
         const WINS = [['day', '24h'], ['week', '7d'], ['month', '30d'], ['all', 'All-time']];
+        const SORTS = ['value', 'pnl', 'roi', 'vlm', 'upl', 'uplpct'];
+        const FLOW_MINS = [[0, 'any size'], [10e3, '$10k+'], [50e3, '$50k+'], [250e3, '$250k+'], [1e6, '$1M+']];
+        const FLOW_SIDES = [['all', 'everything'], ['open', 'opens'], ['close', 'closes']];
+        const PREF_KEY = 'viceHub.scPrefs';
+        const prefs = (() => { try { return JSON.parse(localStorage.getItem(PREF_KEY)) ?? {}; } catch { return {}; } })();
         // a board that arrives scoped sorts by position size, like setScope does
-        const state = { view: 'board', mode: 'all', win: 'month', sort: scannerBootSym ? 'upl' : 'pnl', dir: -1, rows: [], loading: true, err: null, scope: scannerBootSym };
+        const state = {
+          view: 'board',
+          win: WINS.some(([k]) => k === prefs.win) ? prefs.win : 'month',
+          act: prefs.act === 'active' ? 'active' : 'all',
+          sort: scannerBootSym ? 'upl' : (SORTS.includes(prefs.sort) ? prefs.sort : 'pnl'),
+          dir: prefs.dir === 1 ? 1 : -1,
+          rows: [], loading: true, err: null, scope: scannerBootSym, q: '',
+          posSort: 'ntl', posDir: -1, posAll: false,
+          fMin: FLOW_MINS.some(([k]) => k === prefs.fMin) ? prefs.fMin : 10e3,
+          fSide: FLOW_SIDES.some(([k]) => k === prefs.fSide) ? prefs.fSide : 'all',
+          syncedAt: null,
+        };
         scannerBootSym = null;
-        const enrich = new Map(); // addr -> { upl, uplPct, cls, value, npos, coins, ln, sn, book, positions }
+        const savePrefs = () => {
+          try {
+            localStorage.setItem(PREF_KEY, JSON.stringify({
+              win: state.win, act: state.act, sort: state.sort, dir: state.dir,
+              fMin: state.fMin, fSide: state.fSide,
+            }));
+          } catch { /* fine */ }
+        };
+        const enrich = new Map(); // addr -> digest (see digest() below)
         let enrichRun = 0;
         let dead = false;
         let trackedTimer = null;
+        let flowTimer = null;
+        let headTimer = null;
+        let liveTimer = null;
+        let raf = 0;
 
         /* ── symbol scope: Focus on ETH → ETH traders, ETH positions, ETH
-           sentiment. Set by #/scanner/ETH, the Focus carry, or linking a
-           symbol while here; cleared with the chip. ── */
-        const scopePos = (e) => (e?.positions ?? []).filter((p) =>
-          p.coin === state.scope || p.coin === `k${state.scope}`); // kPEPE is 1000×PEPE
+           sentiment. Set by #/scanner/ETH, the Focus carry, linking a symbol
+           while here, typing a symbol in search, or clicking a Positioning
+           row; cleared with the chip. kPEPE is 1000×PEPE — match both. ── */
+        const scopeCoins = () => {
+          const S = String(state.scope ?? '').toUpperCase();
+          return S ? [S, `K${S}`] : [];
+        };
+        const scopePos = (e) => {
+          const keys = scopeCoins();
+          return (e?.positions ?? []).filter((p) => keys.includes(String(p.coin).toUpperCase()));
+        };
         const scopeMeta = (e) => {
           let ntl = 0; let upl = 0; let side = 0; let enNum = 0; let enDen = 0; let lev = null;
           for (const p of scopePos(e)) {
@@ -4921,16 +5759,20 @@
             history.replaceState(null, '', next ? `#/scanner/${encodeURIComponent(next)}` : '#/scanner');
           }
           paintScope();
-          paint();
+          paintView();
         };
         scopeEl.addEventListener('click', (e) => { if (e.target.closest('[data-unscope]')) setScope(null); });
         // closeWallet is declared below — destroy only runs at teardown, long after
-        pageMounts.push({ handle: { destroy() { dead = true; clearInterval(trackedTimer); closeWallet(); }, setScope } });
+        pageMounts.push({ handle: { destroy() {
+          dead = true;
+          clearInterval(trackedTimer); clearInterval(flowTimer);
+          clearInterval(headTimer); clearInterval(liveTimer);
+          if (raf) cancelAnimationFrame(raf);
+          clearTimeout(paintT);
+          unsubLive?.();
+          closeWallet();
+        }, setScope } });
 
-        // TradFi on Hyperliquid: builder-dex markets carry a "dex:COIN" name;
-        // bare equity/metal tickers cover the pre-HIP-3 unit listings
-        const TRADFI_SET = new Set(['TSLA', 'AAPL', 'NVDA', 'MSFT', 'AMZN', 'META', 'GOOGL', 'GOOG', 'COIN', 'HOOD', 'MSTR', 'PLTR', 'AMD', 'NFLX', 'SPY', 'QQQ', 'SPX', 'NDX', 'GOLD', 'XAU', 'SILVER', 'XAG', 'OIL', 'CL', 'EURUSD', 'US500', 'US10Y']);
-        const isTradfi = (coin) => coin.includes(':') || TRADFI_SET.has(coin.replace(/^U/, ''));
         const shortA = (a) => `${a.slice(0, 6)}…${a.slice(-4)}`;
         // coin icons: HL names normalize onto the CoinGecko icon cache —
         // kPEPE is 1000×PEPE, UBTC is Unit-wrapped BTC, dex:COIN is a builder market
@@ -4942,10 +5784,11 @@
           return iconFor(c);
         };
         // sections mount no market widgets — warm the icon cache ourselves
-        fetchMarkets().then(() => { if (!dead) { paint(); paintTracked(); } }).catch(() => { /* letter avatars */ });
+        fetchMarkets().then(() => { if (!dead) { paintView(); paintTracked(); } }).catch(() => { /* letter avatars */ });
         const fmtSign = (v, fmt = fmtCompact) => (v == null ? '—' : `${v < 0 ? '-' : ''}$${fmt(Math.abs(v))}`);
         const pct = (v, digits = 2) => (v == null || !Number.isFinite(v) ? '—' : `${v >= 0 ? '+' : ''}${(v * 100).toFixed(digits)}%`);
         const cls2 = (v) => (v == null ? '' : v >= 0 ? 'up' : 'down');
+        const fmtLev = (x) => (x == null || !Number.isFinite(x) ? '' : `${x >= 10 ? Math.round(x) : x.toFixed(1)}x`);
         let starred = readWalletWatch();
         const starBtn = (a, extra = '') => {
           const on = starred.includes(a);
@@ -4953,31 +5796,99 @@
             `title="${on ? 'Untrack this wallet' : 'Track this wallet — live positions + trade alerts'}" type="button">★</button>`;
         };
 
-        /* ── header views: Leaderboard ⇄ Tracked ── */
-        const paintViews = () => {
-          viewsEl.innerHTML =
-            `<button class="vsc-view${state.view === 'board' ? ' on' : ''}" data-v="board" type="button"><i data-lucide="list-ordered"></i>Leaderboard</button>` +
-            `<button class="vsc-view${state.view === 'tracked' ? ' on' : ''}" data-v="tracked" type="button"><i data-lucide="star"></i>Tracked<span class="n">${starred.length}</span></button>`;
+        /* ── status header: what the Scanner is looking at right now ── */
+        const paintHead = () => {
+          headEl.innerHTML =
+            '<div class="vsc-title"><i data-lucide="radar"></i><b>Vice Scanner</b>' +
+            `<span class="vsc-live${state.loading ? ' syncing' : ''}"><i class="dot"></i>${state.loading
+              ? 'syncing the board…'
+              : `${state.rows.length} books · synced ${esc(ago(state.syncedAt) || 'now')}`}</span>` +
+            '<span class="vsc-sp"></span>' +
+            `<button class="hw-btn vsc-resync${state.loading ? ' spin' : ''}" data-resync type="button" title="Re-sync the board and every book" aria-label="Re-sync"><i data-lucide="rotate-cw"></i></button></div>` +
+            '<p class="vsc-lead">the sharpest wallets on Hyperliquid — who they are, what they hold, what they just did. Tap a coin (or type a symbol) to see every position in it; star a trader for live tracking + trade alerts.</p>';
           icons();
         };
+        headEl.addEventListener('click', (e) => {
+          if (!e.target.closest('[data-resync]') || state.loading) return;
+          enrichRun++; // cancel any in-flight enrichment loop before the reload
+          loadBoard();
+        });
+        headTimer = setInterval(() => { if (!document.hidden && !state.loading) paintHead(); }, 30_000);
+
+        /* ── header views: Leaderboard · Positioning · Flow · Tracked ── */
+        const VIEWS = [
+          ['board', 'Leaderboard', 'list-ordered'],
+          ['positions', 'Positioning', 'scale'],
+          ['flow', 'Flow', 'activity'],
+          ['tracked', 'Tracked', 'star'],
+        ];
+        const paintViews = () => {
+          viewsEl.innerHTML = VIEWS.map(([k, lab, ic]) =>
+            `<button class="vsc-view${state.view === k ? ' on' : ''}" data-v="${k}" type="button"><i data-lucide="${ic}"></i>${lab}` +
+            `${k === 'tracked' ? `<span class="n">${starred.length}</span>` : ''}</button>`).join('');
+          icons();
+        };
+        const paintView = () => {
+          if (state.view === 'board') paint();
+          else if (state.view === 'positions') paintPositions();
+          else if (state.view === 'flow') paintFlow();
+          else paintTracked();
+        };
+        // enrichment lands in bursts — coalesce repaints onto animation
+        // frames, with a timer backstop: background tabs starve rAF entirely
+        // and the board would sit on stale numbers until refocus
+        let paintT = 0;
+        const queuePaint = () => {
+          if (raf) return;
+          raf = requestAnimationFrame(() => {
+            raf = 0;
+            clearTimeout(paintT);
+            paintT = 0;
+            if (!dead) paintView();
+          });
+          if (!paintT) {
+            paintT = setTimeout(() => {
+              paintT = 0;
+              if (!raf || dead) return;
+              cancelAnimationFrame(raf);
+              raf = 0;
+              paintView();
+            }, 400);
+          }
+        };
         const syncView = () => {
-          const board = state.view === 'board';
-          aggEl.hidden = !board;
-          bar.hidden = !board;
-          scroll.hidden = !board;
-          trackedEl.hidden = board;
-          if (board) { clearInterval(trackedTimer); trackedTimer = null; }
-          else { paintTracked(); loadTracked(); }
+          const v = state.view;
+          aggEl.hidden = v === 'tracked';
+          coinsEl.hidden = v !== 'board';
+          bar.hidden = v === 'tracked';
+          scroll.hidden = v === 'tracked';
+          trackedEl.hidden = v !== 'tracked';
+          search.hidden = v === 'flow';
+          actEl.hidden = v === 'flow' || v === 'positions';
+          winEl.hidden = v === 'flow';
+          flowCtl.hidden = v !== 'flow';
+          if (v !== 'tracked' && trackedTimer) { clearInterval(trackedTimer); trackedTimer = null; }
+          if (v !== 'flow' && flowTimer) { clearInterval(flowTimer); flowTimer = null; }
+          if (v === 'tracked') { paintTracked(); loadTracked(); }
+          else if (v === 'flow') { paintFlow(); loadFlow(); }
+          else paintView();
+        };
+        const setView = (v) => {
+          if (state.view === v) return;
+          state.view = v;
+          paintViews();
+          syncView();
         };
 
-        /* ── aggregate strip: what the whole cohort is doing ── */
+        /* ── aggregate strip (Leaderboard): what the whole cohort is doing ── */
+        const card = (label, body2, sub) =>
+          `<div class="vsc-card"><label>${label}</label><div class="v">${body2}</div>${sub ? `<div class="s">${sub}</div>` : ''}</div>`;
         const paintAgg = () => {
           // scope to the DISPLAYED cohort — enrich caches across window
           // switches and would otherwise mix retired rows into the stats
-          const es = state.rows.map((r) => enrich.get(r.a)).filter(Boolean);
-          if (state.loading || es.length < 8) { aggEl.innerHTML = ''; return; }
-          const card = (label, body2, sub) =>
-            `<div class="vsc-card"><label>${label}</label><div class="v">${body2}</div>${sub ? `<div class="s">${sub}</div>` : ''}</div>`;
+          let es = state.rows.map((r) => enrich.get(r.a)).filter(Boolean);
+          if (state.act === 'active') es = es.filter((e) => e.npos > 0); // cards mirror the table
+          if (state.loading || es.length < 4) { aggEl.innerHTML = ''; return; }
           if (state.scope) {
             // symbol sentiment: the cohort's book in ONE coin
             const S = state.scope;
@@ -5038,7 +5949,7 @@
               `<span class="vposn-meter slim"><span class="l" style="width:${100 - shortPct}%"></span><span class="s" style="width:${shortPct}%"></span></span>`,
               `<b class="${shortPct >= 50 ? 'down' : 'up'}">${shortPct >= 50 ? `${shortPct}% short` : `${100 - shortPct}% long`}</b> by notional · ${shortWallets}/${withPos.length} wallets net short`) +
             card('open upl', `<b class="${cls2(uplSum)}">${fmtSign(uplSum)}</b>`,
-              `${inProfit}/${withPos.length} books in profit`) +
+              `${inProfit}/${withPos.length} books in profit · $${fmtCompact(ln + sn)} gross`) +
             card('most crowded', top.length
               ? `<span class="vsc-coins big">${top.map(([c]) => coinIconFor(c)).join('')}</span>`
               : '—', top.map(([c]) => esc(c.replace(/^.*:/, ''))).join(' · ')) +
@@ -5048,15 +5959,55 @@
 
         /* ── leaderboard table ── */
         const paintBars = () => {
-          modeEl.innerHTML = MODES.map(([k, lab]) =>
-            `<button class="vpage-chip${state.mode === k ? ' on' : ''}" data-m="${k}" type="button">${lab}</button>`).join('');
+          actEl.innerHTML = [['all', 'All books'], ['active', 'In a position']].map(([k, lab]) =>
+            `<button class="vpage-chip${state.act === k ? ' on' : ''}" data-act="${k}" type="button">${lab}</button>`).join('');
           winEl.innerHTML = WINS.map(([k, lab]) =>
             `<button class="vpage-chip${state.win === k ? ' on' : ''}" data-w="${k}" type="button">${lab}</button>`).join('');
+          flowCtl.innerHTML =
+            '<span class="vsc-fl">size</span>' + FLOW_MINS.map(([k, lab]) =>
+              `<button class="vpage-chip${state.fMin === k ? ' on' : ''}" data-fm="${k}" type="button">${lab}</button>`).join('') +
+            '<span class="vsc-fl">show</span>' + FLOW_SIDES.map(([k, lab]) =>
+              `<button class="vpage-chip${state.fSide === k ? ' on' : ''}" data-fs="${k}" type="button">${lab}</button>`).join('');
         };
+        /* ── the coin rail: the crowd's most-held markets as one-tap scopes —
+           the headline door into "who is long/short X" ── */
+        const paintCoinRail = () => {
+          if (state.view !== 'board') return;
+          const crowd = {};
+          for (const r of state.rows) {
+            const e = enrich.get(r.a);
+            for (const [c, ntl] of e?.book ?? []) crowd[c] = (crowd[c] ?? 0) + Math.abs(ntl);
+          }
+          const top = Object.entries(crowd).sort((a, b) => b[1] - a[1]).slice(0, 9);
+          if (!top.length) { coinsEl.innerHTML = ''; return; }
+          const S = String(state.scope ?? '').toUpperCase();
+          const scopedIn = top.some(([c]) => c.toUpperCase() === S || c.toUpperCase() === `K${S}`);
+          coinsEl.innerHTML =
+            '<span class="lb">positions in</span>' +
+            top.map(([c]) => {
+              const on = c.toUpperCase() === S || c.toUpperCase() === `K${S}`;
+              return `<button class="vsc-crc${on ? ' on' : ''}" data-c="${esc(c)}" type="button" ` +
+                `title="${on ? 'Show every wallet' : `Who is long or short ${esc(c)} — sizes, entries, live pnl`}">` +
+                `${coinIconFor(c)}${esc(c.replace(/^k/, '').replace(/^.*:/, ''))}</button>`;
+            }).join('') +
+            (S && !scopedIn ? `<button class="vsc-crc on" data-c="${esc(S)}" type="button" title="Show every wallet">${coinIconFor(S)}${esc(S)}</button>` : '');
+        };
+        coinsEl.addEventListener('click', (ev) => {
+          const b = ev.target.closest('[data-c]');
+          if (!b) return;
+          const c = b.dataset.c;
+          const S = String(state.scope ?? '').toUpperCase();
+          setScope(c.toUpperCase() === S || c.toUpperCase() === `K${S}` ? null : c.replace(/^k/, ''));
+        });
         const arrow = (k) => (state.sort === k ? (state.dir < 0 ? ' ↓' : ' ↑') : '');
         const visibleRows = () => {
           let rows = state.rows.map((r) => ({ ...r, e: enrich.get(r.a) }));
-          if (state.mode !== 'all') rows = rows.filter((r) => r.e?.cls === state.mode);
+          // "In a position" trims flat books once their book has been read —
+          // unread books stay visible instead of flickering out of the list
+          if (state.act === 'active') rows = rows.filter((r) => !r.e || r.e.npos > 0);
+          if (state.q && !/^0x/.test(state.q)) {
+            rows = rows.filter((r) => (r.n ?? '').toLowerCase().includes(state.q) || r.a.toLowerCase().startsWith(state.q));
+          }
           if (state.scope) {
             rows = rows.map((r) => ({ ...r, sm: r.e ? scopeMeta(r.e) : null }))
               .filter((r) => r.sm && r.sm.ntl > 0);
@@ -5068,7 +6019,7 @@
             vlm: (r) => r[state.win].vlm,
             upl: (r) => (state.scope ? r.sm?.ntl : r.e?.upl),
             uplpct: (r) => (state.scope ? r.sm?.upl : r.e?.uplPct),
-          }[state.sort];
+          }[state.sort] ?? ((r) => r[state.win].pnl);
           rows.sort((a, b) => {
             const av = key(a);
             const bv = key(b);
@@ -5079,25 +6030,40 @@
           });
           return rows;
         };
+        // the sub-line under a trader's name = their whole book at a glance
+        const bookSub = (e) => {
+          if (!e) return '<span class="sub t3">reading book…</span>';
+          if (!e.npos) return '<span class="sub t3">flat — no open perps</span>';
+          const tot = e.ln + e.sn;
+          const sPct = tot > 0 ? Math.round((e.sn / tot) * 100) : 0;
+          return `<span class="sub"><span class="vsc-mini" title="${100 - sPct}% long / ${sPct}% short by notional">` +
+            `<span class="l" style="width:${100 - sPct}%"></span><span class="s" style="width:${sPct}%"></span></span>` +
+            `${e.npos} pos${e.lev ? ` · ${fmtLev(e.lev)} gross` : ''}</span>`;
+        };
         function paint() {
           if (state.view !== 'board') return;
           paintAgg();
+          paintCoinRail();
           if (state.err) {
+            scroll.className = 'vsc-scroll';
             scroll.innerHTML = '';
             note(scroll, 'wifi-off', esc(state.err));
             return;
           }
           if (state.loading) {
+            scroll.className = 'vsc-scroll';
             scroll.innerHTML = [...Array(9)].map(() =>
               '<div class="vsc-r vsc-skel"><span></span><span></span><span></span><span></span><span></span></div>').join('');
             return;
           }
           const rows = visibleRows();
           const S = state.scope;
+          scroll.className = 'vsc-scroll';
           scroll.innerHTML =
-            '<div class="vsc-r vsc-h">' +
+            '<div class="vsc-r vsc-br vsc-h">' +
             '<span class="st"></span><span class="rk">#</span><span class="who">trader</span>' +
-            `<button class="num sortable" data-s="value" type="button">equity${arrow('value')}</button>` +
+            `<button class="num sortable ceq" data-s="value" type="button">equity${arrow('value')}</button>` +
+            `<button class="num sortable croi" data-s="roi" type="button">roi${arrow('roi')}</button>` +
             `<button class="num sortable" data-s="pnl" type="button">pnl${arrow('pnl')}</button>` +
             `<button class="num sortable cvol" data-s="vlm" type="button">volume${arrow('vlm')}</button>` +
             `<button class="num sortable cupl" data-s="upl" type="button">${S ? `${esc(S.toLowerCase())} size` : 'upl $'}${arrow('upl')}</button>` +
@@ -5108,42 +6074,35 @@
               const roi = r[state.win].roi;
               // scoped rows speak about the scoped position: side · lev · entry
               const sub = S && r.sm
-                ? `<span class="${r.sm.side >= 0 ? 'up' : 'down'}">${r.sm.side >= 0 ? 'long' : 'short'}${r.sm.lev ? ` ${r.sm.lev}x` : ''}</span>${r.sm.entry ? ` @ ${fmtPx(r.sm.entry)}` : ''}`
-                : `${pct(roi)} ${WINS.find(([k]) => k === state.win)?.[1] ?? ''} roi`;
+                ? `<span class="sub"><span class="${r.sm.side >= 0 ? 'up' : 'down'}">${r.sm.side >= 0 ? 'long' : 'short'}${r.sm.lev ? ` ${r.sm.lev}x` : ''}</span>${r.sm.entry ? ` @ ${fmtPx(r.sm.entry)}` : ''}</span>`
+                : bookSub(e);
+              const flat = !S && e && !e.npos;
               const c4 = S && r.sm
                 ? `<span class="num cupl ${r.sm.side >= 0 ? 'up' : 'down'}">$${fmtCompact(r.sm.ntl)}</span>`
-                : `<span class="num cupl ${cls2(e?.upl)}">${e ? fmtSign(e.upl) : '…'}</span>`;
+                : flat ? '<span class="num cupl t3">—</span>'
+                  : `<span class="num cupl ${cls2(e?.upl)}">${e ? fmtSign(e.upl) : '…'}</span>`;
               const c5 = S && r.sm
                 ? `<span class="num cupct ${cls2(r.sm.upl)}">${fmtSign(r.sm.upl)}</span>`
-                : `<span class="num cupct ${cls2(e?.uplPct)}">${e ? pct(e.uplPct) : '…'}</span>`;
-              return `<div class="vsc-r clickable" data-a="${esc(r.a)}" tabindex="0" role="button" aria-label="Inspect ${esc(r.n ?? shortA(r.a))}">` +
+                : flat ? '<span class="num cupct t3">—</span>'
+                  : `<span class="num cupct ${cls2(e?.uplPct)}">${e ? pct(e.uplPct) : '…'}</span>`;
+              return `<div class="vsc-r vsc-br clickable" data-a="${esc(r.a)}" tabindex="0" role="button" aria-label="Inspect ${esc(r.n ?? shortA(r.a))}">` +
                 `<span class="st">${starBtn(r.a)}</span>` +
-                `<span class="rk${i < 3 ? ' top' : ''}">${i + 1}</span>` +
-                `<span class="who"><b>${esc(r.n ?? shortA(r.a))}</b><span class="sub">${sub}</span></span>` +
-                `<span class="num">$${fmtCompact(r.v)}</span>` +
+                `<span class="rk${i < 3 ? ' pod' : ''}">${i + 1}</span>` +
+                `<span class="who"><b>${esc(r.n ?? shortA(r.a))}</b>${sub}</span>` +
+                `<span class="num ceq">$${fmtCompact(r.v)}</span>` +
+                `<span class="num croi ${cls2(roi)}">${pct(roi)}</span>` +
                 `<span class="num ${cls2(r[state.win].pnl)}">${fmtSign(r[state.win].pnl)}</span>` +
                 `<span class="num cvol">$${fmtCompact(r[state.win].vlm)}</span>` +
                 c4 + c5 +
-                `<span class="cls">${e?.coins?.length ? `<span class="vsc-coins" title="${esc(e.coins.join(' · '))}">${e.coins.map(coinIconFor).join('')}</span>` : ''}` +
-                `${e ? (e.cls === 'flat' ? '<i class="t3">flat</i>' : `<i class="${e.cls}">${e.cls === 'crypto' ? 'CRYPTO' : e.cls === 'tradfi' ? 'TRADFI' : 'MIX'}</i>`) : ''}</span>` +
+                `<span class="cls">${e?.coins?.length ? `<span class="vsc-coins" title="${esc(e.coins.join(' · '))}">${e.coins.map(coinIconFor).join('')}</span>` : ''}</span>` +
                 '</div>';
-            }).join('') || `<div class="vgal-none">${S
-              ? `no ${esc(state.mode === 'all' ? '' : `${state.mode} `)}wallets holding ${esc(S)} found yet — books are still being read`
-              : `no ${esc(state.mode)} wallets in this slice yet — classification is still filling in`}</div>`);
+            }).join('') || `<div class="vgal-none">${state.q
+              ? `nothing matches “${esc(state.q)}” in this slice`
+              : S
+                ? `no wallets holding ${esc(S)} found yet — books are still being read`
+                : 'nothing to show yet — books are still being read'}</div>`);
         }
 
-        const classify = (positions) => {
-          if (!positions.length) return 'flat';
-          let tf = 0;
-          let total = 0;
-          for (const p of positions) {
-            const ntl = Math.abs(Number(p.positionValue) || 0);
-            total += ntl;
-            if (isTradfi(p.coin)) tf += ntl;
-          }
-          if (!(total > 0)) return 'flat';
-          return tf / total >= 0.6 ? 'tradfi' : tf / total <= 0.4 ? 'crypto' : 'mix';
-        };
         const digest = (ch, fallbackV) => {
           const positions = (ch?.assetPositions ?? []).map((p) => p.position).filter(Boolean);
           const upl = positions.reduce((a, p) => a + (Number(p.unrealizedPnl) || 0), 0);
@@ -5159,44 +6118,345 @@
           return {
             upl, value, ln, sn, npos: positions.length, positions: sorted,
             uplPct: value > 0 ? upl / value : null,
-            cls: classify(positions),
             coins: sorted.slice(0, 4).map((p) => p.coin),
             book: sorted.map((p) => [p.coin, (Number(p.szi) >= 0 ? 1 : -1) * Math.abs(Number(p.positionValue) || 0)]),
+            lev: value > 0 ? (ln + sn) / value : null,
+            upl0: upl, value0: value, // as-fetched anchors — live ticks derive from these
           };
         };
-        async function enrichRows() {
+        const trackedState = new Map(); // addr -> digest (Tracked view reads this)
+        /* ── LIVE pnl: every open position re-prices on the shared 5s feed —
+           szi × (mark − entry) IS the linear-perp upl, so the board, the
+           Positioning fold and the Tracked cards move with the market
+           without a single extra wallet query. ── */
+        const refreshLive = (map) => {
+          let touched = false;
+          for (const e of [...enrich.values(), ...trackedState.values()]) {
+            if (!e?.positions?.length) continue;
+            let upl = 0;
+            let ln = 0;
+            let sn = 0;
+            let any = false;
+            for (const p of e.positions) {
+              const m = map?.[p.coin]?.px;
+              const szi = Number(p.szi);
+              const en = Number(p.entryPx);
+              if (m > 0 && Number.isFinite(szi) && en > 0) {
+                p.unrealizedPnl = szi * (m - en);
+                p.positionValue = Math.abs(szi) * m;
+                const mu = Number(p.marginUsed);
+                if (mu > 0) p.returnOnEquity = p.unrealizedPnl / mu;
+                any = true;
+              }
+              const u = Number(p.unrealizedPnl) || 0;
+              const n = Math.abs(Number(p.positionValue) || 0);
+              upl += u;
+              if (szi >= 0) ln += n; else sn += n;
+            }
+            if (!any) continue;
+            touched = true;
+            e.upl = upl;
+            e.ln = ln;
+            e.sn = sn;
+            e.value = (e.value0 ?? e.value) + (upl - (e.upl0 ?? upl)); // equity rides the open pnl
+            e.uplPct = e.value > 0 ? upl / e.value : null;
+            e.lev = e.value > 0 ? (ln + sn) / e.value : null;
+          }
+          return touched;
+        };
+        const unsubLive = hlFeed.sub((map) => {
+          if (dead || !refreshLive(map)) return;
+          if (state.view === 'board' || state.view === 'positions') queuePaint();
+          else if (state.view === 'tracked') paintTracked();
+        });
+
+        async function enrichRows(force = false) {
           const run = ++enrichRun;
-          const want = state.rows.filter((r) => !enrich.has(r.a));
+          const want = force ? state.rows : state.rows.filter((r) => !enrich.has(r.a));
           for (let i = 0; i < want.length && !dead && run === enrichRun; i += 8) {
             await Promise.allSettled(want.slice(i, i + 8).map(async (r) => {
               enrich.set(r.a, digest(await hlWalletState(r.a), r.v));
             }));
-            if (!dead && run === enrichRun) paint();
+            if (!dead && run === enrichRun && !force) queuePaint();
           }
+          if (!dead && run === enrichRun) queuePaint();
         }
         async function loadBoard() {
           state.loading = true;
           state.err = null;
-          paint();
+          paintHead();
+          paintView();
           try {
             const sort = ['upl', 'uplpct', 'value'].includes(state.sort) ? 'value' : state.sort;
-            const j = await getJson(`/api/vice-hlboard?window=${state.win}&sort=${sort}&limit=80`, 45_000);
+            const j = await getJson(`/api/vice-hlboard?window=${state.win}&sort=${sort}&limit=100`, 45_000);
             if (dead) return;
             if (!j?.rows?.length) throw new Error('the leaderboard proxy returned nothing');
             state.rows = j.rows;
             state.loading = false;
-            paint();
+            state.syncedAt = Date.now();
+            paintHead();
+            paintView();
             enrichRows();
+            if (state.view === 'flow') loadFlow(); // arrived here before the board synced
           } catch (e) {
             if (dead) return;
             state.loading = false;
             state.err = `leaderboard unreachable — ${e.message}`;
-            paint();
+            paintHead();
+            paintView();
           }
+        }
+        // books drift while the page sits open — refresh the enrichment on a
+        // slow loop (hlWalletState's 3m TTL does the actual rate limiting)
+        liveTimer = setInterval(() => {
+          if (document.hidden || dead || state.loading) return;
+          if (state.view === 'board' || state.view === 'positions') enrichRows(true);
+        }, 150_000);
+
+        /* ── Positioning view: the cohort's whole book, folded by symbol ── */
+        const crowdRows = () => {
+          const pool = state.rows.map((r) => ({ r, e: enrich.get(r.a) })).filter((x) => x.e);
+          const map = new Map();
+          for (const { r, e } of pool) {
+            for (const p of e.positions) {
+              const ntl = Math.abs(Number(p.positionValue) || 0);
+              if (!(ntl > 0)) continue;
+              const long = Number(p.szi) >= 0;
+              let o = map.get(p.coin);
+              if (!o) {
+                o = { coin: p.coin, nL: 0, nS: 0, ln: 0, sn: 0, upl: 0, enL: 0, enLd: 0, enS: 0, enSd: 0, big: null, mark: null };
+                map.set(p.coin, o);
+              }
+              if (long) { o.nL++; o.ln += ntl; } else { o.nS++; o.sn += ntl; }
+              o.upl += Number(p.unrealizedPnl) || 0;
+              const en = Number(p.entryPx);
+              if (en > 0) { if (long) { o.enL += en * ntl; o.enLd += ntl; } else { o.enS += en * ntl; o.enSd += ntl; } }
+              const sz = Math.abs(Number(p.szi));
+              if (sz > 0) o.mark = ntl / sz; // positionValue/szi IS the mark
+              if (!o.big || ntl > o.big.ntl) o.big = { ntl, long, who: r.n ?? shortA(r.a), a: r.a };
+            }
+          }
+          let rows = [...map.values()];
+          if (state.q && !/^0x/.test(state.q)) rows = rows.filter((o) => o.coin.toLowerCase().includes(state.q));
+          const key = {
+            ntl: (o) => o.ln + o.sn, holders: (o) => o.nL + o.nS,
+            bias: (o) => (o.ln + o.sn > 0 ? o.ln / (o.ln + o.sn) : 0), upl: (o) => o.upl,
+          }[state.posSort] ?? ((o) => o.ln + o.sn);
+          rows.sort((a, b) => (state.posDir < 0 ? key(b) - key(a) : key(a) - key(b)));
+          return { read: pool.length, rows };
+        };
+        const paintAggPos = (read, rows) => {
+          if (!rows.length) { aggEl.innerHTML = ''; return; }
+          const gross = rows.reduce((a, o) => a + o.ln + o.sn, 0);
+          const ln = rows.reduce((a, o) => a + o.ln, 0);
+          const sPct = gross > 0 ? Math.round(((gross - ln) / gross) * 100) : 0;
+          const cands = rows.filter((o) => o.nL + o.nS >= 2);
+          const pool = cands.length ? cands : rows;
+          const best = [...pool].sort((a, b) => b.upl - a.upl)[0];
+          const worst = [...pool].sort((a, b) => a.upl - b.upl)[0];
+          aggEl.innerHTML =
+            card('crowd book · gross', `<b>$${fmtCompact(gross)}</b>`,
+              `${rows.length} markets · ${read}/${state.rows.length} books read`) +
+            card('overall lean',
+              `<span class="vposn-meter slim"><span class="l" style="width:${100 - sPct}%"></span><span class="s" style="width:${sPct}%"></span></span>`,
+              `<b class="${sPct >= 50 ? 'down' : 'up'}">${sPct >= 50 ? `${sPct}% short` : `${100 - sPct}% long`}</b> by notional`) +
+            (best && best.upl > 0
+              ? card('best crowd bet', `<span class="wrow">${coinIconFor(best.coin)}<b class="up">${fmtSign(best.upl)}</b></span>`,
+                `${esc(best.coin)} · ${best.nL + best.nS} book${best.nL + best.nS === 1 ? '' : 's'} in it`)
+              : '') +
+            (worst && worst.upl < 0
+              ? card('worst crowd bet', `<span class="wrow">${coinIconFor(worst.coin)}<b class="down">${fmtSign(worst.upl)}</b></span>`,
+                `${esc(worst.coin)} · ${worst.nL + worst.nS} book${worst.nL + worst.nS === 1 ? '' : 's'} in it`)
+              : '');
+        };
+        const parrow = (k) => (state.posSort === k ? (state.posDir < 0 ? ' ↓' : ' ↑') : '');
+        function paintPositions() {
+          if (state.view !== 'positions') return;
+          const { read, rows } = crowdRows();
+          paintAggPos(read, rows);
+          if (state.err) {
+            scroll.className = 'vsc-scroll';
+            scroll.innerHTML = '';
+            note(scroll, 'wifi-off', esc(state.err));
+            return;
+          }
+          if (state.loading || !read) {
+            scroll.className = 'vsc-scroll';
+            scroll.innerHTML = [...Array(9)].map(() =>
+              '<div class="vsc-r vsc-skel"><span></span><span></span><span></span><span></span><span></span></div>').join('');
+            return;
+          }
+          const shown = state.posAll ? rows : rows.slice(0, 30);
+          scroll.className = 'vsc-scroll';
+          scroll.innerHTML =
+            '<div class="vsc-r vsc-pr vsc-h">' +
+            '<span class="who">market</span>' +
+            `<button class="bias sortable" data-ps="bias" type="button">crowd lean${parrow('bias')}</button>` +
+            `<button class="num sortable ch2" data-ps="holders" type="button">books${parrow('holders')}</button>` +
+            `<button class="num sortable" data-ps="ntl" type="button">open interest${parrow('ntl')}</button>` +
+            `<button class="num sortable cupl" data-ps="upl" type="button">crowd upl${parrow('upl')}</button>` +
+            '<span class="cen">avg entries</span><span class="cbig">largest position</span></div>' +
+            (shown.map((o) => {
+              const tot = o.ln + o.sn;
+              const sPct = tot > 0 ? Math.round((o.sn / tot) * 100) : 0;
+              const shortLed = sPct >= 50;
+              const avgL = o.enLd > 0 ? o.enL / o.enLd : null;
+              const avgS = o.enSd > 0 ? o.enS / o.enSd : null;
+              return `<div class="vsc-r vsc-pr clickable" data-coin="${esc(o.coin)}" tabindex="0" role="button" aria-label="Scope the leaderboard to ${esc(o.coin)}">` +
+                `<span class="who"><span class="wrow">${coinIconFor(o.coin)}<b>${esc(o.coin)}</b></span>` +
+                `<span class="sub">${o.mark ? `mark ${fmtPx(o.mark)}` : ''}</span></span>` +
+                `<span class="bias"><span class="vposn-meter slim" title="${100 - sPct}% long / ${sPct}% short by notional"><span class="l" style="width:${100 - sPct}%"></span><span class="s" style="width:${sPct}%"></span></span>` +
+                `<span class="bt ${shortLed ? 'down' : 'up'}">${shortLed ? `${sPct}% short` : `${100 - sPct}% long`}</span></span>` +
+                `<span class="num ch2">${o.nL + o.nS}<span class="sub2">${o.nL}L · ${o.nS}S</span></span>` +
+                `<span class="num">$${fmtCompact(tot)}<span class="sub2">L $${fmtCompact(o.ln)} · S $${fmtCompact(o.sn)}</span></span>` +
+                `<span class="num cupl ${cls2(o.upl)}">${fmtSign(o.upl)}</span>` +
+                `<span class="cen">${avgL ? `<span class="en"><b class="up">L</b>${fmtPx(avgL)}</span>` : ''}${avgS ? `<span class="en"><b class="down">S</b>${fmtPx(avgS)}</span>` : ''}${!avgL && !avgS ? '<span class="t3">—</span>' : ''}</span>` +
+                `<span class="cbig"><b class="${o.big.long ? 'up' : 'down'}">${o.big.long ? 'LONG' : 'SHORT'} $${fmtCompact(o.big.ntl)}</b><span class="sub2">${esc(o.big.who)}</span></span>` +
+                '</div>';
+            }).join('') || `<div class="vgal-none">${state.q ? `no market matches “${esc(state.q)}”` : 'no open positions across the cohort yet — books are still being read'}</div>`) +
+            (rows.length > 30 && !state.posAll
+              ? `<button class="vsc-foot" data-posall type="button">show all ${rows.length} markets</button>`
+              : '');
+        }
+
+        /* ── Flow view: the tape — what the sharpest wallets just did ── */
+        let flowRows = [];
+        let flowAt = null;
+        let flowBusy = false;
+        const FLOW_TOP = 12;
+        const flowSources = () => [...new Set([...state.rows.slice(0, FLOW_TOP).map((r) => r.a), ...starred])].slice(0, 24);
+        async function loadFlow() {
+          if (dead || state.view !== 'flow') return;
+          if (!flowTimer) flowTimer = setInterval(() => { if (!document.hidden) loadFlow(); }, 75_000);
+          if (!state.rows.length && !starred.length) return; // board still syncing — loadBoard re-triggers
+          if (flowBusy) return;
+          flowBusy = true;
+          const srcs = flowSources();
+          const nameOf = new Map(state.rows.map((r) => [r.a, r.n]));
+          const out = [];
+          await Promise.allSettled(srcs.map(async (a) => {
+            const fills = await hlFills(a, 60_000);
+            for (const f of (Array.isArray(fills) ? fills : []).slice(0, 80)) {
+              const coin = String(f.coin ?? '');
+              if (coin.startsWith('@') || coin.includes('/')) continue; // spot pair ids — unreadable
+              const px = Number(f.px);
+              const sz = Number(f.sz);
+              out.push({
+                t: Number(f.time) || 0, a, who: nameOf.get(a) ?? shortA(a), coin,
+                dir: String(f.dir ?? (f.side === 'B' ? 'buy' : 'sell')), side: f.side,
+                ntl: Math.abs(px * sz) || 0, sz, px, pnl: Number(f.closedPnl) || 0,
+              });
+            }
+          }));
+          flowBusy = false;
+          if (dead) return;
+          const cut = Date.now() - 48 * 3600_000;
+          const raw = out.filter((f) => f.t >= cut).sort((a, b) => b.t - a.t);
+          // grinder bots split one move into a burst of micro-fills — coalesce
+          // same trader+market+direction within a 3-minute run into one print
+          const merged = [];
+          for (const f of raw) {
+            const m = merged.at(-1);
+            if (m && m.a === f.a && m.coin === f.coin && m.dir === f.dir && m.side === f.side
+              && f.t >= m.tOld - 180_000) {
+              m.ntl += f.ntl;
+              m.sz += f.sz;
+              m.pnl += f.pnl;
+              m.pxNum += f.px * f.sz;
+              m.tOld = f.t;
+              m.n++;
+              m.px = m.sz > 0 ? m.pxNum / m.sz : f.px;
+              continue;
+            }
+            merged.push({ ...f, n: 1, tOld: f.t, pxNum: f.px * f.sz });
+          }
+          flowRows = merged.slice(0, 1200);
+          flowAt = Date.now();
+          if (state.view === 'flow') paintFlow();
+        }
+        const dirKind = (dir) => {
+          const d = dir.toLowerCase();
+          if (d.includes('liquidat')) return 'liq';
+          if (d.includes('open long') || d === 'buy') return 'ol';
+          if (d.includes('open short') || d === 'sell') return 'os';
+          if (d.includes('close long')) return 'cl';
+          if (d.includes('close short')) return 'cs';
+          return 'fl'; // flips + anything exotic
+        };
+        const flowVisible = () => {
+          const keys = scopeCoins();
+          return flowRows.filter((f) => {
+            if (f.ntl < state.fMin) return false;
+            if (keys.length && !keys.includes(f.coin.toUpperCase())) return false;
+            if (state.fSide === 'open' && !/open|buy|>/i.test(f.dir)) return false;
+            if (state.fSide === 'close' && !/close|sell|liquidat/i.test(f.dir)) return false;
+            return true;
+          });
+        };
+        const paintAggFlow = (rows) => {
+          if (!rows.length) { aggEl.innerHTML = ''; return; }
+          const net = {};
+          const byWho = {};
+          let vol = 0;
+          let liqs = 0;
+          let fillN = 0;
+          for (const f of rows) {
+            vol += f.ntl;
+            fillN += f.n ?? 1;
+            net[f.coin] = (net[f.coin] ?? 0) + (f.side === 'B' ? f.ntl : -f.ntl);
+            const w = (byWho[f.a] ??= { who: f.who, ntl: 0, n: 0 });
+            w.ntl += f.ntl; w.n += f.n ?? 1;
+            if (dirKind(f.dir) === 'liq') liqs++;
+          }
+          const ent = Object.entries(net).sort((a, b) => b[1] - a[1]);
+          const top = ent[0];
+          const bot = ent.at(-1);
+          const busy = Object.values(byWho).sort((a, b) => b.ntl - a.ntl)[0];
+          const spanH = Math.max(1, Math.round((Date.now() - rows.at(-1).t) / 3600_000));
+          aggEl.innerHTML =
+            card('tape volume', `<b>$${fmtCompact(vol)}</b>`,
+              `${fillN} fills · last ${spanH}h${liqs ? ` · <b class="down">${liqs} liquidation${liqs === 1 ? '' : 's'}</b>` : ''}`) +
+            (top && top[1] > 0
+              ? card('heaviest net buying', `<span class="wrow">${coinIconFor(top[0])}<b class="up">+$${fmtCompact(top[1])}</b></span>`, esc(top[0]))
+              : '') +
+            (bot && bot[1] < 0
+              ? card('heaviest net selling', `<span class="wrow">${coinIconFor(bot[0])}<b class="down">-$${fmtCompact(Math.abs(bot[1]))}</b></span>`, esc(bot[0]))
+              : '') +
+            (busy ? card('most active wallet', `<b>${esc(busy.who)}</b>`, `$${fmtCompact(busy.ntl)} across ${busy.n} fills`) : '');
+        };
+        function paintFlow() {
+          if (state.view !== 'flow') return;
+          const rows = flowVisible();
+          paintAggFlow(rows);
+          if ((state.loading || !flowAt) && !flowRows.length) {
+            scroll.className = 'vsc-scroll';
+            scroll.innerHTML = [...Array(9)].map(() =>
+              '<div class="vsc-r vsc-skel"><span></span><span></span><span></span><span></span><span></span></div>').join('');
+            return;
+          }
+          const shown = rows.slice(0, 250);
+          scroll.className = 'vsc-scroll';
+          scroll.innerHTML =
+            '<div class="vsc-r vsc-fr vsc-h">' +
+            '<span class="tm">when</span><span class="who">trader</span><span class="act">action</span>' +
+            '<span class="mkt">market</span><span class="num">size</span><span class="num cpx">price</span><span class="num cpnl">closed pnl</span></div>' +
+            (shown.map((f) => {
+              const k = dirKind(f.dir);
+              return `<div class="vsc-r vsc-fr clickable" data-a="${esc(f.a)}" tabindex="0" role="button" aria-label="Inspect ${esc(f.who)}">` +
+                `<span class="tm" title="${esc(new Date(f.t).toLocaleString())}">${esc(ago(f.t) || 'now')}</span>` +
+                `<span class="who"><b>${esc(f.who)}</b></span>` +
+                `<span class="act"><i class="vsc-badge ${k}">${esc(f.dir.toLowerCase())}</i></span>` +
+                `<span class="mkt"><span class="wrow">${coinIconFor(f.coin)}<b>${esc(f.coin)}</b></span></span>` +
+                `<span class="num">$${fmtCompact(f.ntl)}<span class="sub2">${fmtCompact(f.sz)} ${esc(f.coin)}${f.n > 1 ? ` · ${f.n} fills` : ''}</span></span>` +
+                `<span class="num cpx">${fmtPx(f.px)}</span>` +
+                `<span class="num cpnl ${f.pnl ? cls2(f.pnl) : 't3'}">${f.pnl ? fmtSign(f.pnl) : '—'}</span></div>`;
+            }).join('') || `<div class="vgal-none">${flowRows.length
+              ? 'nothing matches these filters in the last 48h — loosen the size or side filter'
+              : 'no perp fills from this crowd in the last 48h'}</div>`) +
+            `<div class="vsc-tapefoot">tape = last 48h of fills from the top ${Math.min(FLOW_TOP, state.rows.length || FLOW_TOP)} wallets on this board${starred.length ? ' + your tracked wallets' : ''} · refreshes every 75s${flowAt ? ` · read ${esc(ago(flowAt) || 'now')}` : ''}</div>`;
         }
 
         /* ── Tracked view: starred wallets, their LIVE books, trade alerts ── */
-        const trackedState = new Map(); // addr -> digest
         function paintTracked() {
           if (state.view !== 'tracked') return;
           const alerts = readWalletAlerts();
@@ -5223,7 +6483,14 @@
                     `<span class="num">$${fmtCompact(Math.abs(Number(p.positionValue) || 0))}</span>` +
                     `<span class="num">@ ${fmtPx(Number(p.entryPx))}</span>` +
                     `<span class="num ${cls2(pnl)}">${fmtSign(pnl)}</span></div>`;
-                }).join('') + (d.positions.length > 6 ? `<div class="vsc-none">+ ${d.positions.length - 6} more — open the inspector</div>` : '')
+                }).join('')
+                  + (d.positions.length > 6 ? `<div class="vsc-none">+ ${d.positions.length - 6} more — open the inspector</div>` : '')
+                  + (() => {
+                    const tot = d.ln + d.sn;
+                    const sPct = tot > 0 ? Math.round((d.sn / tot) * 100) : 0;
+                    return `<div class="vsc-tw-foot"><span class="vsc-mini"><span class="l" style="width:${100 - sPct}%"></span><span class="s" style="width:${sPct}%"></span></span>` +
+                      `${100 - sPct}% long · $${fmtCompact(tot)} gross${d.lev ? ` · ${fmtLev(d.lev)}` : ''}</div>`;
+                  })()
                 : '<div class="vsc-none">flat — no open perps</div>');
             return `<div class="vsc-tw">${head}${body2}</div>`;
           }).join('') : '';
@@ -5240,7 +6507,7 @@
           clearInterval(trackedTimer);
           const pull = async () => {
             await Promise.allSettled(readWalletWatch().map(async (a2) => {
-              trackedState.set(a2, digest(await hlWalletState(a2)));
+              trackedState.set(a2, digest(await hlWalletState(a2, 55_000)));
             }));
             if (!dead) paintTracked();
           };
@@ -5248,7 +6515,8 @@
           trackedTimer = setInterval(pull, 60_000);
         }
 
-        /* ── wallet inspector — works for any address ── */
+        /* ── wallet inspector — works for any address, now with working
+           orders, rhythm, drawdown, profit factor and per-coin win rates ── */
         const drawerMounts = [];
         const closeWallet = () => {
           for (const h of drawerMounts.splice(0)) { try { h.destroy?.(); } catch { /* gone */ } }
@@ -5278,15 +6546,18 @@
           const row = state.rows.find((r) => r.a === addr);
           pane.innerHTML =
             `<div class="vgal-d-head">${starBtn(addr, 'lg')}<b>${esc(row?.n ?? shortA(addr))}</b>` +
-            `<button class="hw-btn" data-copy title="Copy address"><i data-lucide="copy"></i></button>` +
+            `<button class="vsc-addr" data-copy type="button" title="Copy address">${shortA(addr)}<i data-lucide="copy"></i></button>` +
+            '<span class="vsc-sp"></span>' +
             `<a class="hw-btn" href="https://app.hyperliquid.xyz/explorer/address/${esc(addr)}" target="_blank" rel="noopener noreferrer" title="Hyperliquid explorer"><i data-lucide="external-link"></i></a>` +
             `<a class="hw-btn" href="https://etherscan.io/address/${esc(addr)}" target="_blank" rel="noopener noreferrer" title="Etherscan"><i data-lucide="link"></i></a>` +
             '<button class="hw-btn x" data-x title="Close"><i data-lucide="x"></i></button></div>' +
             '<div class="vsc-stats" data-stats></div>' +
-            '<div class="vsc-sec">equity curve<span class="vgal-chips" data-eqwins></span></div>' +
+            '<div class="vsc-sec">performance<span class="vgal-chips" data-eqmode></span><span class="vgal-chips" data-eqwins></span></div>' +
             '<div class="vsc-eq" data-eq></div>' +
             '<div class="vsc-sec">open positions</div><div data-pos></div>' +
-            '<div class="vsc-sec">recent closed pnl by coin</div><div data-closed></div>' +
+            '<div class="vsc-sec">working orders — where they exit</div><div data-ord></div>' +
+            '<div class="vsc-sec">performance by coin · closed fills</div><div data-closed></div>' +
+            '<div class="vsc-sec">fill rhythm · utc</div><div class="vsc-rhy" data-rhy></div>' +
             '<div class="vsc-sec">spot holdings</div><div data-spot></div>' +
             '<div class="vsc-sec">last fills</div><div data-fills></div>';
           icons();
@@ -5299,25 +6570,33 @@
           });
           const statsEl = pane.querySelector('[data-stats]');
           const stat = (label, val, cl = '') => `<span><label>${label}</label><b class="${cl}">${val}</b></span>`;
-          statsEl.innerHTML = stat('equity', '…') + stat('upl', '…') + stat('win rate', '…') + stat('bias', '…');
+          statsEl.innerHTML = stat('equity', '…') + stat('upl', '…') + stat('exposure', '…') + stat('bias', '…') +
+            stat('win rate', '…') + stat('profit factor', '…') + stat('volume', '…') + stat('fees', '…') +
+            stat('funding · 30d', '…') + stat('max dd · 30d', '…');
 
           let eqChart = null;
           drawerMounts.push({ destroy() { eqChart?.dispose(); } });
           const eqBox = pane.querySelector('[data-eq]');
           const eqWins = pane.querySelector('[data-eqwins]');
+          const eqModes = pane.querySelector('[data-eqmode]');
           let eqData = null;
           let eqWin = 'month';
+          let eqMode = 'equity';
           const EQMAP = { day: '24h', week: '7d', month: '30d', allTime: 'all' };
           const paintEqWins = () => {
+            eqModes.innerHTML = [['equity', 'equity'], ['pnl', 'pnl']].map(([k, lab]) =>
+              `<button class="vpage-chip${eqMode === k ? ' on' : ''}" data-em="${k}" type="button">${lab}</button>`).join('');
             eqWins.innerHTML = Object.entries(EQMAP).map(([k, lab]) =>
               `<button class="vpage-chip${eqWin === k ? ' on' : ''}" data-ew="${k}" type="button">${lab}</button>`).join('');
           };
           const drawEq = () => {
             if (!eqData || !window.echarts) return;
-            const hist = (Object.fromEntries(eqData)[eqWin]?.accountValueHistory ?? []).map(([t, v]) => [t, Number(v)]);
+            const src = Object.fromEntries(eqData)[eqWin];
+            const raw = (eqMode === 'pnl' ? src?.pnlHistory : src?.accountValueHistory) ?? [];
+            const hist = raw.map(([t, v]) => [t, Number(v)]);
             if (hist.length < 2) { eqBox.innerHTML = '<div class="vgal-none">no history for this window</div>'; eqChart?.dispose(); eqChart = null; return; }
             if (!eqChart) { eqBox.innerHTML = ''; eqChart = window.echarts.init(eqBox, null, { renderer: 'canvas' }); }
-            const up = hist.at(-1)[1] >= hist[0][1];
+            const up = eqMode === 'pnl' ? hist.at(-1)[1] >= 0 : hist.at(-1)[1] >= hist[0][1];
             const c = up ? '#21d196' : '#ff6473';
             eqChart.setOption({
               backgroundColor: 'transparent',
@@ -5340,73 +6619,224 @@
             paintEqWins();
             drawEq();
           });
+          eqModes.addEventListener('click', (ev) => {
+            const b = ev.target.closest('[data-em]');
+            if (!b) return;
+            eqMode = b.dataset.em;
+            paintEqWins();
+            drawEq();
+          });
           paintEqWins();
 
           const posEl = pane.querySelector('[data-pos]');
+          const ordEl = pane.querySelector('[data-ord]');
           const closedEl = pane.querySelector('[data-closed]');
+          const rhyEl = pane.querySelector('[data-rhy]');
           const spotEl = pane.querySelector('[data-spot]');
           const fillsEl = pane.querySelector('[data-fills]');
           const results = await Promise.allSettled([
             hlWalletState(addr),
             hlInfo({ type: 'portfolio', user: addr }),
-            hlInfo({ type: 'userFills', user: addr }),
+            hlFills(addr),
             hlInfo({ type: 'spotClearinghouseState', user: addr }),
+            hlInfo({ type: 'frontendOpenOrders', user: addr }),
+            hlInfo({ type: 'userFunding', user: addr, startTime: Date.now() - 30 * 864e5 }),
+            Promise.race([hlSnap(), new Promise((res) => { setTimeout(() => res(null), 6000); })]),
           ]);
           if (root.querySelector('.vsc-veil') !== veil) return; // closed meanwhile
-          const [ch, port, fills, spot] = results.map((r) => (r.status === 'fulfilled' ? r.value : null));
+          const [ch, port, fills, spot, orders, funding, mids] = results.map((r) => (r.status === 'fulfilled' ? r.value : null));
 
           const positions = (ch?.assetPositions ?? []).map((p) => p.position).filter(Boolean);
           const equity = Number(ch?.marginSummary?.accountValue) || null;
           const upl = positions.reduce((a, p) => a + (Number(p.unrealizedPnl) || 0), 0);
           const notional = positions.reduce((a, p) => a + Math.abs(Number(p.positionValue) || 0), 0);
           const longNtl = positions.reduce((a, p) => a + (Number(p.szi) > 0 ? Math.abs(Number(p.positionValue) || 0) : 0), 0);
-          const closedFills = (Array.isArray(fills) ? fills : []).filter((f) => Number(f.closedPnl) !== 0);
+          const fillArr = Array.isArray(fills) ? fills : [];
+          const closedFills = fillArr.filter((f) => Number(f.closedPnl) !== 0);
           const wins = closedFills.filter((f) => Number(f.closedPnl) > 0).length;
+          const winSum = closedFills.reduce((a, f) => a + Math.max(0, Number(f.closedPnl)), 0);
+          const lossSum = closedFills.reduce((a, f) => a + Math.min(0, Number(f.closedPnl)), 0);
+          const pf = lossSum < 0 ? winSum / -lossSum : winSum > 0 ? Infinity : null;
+          const fees = fillArr.reduce((a, f) => a + (Number(f.fee) || 0), 0);
+          const fund = Array.isArray(funding)
+            ? funding.reduce((a, x) => a + (Number(x?.delta?.usdc) || 0), 0)
+            : null;
           const bias = notional > 0 ? longNtl / notional : null;
-          statsEl.innerHTML =
-            stat('equity', equity != null ? `$${fmtCompact(equity)}` : '—') +
-            stat('upl', `${fmtSign(upl)} (${equity > 0 ? pct(upl / equity) : '—'})`, cls2(upl)) +
-            stat('exposure', notional ? `$${fmtCompact(notional)} · ${(notional / (equity || notional)).toFixed(1)}x` : 'flat') +
-            stat('bias', bias == null ? '—' : `${Math.round(bias * 100)}% long`, bias == null ? '' : bias >= 0.5 ? 'up' : 'down') +
-            stat('win rate', closedFills.length ? `${Math.round((wins / closedFills.length) * 100)}% of ${closedFills.length}` : '—');
+          const vol = row ? row[state.win].vlm : fillArr.reduce((a, f) => a + (Math.abs(Number(f.px) * Number(f.sz)) || 0), 0);
+          const winLab = row ? (WINS.find(([k]) => k === state.win)?.[1] ?? '') : 'recent';
+          let maxDd = null; // peak-to-trough on the 30d equity curve
+          const hist30 = port ? ((Object.fromEntries(port).month?.accountValueHistory) ?? []) : [];
+          if (hist30.length > 2) {
+            let peak = -Infinity;
+            let dd = 0;
+            for (const [, v0] of hist30) {
+              const v2 = Number(v0);
+              if (v2 > peak) peak = v2;
+              else if (peak > 0) dd = Math.max(dd, (peak - v2) / peak);
+            }
+            maxDd = dd;
+          }
+          const drawStats = (eqL, uplL, ntlL, biasL) => {
+            statsEl.innerHTML =
+              stat('equity', eqL != null ? `$${fmtCompact(eqL)}` : '—') +
+              stat('upl', `${fmtSign(uplL)} (${eqL > 0 ? pct(uplL / eqL) : '—'})`, cls2(uplL)) +
+              stat('exposure', ntlL ? `$${fmtCompact(ntlL)} · ${(ntlL / (eqL || ntlL)).toFixed(1)}x` : 'flat') +
+              stat('bias', biasL == null ? '—' : `${Math.round(biasL * 100)}% long`, biasL == null ? '' : biasL >= 0.5 ? 'up' : 'down') +
+              stat('win rate', closedFills.length ? `${Math.round((wins / closedFills.length) * 100)}% of ${closedFills.length}` : '—') +
+              stat('profit factor', pf == null ? '—' : Number.isFinite(pf) ? pf.toFixed(2) : '∞ — no losses', pf != null ? (pf >= 1 ? 'up' : 'down') : '') +
+              stat(`volume · ${winLab}`, vol ? `$${fmtCompact(vol)}` : '—') +
+              stat('fees · recent', fillArr.length ? `$${fmtCompact(fees)}` : '—') +
+              stat('funding · 30d', fund != null ? fmtSign(fund) : '—', fund != null && fund !== 0 ? cls2(fund) : '') +
+              stat('max dd · 30d', maxDd != null ? `-${(maxDd * 100).toFixed(1)}%` : '—', maxDd != null && maxDd > 0.25 ? 'down' : '');
+          };
+          drawStats(equity, upl, notional, bias);
 
           if (port) { eqData = port; drawEq(); } else eqBox.innerHTML = '<div class="vgal-none">portfolio history unreachable</div>';
 
-          posEl.innerHTML = positions.length
-            ? positions.sort((a, b) => Math.abs(Number(b.positionValue)) - Math.abs(Number(a.positionValue))).map((p) => {
+          const posSorted = [...positions].sort((a, b) => Math.abs(Number(b.positionValue)) - Math.abs(Number(a.positionValue)));
+          const drawPos = () => {
+            posEl.innerHTML = posSorted.length
+            ? posSorted.map((p) => {
               const sz = Number(p.szi);
               const pnl = Number(p.unrealizedPnl);
-              return `<div class="vsc-r vsc-pos"><span class="who"><span class="wrow">${coinIconFor(p.coin)}<b>${esc(p.coin)}</b></span>` +
+              const ntl = Math.abs(Number(p.positionValue) || 0);
+              const mark = Math.abs(sz) > 0 ? ntl / Math.abs(sz) : null;
+              const liq = Number(p.liquidationPx);
+              const dist = liq > 0 && mark ? Math.abs(mark - liq) / mark : null;
+              return `<div class="vsc-r vsc-pos5"><span class="who"><span class="wrow">${coinIconFor(p.coin)}<b>${esc(p.coin)}</b></span>` +
                 `<span class="sub ${sz >= 0 ? 'up' : 'down'}">${sz >= 0 ? 'long' : 'short'} ${esc(String(p.leverage?.value ?? ''))}x</span></span>` +
-                `<span class="num">$${fmtCompact(Math.abs(Number(p.positionValue) || 0))}</span>` +
+                `<span class="num">$${fmtCompact(ntl)}</span>` +
                 `<span class="num">@ ${fmtPx(Number(p.entryPx))}</span>` +
+                `<span class="num cliq">${liq > 0 ? `${fmtPx(liq)}<span class="sub2">liq · ${dist == null ? '' : dist > 5 ? 'far away' : `${(dist * 100).toFixed(1)}% away`}</span>` : '<span class="t3">—</span>'}</span>` +
                 `<span class="num ${cls2(pnl)}">${fmtSign(pnl)} (${pct(Number(p.returnOnEquity), 1)})</span></div>`;
             }).join('')
             : '<div class="vsc-none">no open perp positions</div>';
+          };
+          drawPos();
+
+          // working orders: resting limits + position TP/SLs, with distance
+          // from the mark — the closest thing to "where they plan to exit"
+          const markFor = (coin) => {
+            const p = positions.find((x) => x.coin === coin);
+            if (p) {
+              const sz = Math.abs(Number(p.szi));
+              const ntl = Math.abs(Number(p.positionValue) || 0);
+              if (sz > 0) return ntl / sz;
+            }
+            return mids?.[coin]?.px ?? null;
+          };
+          const ordRows = (Array.isArray(orders) ? orders : []).map((o) => {
+            const trig = o.isTrigger && Number(o.triggerPx) > 0;
+            const px = trig ? Number(o.triggerPx) : Number(o.limitPx);
+            const kind = /take profit/i.test(o.orderType ?? '') ? 'tp' : /stop/i.test(o.orderType ?? '') ? 'sl' : 'lim';
+            const sz = Number(o.sz);
+            const mark = markFor(o.coin);
+            return {
+              coin: o.coin, kind, px, sz, side: o.side, reduceOnly: !!o.reduceOnly,
+              full: !!o.isPositionTpsl && !(sz > 0),
+              dist: mark && px ? (px - mark) / mark : null,
+            };
+          }).filter((o) => o.px > 0 && !String(o.coin).startsWith('@') && !String(o.coin).includes('/'))
+            .sort((a, b) => (a.coin < b.coin ? -1 : a.coin > b.coin ? 1 : (a.px ?? 0) - (b.px ?? 0)));
+          ordEl.innerHTML = ordRows.length
+            ? ordRows.slice(0, 14).map((o) =>
+              `<div class="vsc-r vsc-ord"><span class="who"><span class="wrow">${coinIconFor(o.coin)}<b>${esc(o.coin)}</b></span>` +
+              `<span class="sub">${o.side === 'B' ? 'buy' : 'sell'}${o.reduceOnly ? ' · reduce-only' : ''}</span></span>` +
+              `<span class="act"><i class="vsc-badge ${o.kind}">${o.kind === 'tp' ? 'take profit' : o.kind === 'sl' ? 'stop' : 'limit'}</i></span>` +
+              `<span class="num">${o.full ? 'full position' : `${fmtCompact(o.sz)} ${esc(o.coin)}`}</span>` +
+              `<span class="num">@ ${fmtPx(o.px)}</span>` +
+              `<span class="num cdist ${o.dist != null ? cls2(o.dist) : 't3'}">${o.dist != null ? `${o.dist >= 0 ? '+' : ''}${(o.dist * 100).toFixed(1)}% away` : ''}</span></div>`).join('') +
+              (ordRows.length > 14 ? `<div class="vsc-none">+ ${ordRows.length - 14} more resting orders</div>` : '')
+            : '<div class="vsc-none">no working orders</div>';
 
           const byCoin = {};
-          for (const f of closedFills) (byCoin[f.coin] ??= { pnl: 0, n: 0 }), byCoin[f.coin].pnl += Number(f.closedPnl), byCoin[f.coin].n += 1;
-          const topClosed = Object.entries(byCoin).sort((a, b) => Math.abs(b[1].pnl) - Math.abs(a[1].pnl)).slice(0, 6);
+          for (const f of closedFills) {
+            const o = (byCoin[f.coin] ??= { pnl: 0, n: 0, w: 0, vol: 0 });
+            o.pnl += Number(f.closedPnl);
+            o.n += 1;
+            if (Number(f.closedPnl) > 0) o.w += 1;
+            o.vol += Math.abs(Number(f.px) * Number(f.sz)) || 0;
+          }
+          const topClosed = Object.entries(byCoin).sort((a, b) => Math.abs(b[1].pnl) - Math.abs(a[1].pnl)).slice(0, 8);
           closedEl.innerHTML = topClosed.length
             ? topClosed.map(([coin, o]) =>
-              `<div class="vsc-r vsc-pos"><span class="who"><span class="wrow">${coinIconFor(coin)}<b>${esc(coin)}</b></span><span class="sub">${o.n} closing fills</span></span>` +
+              `<div class="vsc-r vsc-pos"><span class="who"><span class="wrow">${coinIconFor(coin)}<b>${esc(coin)}</b></span>` +
+              `<span class="sub">${o.n} closing fills · $${fmtCompact(o.vol)} traded</span></span>` +
+              `<span class="num">${Math.round((o.w / o.n) * 100)}% win</span>` +
+              `<span class="num t3"></span>` +
               `<span class="num ${cls2(o.pnl)}">${fmtSign(o.pnl)}</span></div>`).join('')
             : '<div class="vsc-none">no recent closed positions</div>';
+
+          if (fillArr.length >= 6) {
+            const buckets = Array(24).fill(0);
+            for (const f of fillArr) {
+              const h = new Date(Number(f.time)).getUTCHours();
+              if (h >= 0 && h < 24) buckets[h]++;
+            }
+            const mx = Math.max(...buckets, 1);
+            const W2 = 24 * 13 - 3;
+            const H2 = 40;
+            rhyEl.innerHTML =
+              `<svg viewBox="0 0 ${W2} ${H2 + 12}" role="img" aria-label="Fill count by hour of day, UTC">` +
+              buckets.map((n, h) => {
+                const bh = Math.max(n ? 3 : 1.5, Math.round((n / mx) * H2));
+                return `<rect x="${h * 13}" y="${H2 - bh}" width="10" height="${bh}" rx="1.5" class="${n === mx ? 'pk' : n ? '' : 'z'}"><title>${String(h).padStart(2, '0')}:00 UTC — ${n} fill${n === 1 ? '' : 's'}</title></rect>`;
+              }).join('') +
+              [0, 6, 12, 18].map((h) => `<text x="${h * 13}" y="${H2 + 10}">${String(h).padStart(2, '0')}</text>`).join('') +
+              '</svg>' +
+              `<span class="vsc-rhylab">busiest ${String(buckets.indexOf(mx)).padStart(2, '0')}:00 · ${fillArr.length} fills</span>`;
+          } else rhyEl.innerHTML = '<div class="vsc-none">not enough fills to read a rhythm</div>';
 
           const bals = (spot?.balances ?? []).filter((b) => Number(b.total) > 0);
           spotEl.innerHTML = bals.length
             ? bals.map((b) => `<div class="vsc-r vsc-pos"><span class="who"><span class="wrow">${coinIconFor(b.coin)}<b>${esc(b.coin)}</b></span></span>` +
               `<span class="num">${fmtCompact(Number(b.total))}</span>` +
-              `<span class="num t3">${Number(b.entryNtl) > 0 ? `in @ $${fmtCompact(Number(b.entryNtl))}` : ''}</span></div>`).join('')
+              `<span class="num t3">${Number(b.entryNtl) > 0 ? `in @ $${fmtCompact(Number(b.entryNtl))}` : ''}</span><span class="num t3"></span></div>`).join('')
             : '<div class="vsc-none">no spot holdings</div>';
 
-          fillsEl.innerHTML = (Array.isArray(fills) ? fills : []).slice(0, 15).map((f) => {
+          fillsEl.innerHTML = fillArr.slice(0, 15).map((f) => {
             const pnl = Number(f.closedPnl);
             return `<div class="vsc-r vsc-pos"><span class="who"><span class="wrow">${coinIconFor(f.coin)}<b>${esc(f.coin)}</b></span>` +
               `<span class="sub">${esc(f.dir ?? (f.side === 'B' ? 'buy' : 'sell'))} · ${ago(Number(f.time))}</span></span>` +
               `<span class="num">${fmtCompact(Number(f.sz))} @ ${fmtPx(Number(f.px))}</span>` +
+              `<span class="num t3"></span>` +
               `<span class="num ${pnl ? cls2(pnl) : 't3'}">${pnl ? fmtSign(pnl) : ''}</span></div>`;
           }).join('') || '<div class="vsc-none">no fills yet</div>';
+
+          /* LIVE: the open book re-prices on every 5s feed tick while the
+             drawer is up — same mark-derived math the board uses */
+          if (positions.length) {
+            const equity0 = equity;
+            const upl0 = upl;
+            const unsubD = hlFeed.sub((map) => {
+              if (root.querySelector('.vsc-veil') !== veil) return;
+              let uplL = 0;
+              let ntlL = 0;
+              let longL = 0;
+              let any = false;
+              for (const p of positions) {
+                const m = map?.[p.coin]?.px;
+                const szi = Number(p.szi);
+                const en = Number(p.entryPx);
+                if (m > 0 && Number.isFinite(szi) && en > 0) {
+                  p.unrealizedPnl = szi * (m - en);
+                  p.positionValue = Math.abs(szi) * m;
+                  const mu = Number(p.marginUsed);
+                  if (mu > 0) p.returnOnEquity = p.unrealizedPnl / mu;
+                  any = true;
+                }
+                const u = Number(p.unrealizedPnl) || 0;
+                const n = Math.abs(Number(p.positionValue) || 0);
+                uplL += u;
+                ntlL += n;
+                if (szi > 0) longL += n;
+              }
+              if (!any) return;
+              drawStats(equity0 != null ? equity0 + (uplL - upl0) : null, uplL, ntlL, ntlL > 0 ? longL / ntlL : null);
+              drawPos();
+            });
+            drawerMounts.push({ destroy() { unsubD(); } });
+          }
         }
 
         /* ── wiring ── */
@@ -5421,50 +6851,68 @@
             b.title = nowOn ? 'Untrack this wallet' : 'Track this wallet — live positions + trade alerts';
           });
           paintViews();
-          if (nowOn) { toast('tracking — live positions + trade alerts', { label: 'View', run: () => { state.view = 'tracked'; paintViews(); syncView(); } }); loadTracked(); }
+          if (nowOn) { toast('tracking — live positions + trade alerts', { label: 'View', run: () => { setView('tracked'); } }); loadTracked(); }
           else if (state.view === 'tracked') paintTracked();
         };
         viewsEl.addEventListener('click', (ev) => {
           const b = ev.target.closest('[data-v]');
-          if (!b) return;
-          state.view = b.dataset.v;
-          paintViews();
-          syncView();
-          if (state.view === 'board') paint();
+          if (b) setView(b.dataset.v);
         });
-        modeEl.addEventListener('click', (ev) => {
-          const b = ev.target.closest('[data-m]');
+        actEl.addEventListener('click', (ev) => {
+          const b = ev.target.closest('[data-act]');
           if (!b) return;
-          state.mode = b.dataset.m;
+          state.act = b.dataset.act;
           paintBars();
-          paint();
+          savePrefs();
+          paintView();
         });
         winEl.addEventListener('click', (ev) => {
           const b = ev.target.closest('[data-w]');
           if (!b) return;
           state.win = b.dataset.w;
           paintBars();
+          savePrefs();
           loadBoard();
+        });
+        flowCtl.addEventListener('click', (ev) => {
+          const fm = ev.target.closest('[data-fm]');
+          if (fm) { state.fMin = Number(fm.dataset.fm); paintBars(); savePrefs(); paintFlow(); return; }
+          const fs = ev.target.closest('[data-fs]');
+          if (fs) { state.fSide = fs.dataset.fs; paintBars(); savePrefs(); paintFlow(); }
         });
         scroll.addEventListener('click', (ev) => {
           const sb = ev.target.closest('[data-star]');
           if (sb) { onStar(sb); return; }
           const th = ev.target.closest('.sortable');
-          if (th) {
+          if (th?.dataset.s) {
             const k = th.dataset.s;
             if (state.sort === k) state.dir = -state.dir;
             else { state.sort = k; state.dir = -1; }
+            savePrefs();
             paint();
             return;
           }
+          if (th?.dataset.ps) {
+            const k = th.dataset.ps;
+            if (state.posSort === k) state.posDir = -state.posDir;
+            else { state.posSort = k; state.posDir = -1; }
+            paintPositions();
+            return;
+          }
+          if (ev.target.closest('[data-posall]')) { state.posAll = true; paintPositions(); return; }
+          const pr = ev.target.closest('.vsc-pr[data-coin]');
+          if (pr) { setScope(pr.dataset.coin); setView('board'); return; }
           const r = ev.target.closest('.vsc-r.clickable');
           if (r?.dataset.a) openWallet(r.dataset.a);
         });
         // rows are focusable — Enter/Space must open them like a click would
         scroll.addEventListener('keydown', (ev) => {
           if (ev.key !== 'Enter' && ev.key !== ' ') return;
+          if (ev.target.closest('button')) return;
+          const pr = ev.target.closest?.('.vsc-pr[data-coin]');
+          if (pr) { ev.preventDefault(); setScope(pr.dataset.coin); setView('board'); return; }
           const r = ev.target.closest?.('.vsc-r.clickable');
-          if (!r?.dataset.a || ev.target.closest('button')) return;
+          if (!r?.dataset.a) return;
           ev.preventDefault();
           openWallet(r.dataset.a);
         });
@@ -5481,17 +6929,35 @@
           const al = ev.target.closest('.vsc-al');
           if (al?.dataset.a) openWallet(al.dataset.a);
         });
-        inp.addEventListener('keydown', (e) => {
-          if (e.key !== 'Enter') return;
-          const a2 = inp.value.trim().toLowerCase();
-          if (/^0x[0-9a-f]{40}$/.test(a2)) openWallet(a2);
-          else toast('that doesn’t look like a wallet address (0x + 40 hex)');
+        // the omni-box: live name filter · 0x… inspects · symbol scopes
+        inp.addEventListener('input', () => {
+          state.q = inp.value.trim().toLowerCase();
+          if (!/^0x/.test(state.q)) queuePaint();
         });
+        inp.addEventListener('keydown', async (e) => {
+          if (e.key === 'Escape' && inp.value) { e.stopPropagation(); inp.value = ''; state.q = ''; queuePaint(); return; }
+          if (e.key !== 'Enter') return;
+          const v2 = inp.value.trim();
+          if (!v2) return;
+          if (/^0x[0-9a-f]{40}$/i.test(v2)) { openWallet(v2.toLowerCase()); return; }
+          if (/^0x/i.test(v2)) { toast('that doesn’t look like a full address (0x + 40 hex)'); return; }
+          const sym = v2.replace(/^\$/, '').toUpperCase();
+          const mids = await Promise.race([hlSnap(), new Promise((res) => { setTimeout(() => res(null), 4000); })]);
+          if (dead) return;
+          if (mids?.[sym] || mids?.[`k${sym}`] || coinIcons[sym]) {
+            inp.value = '';
+            state.q = '';
+            setScope(sym);
+            if (state.view === 'tracked' || state.view === 'positions') setView('board');
+            else paintView();
+          }
+          // anything else is a live name filter — already applied on input
+        });
+        paintHead();
         paintViews();
         paintBars();
         paintScope();
         syncView();
-        paint();
         loadBoard();
         // deep link: #/scanner/0x… opens the inspector straight away
         if (scannerBootAddr) {
@@ -5501,34 +6967,82 @@
         }
       },
     },
-    // the storefront (audit C2 + owner ask): every element organized by
-    // category, sketch thumbnails, live preview in an inspector drawer,
-    // one-click add with on-board counts
+    // the storefront (audit C2 + owner ask): one grouped page, navigated —
+    // the rail is an INDEX, not a filter: click a category to glide to its
+    // section, a scroll-spy lights up where you are, search trims the whole
+    // page live. Live preview drawer + one-click add unchanged.
     gallery: {
       title: 'Gallery', icon: 'shapes',
       render(root) {
-        const wrap = el('div', 'vgal');
+        const wrap = el('div', 'vgal vgal2');
         root.appendChild(wrap);
-        const intro = el('div', 'vgal-intro',
-          `<b>Element Gallery</b><span>every block the Hub can render — click one for a live preview, add it to “${esc(store.active)}” in one click.</span>`);
-        const bar = el('div', 'vgal-bar');
+        const SECTIONS = [
+          ['Featured', 'star'], ['Charts', 'candlestick-chart'], ['Markets', 'globe'],
+          ['Futures', 'trending-up'], ['Options', 'percent'], ['Screeners', 'filter'],
+          ['News & data', 'newspaper'], ['Vice', 'zap'],
+        ];
+        const FEATURED = ['vCmeGap', 'vMetric', 'vChartPro', 'vPositioning', 'vScreener', 'news', 'vHeat', 'vLiqMap', 'vFunding', 'vFng'];
+        const catLabel = (c) => (c === 'Vice' ? 'Vice originals' : c);
+        const slug = (c) => c.toLowerCase().replace(/[^a-z]+/g, '-');
+        let q = '';
+        let active = 'Featured';
+        const all = Object.entries(HUB_WIDGETS);
+        const groupOf = (c) => (c === 'Featured'
+          ? FEATURED.map((t) => [t, HUB_WIDGETS[t]]).filter(([, m]) => m)
+          : all.filter(([, m]) => m.cat === c));
+        const hitQ = ([, m]) => {
+          const ql = q.toLowerCase();
+          return !ql || `${m.title} ${m.desc} ${m.cat}`.toLowerCase().includes(ql);
+        };
+
+        /* ── chrome: status header · index rail · sticky toolbar · sections ── */
+        const head = el('div', 'vsc-head');
+        const cols = el('div', 'vgal-cols');
+        const nav = el('nav', 'vgal-nav');
+        nav.setAttribute('aria-label', 'Element categories');
+        const mainCol = el('div', 'vgal-maincol');
+        const toolbar = el('div', 'vgal-toolbar');
         const search = el('div', 'vgal-search', '<i data-lucide="search"></i>');
         const inp = document.createElement('input');
         inp.placeholder = 'Search elements…';
         inp.setAttribute('aria-label', 'Search elements');
         search.appendChild(inp);
-        const chips = el('div', 'vgal-chips');
-        bar.append(search, chips);
+        const mnav = el('div', 'vgal-mnav'); // ≤1000px: the rail as a jump bar
+        const ctx = el('span', 'vgal-ctx');
+        toolbar.append(search, mnav, ctx);
         const listEl = el('div', 'vgal-list');
-        wrap.append(intro, bar, listEl);
-        const CATS = ['All', 'Featured', 'Charts', 'Markets', 'Futures', 'Options', 'Screeners', 'News & data', 'Vice'];
-        const FEATURED = ['vCmeGap', 'vMetric', 'vChartPro', 'vPositioning', 'vScreener', 'news', 'vHeat', 'vLiqMap', 'vFunding', 'vFng'];
-        let cat = 'All';
-        let q = '';
+        mainCol.append(toolbar, listEl);
+        cols.append(nav, mainCol);
+        wrap.append(head, cols);
+
         const onBoard = () => {
           const counts = {};
           for (const i of activeGrid()) counts[i.type] = (counts[i.type] ?? 0) + 1;
           return counts;
+        };
+        const paintHead = () => {
+          const used = Object.values(onBoard()).reduce((a, n) => a + n, 0);
+          head.innerHTML =
+            '<div class="vsc-title"><i data-lucide="shapes"></i><b>Element Gallery</b>' +
+            `<span class="vsc-live"><i class="dot"></i>${all.length} elements · ${used} on “${esc(store.active)}”</span></div>` +
+            '<p class="vsc-lead">every block the Hub can render, in one browse — click a card for a live preview, add it to your dashboard in one click.</p>';
+          icons();
+        };
+        const navItem = (c, ic, n, extra = '') =>
+          `<button class="vgal-navi${c === active ? ' on' : ''}${n ? '' : ' dim'} ${extra}" data-sec="${esc(c)}" type="button">` +
+          `<i data-lucide="${ic}"></i><span class="lb">${esc(catLabel(c))}</span><span class="n">${n}</span></button>`;
+        const paintNav = () => {
+          const rows = SECTIONS.map(([c, ic]) => [c, ic, groupOf(c).filter(hitQ).length]);
+          nav.innerHTML = '<span class="vgal-navlb">browse</span>' + rows.map(([c, ic, n]) => navItem(c, ic, n)).join('');
+          mnav.innerHTML = rows.map(([c, ic, n]) => navItem(c, ic, n, 'm')).join('');
+          icons();
+        };
+        const setActive = (c) => {
+          if (c === active) return;
+          active = c;
+          for (const b of wrap.querySelectorAll('.vgal-navi')) b.classList.toggle('on', b.dataset.sec === c);
+          // the mobile jump bar keeps the lit item in reach
+          mnav.querySelector('.vgal-navi.on')?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
         };
         const card = (t, m, counts) =>
           `<button class="vgal-card" data-t="${t}" type="button" title="${esc(m.title)} — ${esc(m.desc)}">` +
@@ -5541,35 +7055,50 @@
           '</span>' +
           `<span class="vgal-add" data-add="${t}" role="button" aria-label="Add ${esc(m.title)}" title="Add to the dashboard"><i data-lucide="plus"></i></span>` +
           '</button>';
-        const paintChips = () => {
-          chips.innerHTML = CATS.map((c) =>
-            `<button class="vpage-chip${c === cat ? ' on' : ''}" data-c="${esc(c)}" type="button">${esc(c === 'Vice' ? 'Vice originals' : c)}</button>`).join('');
-        };
-        const matches = () => {
-          const ql = q.toLowerCase();
-          return Object.entries(HUB_WIDGETS).filter(([t, m]) => {
-            if (cat === 'Featured' && !FEATURED.includes(t)) return false;
-            if (cat !== 'All' && cat !== 'Featured' && m.cat !== cat) return false;
-            return !ql || `${m.title} ${m.desc} ${m.cat}`.toLowerCase().includes(ql);
-          });
-        };
         const paint = () => {
           const counts = onBoard();
-          const list = matches();
-          if (!list.length) { listEl.innerHTML = '<div class="vgal-none">nothing matches</div>'; return; }
-          if (cat === 'All' && !q) {
-            // grouped storefront: section headers keep 50 blocks scannable
-            listEl.innerHTML = CATS.slice(2).map((c) => {
-              const group = list.filter(([, m]) => m.cat === c);
-              if (!group.length) return '';
-              return `<div class="vgal-cat">${esc(c === 'Vice' ? 'Vice originals' : c)}<span>${group.length}</span></div>` +
-                `<div class="vgal-grid">${group.map(([t, m]) => card(t, m, counts)).join('')}</div>`;
-            }).join('');
-          } else {
-            listEl.innerHTML = `<div class="vgal-grid">${list.map(([t, m]) => card(t, m, counts)).join('')}</div>`;
-          }
+          listEl.innerHTML = SECTIONS.map(([c, ic]) => {
+            const group = groupOf(c).filter(hitQ);
+            if (!group.length) return '';
+            return `<section class="vgal-sec" id="gsec-${slug(c)}" data-sec="${esc(c)}">` +
+              `<div class="vgal-cat"><i data-lucide="${ic}"></i>${esc(catLabel(c))}<span>${group.length}</span></div>` +
+              `<div class="vgal-grid">${group.map(([t, m]) => card(t, m, counts)).join('')}</div></section>`;
+          }).join('') || `<div class="vgal-none">nothing matches “${esc(q)}” — try another word</div>`;
+          const hits = all.filter(hitQ).length;
+          ctx.textContent = q ? `${hits} match${hits === 1 ? '' : 'es'}` : '';
+          paintNav();
           icons();
+          spy();
         };
+
+        /* ── the spy: the rail always knows which section you're reading ── */
+        let spyRaf = 0;
+        const spy = () => {
+          const secs = [...listEl.querySelectorAll('.vgal-sec')];
+          if (!secs.length) return;
+          let cur = secs[0].dataset.sec;
+          for (const s of secs) {
+            if (s.getBoundingClientRect().top <= 118) cur = s.dataset.sec;
+            else break;
+          }
+          setActive(cur);
+        };
+        const onScroll = () => {
+          if (spyRaf) return;
+          spyRaf = requestAnimationFrame(() => { spyRaf = 0; spy(); });
+        };
+        window.addEventListener('scroll', onScroll, { passive: true });
+        pageMounts.push({ handle: { destroy() {
+          window.removeEventListener('scroll', onScroll);
+          if (spyRaf) cancelAnimationFrame(spyRaf);
+        } } });
+        const jump = (c) => {
+          const sec = listEl.querySelector(`#gsec-${slug(c)}`);
+          if (!sec) return;
+          setActive(c);
+          sec.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        };
+
         /* inspector drawer: the card's live twin — one mount at a time */
         let drawer = null;
         const closeDrawer = () => {
@@ -5615,6 +7144,7 @@
             const b = e.currentTarget;
             b.innerHTML = '<i data-lucide="check"></i>Added — add another?';
             icons();
+            paintHead();
             paint();
           });
           drawer = { t, veil, handle, onKey };
@@ -5623,14 +7153,14 @@
           pageMounts.push({ handle: { destroy: closeDrawer } });
           icons();
         };
-        chips.addEventListener('click', (ev) => {
-          const b = ev.target.closest('[data-c]');
-          if (!b) return;
-          cat = b.dataset.c;
-          paintChips();
-          paint();
+        cols.addEventListener('click', (ev) => {
+          const b = ev.target.closest('[data-sec]');
+          if (b?.classList.contains('vgal-navi')) jump(b.dataset.sec);
         });
         inp.addEventListener('input', () => { q = inp.value.trim(); paint(); });
+        inp.addEventListener('keydown', (e) => {
+          if (e.key === 'Escape' && inp.value) { e.stopPropagation(); inp.value = ''; q = ''; paint(); }
+        });
         listEl.addEventListener('click', (ev) => {
           const add = ev.target.closest('[data-add]');
           if (add) {
@@ -5638,13 +7168,14 @@
             const t = add.dataset.add;
             const m = HUB_WIDGETS[t];
             pinInstance({ type: t, w: m.w, h: m.h, settings: {} });
+            paintHead();
             paint();
             return;
           }
           const c = ev.target.closest('.vgal-card');
           if (c) openDrawer(c.dataset.t);
         });
-        paintChips();
+        paintHead();
         paint();
       },
     },
@@ -6033,10 +7564,14 @@
       // (audit M3: always-live drag meant accidental shuffles on every misclick)
       staticGrid: true,
       resizable: { handles: 'n,e,s,w,ne,se,sw,nw' }, // any edge, any corner
+      // hybrids resolve the 'mobile' default to false and hide every handle
+      // behind mouseenter — touch users could never resize (audit round 3)
+      alwaysShowResizeHandle: 'mobile',
       animate: true,
       // columnMax MUST match column — columnOpts defaults it to 12, which
-      // silently overrides the 24-col fine grid (learned the hard way)
-      columnOpts: { columnMax: GRID_COLS, breakpoints: [{ w: 900, c: 6 }, { w: 560, c: 2 }] },
+      // silently overrides the 24-col fine grid (learned the hard way).
+      // Phones get a single-column feed — the native-app reading order.
+      columnOpts: { columnMax: GRID_COLS, breakpoints: [{ w: 900, c: 6 }, { w: 640, c: 2 }, { w: 460, c: 1 }] },
     }, '#hub-grid');
 
     observer = new IntersectionObserver((entries) => {
@@ -6067,9 +7602,44 @@
       }
       grid.batchUpdate(false);
     }
+    // collapsed layouts inherit float-mode y-gaps from the desktop geometry —
+    // the phone feed must pack tight. Safe: persists are skipped while
+    // collapsed, and returning to 24 cols reapplies the authoritative store.
+    let compacting = false;
+    function compactCollapsed() {
+      if (compacting || grid.getColumn() === GRID_COLS) return;
+      // defer past gridstack's own change processing, then pack EXPLICITLY —
+      // grid.compact() is a no-op under the float engine, and the column
+      // collapse both keeps desktop y-gaps and exiles some blocks to the
+      // bottom. A greedy shelf pack over the sorted nodes is deterministic.
+      setTimeout(() => {
+        if (compacting || !grid || grid.getColumn() === GRID_COLS) return;
+        compacting = true;
+        try {
+          const col = grid.getColumn();
+          const nodes = [...grid.engine.nodes].sort((a, b) => (a.y - b.y) || (a.x - b.x));
+          const colH = Array(col).fill(0);
+          grid.batchUpdate();
+          for (const n of nodes) {
+            const w = Math.max(1, Math.min(n.w ?? 1, col));
+            let bx = 0;
+            let by = Infinity;
+            for (let x = 0; x + w <= col; x++) {
+              const h = Math.max(...colH.slice(x, x + w));
+              if (h < by) { by = h; bx = x; }
+            }
+            if (n.x !== bx || n.y !== by) grid.update(n.el, { x: bx, y: by });
+            for (let x = bx; x < bx + w; x++) colH[x] = by + (n.h ?? 1);
+          }
+          grid.batchUpdate(false);
+        } catch { /* cosmetic only */ }
+        compacting = false;
+      }, 0);
+    }
+    packCollapsed = compactCollapsed; // renderLayout calls this after every full paint
     grid.on('change', (ev, items) => {
       const col = grid.getColumn();
-      if (col !== GRID_COLS) { lastCol = col; return; }
+      if (col !== GRID_COLS) { lastCol = col; compactCollapsed(); return; }
       if (lastCol !== GRID_COLS) { lastCol = GRID_COLS; reapplyGeometry(); return; }
       if (!items) return;
       const g = activeGrid();
@@ -6097,9 +7667,15 @@
       clearTimeout(colT);
       colT = setTimeout(() => {
         if (!grid) return;
+        // drive the column explicitly — gridstack's own breakpoint listener
+        // misses some resizes (emulated viewports, rapid rotations); this is
+        // idempotent with the columnOpts table above
+        const gw = $('#hub-grid')?.clientWidth ?? 0;
+        const want = gw > 900 ? GRID_COLS : gw > 640 ? 6 : gw > 460 ? 2 : 1;
+        if (gw && grid.getColumn() !== want) { try { grid.column(want, 'moveScale'); } catch { /* engine's call */ } }
         const col = grid.getColumn();
         if (col === GRID_COLS && lastCol !== GRID_COLS) { lastCol = GRID_COLS; reapplyGeometry(); }
-        else if (col !== GRID_COLS) lastCol = col;
+        else if (col !== GRID_COLS) { lastCol = col; compactCollapsed(); }
         fitCells();
       }, 150);
     });
