@@ -1,4 +1,4 @@
-/* Vice Hub — customizable live market dashboard + Velo-style section boards. v2.24.0
+/* Vice Hub — customizable live market dashboard + Velo-style section boards. v2.26.0
    Architecture: a widget REGISTRY (manifest per type: title, sizes, settings
    schema, mount/destroy lifecycle) + a Gridstack canvas (float mode, 24-col
    fine grid). Saved layouts store INSTANCES ({id,type,x,y,w,h,settings}),
@@ -4797,16 +4797,19 @@
 
   /* ── Wallpaper Mode: the chart desk as an ambient TV display ──────────
      Art direction: a Kenwood DPX-440 head unit — the full-dot-matrix
-     multicolour VFD of the DPX family. Everything renders on one cell
-     grid: a dim unlit dot lattice, phosphor-glow lit dots (pre-rendered
-     sprites, no per-dot shadowBlur), chunky 5×7 pixel type, a dotted
-     rounded-outline clock badge (the "P-TIME" chip), the price series
-     drawn as the demo-mode mountain landscape, a dancing spectrum
-     analyzer with falling peak caps, and a scrolling stats ticker.
-     Live numbers ride the shared hlFeed poller; the landscape and the
-     analyzer weights come from candleSnapshot. The whole grid drifts
-     ±1 cell on a slow orbit so a real TV never burns in. Esc, leaving
-     fullscreen, or the fade-in exit chip closes it. ── */
+     multicolour VFD of the DPX family. v2 rule: EVERY moving element is
+     real market data. The sky is the live trade tape (websocket fills —
+     green buys / red sells, height = price, brightness = size, drifting
+     left with age); the analyzer is the live order book (bids left of
+     mid, asks right, 2.5s polls, punched by trades at their price); the
+     ridge is the candle series; the bottom treadmill is the live tape
+     (tracked market's full stats leading the top-16 books by volume);
+     the LIVE lamp breathes on actual feed ticks; the sweep fires on the
+     real funding hour. Rendering: batched fillRect VFD squares + one
+     downscale bloom pass — no per-dot sprites — so the dense clarity
+     tiers (Retro→Ultra, up to a ~380-col grid) hold ~32fps. The grid
+     drifts ±1 cell on a slow orbit so a real TV never burns in. Esc,
+     leaving fullscreen, or the fade-in exit chip closes it. ── */
   const VWALL_FONT = (() => {
     const raw = {
       '0': '01110 10001 10011 10101 11001 10001 01110',
@@ -4878,32 +4881,139 @@
     document.body.appendChild(wrap);
     icons();
     const ctx = cv.getContext('2d');
+    const REDM = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-    /* viewer settings: ticker · timeframe · clarity (dot density). The
-       ticker follows the desk symbol on open; tf + clarity persist. */
+    /* viewer settings — the ticker follows the desk on open; tf + clarity
+       persist. Clarity = dot density: each tier pairs a grid divisor with
+       text scales so the composition keeps its physical size while the
+       dots get finer. Old soft/std/sharp prefs migrate. */
     const LS_WALL = 'viceHub.wall';
-    const TF_HOURS = { '5m': 10, '15m': 40, '1h': 168, '4h': 672, '1d': 4320 }; // lookback per interval
-    const CLARITY = { soft: [105, 64], std: [150, 92], sharp: [215, 132] }; // grid divisors
+    const TF_HOURS = { '1m': 3, '5m': 10, '15m': 40, '1h': 168, '4h': 672, '1d': 4320 };
+    const CLARITY = {
+      retro: { d: [150, 92], sm: 1, pr: 2 },
+      fine: { d: [210, 129], sm: 1, pr: 3 },
+      super: { d: [290, 178], sm: 2, pr: 4 },
+      ultra: { d: [380, 233], sm: 2, pr: 5 },
+    };
+    const CLAR_MIGRATE = { soft: 'retro', std: 'retro', sharp: 'fine' };
     const stored = (() => { try { return JSON.parse(localStorage.getItem(LS_WALL)) ?? {}; } catch { return {}; } })();
     let tf = TF_HOURS[stored.tf] ? stored.tf : '15m';
-    let clarity = CLARITY[stored.clarity] ? stored.clarity : 'std';
-    const saveWall = () => { try { localStorage.setItem(LS_WALL, JSON.stringify({ tf, clarity })); } catch { /* fine */ } };
+    let clarity = CLARITY[stored.clarity] ? stored.clarity : (CLAR_MIGRATE[stored.clarity] ?? 'fine');
+    let zoom = [1, 2, 4].includes(stored.zoom) ? stored.zoom : 1;
+    const saveWall = () => { try { localStorage.setItem(LS_WALL, JSON.stringify({ tf, clarity, zoom })); } catch { /* fine */ } };
 
     let coin = coinNow(); // HL key, e.g. BTC / kPEPE
     let base = String(coin).replace(/^k/, '');
-    const PAL = { cyan: '#41e3ff', blue: '#3a6bff', mag: '#e14dff', red: '#ff3b57', grn: '#2fe08e', amb: '#ffb63d', wht: '#eef8ff' };
+    const PAL = { cyan: '#41e3ff', blue: '#3a6bff', mag: '#e14dff', red: '#ff3b57', grn: '#2fe08e', amb: '#ffb63d', wht: '#eef8ff', pnk: '#ff3d94' };
+
+    /* Perpingo: the SITE'S actual logo (vice-terminal-64.png — the same
+       asset .vt-flamingo masks), sampled into the dot grid on load */
+    let flamingo = null;
+    {
+      const fimg = new Image();
+      fimg.onload = () => {
+        try {
+          const n = 18;
+          const c2 = document.createElement('canvas');
+          c2.width = c2.height = n;
+          const g2 = c2.getContext('2d', { willReadFrequently: true });
+          g2.drawImage(fimg, 0, 0, n, n);
+          const d2 = g2.getImageData(0, 0, n, n).data;
+          const out = [];
+          for (let r = 0; r < n; r++) {
+            for (let c = 0; c < n; c++) {
+              const a = d2[(r * n + c) * 4 + 3];
+              if (a > 60) out.push([c, r, a > 170 ? 0.95 : 0.45]);
+            }
+          }
+          flamingo = out.length ? out : null;
+        } catch { /* headerless is fine */ }
+      };
+      fimg.src = '../vice-terminal-64.png';
+    }
 
     /* ── live + historical data ── */
     let dead = false;
-    let px = null; let chg = null; let vol = null; let oi = null; let fund = null;
+    let px = null; let chg = null;
     let flashAt = -1e9; let flashUp = true;
     let closes = []; let vols = [];
+
+    /* coin logos, dot-matrixed: sample each icon into a 7×7 cell grid so
+       the real logos ride the VFD without breaking the pixel aesthetic */
+    const logoDots = new Map(); // key -> 'fail' | false loading | [[c,r,color]…]
+    const logoFor = (k) => {
+      const got = logoDots.get(k);
+      if (got !== undefined) return got;
+      logoDots.set(k, false);
+      // TradingView's logo CDN is the one that answers CORS — CoinGecko's
+      // rejects anonymous loads, which taints the sampling canvas
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.onload = () => {
+        try {
+          const n = 7;
+          const c2 = document.createElement('canvas');
+          c2.width = c2.height = n;
+          const g2 = c2.getContext('2d', { willReadFrequently: true });
+          g2.drawImage(img, 0, 0, n, n);
+          const d2 = g2.getImageData(0, 0, n, n).data;
+          const out = [];
+          for (let r = 0; r < n; r++) {
+            for (let c = 0; c < n; c++) {
+              const i = (r * n + c) * 4;
+              if (d2[i + 3] < 90) continue;
+              out.push([c, r, `rgb(${d2[i]},${d2[i + 1]},${d2[i + 2]})`]);
+            }
+          }
+          logoDots.set(k, out.length ? out : 'fail');
+        } catch { logoDots.set(k, 'fail'); }
+      };
+      img.onerror = () => logoDots.set(k, 'fail');
+      img.src = `https://s3-symbol-logo.tradingview.com/crypto/XTVC${encodeURIComponent(String(k).replace(/^k/, ''))}.svg`;
+      return false;
+    };
+
+    /* the treadmill: one live tape — the tracked market leads with its
+       full stats, then the top-16 books by volume, repainted every tick */
+    let tape = [];
+    let tapeU = 0; // tape width in base units (glyph 6, logo 8)
+    const buildTape = (map) => {
+      const t2 = [];
+      const push = (s, col, a = 0.9) => { for (const ch of String(s)) t2.push({ ch, col, a }); };
+      const logo = (k) => t2.push({ logo: k });
+      const d0 = map?.[coin];
+      if (d0) {
+        logo(coin);
+        push(`$${base} `, PAL.wht, 1);
+        push(`$${fmtPx(d0.px)} `, PAL.cyan, 1);
+        if (d0.chg != null) push(`${d0.chg >= 0 ? '▲' : '▼'}${fmtChg(d0.chg)} `, d0.chg >= 0 ? PAL.grn : PAL.red, 1);
+        push(`VOL $${fmtCompact(d0.vol)} `, PAL.amb, 0.8);
+        push(`OI $${fmtCompact(d0.oi * d0.px)} `, PAL.amb, 0.8);
+        push(`FUND ${(d0.funding * 100).toFixed(4)}%/H`, PAL.amb, 0.8);
+        push(' ·· ', PAL.amb, 0.45);
+      }
+      const top = Object.entries(map ?? {})
+        .map(([k, d]) => ({ k, ...d }))
+        .filter((r) => r.k !== coin && Number.isFinite(r.px) && r.vol > 0)
+        .sort((a, b) => b.vol - a.vol).slice(0, 16);
+      for (const r of top) {
+        logo(r.k);
+        push(`$${r.k.replace(/^k/, '')} `, PAL.wht);
+        push(`$${fmtPx(r.px)} `, PAL.cyan);
+        if (r.chg != null) push(`${r.chg >= 0 ? '▲' : '▼'}${fmtChg(r.chg)}`, r.chg >= 0 ? PAL.grn : PAL.red, 0.95);
+        push(' · ', PAL.amb, 0.45);
+      }
+      tapeU = t2.reduce((s, g) => s + (g.logo ? 8 : 6), 0);
+      return t2;
+    };
     const unsub = hlFeed.sub((map) => {
+      tape = buildTape(map);
       const d = map?.[coin];
       if (!d) return;
-      if (px != null && d.px !== px) { flashAt = performance.now(); flashUp = d.px > px; kick(); }
-      px = d.px; chg = d.chg; vol = d.vol; oi = d.oi * d.px; fund = d.funding;
+      if (px != null && d.px !== px) { flashAt = performance.now(); flashUp = d.px > px; }
+      px = d.px; chg = d.chg;
     });
+
     let candleSeq = 0; // stale responses from a swapped ticker/tf never land
     async function loadCandles() {
       const run = ++candleSeq;
@@ -4912,81 +5022,131 @@
         const ks = await hlInfo({ type: 'candleSnapshot', req: { coin, interval: tf, startTime: end - TF_HOURS[tf] * 3600_000, endTime: end } });
         if (dead || run !== candleSeq || !Array.isArray(ks) || ks.length < 8) return;
         closes = ks.map((k) => Number(k.c));
-        vols = ks.map((k) => Number(k.v) * Number(k.c)); // notional per candle
+        vols = ks.map((k) => Number(k.v) * Number(k.c));
       } catch { /* keep the last landscape */ }
     }
     loadCandles();
     const candleTimer = setInterval(loadCandles, 90_000);
+
+    /* the analyzer's one source of truth: the live order book (2.5s) */
+    let book = null; // { bids:[{px,n}…near→far], asks:[…], mid }
+    let bookSeq = 0;
+    async function loadBook() {
+      const run = ++bookSeq;
+      try {
+        const b = await hlInfo({ type: 'l2Book', coin });
+        if (dead || run !== bookSeq) return;
+        const [bids, asks] = b?.levels ?? [[], []];
+        const lv = (l) => ({ px: Number(l.px), n: Number(l.px) * Number(l.sz) });
+        const B = bids.map(lv); const A = asks.map(lv);
+        book = B.length && A.length ? { bids: B, asks: A, mid: (B[0].px + A[0].px) / 2 } : null;
+      } catch { book = null; } // bars fall to the floor — honestly
+    }
+    loadBook();
+    const bookTimer = setInterval(loadBook, 2500);
+
+    /* the sky is the trade tape: a live websocket — every spark is a real
+       fill (green buy / red sell, height = its price, brightness = size),
+       drifting left as it ages; each punches the book bar at its price */
+    const sparks = []; // { px, buy, mag, born, life }
+    const onTrade = (tr) => {
+      if (String(tr.coin) !== coin) return;
+      const tpx = Number(tr.px); const ntl = tpx * Number(tr.sz);
+      if (!Number.isFinite(tpx) || !(ntl > 0)) return;
+      const mag = Math.min(1, 0.25 + Math.log10(1 + ntl) / 6);
+      sparks.push({ px: tpx, buy: tr.side === 'B', mag, born: performance.now(), life: 3500 + mag * 4500 });
+      if (sparks.length > 240) sparks.splice(0, sparks.length - 240);
+    };
+    let ws = null; let wsRetry = 0; let wsRetryT = 0;
+    const wsSub = (c, on) => {
+      try { if (ws?.readyState === 1) ws.send(JSON.stringify({ method: on ? 'subscribe' : 'unsubscribe', subscription: { type: 'trades', coin: c } })); }
+      catch { /* fine */ }
+    };
+    const wsOpen = () => {
+      if (dead) return;
+      try { ws = new WebSocket('wss://api.hyperliquid.xyz/ws'); } catch { return; }
+      ws.onopen = () => { wsRetry = 0; wsSub(coin, true); };
+      ws.onmessage = (ev) => {
+        try {
+          const msg = JSON.parse(ev.data);
+          if (msg.channel === 'trades' && Array.isArray(msg.data)) for (const tr of msg.data) onTrade(tr);
+        } catch { /* not ours */ }
+      };
+      ws.onclose = () => { if (!dead) wsRetryT = setTimeout(wsOpen, Math.min(15_000, 2000 * ++wsRetry)); };
+      ws.onerror = () => { try { ws.close(); } catch { /* fine */ } };
+    };
+    wsOpen();
+
     const setCoin = (next) => {
       if (next === coin) return;
+      const old = coin;
       coin = next;
       base = String(coin).replace(/^k/, '');
-      closes = []; vols = [];
+      closes = []; vols = []; sparks.length = 0; book = null;
       const d = hlFeed.snap()?.[coin];
-      px = d?.px ?? null; chg = d?.chg ?? null; vol = d?.vol ?? null;
-      oi = d ? d.oi * d.px : null; fund = d?.funding ?? null;
-      loadCandles();
+      px = d?.px ?? null; chg = d?.chg ?? null;
+      tape = buildTape(hlFeed.snap());
+      wsSub(old, false); wsSub(coin, true);
+      loadCandles(); loadBook();
     };
 
-    /* ── the cell grid + phosphor sprites ── */
+    /* ── the cell grid: batched VFD squares + one bloom pass ── */
     let W = 0; let H = 0; let cell = 8; let cols = 0; let rows = 0;
-    const m = 3; // outer margin, in cells
-    let latt = null; // the unlit lattice, pre-rendered once per resize
-    const sprites = new Map(); // color -> glow sprite (core dot + radial halo)
-    const sprite = (color) => {
-      let s = sprites.get(color);
-      if (!s) {
-        const r = cell * 1.6;
-        s = document.createElement('canvas');
-        s.width = s.height = Math.ceil(r * 2);
-        const g = s.getContext('2d');
-        const grad = g.createRadialGradient(r, r, 0, r, r, r);
-        grad.addColorStop(0, `${color}c8`);
-        grad.addColorStop(0.35, `${color}50`);
-        grad.addColorStop(1, `${color}00`);
-        g.fillStyle = grad;
-        g.fillRect(0, 0, s.width, s.height);
-        g.fillStyle = color;
-        g.beginPath();
-        g.arc(r, r, cell * 0.3, 0, Math.PI * 2);
-        g.fill();
-        sprites.set(color, s);
-      }
-      return s;
-    };
+    let m = 3; let sm = 1; let pr = 2;
+    let latt = null; let bloomCv = null; let bctx = null;
     const fit = () => {
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
       W = wrap.clientWidth || innerWidth;
       H = wrap.clientHeight || innerHeight;
-      cv.width = Math.round(W * dpr);
-      cv.height = Math.round(H * dpr);
+      cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      const [dw, dh] = CLARITY[clarity];
-      cell = Math.max(4, Math.min(W / dw, H / dh));
-      cols = Math.floor(W / cell);
-      rows = Math.floor(H / cell);
-      sprites.clear();
+      const conf = CLARITY[clarity];
+      cell = Math.max(3, Math.min(W / conf.d[0], H / conf.d[1]));
+      cols = Math.floor(W / cell); rows = Math.floor(H / cell);
+      m = Math.max(3, Math.round(cols * 0.02));
+      sm = conf.sm; pr = conf.pr;
       latt = document.createElement('canvas');
-      latt.width = cv.width;
-      latt.height = cv.height;
+      latt.width = cv.width; latt.height = cv.height;
       const g = latt.getContext('2d');
       g.setTransform(dpr, 0, 0, dpr, 0, 0);
+      g.fillStyle = '#010108';
+      g.fillRect(0, 0, W, H);
       g.fillStyle = 'rgba(82, 106, 168, 0.13)';
-      for (let r = 0; r < rows; r++) {
-        for (let c = 0; c < cols; c++) {
-          g.beginPath();
-          g.arc((c + 0.5) * cell, (r + 0.5) * cell, cell * 0.26, 0, Math.PI * 2);
-          g.fill();
-        }
-      }
+      const usz = cell * 0.62; const uoff = (cell - usz) / 2;
+      for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) g.fillRect(c * cell + uoff, r * cell + uoff, usz, usz);
+      bloomCv = document.createElement('canvas');
+      bloomCv.width = Math.max(2, Math.round(cv.width / 4));
+      bloomCv.height = Math.max(2, Math.round(cv.height / 4));
+      bctx = bloomCv.getContext('2d');
     };
 
-    let ox = 0; let oy = 0; // burn-in drift offset, in cells
+    let ox = 0; let oy = 0; // burn-in drift, in cells
+    const batch = new Map(); // color+alpha bucket -> flat point list
     const dot = (c, r, color, a = 1) => {
       if (c < -1 || r < -1 || c > cols || r > rows) return;
-      const s = sprite(color);
-      ctx.globalAlpha = a;
-      ctx.drawImage(s, (c + ox + 0.5) * cell - s.width / 2, (r + oy + 0.5) * cell - s.height / 2);
+      const aq = a >= 0.95 ? 10 : Math.max(1, Math.round(a * 10));
+      const key = color + aq;
+      let g2 = batch.get(key);
+      if (!g2) { g2 = { color, a: aq / 10, pts: [] }; batch.set(key, g2); }
+      g2.pts.push(c + ox, r + oy);
+    };
+    const flush = () => {
+      const sz = cell * 0.7; const off = (cell - sz) / 2;
+      for (const { color, a, pts } of batch.values()) {
+        ctx.fillStyle = color;
+        ctx.globalAlpha = a;
+        for (let i = 0; i < pts.length; i += 2) ctx.fillRect(pts[i] * cell + off, pts[i + 1] * cell + off, sz, sz);
+      }
+      ctx.globalAlpha = 1;
+      batch.clear();
+      // phosphor bloom: downscale the lit frame, add it back on top
+      bctx.setTransform(1, 0, 0, 1, 0, 0);
+      bctx.globalCompositeOperation = 'copy';
+      bctx.drawImage(cv, 0, 0, bloomCv.width, bloomCv.height);
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.globalAlpha = 0.5;
+      ctx.drawImage(bloomCv, 0, 0, W, H);
+      ctx.globalCompositeOperation = 'source-over';
       ctx.globalAlpha = 1;
     };
     const glyph = (ch) => VWALL_FONT[ch] ?? VWALL_FONT[' '];
@@ -5006,29 +5166,27 @@
     };
     const textW = (str, scale) => String(str).length * 6 * scale - scale;
     // the DPX "P-TIME" chip: a dotted rounded outline hugging its label
-    const badge = (str, right, r0, color) => {
-      const w = textW(str, 1) + 6;
-      const h = 11;
+    const badge = (str, right, r0, color, s = 1) => {
+      const w = textW(str, s) + 6 * s;
+      const h = 11 * s;
       const c0 = right - w;
-      for (let c = c0 + 2; c <= c0 + w - 3; c++) { dot(c, r0, color, 0.8); dot(c, r0 + h - 1, color, 0.8); }
-      for (let r = r0 + 2; r <= r0 + h - 3; r++) { dot(c0, r, color, 0.8); dot(c0 + w - 1, r, color, 0.8); }
-      dot(c0 + 1, r0 + 1, color, 0.8); dot(c0 + w - 2, r0 + 1, color, 0.8);
-      dot(c0 + 1, r0 + h - 2, color, 0.8); dot(c0 + w - 2, r0 + h - 2, color, 0.8);
-      text(str, c0 + 3, r0 + 2, 1, color);
+      for (let tk = 0; tk < s; tk++) {
+        for (let c = c0 + 2 * s; c <= c0 + w - 1 - 2 * s; c++) { dot(c, r0 + tk, color, 0.8); dot(c, r0 + h - 1 - tk, color, 0.8); }
+        for (let r = r0 + 2 * s; r <= r0 + h - 1 - 2 * s; r++) { dot(c0 + tk, r, color, 0.8); dot(c0 + w - 1 - tk, r, color, 0.8); }
+      }
+      for (let k = 0; k < s; k++) {
+        for (let k2 = 0; k2 < s; k2++) {
+          dot(c0 + s + k, r0 + s + k2, color, 0.8); dot(c0 + w - 1 - s - k, r0 + s + k2, color, 0.8);
+          dot(c0 + s + k, r0 + h - 1 - s - k2, color, 0.8); dot(c0 + w - 1 - s - k, r0 + h - 1 - s - k2, color, 0.8);
+        }
+      }
+      text(str, c0 + 3 * s, r0 + 2 * s, s, color);
       return c0;
     };
 
-    /* ── the spectrum analyzer state ── */
-    const bars = { n: 0, h: [], pk: [], pkAt: [], kick: [] };
-    function kick() { // a live tick punches a few random bands, EQ-demo style
-      for (let i = 0; i < bars.n; i++) if (Math.random() < 0.3) bars.kick[i] = Math.min(1, bars.kick[i] + 0.35 + Math.random() * 0.4);
-    }
-
-    /* ── the frame ── */
-    let raf = 0;
-    let last = 0;
-    let marq = 0; let marqAt = 0;
-    let sweepAt = performance.now() + 2500;
+    /* ── the frame — every moving element rides real data ── */
+    const bars = { n: 0, h: [], pk: [], pkAt: [] };
+    let raf = 0; let last = 0; let marq = 0; let marqAt = 0;
     const t0 = performance.now();
     function frame(t) {
       if (dead) return;
@@ -5036,139 +5194,199 @@
       if (t - last < 31 || document.hidden) return; // ~32fps reads as phosphor
       last = t;
       const drift = Math.floor((t - t0) / 240_000) % 4;
-      ox = [0, 1, 1, 0][drift];
-      oy = [0, 0, 1, 1][drift];
+      ox = [0, 1, 1, 0][drift]; oy = [0, 0, 1, 1][drift];
 
-      ctx.fillStyle = '#010108';
-      ctx.fillRect(0, 0, W, H);
-      ctx.drawImage(latt, 0, 0, W, H);
+      ctx.drawImage(latt, 0, 0, W, H); // bg + unlit lattice in one blit
 
-      /* vertical layout, top to bottom */
-      const marqTop = rows - m - 7;
-      const specBot = marqTop - 3;
-      const specH = Math.max(10, Math.round(rows * 0.24));
+      /* layout, in cells */
+      const treadTop = rows - m - 7 * sm;
+      const specBot = treadTop - 2 * sm - 1;
+      const specH = Math.max(10, Math.round(rows * 0.22));
       const specTop = specBot - specH;
       const ridgeBot = specTop - 2;
-      const ridgeTop = Math.min(ridgeBot - 6, Math.round(rows * 0.36));
+      const pr0 = m + 19 * sm;
+      const ridgeTop = Math.min(ridgeBot - 6, Math.max(pr0 + 7 * pr + 3, Math.round(rows * 0.38)));
+      const tick = Math.max(0, 1 - (t - flashAt) / 900); // decays from the last real price tick
 
-      /* sky sparkles — the demo scene's idle glitter */
-      for (let i = 0; i < 26; i++) {
-        const c = Math.floor((((i * 631) % 997) / 997) * cols);
-        const r = m + Math.floor((((i * 389) % 499) / 499) * Math.max(4, ridgeTop - m - 2));
-        const tw = 0.5 + 0.5 * Math.sin(t / 900 + i * 2.1);
-        dot(c, r, i % 5 ? PAL.cyan : PAL.wht, 0.08 + 0.22 * tw);
+      /* header: Perpingo + brand + market, clock chip + feed lamp */
+      if (flamingo) {
+        for (const [dc, dr, a2] of flamingo) {
+          for (let sy = 0; sy < sm; sy++) for (let sx = 0; sx < sm; sx++) dot(m + dc * sm + sx, m + dr * sm + sy, PAL.pnk, a2);
+        }
       }
-
-      /* header: brand + market, clock chip + feed light */
-      text('VICE SUITE', m, m, 1, PAL.cyan, 0.7);
-      text(`${base}-USD PERP`, m, m + 9, 1, PAL.wht, 0.5);
+      const hx = m + 20 * sm;
+      text('VICE SUITE', hx, m, sm, PAL.cyan, 0.7);
+      // the tracked token wears its own logo on the market line
+      const L0 = logoFor(coin);
+      if (Array.isArray(L0)) for (const [dc, dr, col2] of L0) for (let sy = 0; sy < sm; sy++) for (let sx = 0; sx < sm; sx++) dot(hx + dc * sm + sx, m + 9 * sm + dr * sm + sy, col2, 0.95);
+      text(`${base}-USD PERP · ${tf.toUpperCase()}`, hx + (Array.isArray(L0) ? 9 * sm : 0), m + 9 * sm, sm, PAL.wht, 0.5);
       const now = new Date();
-      const bLeft = badge(`${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`, cols - m, m, PAL.cyan);
-      const liveOk = Date.now() - hlTickAt < 20_000;
+      const bLeft = badge(`${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`, cols - m, m, PAL.cyan, sm);
+      const fresh = Date.now() - hlTickAt;
+      const liveOk = fresh < 20_000;
       const lab = liveOk ? 'LIVE' : 'NO FEED';
       const lcol = liveOk ? PAL.grn : PAL.red;
-      if (!liveOk || Math.sin(t / 480) > 0) dot(bLeft - textW(lab, 1) - 8, m + 5, lcol, 0.9);
-      text(lab, bLeft - textW(lab, 1) - 5, m + 2, 1, lcol, 0.75);
+      const pulse = liveOk ? Math.max(0.3, 1 - (fresh % 5000) / 5000) : 1; // breathes on real ticks
+      dot(bLeft - textW(lab, sm) - 5 * sm - 2, m + 3 * sm, lcol, pulse);
+      text(lab, bLeft - textW(lab, sm) - 3 * sm - 2, m + 2 * sm, sm, lcol, 0.75);
 
       /* the price: big segmented digits, tick-flash green/red */
-      const pr0 = m + 20;
       const pxStr = px != null ? `$${fmtPx(px)}` : '$-----';
-      const flashing = t - flashAt < 650;
-      text(pxStr, m, pr0, 2, flashing ? (flashUp ? PAL.grn : PAL.red) : PAL.wht);
+      const flashing = !REDM && t - flashAt < 650;
+      text(pxStr, m, pr0, pr, flashing ? (flashUp ? PAL.grn : PAL.red) : PAL.wht);
       if (chg != null) {
         const chStr = `${chg >= 0 ? '▲' : '▼'}${fmtChg(chg)}`;
-        text(chStr, m + textW(pxStr, 2) + 6, pr0 + 7, 1, chg >= 0 ? PAL.grn : PAL.red, 0.95);
+        text(chStr, m + textW(pxStr, pr) + 3 * sm + 3, pr0 + 7 * (pr - sm), sm, chg >= 0 ? PAL.grn : PAL.red, 0.95);
       }
 
-      /* the landscape: 40h of price is the mountain range. A softer magenta
-         horizon trails behind it for depth; fills are checkerboard-dithered
-         like the demo scene's shading */
-      if (closes.length > 8) {
+      /* zoom slices the loaded window: Fit shows it all, 2×/4× the tail */
+      const view = closes.length > 8 && zoom > 1 ? closes.slice(-Math.max(24, Math.ceil(closes.length / zoom))) : closes;
+
+      /* the sky IS the trade tape: real fills drift left as they age */
+      if (sparks.length && view.length) {
         let lo = Infinity; let hi = -Infinity;
-        for (const v of closes) { if (v < lo) lo = v; if (v > hi) hi = v; }
+        for (const v of view) { if (v < lo) lo = v; if (v > hi) hi = v; }
+        const skyT = m + 19 * sm; const skyB = ridgeTop - 2;
+        const driftC = cols / 55; // cells/second — physically constant speed
+        for (let i = sparks.length - 1; i >= 0; i--) {
+          const s = sparks[i];
+          const age = t - s.born;
+          const c = cols - m - 1 - Math.floor((age / 1000) * driftC);
+          if (age > s.life || c < m) { sparks.splice(i, 1); continue; }
+          const f = hi > lo ? Math.min(1, Math.max(0, (s.px - lo) / (hi - lo))) : 0.5;
+          const r = Math.round(skyB - f * (skyB - skyT));
+          const a = Math.max(0.15, s.mag * (1 - age / s.life));
+          const col = s.buy ? PAL.grn : PAL.red;
+          dot(c, r, col, a);
+          if (s.mag > 0.75) { dot(c + 1, r, col, a * 0.5); dot(c - 1, r, col, a * 0.5); dot(c, r - 1, col, a * 0.5); dot(c, r + 1, col, a * 0.5); }
+        }
+      }
+
+      /* the landscape: the candle series IS the mountain range */
+      if (view.length > 8) {
+        let lo = Infinity; let hi = -Infinity;
+        for (const v of view) { if (v < lo) lo = v; if (v > hi) hi = v; }
         const span = hi - lo || 1;
         const inW = cols - 2 * m;
         let pB = null;
         for (let c = m; c < cols - m; c++) {
           const f = (c - m) / inW;
-          const hB = (closes[Math.floor(f * (closes.length - 1) * 0.8)] - lo) / span;
+          const hB = (view[Math.floor(f * (view.length - 1) * 0.8)] - lo) / span;
           const rB = Math.round(ridgeBot - hB * (ridgeBot - ridgeTop) * 0.55) - 4;
           dot(c, rB, PAL.mag, 0.3);
           if (pB != null) for (let r = Math.min(pB, rB) + 1; r < Math.max(pB, rB); r++) dot(c, r, PAL.mag, 0.2);
           pB = rB;
-          for (let r = rB + 1; r <= ridgeBot; r++) if ((c + r) % 2 === 0) dot(c, r, PAL.mag, 0.06);
+          for (let r = rB + 1; r <= ridgeBot; r += 2) if ((c + r) % 2 === 0) dot(c, r, PAL.mag, 0.06);
         }
         let p2 = null;
         for (let c = m; c < cols - m; c++) {
           const f = (c - m) / inW;
-          const h2 = (closes[Math.floor(f * (closes.length - 1))] - lo) / span;
+          const h2 = (view[Math.floor(f * (view.length - 1))] - lo) / span;
           const r2 = Math.round(ridgeBot - h2 * (ridgeBot - ridgeTop));
           dot(c, r2, PAL.cyan, 0.95);
           if (p2 != null) for (let r = Math.min(p2, r2) + 1; r < Math.max(p2, r2); r++) dot(c, r, PAL.cyan, 0.6);
           p2 = r2;
           for (let r = r2 + 1; r <= ridgeBot; r++) if ((c + r) % 2 === 0) dot(c, r, PAL.blue, 0.15);
         }
-        const hL = (closes[closes.length - 1] - lo) / span;
-        dot(cols - m - 1, Math.round(ridgeBot - hL * (ridgeBot - ridgeTop)), PAL.wht, 0.5 + 0.5 * Math.sin(t / 300));
+        const hL = (view[view.length - 1] - lo) / span;
+        dot(cols - m - 1, Math.round(ridgeBot - hL * (ridgeBot - ridgeTop)), PAL.wht, 0.25 + 0.75 * tick);
       }
 
-      /* the spectrum analyzer: candle volumes set each band's weight, a
-         slow interference wave makes them dance, live ticks kick them */
-      const bw = 3; const gap = 1;
-      const n = Math.max(8, Math.floor((cols - 2 * m + gap) / (bw + gap)));
-      if (bars.n !== n) { bars.n = n; bars.h = Array(n).fill(0); bars.pk = Array(n).fill(0); bars.pkAt = Array(n).fill(0); bars.kick = Array(n).fill(0); }
-      const tail = vols.slice(-n);
-      let vHi = 0;
-      for (const v of tail) if (v > vHi) vHi = v;
-      for (let i = 0; i < n; i++) {
-        const w = tail.length === n && vHi > 0 ? Math.sqrt(tail[i] / vHi) : 0.6;
-        const wave = 0.5 + 0.5 * Math.sin(t / 430 + i * 0.9) * Math.sin(t / 1170 + i * 0.35);
-        bars.kick[i] *= 0.94;
-        const target = Math.min(1, w * (0.28 + 0.62 * wave) + bars.kick[i]);
-        bars.h[i] += (target - bars.h[i]) * (target > bars.h[i] ? 0.38 : 0.1);
-        const hC = Math.round(bars.h[i] * specH);
-        const c0 = m + i * (bw + gap);
-        for (let r = 0; r < hC; r++) {
-          const f = r / specH;
-          const col = f < 0.45 ? PAL.blue : f < 0.7 ? PAL.cyan : f < 0.88 ? PAL.mag : PAL.red;
-          for (let b = 0; b < bw; b++) dot(c0 + b, specBot - r, col, 0.9);
+      /* the analyzer IS the order book: bids stack left of mid, asks
+         right; recent trades punch the bar at their price */
+      const bw = 3 * sm - (sm > 1 ? 1 : 0); const gap = sm;
+      const half = Math.floor((cols - 2 * m - 2) / 2 / (bw + gap));
+      const nB = half * 2;
+      if (nB >= 4) {
+        if (bars.n !== nB) { bars.n = nB; bars.h = Array(nB).fill(0); bars.pk = Array(nB).fill(0); bars.pkAt = Array(nB).fill(0); }
+        const targets = Array(nB).fill(0);
+        if (book) {
+          // cumulative depth ladder: bar i = all resting liquidity within
+          // its distance of mid, so each side rises as it walks out
+          const bucket = (levels, off2) => {
+            if (!levels.length) return;
+            const near = levels[0].px;
+            const rng = Math.abs(levels[levels.length - 1].px - near) || 1;
+            for (const l of levels) targets[off2 + Math.min(half - 1, Math.floor((Math.abs(l.px - near) / rng) * half))] += l.n;
+            for (let i2 = 1; i2 < half; i2++) targets[off2 + i2] += targets[off2 + i2 - 1];
+          };
+          bucket(book.bids, 0);
+          bucket(book.asks, half);
+          let mx = 1;
+          for (const v of targets) if (v > mx) mx = v;
+          for (let i = 0; i < nB; i++) targets[i] = Math.sqrt(targets[i] / mx);
+          const bN = book.bids[0]?.px; const bR = Math.abs((book.bids.at(-1)?.px ?? bN) - bN) || 1;
+          const aN = book.asks[0]?.px; const aR = Math.abs((book.asks.at(-1)?.px ?? aN) - aN) || 1;
+          for (const s of sparks) {
+            const age = t - s.born;
+            if (age > 650) continue;
+            const idx = s.px <= book.mid
+              ? Math.min(half - 1, Math.floor((Math.abs(s.px - bN) / bR) * half))
+              : half + Math.min(half - 1, Math.floor((Math.abs(s.px - aN) / aR) * half));
+            targets[idx] = Math.min(1.15, targets[idx] + s.mag * 0.5 * (1 - age / 650));
+          }
         }
-        if (bars.h[i] * specH >= bars.pk[i]) { bars.pk[i] = bars.h[i] * specH; bars.pkAt[i] = t; }
-        else if (t - bars.pkAt[i] > 420) bars.pk[i] = Math.max(0, bars.pk[i] - 0.24);
-        const capCol = bars.pk[i] / specH > 0.85 ? PAL.wht : PAL.red;
-        for (let b = 0; b < bw; b++) dot(c0 + b, specBot - Math.round(bars.pk[i]) - 1, capCol, 0.95);
-      }
-
-      /* the ticker: whole-cell steps — chunky, like the real scroll */
-      if (t - marqAt > 85) { marq += 1; marqAt = t; }
-      const msg = (` ${base}-USD $${px != null ? fmtPx(px) : '-----'} ` +
-        (chg != null ? `${chg >= 0 ? '▲' : '▼'}${fmtChg(chg)} ` : '') +
-        `· 24H VOL $${fmtCompact(vol) === '—' ? '--' : fmtCompact(vol)} · OPEN INT $${fmtCompact(oi) === '—' ? '--' : fmtCompact(oi)} ` +
-        (fund != null ? `· FUNDING ${(fund * 100).toFixed(4)}%/H ` : '') +
-        '· HYPERLIQUID PERPS · VICE SUITE ·').toUpperCase();
-      const total = msg.length * 6;
-      const off = marq % total;
-      for (let k = 0; k < 2; k++) {
-        let c = m - off + k * total;
-        for (const ch of msg) {
-          if (c > -6 && c < cols) text(ch, c, marqTop, 1, PAL.amb, 0.85);
-          c += 6;
+        const cMid = Math.floor(cols / 2);
+        for (let i = 0; i < nB; i++) {
+          bars.h[i] += (targets[i] - bars.h[i]) * (targets[i] > bars.h[i] ? 0.35 : 0.12);
+          const hC = Math.round(Math.min(1.15, bars.h[i]) * specH);
+          const isBid = i < half;
+          const j = isBid ? i : i - half;
+          const c0 = isBid ? cMid - 1 - (j + 1) * (bw + gap) + gap : cMid + 2 + j * (bw + gap);
+          for (let r = 0; r < hC; r++) {
+            const f = r / specH;
+            const col = isBid
+              ? (f < 0.5 ? PAL.blue : f < 0.8 ? PAL.cyan : PAL.wht)
+              : (f < 0.5 ? PAL.mag : f < 0.8 ? PAL.red : PAL.wht);
+            for (let b = 0; b < bw; b++) dot(c0 + b, specBot - r, col, 0.85);
+          }
+          if (hC >= bars.pk[i]) { bars.pk[i] = hC; bars.pkAt[i] = t; }
+          else if (t - bars.pkAt[i] > 900) bars.pk[i] = Math.max(0, bars.pk[i] - 0.2);
+          if (bars.pk[i] > 0.5) {
+            const capC = isBid ? PAL.cyan : PAL.red;
+            for (let b = 0; b < bw; b++) dot(c0 + b, specBot - Math.round(bars.pk[i]) - 1, capC, 0.95);
+          }
         }
+        // the mid: a faint pillar that lights on real ticks
+        for (let r = 0; r <= specH; r += 2) dot(cMid, specBot - r, PAL.wht, 0.06 + 0.3 * tick);
       }
 
-      /* the demo sweep: a soft white wash crosses the glass now and then */
-      if (t > sweepAt) {
-        const p = (t - sweepAt) / 1600;
-        if (p >= 1) sweepAt = t + 34_000 + Math.random() * 10_000;
-        else {
-          const sc = Math.floor(p * (cols + 20)) - 10;
+      /* the treadmill: the live tape, whole-cell steps */
+      const stepMs = Math.max(35, Math.round(16 * cell)) * (REDM ? 2 : 1);
+      if (t - marqAt > stepMs) { marq += 1; marqAt = t; }
+      if (tape.length) {
+        const total = tapeU * sm;
+        const off3 = marq % total;
+        for (let k = 0; k < 2; k++) {
+          let c = m - off3 + k * total;
+          for (const g3 of tape) {
+            const wI = (g3.logo ? 8 : 6) * sm;
+            if (c > -wI && c < cols) {
+              if (g3.logo) {
+                const L = logoFor(g3.logo);
+                if (Array.isArray(L)) for (const [dc, dr, col2] of L) for (let sy = 0; sy < sm; sy++) for (let sx = 0; sx < sm; sx++) dot(c + dc * sm + sx, treadTop + dr * sm + sy, col2, 0.9);
+                else if (L === 'fail') text(String(g3.logo).replace(/^k/, '')[0], c + sm, treadTop, sm, PAL.wht, 0.4);
+              } else text(g3.ch, c, treadTop, sm, g3.col, g3.a);
+            }
+            c += wI;
+          }
+        }
+      } else text('CONNECTING TO THE TAPE', m, treadTop, sm, PAL.amb, 0.5);
+
+      /* funding settles on the hour — the sweep marks the real moment */
+      if (!REDM) {
+        const msIn = Date.now() % 3600_000;
+        if (msIn < 1600) {
+          const sc = Math.floor((msIn / 1600) * (cols + 20)) - 10;
           for (let r = 0; r < rows; r++) {
             for (let dc = -2; dc <= 2; dc++) {
-              if ((r + sc + dc) % 2 === 0) dot(sc + dc, r, PAL.wht, 0.14 * (1 - Math.abs(dc) / 3));
+              if ((r + sc + dc) % 2 === 0) dot(sc + dc, r, PAL.amb, 0.12 * (1 - Math.abs(dc) / 3));
             }
           }
         }
       }
+
+      flush();
     }
 
     /* ── chrome + lifecycle ── */
@@ -5185,8 +5403,9 @@
     panel.innerHTML =
       '<label>ticker</label><input class="vwall-sym" maxlength="12" spellcheck="false" autocomplete="off" ' +
       'aria-label="Tracked symbol" placeholder="BTC">' +
-      `<label>timeframe</label>${seg('tf', [['5m', '5M'], ['15m', '15M'], ['1h', '1H'], ['4h', '4H'], ['1d', '1D']], tf)}` +
-      `<label>clarity</label>${seg('clarity', [['soft', 'Soft'], ['std', 'Standard'], ['sharp', 'Sharp']], clarity)}`;
+      `<label>timeframe</label>${seg('tf', [['1m', '1M'], ['5m', '5M'], ['15m', '15M'], ['1h', '1H'], ['4h', '4H'], ['1d', '1D']], tf)}` +
+      `<label>zoom</label>${seg('zoom', [['1', 'Fit'], ['2', '2×'], ['4', '4×']], String(zoom))}` +
+      `<label>clarity</label>${seg('clarity', [['retro', 'Retro'], ['fine', 'Fine'], ['super', 'Super'], ['ultra', 'Ultra']], clarity)}`;
     const symInp = panel.querySelector('.vwall-sym');
     symInp.value = base;
     const applySym = () => {
@@ -5212,9 +5431,11 @@
       const b = ev.target.closest('.vwall-seg button');
       if (!b) return;
       const k = b.closest('.vwall-seg').dataset.k;
-      if (b.dataset.v === (k === 'tf' ? tf : clarity)) return;
+      const cur = k === 'tf' ? tf : k === 'zoom' ? String(zoom) : clarity;
+      if (b.dataset.v === cur) return;
       for (const o of b.closest('.vwall-seg').children) o.classList.toggle('on', o === b);
       if (k === 'tf') { tf = b.dataset.v; loadCandles(); }
+      else if (k === 'zoom') zoom = Number(b.dataset.v);
       else { clarity = b.dataset.v; fit(); }
       saveWall();
     });
@@ -5237,7 +5458,10 @@
       dead = true;
       cancelAnimationFrame(raf);
       clearInterval(candleTimer);
+      clearInterval(bookTimer);
       clearTimeout(wakeT);
+      clearTimeout(wsRetryT);
+      try { ws?.close(); } catch { /* gone */ }
       unsub();
       window.removeEventListener('keydown', onKey, true);
       document.removeEventListener('fullscreenchange', onFs);

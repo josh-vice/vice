@@ -2397,7 +2397,7 @@ body.in-section .hub-menu button[data-menu="keys"] { display: flex; }
 
 /* the display panel: ticker · timeframe · clarity */
 .vwall-panel {
-  position: absolute; top: 64px; right: 20px; z-index: 2; width: 240px;
+  position: absolute; top: 64px; right: 20px; z-index: 2; width: 268px;
   display: none; flex-direction: column; gap: 7px;
   border: 1px solid rgba(126, 165, 235, 0.3); border-radius: 14px;
   background: rgba(4, 9, 24, 0.88); backdrop-filter: blur(10px); padding: 14px 15px 15px;
