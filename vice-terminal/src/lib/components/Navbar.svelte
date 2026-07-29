@@ -63,7 +63,7 @@
 
 <nav class="h-11 bg-terminal-bg border-b border-terminal-border flex items-center justify-between px-3 select-none gap-2">
 	<div class="flex items-center gap-3 flex-shrink-0">
-		<a href="/" class="flex items-center gap-2 hover:opacity-90 transition-opacity">
+		<a href="/trade" class="flex items-center gap-2 hover:opacity-90 transition-opacity">
 			<div class="w-6 h-6 rounded bg-black flex items-center justify-center overflow-hidden ring-1 ring-terminal-red/40">
 				<img src="/flamingo.png" alt="Vice Terminal flamingo logo" class="w-full h-full object-contain" />
 			</div>

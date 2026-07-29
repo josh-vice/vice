@@ -1,12 +1,14 @@
 <script lang="ts">
 	import '../app.css';
-	import { onMount } from 'svelte';
+	import { onMount, setContext } from 'svelte';
 	import { page } from '$app/state';
 	import { startPriceUpdates, stopPriceUpdates, hotkeysEnabled, orderSide, cliOpen, clickPlacementMode, setOrderSizePercent, setChartTimeframe } from '$lib/stores';
 	import { actionForHotkey, hotkeyFromEvent, isTypingTarget, loadHotkeys } from '$lib/hotkeys';
+	import { SUITE_CONTEXT, suiteContext } from '$lib/suite/context';
 
 	let { children } = $props();
 	let isDocumentation = $derived(page.url.pathname.startsWith('/docs'));
+	setContext(SUITE_CONTEXT, suiteContext);
 
 	onMount(() => {
 		startPriceUpdates();
