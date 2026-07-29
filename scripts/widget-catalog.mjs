@@ -2,7 +2,7 @@
 import { resolve } from 'node:path';
 
 const root = resolve(import.meta.dir, '..');
-const sourcePath = resolve(root, 'vice/hub.js');
+const sourcePath = resolve(root, 'vice-terminal/static/legacy/hub.js');
 const catalogPath = resolve(root, 'docs/widgets/vice-suite-widget-catalog.json');
 
 export function idsFromWidgetDescriptions(source) {

@@ -33,7 +33,7 @@
     "test:preflight-policy": "bun test scripts/preflight-policy.test.mjs",
     "test:gateway-policy": "bun test scripts/gateway-policy.test.mjs",
     "test:stories": "bun test scripts/user-story-catalog.test.mjs && bun scripts/user-story-catalog.mjs",
-    "test:widgets": "bun test scripts/widget-catalog.test.mjs && bun scripts/widget-catalog.mjs",
+    "test:widgets": "bun test scripts/widget-catalog.test.mjs scripts/hub-route.test.mjs && bun scripts/widget-catalog.mjs",
     "test:competitive": "bun test scripts/competitive-matrix.test.mjs && bun scripts/competitive-matrix.mjs",
     "test:browser": "bun test scripts/browser-surface.test.mjs && bun scripts/browser-surface.mjs",
     "test:live-feed": "bun scripts/live-feed-smoke.mjs",

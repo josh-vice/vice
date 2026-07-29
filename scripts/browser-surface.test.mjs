@@ -8,6 +8,8 @@ describe('SSR browser-surface smoke boundary', () => {
 		for (const hydratedOnlyHook of ['trading-chart', 'order-book', 'recent-trades', 'data-candle-count']) expect(script).not.toContain(hydratedOnlyHook);
 		expect(script).toContain('BloFin public review policy');
 		expect(script).toContain('SSR suite shell');
+		expect(script).toContain('SSR Hub shell');
+		expect(script).toContain('preserved Hub island');
 		expect(script).toContain('`${frontend}/trade`');
 		expect(script).toContain('/review/blofin');
 		expect(script).toContain('https://openapi.blofin.com');

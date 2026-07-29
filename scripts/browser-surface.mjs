@@ -29,6 +29,14 @@ await expect('SSR terminal shell', `${frontend}/trade`, (response, body) =>
 	body.includes('data-feed-status')
 );
 
+await expect('SSR Hub shell', `${frontend}/hub`, (_response, body) =>
+	body.includes('data-testid="hub-shell"') && body.includes('/legacy/hub/index.html')
+);
+
+await expect('preserved Hub island', `${frontend}/legacy/hub/index.html`, (_response, body) =>
+	body.includes('Vice Hub') && body.includes('../suite-bridge.js') && body.includes('../hub.js')
+);
+
 await expect('local execution session policy', `${frontend}/api/hl/session`, (_response, body) => {
 	const session = JSON.parse(body);
 	return session.tradingMode === 'local-encrypted-agent' && session.serverSigning === false;
