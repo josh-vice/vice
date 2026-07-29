@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { selectedMarket, orderBook, orderSide, chartTimeframe, setChartTimeframe, marketContextStatus, marketRegistry, selectMarket } from '$lib/stores';
+	import { selectedMarket, orderBook, orderSide, chartTimeframe, setChartTimeframe, marketContextStatus, marketCatalogStatus, marketRegistry, selectMarket } from '$lib/stores';
 	import { startPriceAlertMonitoring } from '$lib/priceAlerts';
 	import { startSoundNotifications } from '$lib/soundNotifications';
 	import { loadPrivacyMode } from '$lib/privacyMode';
@@ -20,7 +20,7 @@
 	import { formatPrice } from '$lib/format';
 	import { describeMarketClass } from '$lib/marketClass';
 	import { BarChart3, LineChart } from 'lucide-svelte';
-	import { parseTradeHandoff, resolveTradeHandoff } from '$lib/suite/handoff';
+	import { parseTradeHandoff, resolveTradeHandoffState } from '$lib/suite/handoff';
 
 	type MobileTab = 'markets' | 'trade';
 
@@ -58,15 +58,26 @@
 		let stopHandoff: (() => void) | undefined;
 		if (rawHandoff && !handoff) handoffMessage = 'Trade context was rejected because it was incomplete or invalid.';
 		if (handoff) {
-			const apply = (markets: Parameters<typeof resolveTradeHandoff>[0]) => {
-				const market = resolveTradeHandoff(markets, handoff);
-				if (!market) return;
-				selectMarket(market);
-				handoffMessage = `Trade context loaded: ${market.symbol}.`;
+			const apply = () => {
+				if (handoffMessage) return;
+				const result = resolveTradeHandoffState(get(marketRegistry), handoff, get(marketCatalogStatus));
+				if (result.state === 'pending') return;
+				if (result.state === 'resolved') {
+					selectMarket(result.market);
+					setChartTimeframe(handoff.timeframe);
+					handoffMessage = `Trade context loaded: ${result.market.symbol}.`;
+				} else {
+					handoffMessage = 'Trade context is unavailable in the current catalog. No alternate market was selected.';
+				}
 				stopHandoff?.();
 			};
-			apply(get(marketRegistry));
-			if (!handoffMessage) stopHandoff = marketRegistry.subscribe(apply);
+			apply();
+			if (!handoffMessage) {
+				const stopRegistry = marketRegistry.subscribe(apply);
+				const stopCatalog = marketCatalogStatus.subscribe(apply);
+				stopHandoff = () => { stopRegistry(); stopCatalog(); };
+				if (handoffMessage) stopHandoff();
+			}
 		}
 		return () => {
 			stopAlerts();
@@ -190,7 +201,7 @@
 
 			<!-- Timeframe selector -->
 			<div class="h-8 bg-terminal-bg-secondary flex items-center px-3 gap-1 flex-shrink-0 overflow-x-auto scrollbar-none">
-				{#each ['1m', '5m', '15m', '1h', '4h', '1d'] as tf}
+				{#each ['1m', '5m', '15m', '1h', '4h', '1D'] as tf}
 					<button
 						class="px-2.5 py-1 text-2xs font-medium rounded whitespace-nowrap transition-colors
 							{tf === $chartTimeframe ? 'bg-terminal-bg-tertiary text-terminal-text' : 'text-terminal-text-muted'}"

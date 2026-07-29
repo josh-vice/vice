@@ -5,6 +5,7 @@ import {
 	isConnected,
 	marketCatalogStatus,
 	marketDataStatus,
+	chartTimeframe,
 	selectedDex,
 	selectedMarket,
 	type Dex,
@@ -17,6 +18,7 @@ export const SUITE_CONTEXT = Symbol('vice-suite-context');
 export interface SuiteMarketContext {
 	venue: Dex;
 	market: MarketDescriptor | null;
+	timeframe: string;
 	dataStatus: HealthStatus;
 	catalogStatus: HealthStatus;
 }
@@ -40,11 +42,12 @@ export interface SuiteContext {
  * and health state, never a signer, credential, or mutable order handle.
  */
 export const suiteContext: Readable<SuiteContext> = derived(
-	[selectedDex, selectedMarket, marketDataStatus, marketCatalogStatus, activeSubaccount, isConnected, accountSyncStatus],
-	([$selectedDex, $selectedMarket, $marketDataStatus, $marketCatalogStatus, $activeSubaccount, $isConnected, $accountSyncStatus]) => ({
+	[selectedDex, selectedMarket, chartTimeframe, marketDataStatus, marketCatalogStatus, activeSubaccount, isConnected, accountSyncStatus],
+	([$selectedDex, $selectedMarket, $chartTimeframe, $marketDataStatus, $marketCatalogStatus, $activeSubaccount, $isConnected, $accountSyncStatus]) => ({
 		market: {
 			venue: $selectedDex,
 			market: $selectedMarket,
+			timeframe: $chartTimeframe,
 			dataStatus: $marketDataStatus,
 			catalogStatus: $marketCatalogStatus
 		},

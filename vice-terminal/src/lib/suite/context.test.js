@@ -1,11 +1,12 @@
 import { describe, expect, test } from 'bun:test';
 import { get } from 'svelte/store';
-import { activeSubaccount, accountSyncStatus, isConnected, marketCatalogStatus, marketDataStatus, selectedDex, selectedMarket } from '$lib/stores';
+import { activeSubaccount, accountSyncStatus, chartTimeframe, isConnected, marketCatalogStatus, marketDataStatus, selectedDex, selectedMarket } from '$lib/stores';
 import { suiteContext } from './context';
 
 describe('shared suite context', () => {
 	test('publishes exact market identity and no wallet or credential fields', () => {
 		selectedDex.set('hyperliquid');
+		chartTimeframe.set('15m');
 		marketDataStatus.set('live');
 		marketCatalogStatus.set('live');
 		accountSyncStatus.set('live');
@@ -15,6 +16,7 @@ describe('shared suite context', () => {
 
 		const context = get(suiteContext);
 		expect(context.market.market?.apiCoin).toBe('BTC');
+		expect(context.market.timeframe).toBe('15m');
 		expect(context.account).toEqual({ accountId: 'trader-1', accountLabel: 'Primary', connected: true, syncStatus: 'live' });
 		expect(JSON.stringify(context)).not.toContain('wallet');
 		expect(JSON.stringify(context)).not.toContain('credential');

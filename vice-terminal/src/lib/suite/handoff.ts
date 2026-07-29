@@ -1,4 +1,12 @@
 import type { MarketDescriptor } from '$lib/types';
+import type { HealthStatus } from '$lib/productionTruth';
+
+export const TRADE_HANDOFF_TIMEFRAMES = ['1m', '5m', '15m', '1h', '4h', '1D'] as const;
+export type TradeHandoffTimeframe = typeof TRADE_HANDOFF_TIMEFRAMES[number];
+
+function isTradeHandoffTimeframe(value: unknown): value is TradeHandoffTimeframe {
+	return typeof value === 'string' && (TRADE_HANDOFF_TIMEFRAMES as readonly string[]).includes(value);
+}
 
 export interface SuiteTradeHandoff {
 	version: 1;
@@ -6,11 +14,17 @@ export interface SuiteTradeHandoff {
 	marketKey: string;
 	apiCoin: string;
 	kind: MarketDescriptor['kind'];
+	timeframe: TradeHandoffTimeframe;
 }
 
-export function createTradeHandoff(market: MarketDescriptor): SuiteTradeHandoff | null {
-	if (!market.instrument || market.instrument.venue !== 'hyperliquid' || market.tradingAvailability === 'metadataOnly') return null;
-	return { version: 1, venue: 'hyperliquid', marketKey: market.marketKey, apiCoin: market.apiCoin, kind: market.kind };
+export type TradeHandoffResolution =
+	| { state: 'pending' }
+	| { state: 'resolved'; market: MarketDescriptor }
+	| { state: 'unavailable' };
+
+export function createTradeHandoff(market: MarketDescriptor, timeframe: string): SuiteTradeHandoff | null {
+	if (!market.instrument || market.instrument.venue !== 'hyperliquid' || market.tradingAvailability === 'metadataOnly' || !isTradeHandoffTimeframe(timeframe)) return null;
+	return { version: 1, venue: 'hyperliquid', marketKey: market.marketKey, apiCoin: market.apiCoin, kind: market.kind, timeframe };
 }
 
 export function encodeTradeHandoff(handoff: SuiteTradeHandoff): string {
@@ -23,7 +37,7 @@ export function parseTradeHandoff(value: string | null): SuiteTradeHandoff | nul
 		const parsed: unknown = JSON.parse(decodeURIComponent(value));
 		if (!parsed || typeof parsed !== 'object') return null;
 		const handoff = parsed as Partial<SuiteTradeHandoff>;
-		if (handoff.version !== 1 || handoff.venue !== 'hyperliquid' || typeof handoff.marketKey !== 'string' || typeof handoff.apiCoin !== 'string' || typeof handoff.kind !== 'string') return null;
+		if (handoff.version !== 1 || handoff.venue !== 'hyperliquid' || typeof handoff.marketKey !== 'string' || typeof handoff.apiCoin !== 'string' || typeof handoff.kind !== 'string' || !isTradeHandoffTimeframe(handoff.timeframe)) return null;
 		if (!handoff.marketKey.startsWith('hyperliquid:') || handoff.marketKey.length > 160 || handoff.apiCoin.trim() !== handoff.apiCoin || handoff.apiCoin.length === 0) return null;
 		return handoff as SuiteTradeHandoff;
 	} catch {
@@ -39,4 +53,20 @@ export function resolveTradeHandoff(markets: readonly MarketDescriptor[], handof
 		market.instrument?.venue === handoff.venue &&
 		market.tradingAvailability !== 'metadataOnly'
 	) ?? null;
+}
+
+/**
+ * A route handoff may arrive before the catalog. Once that catalog has made a
+ * terminal decision, missing identity is unavailable rather than a reason to
+ * select a lookalike display symbol or wait forever.
+ */
+export function resolveTradeHandoffState(
+	markets: readonly MarketDescriptor[],
+	handoff: SuiteTradeHandoff,
+	catalogStatus: HealthStatus
+): TradeHandoffResolution {
+	const market = resolveTradeHandoff(markets, handoff);
+	if (market) return { state: 'resolved', market };
+	if (catalogStatus === 'live' || catalogStatus === 'degraded' || catalogStatus === 'error') return { state: 'unavailable' };
+	return { state: 'pending' };
 }

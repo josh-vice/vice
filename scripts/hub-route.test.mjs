@@ -21,6 +21,7 @@ describe('Vice Hub SvelteKit migration boundary', () => {
 		expect(hubScript).toContain('linkSymbol(market.apiCoin)');
 		expect(bridge).toContain("event.origin !== window.location.origin");
 		expect(bridge).toContain('marketKey');
+		expect(bridge).toContain('timeframe');
 		expect(bridge).toContain('window.top.location.assign');
 		expect(bridge).not.toContain('walletAddress');
 		expect(bridge).not.toContain('context.account');

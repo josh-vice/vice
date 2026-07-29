@@ -18,7 +18,7 @@ Each story uses schema v1 operational-contract fields for persona, preconditions
 | US-010 | One-action position and risk ergonomics | position close and reverse identity tests | In progress; funded position-lifecycle proof remains open |
 | US-011 | Persistent conditional automation without custody compromise | trigger, persistence-disclosure, conditional-ladder, local-telemetry tests, and partial browser smoke | In progress; user-run orchestrator, lifecycle browser proof, and funded proof remain open |
 | US-012 | Dockable workspace, power input, and the dither design language | privacy-mode, hotkey-binding, CLI-chain/preference, workspace-layout, and workspace-host tests | In progress; Dockview workspace, local layouts, and an initial configurable-hotkey slice are implemented; browser evidence and remaining certified actions are open |
-| US-013 | Unified Suite context | planned context-schema, shell-navigation, privacy-boundary, and handoff suites | Planned |
+| US-013 | Unified Suite context | `suite/context.test.js`, `suite/handoff.test.js`, `components/tradeHandoffSurface.test.js`, and `scripts/hub-route.test.mjs` | Partial: exact public Hub-to-Trade market/timeframe handoff and fail-closed catalog outcome are implemented; browser, mobile, Scanner, and Gallery evidence remain open |
 | US-014 | Complete widget quality | planned widget-catalog, lifecycle, visual, accessibility, migration, and soak suites | Planned |
 | US-015 | Scanner intelligence to action | planned source, scope, stale, handoff, visual, and load-isolation suites | Planned |
 | US-016 | Durable customization | planned IndexedDB migration, corruption, import/export, and rollback suites | Planned |

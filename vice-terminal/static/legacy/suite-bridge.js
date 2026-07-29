@@ -22,6 +22,7 @@
     return value && value.version === VERSION && value.context &&
       value.context.market && validMarket(value.context.market.market) &&
       typeof value.context.market.venue === 'string' &&
+      typeof value.context.market.timeframe === 'string' &&
       typeof value.context.market.dataStatus === 'string' &&
       typeof value.context.market.catalogStatus === 'string';
   }
@@ -34,7 +35,9 @@
     const market = window.viceSuitePublicContext.market.market;
     const trade = document.getElementById('hub-open-trade');
     if (!trade || !market || market.tradingAvailability === 'metadataOnly' || market.instrument?.venue !== 'hyperliquid') return;
-    const handoff = { version: VERSION, venue: 'hyperliquid', marketKey: market.marketKey, apiCoin: market.apiCoin, kind: market.kind };
+    const timeframe = window.viceSuitePublicContext.market.timeframe;
+    if (!['1m', '5m', '15m', '1h', '4h', '1D'].includes(timeframe)) return;
+    const handoff = { version: VERSION, venue: 'hyperliquid', marketKey: market.marketKey, apiCoin: market.apiCoin, kind: market.kind, timeframe };
     trade.disabled = false;
     trade.onclick = () => {
       window.top.location.assign(`/trade?handoff=${encodeURIComponent(JSON.stringify(handoff))}`);

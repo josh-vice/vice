@@ -25,3 +25,9 @@ As a trader, I want Hub, Scanner, Gallery, and Trade to share an exact public ma
 - Telemetry: Record anonymous route and handoff outcomes without market, account, wallet, or order values.
 - Linked tests: Context-schema, malformed-route, deep-link, shell-navigation, privacy-boundary, mobile, and browser handoff suites.
 - Funded-testnet evidence: Certified chart/DOM handoffs reuse the destination action's funded evidence; public-only handoffs require browser evidence only.
+
+## Current evidence
+
+- The SvelteKit shell serves `/`, `/hub`, `/trade`, `/scanner`, and `/gallery`. The preserved Hub island receives only a same-origin, typed public context; its Trade action sends canonical Hyperliquid market identity and a bounded chart timeframe.
+- Trade validates version, venue, exact key, API coin, product kind, and timeframe. It waits only while the catalog is unresolved; an unavailable exact identity is visibly rejected without a display-symbol fallback or a market selection.
+- Coverage: `src/lib/suite/context.test.js`, `src/lib/suite/handoff.test.js`, `components/tradeHandoffSurface.test.js`, and `scripts/hub-route.test.mjs`. This is local contract/build proof, not browser or funded execution evidence.
