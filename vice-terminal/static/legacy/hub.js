@@ -484,6 +484,19 @@
     }
     if (hits) toast(`linked ${hits} block${hits === 1 ? '' : 's'} to ${linkedSym}`);
   }
+
+  // The Suite shell supplies this only after it has a canonical venue market.
+  // This updates research linkage, never an execution field or signer.
+  window.addEventListener('vice-suite-context', (event) => {
+    const market = event.detail?.market?.market;
+    const badge = $('#hub-suite-context');
+    if (!market?.marketKey || !market?.apiCoin || !market?.kind) {
+      if (badge) { badge.textContent = 'Suite context: unavailable'; badge.classList.remove('live'); }
+      return;
+    }
+    if (badge) { badge.textContent = `Suite context: ${market.apiCoin}`; badge.classList.add('live'); }
+    linkSymbol(market.apiCoin);
+  });
   const rowLinker = (container) => container.addEventListener('click', (ev) => {
     const r = ev.target.closest('.vrow.clickable');
     if (r?.dataset.sym) linkSymbol(r.dataset.sym);
