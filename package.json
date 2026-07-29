@@ -33,7 +33,7 @@
     "test:preflight-policy": "bun test scripts/preflight-policy.test.mjs",
     "test:gateway-policy": "bun test scripts/gateway-policy.test.mjs",
     "test:stories": "bun test scripts/user-story-catalog.test.mjs && bun scripts/user-story-catalog.mjs",
-    "test:widgets": "bun test scripts/widget-catalog.test.mjs scripts/hub-route.test.mjs scripts/hub-persistence.test.mjs vice-terminal/src/lib/suite/widgets.test.js vice-terminal/src/lib/nativeNotes.test.js vice-terminal/src/lib/sessionClocks.test.js vice-terminal/src/lib/components/nativeWatchlistPortSurface.test.js vice-terminal/src/lib/components/nativeNotesPortSurface.test.js vice-terminal/src/lib/components/nativeSessionClocksPortSurface.test.js && bun scripts/widget-catalog.mjs",
+    "test:widgets": "bun test scripts/widget-catalog.test.mjs scripts/hub-route.test.mjs scripts/hub-persistence.test.mjs vice-terminal/src/lib/suite/widgets.test.js vice-terminal/src/lib/nativeNotes.test.js vice-terminal/src/lib/sessionClocks.test.js vice-terminal/src/lib/candleCountdown.test.js vice-terminal/src/lib/components/nativeWatchlistPortSurface.test.js vice-terminal/src/lib/components/nativeNotesPortSurface.test.js vice-terminal/src/lib/components/nativeSessionClocksPortSurface.test.js vice-terminal/src/lib/components/nativeCandleCountdownPortSurface.test.js && bun scripts/widget-catalog.mjs",
     "test:competitive": "bun test scripts/competitive-matrix.test.mjs && bun scripts/competitive-matrix.mjs",
     "test:browser": "bun test scripts/browser-surface.test.mjs && bun scripts/browser-surface.mjs",
     "test:live-feed": "bun scripts/live-feed-smoke.mjs",

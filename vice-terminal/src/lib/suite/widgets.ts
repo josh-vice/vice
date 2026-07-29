@@ -35,6 +35,14 @@ export const nativeWidgetPorts = {
 		nativeRoute: '/hub/native/session-clocks',
 		provenance: 'Browser clock with explicit IANA time zones and regular exchange hours',
 		status: 'ported'
+	},
+	vCountdown: {
+		legacyId: 'vCountdown',
+		title: 'Candle Close',
+		story: 'US-014',
+		nativeRoute: '/hub/native/candle-countdown',
+		provenance: 'Browser clock with UTC-aligned candle boundaries',
+		status: 'ported'
 	}
 } as const;
 

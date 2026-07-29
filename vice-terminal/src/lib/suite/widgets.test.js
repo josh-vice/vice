@@ -45,4 +45,15 @@ describe('native widget ports', () => {
 			status: 'ported'
 		});
 	});
+
+	test('maps the UTC candle-close clock to its native route', () => {
+		expect(nativeWidgetPorts.vCountdown).toEqual({
+			legacyId: 'vCountdown',
+			title: 'Candle Close',
+			story: 'US-014',
+			nativeRoute: '/hub/native/candle-countdown',
+			provenance: 'Browser clock with UTC-aligned candle boundaries',
+			status: 'ported'
+		});
+	});
 });
