@@ -1,0 +1,32 @@
+{
+  "course": 3,
+  "chapterId": 13,
+  "title": "Range Market Scenario — Live Walkthrough",
+  "module": "Applying the Basics",
+  "edits": [
+    {
+      "slot": "introChart",
+      "addMarkLines": [
+        { "yAxis": 84, "label": "Stop — Buffer below Range Low", "color": "#ff2e88" }
+      ],
+      "reason": "The intro illustrates a LONG from Range Low (markPoints: Long Entry @idx4 at the 85 swing low -> Above Mid -> Target Range High). The long's protective stop is taught but not drawn. Intro bullet: 'Buffer on stop: essential — wicks and fake-outs regularly probe just beyond Range High or Range Low by a small margin'. yAxis 84 sits just below the long's swing-low entry (85) inside the ~83-97 price band, illustrating the taught buffer. Pink because it is a stop sitting against a long. Note: 84 lands at the lower edge of the Range Low zone (83-88); it is still below the 85 swing-low entry so it reads correctly as the buffered protective level."
+    },
+    {
+      "slot": "lessonChart",
+      "addMarkLines": [
+        { "yAxis": 91.5, "label": "Midpoint — cross down = target confident", "color": "#ffcc00" },
+        { "yAxis": 87, "label": "Target — Range Low", "color": "#00d4d4" }
+      ],
+      "reason": "Two taught levels are missing from the worked short trade. (1) Midpoint: lesson teaches 'Midpoint rule confirmed: price below mid moved to Range Low; price above mid moved to Range High — consistently' and 'if price drops below mid, confidence in Range Low target increases'. The midpoint is the chapter's core progress gauge but is not drawn here. 91.5 = midway between Range Low (85-89) and Range High (94-98), inside the ~84-101 band; gold matches the intro chart's midpoint color. (2) Target level: the short's take-profit (Range Low) is taught as the destination — 'confidence in Range Low target increases'. Currently only markPoint 'Target Range Low Hit' @idx15 marks the hit; no labelled TARGET level line exists. yAxis 87 = center of the Range Low zone (85-89); teal = target/with-the-move. The product principle requires the referenced 'target' to be drawn as a level, not only mentioned."
+    },
+    {
+      "slot": "quiz.chart",
+      "addMarkLines": [
+        { "yAxis": 91.5, "label": "Midpoint", "color": "#ffcc00" }
+      ],
+      "reason": "The quiz question explicitly names the midpoint — 'then immediately reverses and drops through the midpoint toward Range Low' — but the chart never draws it. This is neutral decision CONTEXT: it does not reveal the answer (the answer concerns stop-buffer placement, not the midpoint), so it is safe to show pre-cut. yAxis 91.5 between the Range Low (85-89) and Range High (94-98) zones, inside the ~83-102 band; gold per the chapter's midpoint convention."
+    }
+  ],
+  "alreadyGood": [],
+  "notes": "Re-derived all three slots from chapter 13 text. ACCEPTED (with refinement): intro stop @84 (med — illustrates taught long stop-buffer; sits below the 85 swing-low entry, just inside the lower edge of the Range Low zone), lesson midpoint @91.5 (high) and lesson target Range Low @87 (med), quiz midpoint @91.5 pre-cut (high — explicitly named in the question, answer-safe). REJECTED: the auditor's quiz revealMarkPoint {dataIndex:8,'Buffered stop would sit here — above wick',position:'top'}. dataIndex 8 ALREADY carries a reveal markPoint 'Spike Hits Tight Stop!' at position:'top' — adding a second top callout on the same spike candle crowds/conflicts, and the buffered-stop prescription is already fully covered by the quiz explanation text plus the existing reveals (tight stop hit @idx8 + 'Would Have Hit Target!' @idx14). No clean alternate bar exists to relocate it, so restraint favors dropping it. No additional gaps found: the lesson short's entry (98) and buffered stop (101) are already drawn; intro entry/midpoint/target markPoints are present. All proposed yAxis values verified inside their charts' visible price bands."
+}

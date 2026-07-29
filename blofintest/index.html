@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>BloFin Academy — Learn to Trade Crypto, Free</title>
+  <link rel="icon" type="image/png" href="/blofintest/blofin-icon.png" />
+
+  <!-- BloFin-branded STAGING copy of the Liquidity Theory app (/blofintest).
+       Same engine + content, BloFin skin (blofin-theme.css + blofin-boot.js).
+       noindex: this stage must never compete with the canonical site. -->
+  <meta name="robots" content="noindex, nofollow" />
+  <meta name="description" content="BloFin Academy — a free, no-account crypto trading academy. Four interactive courses, a live practice simulator, glossary, flashcards, and interactive labs." />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="BloFin Academy" />
+  <meta property="og:title" content="BloFin Academy — Learn to Trade Crypto, Free" />
+  <meta property="og:description" content="A free, interactive crypto trading academy — 4 courses, a live practice simulator, and real charts. No account needed; your progress saves automatically." />
+  <meta property="og:url" content="https://liqtheory.com/blofintest" />
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <!-- Trimmed: IBM Plex Mono never renders (Cascadia always wins the stack) and
+       weight 300 is unused — dropping both cuts the font payload ~40%. -->
+  <link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+
+  <!-- Styles -->
+  <!-- Recolored copies (build-blofin-skin.sh) — hardcoded LT colours mapped to BloFin -->
+  <link rel="stylesheet" href="/blofintest/lt-styles.css?v=1.118.0-blofin5" />
+  <!-- v2 animated-lessons player chrome (scoped to .ltp2*; see lessons-v2/) -->
+  <link rel="stylesheet" href="/blofintest/lessons-v2/player.css?v=1.20.0-blofin5" />
+  <!-- BloFin re-skin — MUST come after lt-styles.css so its !important overrides win -->
+  <link rel="stylesheet" href="/blofintest/blofin-theme.css?v=2.4.0" />
+
+  <!-- CDN deps — pinned exact versions + SRI so a compromised/drifting CDN can't
+       inject code. To upgrade: bump the version, re-download, recompute
+       `openssl dgst -sha384 -binary file | openssl base64 -A`. -->
+  <!-- ECharts (chart rendering) -->
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5.6.0/dist/echarts.min.js"
+          integrity="sha384-pPi0zxBAoDu6+JXW/C68UZLvBUUtU+7zonhif43rqj7pxsGyqyqzcian2Rj37Rss"
+          crossorigin="anonymous" defer></script>
+
+  <!-- Lucide icons -->
+  <script src="https://cdn.jsdelivr.net/npm/lucide@1.23.0/dist/umd/lucide.min.js"
+          integrity="sha384-ouAVEJVCMsf8Svzn+BwqbaBhxBEA0xgeVBhHnxmWd+Wqyv18yhWCQwGegFD/OHLq"
+          crossorigin="anonymous" defer></script>
+
+  <!-- Cross-device progress sync: LZ-String (compact link) + QRCode (scan to transfer).
+       Client-side only — the progress lives in the link's #fragment; nothing is uploaded. -->
+  <script src="https://cdn.jsdelivr.net/npm/lz-string@1.5.0/libs/lz-string.min.js"
+          integrity="sha384-0d+Gr7vM4Drod8E3hXKgciWJSWbjD/opKLLygI9ktiWbuvlDwQLzU46wJ9s5gsp7"
+          crossorigin="anonymous" defer></script>
+  <script src="https://cdn.jsdelivr.net/gh/davidshimjs/qrcodejs@04f46c6a0708418cb7b96fc563eacae0fbf77674/qrcode.min.js"
+          integrity="sha384-3zSEDfvllQohrq0PHL1fOXJuC/jSOO34H46t6UQfobFOmxE5BpjjaIJY5F2/bMnU"
+          crossorigin="anonymous" defer></script>
+
+  <!-- Persistence facade: ONE registry of every fixed localStorage key + safe
+       accessors. Must load before lt-settings.js (reads prefs at parse time). -->
+  <script src="/lt-store.js?v=1.2.0"></script>
+
+  <!-- Settings load SYNCHRONOUSLY right after the store: ltApplySavedSettings() runs at
+       parse time and sets the theme/palette CSS vars BEFORE first paint (no flash).
+       Everything below is deferred — order-preserving, so the parse-time dependency
+       chain (chartgen → data → engine) is unchanged, but nothing blocks rendering. -->
+  <script src="/lt-settings.js?v=1.38.2"></script>
+
+  <!-- Technical-analysis math (Ichimoku / RSI / CVD / volume). The engine delegates
+       its indicator helpers here; must load before lt-engine.js. -->
+  <script src="/lt-ta.js?v=1.1.0" defer></script>
+
+  <!-- Canonical data-viz palette (engine VIZ/RED/GOLD/TEAL2 alias to this). -->
+  <script src="/lt-tokens.js?v=1.0.0" defer></script>
+
+  <!-- Pure colour / number-format helpers (engine helpers delegate here). -->
+  <script src="/lt-utils.js?v=1.2.0" defer></script>
+
+  <!-- Teaching-candle generator (data files call ltCandles() at parse time) -->
+  <script src="/lt-chartgen.js?v=1.2.0" defer></script>
+
+  <!-- Data files MUST load before lt-engine.js (engine reads LT_CHAPTERS at parse time) -->
+  <script src="/lt-data.js?v=1.18.2" defer></script>
+  <script src="/lt-data-course2.js?v=1.22.0" defer></script>
+  <script src="/lt-data-course3.js?v=1.20.0" defer></script>
+  <script src="/lt-data-course4.js?v=1.27.0" defer></script>
+
+  <!-- Module quizzes — multi-question end-of-module "Learning Assessment" (the Quiz step) -->
+  <script src="/lt-module-quizzes.js?v=1.0.5" defer></script>
+
+  <!-- Real historical pattern definitions -->
+  <script src="/lt-patterns.js?v=1.5.0" defer></script>
+
+  <!-- Synthetic market generator + live BTC data feed -->
+  <script src="/lt-simulator.js?v=1.5.0" defer></script>
+  <script src="/blofintest/lt-sim-feed.js?v=1.3.0-blofin1" defer></script>
+
+  <!-- UI modules (loaded before engine so engine can call them) -->
+  <script src="/lt-gallery.js?v=2.0.1" defer></script>
+  <script src="/lt-orderbook.js?v=1.5.1" defer></script>
+  <script src="/lt-patternlib.js?v=1.1.1" defer></script>
+  <script src="/lt-ichimoku.js?v=1.3.1" defer></script>
+  <script src="/lt-fib.js?v=1.3.1" defer></script>
+  <script src="/lt-msbuilder.js?v=1.1.1" defer></script>
+  <script src="/lt-divtrainer.js?v=1.0.1" defer></script>
+  <script src="/lt-volreader.js?v=1.0.1" defer></script>
+  <script src="/lt-tradingview.js?v=1.0.1" defer></script>
+  <script src="/lt-sim-ui.js?v=3.9.1" defer></script>
+  <script src="/lt-glossary.js?v=2.2.1" defer></script>
+  <script src="/lt-flashcards.js?v=1.9.10" defer></script>
+  <script src="/lt-community.js?v=2.1.0" defer></script>
+
+  <!-- v2 animated-lessons stack (dependency-free): vocabulary + Canvas renderer + lesson-file
+       manifest. THE lesson renderer (engine maps each chapter → a v2 lesson; lesson files
+       lazy-load per course via window.LT_V2_FILES). Must load before the deferred engine. -->
+  <script src="/blofintest/lessons-v2/chart-vocabulary.js?v=1.14.0-blofin5" defer></script>
+  <script src="/blofintest/lessons-v2/renderer.js?v=1.29.0-blofin5" defer></script>
+  <script src="/lessons-v2/lessons/manifest.js?v=1.1.1" defer></script>
+  <!-- which lessons have pre-generated narration audio (window.LT_AUDIO_MANIFEST) -->
+  <script src="/lessons-v2/audio/manifest.js?v=2.0.0" defer></script>
+
+  <!-- Main engine — boots on DOMContentLoaded -->
+  <script src="/lt-engine.js?v=3.152.1" defer></script>
+  <!-- BloFin JS-side skin — deferred after the engine (globals exist, boot hasn't run) -->
+  <script src="/blofintest/blofin-boot.js?v=1.10.1" defer></script>
+  <!-- Vercel Analytics -->
+  <script>window.va=window.va||function(){(window.vaq=window.vaq||[]).push(arguments);};</script>
+  <script defer src="/_vercel/insights/script.js"></script>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     BLOFIN MASTHEAD — replica of blofin.com's top bar (56px), so the
+     Academy reads as native to their site. Links go to the real
+     blofin.com destinations; "Academy" is this page.
+     ═══════════════════════════════════════════════════════════════ -->
+<header class="bf-masthead">
+  <a class="bf-mast-logo" href="https://www.blofin.com/en/" target="_blank" rel="noopener noreferrer" aria-label="BloFin" style="color:#fcfdff">
+    <svg width="80" height="20" viewBox="0 0 80 20" fill="none" xmlns="http://www.w3.org/2000/svg"><g clip-path="url(#bfl0)"><path d="M65.1523 19.2458V6.56929H69.0368L69.3318 8.19085C70.4133 6.98776 71.8885 6.42188 73.9289 6.42188C77.8134 6.42188 80.0012 8.73058 80.0012 12.8332V19.2458H75.748V13.2018C75.748 10.9668 74.7403 9.81122 72.7487 9.81122C70.6096 9.81122 69.4056 10.9418 69.4056 12.9557V19.2446H65.1523V19.2458Z" fill="currentColor"/><path d="M58.8609 19.246V6.56949H63.2888V19.246H58.8609ZM61.0624 5.43892C59.7596 5.43892 58.752 4.50569 58.752 3.25266C58.752 1.99964 59.7585 1.06641 61.0624 1.06641C62.3663 1.06641 63.3728 1.99964 63.3728 3.25266C63.3728 4.50569 62.3651 5.43892 61.0624 5.43892Z" fill="currentColor"/><path d="M43.2832 19.2456V1H56.9519V4.83278H47.8065V7.92849H55.5266V11.5152H47.8065V19.2456H43.2832Z" fill="currentColor"/><path d="M33.4589 19.2377C28.6405 19.2377 25.4199 16.6579 25.4199 12.7526C25.4199 8.84733 28.6405 6.26758 33.4589 6.26758C38.2772 6.26758 41.474 8.87111 41.474 12.7526C41.474 16.6342 38.2534 19.2377 33.4589 19.2377ZM33.4589 15.8483C35.7455 15.8483 37.147 14.669 37.147 12.7526C37.147 10.8362 35.7455 9.65693 33.4589 9.65693C31.1722 9.65693 29.7469 10.8362 29.7469 12.7526C29.7469 14.669 31.1484 15.8483 33.4589 15.8483Z" fill="currentColor"/><path d="M19.2188 19.2795V1.02734H23.5853V19.2783H19.2188V19.2795Z" fill="currentColor"/><path d="M15.3838 2.94336L11.5385 5.83568L6.83398 9.28805V13.051L16.4455 5.89814C16.4455 5.884 16.4479 5.87104 16.4479 5.85689C16.4479 4.67592 16.0932 3.70592 15.3838 2.94454V2.94336Z" fill="#FF8802"/><path d="M16.7211 11.9873C16.3982 11.3956 15.9103 10.9218 15.2563 10.5647C15.03 10.4409 14.7802 10.3349 14.5115 10.2417L11.6702 12.3633C11.6702 12.3633 11.6738 12.3656 11.6749 12.3668C12.1015 12.6897 12.316 13.1541 12.316 13.7623C12.316 14.3704 12.1074 14.8584 11.6879 15.1707C11.2696 15.4842 10.6426 15.641 9.80591 15.641H4.46443V4.65512H9.51719C10.1795 4.65512 10.698 4.81659 11.0728 5.13835C11.2931 5.32693 11.4463 5.56029 11.5371 5.83491L15.3824 2.94259C15.1514 2.69508 14.8839 2.46879 14.5775 2.26607C13.3318 1.44104 11.5135 1.02734 9.12595 1.02734H0V19.2959H9.04699C11.6973 19.2959 13.7184 18.8515 15.1137 17.9652C16.5078 17.0777 17.2054 15.7907 17.2054 14.1029C17.2054 13.2849 17.044 12.5813 16.7211 11.9885V11.9873Z" fill="currentColor"/></g><defs><clipPath id="bfl0"><rect width="80" height="20" fill="currentColor"/></clipPath></defs></svg>
+  </a>
+  <nav class="bf-mast-nav" aria-label="BloFin">
+    <a class="bf-mast-link" href="https://www.blofin.com/en/crypto" target="_blank" rel="noopener noreferrer">Buy Crypto <svg class="bf-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></a>
+    <a class="bf-mast-link" href="https://www.blofin.com/en/market/derivatives" target="_blank" rel="noopener noreferrer">Markets</a>
+    <a class="bf-mast-link" href="https://www.blofin.com/spot/en/BTC-USDT" target="_blank" rel="noopener noreferrer">Spot <svg class="bf-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></a>
+    <a class="bf-mast-link" href="https://www.blofin.com/futures/en/BTC-USDT" target="_blank" rel="noopener noreferrer"><svg class="bf-flame" viewBox="0 0 24 24" fill="#ff8802"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg> Futures <svg class="bf-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></a>
+    <a class="bf-mast-link active" href="./">Academy</a>
+    <span class="bf-mast-link bf-mast-more" aria-hidden="true">&#8226;&#8226;&#8226;</span>
+  </nav>
+  <span class="bf-mast-spacer"></span>
+  <a class="bf-mast-login" href="https://www.blofin.com/en/login" target="_blank" rel="noopener noreferrer">Log in</a>
+  <a class="bf-mast-signup" href="https://www.blofin.com/en/register" target="_blank" rel="noopener noreferrer"><svg class="bf-gift" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg> Sign up</a>
+  <span class="bf-mast-icons">
+    <span class="bf-ic" title="Notifications"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></span>
+    <span class="bf-ic" title="Download app"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></span>
+    <span class="bf-ic" title="Language"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg></span>
+  </span>
+</header>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     APP SHELL
+     ═══════════════════════════════════════════════════════════════ -->
+<div class="app-layout">
+
+  <!-- ── SIDEBAR ─────────────────────────────────────────────────── -->
+  <aside class="sidebar" id="sidebar">
+
+    <div class="sidebar-header">
+      <a class="logo" href="./" onclick="if(typeof showHome==='function'){showHome();return false;}" title="Home">
+        <span class="logo-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" role="img" aria-label="BloFin Academy">
+            <path d="M18.491 5.66919L15.1386 8.18853L11.1748 11.162V14.4308L19.4167 8.24191C19.4167 8.2296 19.4187 8.2183 19.4187 8.20598C19.4187 7.1773 19.1095 6.33239 18.491 5.66919Z" fill="#FF8802"/>
+            <path d="M18.3813 12.3085C18.2477 12.2356 18.106 12.1709 17.956 12.1103L15.408 14.0086C15.6803 14.2796 15.8179 14.641 15.8179 15.0937C15.8179 15.6235 15.6361 16.0485 15.2703 16.3216C14.9056 16.5947 14.359 16.7312 13.6296 16.7312H8.9699V7.15996H13.3779C13.9553 7.15996 14.4073 7.3006 14.734 7.58087C14.9262 7.74513 15.0597 7.9484 15.1388 8.18761L18.4912 5.66827C18.2899 5.45268 18.0566 5.25556 17.7895 5.07898C16.7025 4.36035 15.1173 4 13.0358 4H5.07959V19.9127H12.9669C15.2775 19.9127 17.0395 19.5257 18.256 18.7536C19.4714 17.9806 20.0796 16.8595 20.0796 15.3894C20.0796 14.6769 19.9388 14.064 19.6573 13.5476C19.3758 13.0323 18.9505 12.6196 18.3803 12.3095L18.3813 12.3085Z" fill="currentColor"/>
+          </svg>
+        </span>
+        <span class="logo-text">BloFin Academy</span>
+      </a>
+      <button class="sidebar-close-btn icon-btn" id="sidebar-close" aria-label="Close sidebar">
+        <i data-lucide="x" style="width:16px;height:16px;"></i>
+      </button>
+    </div>
+
+    <!-- Home hub — static button below the logo, above the courses. Sits outside
+         #chapter-list so it never scrolls with the chapter list. -->
+    <button class="sidebar-home-btn" id="sidebar-home-btn" onclick="typeof showHome === 'function' && showHome()" aria-label="Home hub">
+      <i data-lucide="home" style="width:16px;height:16px;"></i>
+      <span>Home</span>
+    </button>
+
+    <!-- Legacy course-select (hidden — engine hides it, but the element must exist) -->
+    <select id="course-select" class="course-select" style="display:none;"></select>
+
+    <!-- Per-course progress bar -->
+    <div class="sidebar-progress-wrap">
+      <div class="sidebar-progress-track">
+        <div class="sidebar-progress-fill" id="sidebar-progress-bar" style="width:0%"></div>
+      </div>
+      <div class="sidebar-progress-text" id="sidebar-progress-text">0 / 0 completed</div>
+    </div>
+
+    <!-- Chapter list (engine builds this via buildSidebar()) -->
+    <nav class="chapter-list" id="chapter-list"></nav>
+
+  </aside>
+
+  <!-- ── MAIN CONTENT WRAP ───────────────────────────────────────── -->
+  <div class="main-wrap">
+
+    <!-- Top header bar -->
+    <header class="top-header">
+      <button class="icon-btn menu-btn" id="sidebar-toggle" aria-label="Toggle sidebar" title="Toggle sidebar" aria-expanded="true">
+        <i data-lucide="menu" style="width:18px;height:18px;"></i>
+      </button>
+
+      <div class="header-info">
+        <span class="header-tag" id="header-tag">Module 1 · Session 1</span>
+        <div class="header-title" id="header-title">Loading…</div>
+      </div>
+
+      <!-- Live BTC price (Binance, streaming) -->
+      <div class="btc-ticker" id="btc-ticker" title="Open the live BTC chart in the Practice Simulator" role="button" tabindex="0"
+           onclick="typeof bfOpenLiveBTC==='function'&&bfOpenLiveBTC()"
+           onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();typeof bfOpenLiveBTC==='function'&&bfOpenLiveBTC();}">
+        <span class="btc-ticker-dot" aria-hidden="true"></span>
+        <span class="btc-ticker-sym">BTC</span>
+        <span class="btc-ticker-price" id="btc-ticker-price">—</span>
+      </div>
+
+
+      <!-- Global glossary search -->
+      <div class="header-search" id="header-search">
+        <i data-lucide="search" style="width:15px;height:15px;"></i>
+        <input id="lt-search-input" type="text" placeholder="Search terms — e.g. Ichimoku" autocomplete="off" spellcheck="false" />
+        <kbd class="search-kbd" aria-hidden="true">/</kbd>
+        <div class="lt-search-results hidden" id="lt-search-results"></div>
+      </div>
+
+      <div class="header-right">
+        <button class="icon-btn hidden" id="copy-link-btn" data-tip="Share lesson" aria-label="Share this lesson" onclick="typeof ltCopyLessonLink === 'function' && ltCopyLessonLink()">
+          <i data-lucide="share-2" style="width:16px;height:16px;"></i>
+        </button>
+        <button class="icon-btn" id="sim-sidebar-btn" data-tip="Practice Simulator" aria-label="Practice Simulator" onclick="typeof showSimulator === 'function' && showSimulator()">
+          <i data-lucide="activity" style="width:16px;height:16px;"></i>
+        </button>
+        <button class="icon-btn" id="glossary-sidebar-btn" data-tip="Glossary &amp; Definitions" aria-label="Glossary &amp; Definitions" onclick="typeof showGlossary === 'function' && showGlossary()">
+          <i data-lucide="book-open" style="width:16px;height:16px;"></i>
+        </button>
+        <button class="icon-btn" id="flashcards-sidebar-btn" data-tip="Flashcards" aria-label="Flashcards" onclick="typeof showFlashcards === 'function' && showFlashcards()">
+          <i data-lucide="layers" style="width:16px;height:16px;"></i>
+        </button>
+        <button class="icon-btn" id="community-sidebar-btn" data-tip="Community &amp; Social" aria-label="Community &amp; Social" onclick="typeof showCommunity === 'function' && showCommunity()">
+          <i data-lucide="users" style="width:16px;height:16px;"></i>
+        </button>
+        <button class="icon-btn" data-tip="Settings" aria-label="Settings" onclick="typeof showSettings === 'function' && showSettings()">
+          <i data-lucide="settings" style="width:16px;height:16px;"></i>
+        </button>
+      </div>
+    </header>
+
+    <!-- Global progress bar (3px strip beneath header) -->
+    <div class="global-progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+      <div class="global-progress-fill" id="global-progress-fill" style="width:0%"></div>
+    </div>
+
+    <!-- Scrollable content area — engine writes HTML here -->
+    <main class="content-area" id="content-area"></main>
+
+    <!-- Bottom nav bar -->
+    <footer class="nav-footer">
+      <div class="nav-footer-inner">
+        <button class="nav-btn nav-prev" id="btn-prev" disabled>
+          <span class="nav-arrow">←</span>
+          <span class="nav-label">Back</span>
+        </button>
+        <button class="nav-btn nav-next" id="btn-next">
+          <span class="nav-label">Next</span>
+          <span class="nav-arrow">→</span>
+        </button>
+      </div>
+    </footer>
+
+  </div><!-- /.main-wrap -->
+
+</div><!-- /.app-layout -->
+
+<!-- ═══════════════════════════════════════════════════════════════
+     BLOFIN FOOTER — visual replica of blofin.com's site footer.
+     Scroll below the app to see it; links go to the real site.
+     ═══════════════════════════════════════════════════════════════ -->
+<footer class="bf-foot">
+  <div class="bf-foot-grid">
+    <div class="bf-foot-brand">
+      <svg width="80" height="20" viewBox="0 0 80 20" fill="none" xmlns="http://www.w3.org/2000/svg"><g clip-path="url(#bfl1)"><path d="M65.1523 19.2458V6.56929H69.0368L69.3318 8.19085C70.4133 6.98776 71.8885 6.42188 73.9289 6.42188C77.8134 6.42188 80.0012 8.73058 80.0012 12.8332V19.2458H75.748V13.2018C75.748 10.9668 74.7403 9.81122 72.7487 9.81122C70.6096 9.81122 69.4056 10.9418 69.4056 12.9557V19.2446H65.1523V19.2458Z" fill="currentColor"/><path d="M58.8609 19.246V6.56949H63.2888V19.246H58.8609ZM61.0624 5.43892C59.7596 5.43892 58.752 4.50569 58.752 3.25266C58.752 1.99964 59.7585 1.06641 61.0624 1.06641C62.3663 1.06641 63.3728 1.99964 63.3728 3.25266C63.3728 4.50569 62.3651 5.43892 61.0624 5.43892Z" fill="currentColor"/><path d="M43.2832 19.2456V1H56.9519V4.83278H47.8065V7.92849H55.5266V11.5152H47.8065V19.2456H43.2832Z" fill="currentColor"/><path d="M33.4589 19.2377C28.6405 19.2377 25.4199 16.6579 25.4199 12.7526C25.4199 8.84733 28.6405 6.26758 33.4589 6.26758C38.2772 6.26758 41.474 8.87111 41.474 12.7526C41.474 16.6342 38.2534 19.2377 33.4589 19.2377ZM33.4589 15.8483C35.7455 15.8483 37.147 14.669 37.147 12.7526C37.147 10.8362 35.7455 9.65693 33.4589 9.65693C31.1722 9.65693 29.7469 10.8362 29.7469 12.7526C29.7469 14.669 31.1484 15.8483 33.4589 15.8483Z" fill="currentColor"/><path d="M19.2188 19.2795V1.02734H23.5853V19.2783H19.2188V19.2795Z" fill="currentColor"/><path d="M15.3838 2.94336L11.5385 5.83568L6.83398 9.28805V13.051L16.4455 5.89814C16.4455 5.884 16.4479 5.87104 16.4479 5.85689C16.4479 4.67592 16.0932 3.70592 15.3838 2.94454V2.94336Z" fill="#FF8802"/><path d="M16.7211 11.9873C16.3982 11.3956 15.9103 10.9218 15.2563 10.5647C15.03 10.4409 14.7802 10.3349 14.5115 10.2417L11.6702 12.3633C11.6702 12.3633 11.6738 12.3656 11.6749 12.3668C12.1015 12.6897 12.316 13.1541 12.316 13.7623C12.316 14.3704 12.1074 14.8584 11.6879 15.1707C11.2696 15.4842 10.6426 15.641 9.80591 15.641H4.46443V4.65512H9.51719C10.1795 4.65512 10.698 4.81659 11.0728 5.13835C11.2931 5.32693 11.4463 5.56029 11.5371 5.83491L15.3824 2.94259C15.1514 2.69508 14.8839 2.46879 14.5775 2.26607C13.3318 1.44104 11.5135 1.02734 9.12595 1.02734H0V19.2959H9.04699C11.6973 19.2959 13.7184 18.8515 15.1137 17.9652C16.5078 17.0777 17.2054 15.7907 17.2054 14.1029C17.2054 13.2849 17.044 12.5813 16.7211 11.9885V11.9873Z" fill="currentColor"/></g><defs><clipPath id="bfl1"><rect width="80" height="20" fill="currentColor"/></clipPath></defs></svg>
+      <p class="bf-foot-tag">Trade crypto your way. BloFin Academy is a free, interactive trading education — no account needed.</p>
+      <div class="bf-foot-social">
+        <a href="https://x.com/Blofin_Official" target="_blank" rel="noopener noreferrer" aria-label="X"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg></a>
+        <a href="https://www.instagram.com/blofinofficial/" target="_blank" rel="noopener noreferrer" aria-label="Instagram"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg></a>
+        <a href="https://discord.gg/sn3uu2BByU" target="_blank" rel="noopener noreferrer" aria-label="Discord"><svg viewBox="0 0 512 365.467" fill="currentColor" fill-rule="evenodd" clip-rule="evenodd"><path d="M378.186 365.028s-15.794-18.865-28.956-35.099c57.473-16.232 79.41-51.77 79.41-51.77-17.989 11.846-35.099 20.182-50.454 25.885-21.938 9.213-42.997 14.917-63.617 18.866-42.118 7.898-80.726 5.703-113.631-.438-25.008-4.827-46.506-11.407-64.494-18.867-10.091-3.947-21.059-8.774-32.027-14.917-1.316-.877-2.633-1.316-3.948-2.193-.877-.438-1.316-.878-1.755-.878-7.898-4.388-12.285-7.458-12.285-7.458s21.06 34.659 76.779 51.331c-13.163 16.673-29.395 35.977-29.395 35.977C36.854 362.395 0 299.218 0 299.218 0 159.263 63.177 45.633 63.177 45.633 126.354-1.311 186.022.005 186.022.005l4.388 5.264C111.439 27.645 75.461 62.305 75.461 62.305s9.653-5.265 25.886-12.285c46.945-20.621 84.236-25.885 99.592-27.64 2.633-.439 4.827-.878 7.458-.878 26.763-3.51 57.036-4.387 88.624-.878 41.68 4.826 86.43 17.111 132.058 41.68 0 0-34.66-32.906-109.244-55.281l6.143-7.019s60.105-1.317 122.844 45.628c0 0 63.178 113.631 63.178 253.585 0-.438-36.854 62.739-133.813 65.81l-.001.001zm-43.874-203.133c-25.006 0-44.75 21.498-44.75 48.262 0 26.763 20.182 48.26 44.75 48.26 25.008 0 44.752-21.497 44.752-48.26 0-26.764-20.182-48.262-44.752-48.262zm-160.135 0c-25.008 0-44.751 21.498-44.751 48.262 0 26.763 20.182 48.26 44.751 48.26 25.007 0 44.75-21.497 44.75-48.26.439-26.763-19.742-48.262-44.75-48.262z"/></svg></a>
+        <a href="https://www.youtube.com/@BloFin_Official" target="_blank" rel="noopener noreferrer" aria-label="YouTube"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22.54 6.42a2.78 2.78 0 0 0-1.94-2C18.88 4 12 4 12 4s-6.88 0-8.6.46a2.78 2.78 0 0 0-1.94 2A29 29 0 0 0 1 11.75a29 29 0 0 0 .46 5.33A2.78 2.78 0 0 0 3.4 19c1.72.46 8.6.46 8.6.46s6.88 0 8.6-.46a2.78 2.78 0 0 0 1.94-2 29 29 0 0 0 .46-5.25 29 29 0 0 0-.46-5.33z"/><polygon points="9.75 15.02 15.5 11.75 9.75 8.48 9.75 15.02"/></svg></a>
+      </div>
+    </div>
+    <div class="bf-foot-col">
+      <h4>About</h4>
+      <a href="https://www.blofin.com/en/about" target="_blank" rel="noopener noreferrer">About BloFin</a>
+      <a href="https://blofin.zendesk.com/hc/en-us/sections/11526397040911-Announcement" target="_blank" rel="noopener noreferrer">Announcements</a>
+      <a href="https://www.blofin.com/en/proof-of-reserves" target="_blank" rel="noopener noreferrer">Proof of Reserves</a>
+      <a href="https://www.blofin.com/en/media-kit" target="_blank" rel="noopener noreferrer">Media Kit</a>
+      <a href="https://www.blofin.com/en/careers" target="_blank" rel="noopener noreferrer">Careers</a>
+    </div>
+    <div class="bf-foot-col">
+      <h4>Products</h4>
+      <a href="https://www.blofin.com/futures/en/BTC-USDT" target="_blank" rel="noopener noreferrer">Futures</a>
+      <a href="https://www.blofin.com/spot/en/BTC-USDT" target="_blank" rel="noopener noreferrer">Spot</a>
+      <a href="https://www.blofin.com/en/copy-trading" target="_blank" rel="noopener noreferrer">Copy Trading</a>
+      <a href="https://www.blofin.com/en/crypto" target="_blank" rel="noopener noreferrer">Buy Crypto</a>
+      <a href="./">Academy</a>
+    </div>
+    <div class="bf-foot-col">
+      <h4>Services</h4>
+      <a href="https://www.blofin.com/en/fees" target="_blank" rel="noopener noreferrer">Fees</a>
+      <a href="https://www.blofin.com/en/vip" target="_blank" rel="noopener noreferrer">VIP Program</a>
+      <a href="https://docs.blofin.com" target="_blank" rel="noopener noreferrer">API</a>
+      <a href="https://www.blofin.com/en/institutional" target="_blank" rel="noopener noreferrer">Institutional</a>
+      <a href="https://www.blofin.com/en/affiliate" target="_blank" rel="noopener noreferrer">Affiliates</a>
+    </div>
+    <div class="bf-foot-col">
+      <h4>Support</h4>
+      <a href="https://blofin.zendesk.com/hc/en-us" target="_blank" rel="noopener noreferrer">Help Center</a>
+      <a href="https://www.blofin.com/en/terms-of-service" target="_blank" rel="noopener noreferrer">Terms of Service</a>
+      <a href="https://www.blofin.com/en/privacy-policy" target="_blank" rel="noopener noreferrer">Privacy Policy</a>
+      <a href="https://www.blofin.com/en/risk-disclosure" target="_blank" rel="noopener noreferrer">Risk Disclosure</a>
+      <a href="https://www.blofin.com/en/aml-kyc" target="_blank" rel="noopener noreferrer">AML &amp; KYC</a>
+    </div>
+  </div>
+  <div class="bf-foot-legal">
+    <span>&copy; 2023-2026 BLOFIN.COM. All rights reserved.</span>
+    <span>BloFin Academy &mdash; educational content only, not financial advice.</span>
+  </div>
+</footer>
+
+<!-- Sidebar overlay (mobile tap-to-close) -->
+<div class="sidebar-overlay hidden" id="sidebar-overlay"></div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     TOAST NOTIFICATION
+     ═══════════════════════════════════════════════════════════════ -->
+<div class="toast hidden" id="toast"></div>
+
+</body>
+</html>

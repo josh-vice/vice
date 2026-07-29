@@ -1,0 +1,9 @@
+{
+  "course": 3,
+  "chapterId": 17,
+  "title": "Developing a Trader's Mindset",
+  "module": "Unlocking Your Potential",
+  "edits": [],
+  "alreadyGood": ["introChart", "lessonChart", "quiz.chart"],
+  "notes": "Psychology/mindset chapter — no chart teaches any concrete price level (no entry/stop/target/support/resistance/zone). All three candlestick defs are behavioral-arc illustrations and the existing markPoints already label every concept the text names. (1) introChart (band ~70-105, 18 bars): markPoints idx 0/6/11/17 all in range, trace the 'edge builds over time / 10,000 hours' equity arc from losing -> break-even -> small profits -> consistent edge. Intro text names no price levels. Complete. (2) lessonChart (band ~84-108, 16 bars): markPoints idx 0/2/4/8/10/15 all in range, label the exact taught sequence 'After 5 consecutive losses: stop trading; walk away; de-stress; return fresh' (Loss1->Loss5 Stop->Rest->Return Fresh Win->Back in Control). No taught levels to draw. Complete. (3) quiz.chart (band ~84-104, cutIndex:5, 15 bars: legs to87/5,to84/3,to95/3,to104/4): pre-reveal shows only the descending decline into the 5th loss — correct decision context, no spoiler. revealMarkPoints idx 4 (5th loss, pink), 7 (bottom=rest, gold), 10 (top of recovery leg=win, teal), 14 (final bar=recovers, teal) all land on the right bars with palette-correct colors. Auditor's verdict of three complete slots with zero gaps is correct; no additions or fixes warranted — adding entry/stop/target lines here would be inventing levels the text does not teach."
+}

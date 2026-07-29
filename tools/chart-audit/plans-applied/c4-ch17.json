@@ -1,0 +1,33 @@
+{
+  "course": 4,
+  "chapterId": 17,
+  "title": "Genie",
+  "module": "Indicator Suite",
+  "edits": [
+    {
+      "slot": "introChart",
+      "addMarkLines": [
+        { "yAxis": 78, "label": "Stop — Below Swing Low", "color": "#ff2e88" },
+        { "yAxis": 115, "label": "Scalp Target", "color": "#ffcc00" }
+      ],
+      "reason": "Lesson bullet teaches the long scalp setup: 'Green hue at DBS zone + green arrow = scalp long entry trigger; stop below the recent swing low'. The stop level is named but never drawn — yAxis 78 sits just under the local bottom/swing low at 80 (band floor ~78), pink because it is the stop against a long. The existing idx15 markPoint names 'Scalp Target Reached' as an EVENT but no target LEVEL line exists; yAxis 115 is the leg-2 .to top (inside band), gold per palette as the take-profit magnet."
+    },
+    {
+      "slot": "lessonChart",
+      "addMarkLines": [
+        { "yAxis": 106, "label": "Stop — Above Swing High", "color": "#ff2e88" },
+        { "yAxis": 72, "label": "Scalp Short Target", "color": "#00d4d4" }
+      ],
+      "reason": "Lesson bullet teaches the short scalp setup: 'Red hue at SSR zone + red arrow = scalp short entry trigger; stop above the recent swing high'. Stop level named but not drawn — yAxis 106 sits just above the local top/swing high at 104 (band ceiling), pink stop against the short. The existing idx15 markPoint names 'Scalp Short Target' as an EVENT but no target LEVEL line exists; yAxis 72 is the leg-2 .to floor (inside band), teal as the target the short is moving toward."
+    },
+    {
+      "slot": "quiz.chart",
+      "addRevealMarkPoints": [
+        { "dataIndex": 5, "label": "Stop — Above Swing High", "position": "top", "color": "#ff2e88" }
+      ],
+      "reason": "The correct answer teaches 'scalp short entry at the SSR with stop above the swing high'. The reveal already annotates the red hues (idx6), arrow entry (idx7) and target reached (idx14) but never shows the stop. Routed to revealMarkPoints so the pre-cut decision chart (cutIndex:8) is unchanged and the answer is not spoiled. Anchored at dataIndex:5 (top) to de-conflict from the existing 'Red Hues — Local Top Warning' label already at idx6; pink because it is the stop against the short. A markLine is intentionally NOT used here because markLines render pre-reveal and would hint at the short bias before the user answers."
+    }
+  ],
+  "alreadyGood": [],
+  "notes": "Re-derived all three charts from the chapter text; all three auditor gaps are valid and text-justified, so all are kept. Coordinate sanity: intro band [78,117] (START 96 -> 80 -> 115) admits stop 78 (floor) and target 115; lesson band [70,106] (START 82 -> 104 -> 72) admits stop 106 (ceiling) and target 72 (floor) — all inside or at the band edge, none clip. Quiz stop is correctly demoted from a level line to a revealMarkPoint and moved off idx6 to idx5 to avoid label collision with the existing reveal point. Colors follow the chapter convention and palette: pink for stops against longs/shorts, gold for the long TP magnet, teal for the short's downside target. No existing annotation is wrong, so no fixes proposed."
+}

@@ -1,0 +1,18 @@
+{
+  "course": "1",
+  "file": "11_LTF_Scenario.js",
+  "lessonId": "course1/11_ltf_scenario",
+  "edits": [
+    {
+      "beatId": "retest-entry",
+      "beatType": "CHART",
+      "move": "sr_flip",
+      "addShow": [
+        { "kind": "zone", "of": "level", "side": "below", "label": "risk defined under level", "tone": "risk" }
+      ],
+      "reason": "say: 'with risk defined right under the level' — teaches a concrete risk band sitting directly below the marked S/R flip level. 'level' is a valid (L) level anchor for sr_flip, so a zone kind is type-correct; side:'below' matches 'right under the level'. Not already drawn by the move or in the accumulated show."
+    }
+  ],
+  "alreadyGood": [ "mark-and-break", "confirm" ],
+  "notes": "Verified all anchors against sr_flip (level, test1, breakout, retest, top) and liquidity_sweep_bullish (support, firstTest, sweepLow, reclaim, reversalTop). Auditor's single proposed gap (risk zone under 'level' on retest-entry) is valid: correct (L) anchor, correct kind/type, say-justified, non-redundant. Accepted as-is. mark-and-break: level@level (the 4H spot price reacted to before) and marker@breakout (breaks above) cover everything taught. confirm: support (the level), sweepLow (dip below), reclaim (reclaim/bullish structure) all drawn — complete. CONCEPT beats (intro, finite, recap) skipped. No noAnchorGaps: the only locatable references all map to existing anchors."
+}

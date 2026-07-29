@@ -1,0 +1,24 @@
+{
+  "course": 3,
+  "chapterId": 16,
+  "title": "Recording Your System — The Trading Journal",
+  "module": "Crafting Your System",
+  "edits": [
+    {
+      "slot": "lessonChart",
+      "addMarkLines": [
+        { "yAxis": 92, "label": "Actual Exit — Slippage Below Stop", "color": "#ff2e88" }
+      ],
+      "fixes": [
+        {
+          "find": "{ yAxis: 125, label: \"Target\", color: \"#00d4d4\" }",
+          "replaceWith": "{ yAxis: 116, label: \"Target $15,375 (never reached)\", color: \"#00d4d4\" }",
+          "reason": "Taught Target $15,375 scales to ~137 (factor 105/11749), which clips far above the visible band (price legs top at 113, wick margin ~117), so the line never renders. Moving it to 116 keeps it on-screen at the top edge, clearly ABOVE the pump high so it reads as the unreached swing-long target. NOT lowered to 112 (auditor's value) because 112 sits on top of the 113 pump candle and would falsely imply the target was nearly hit — the lesson's point is the trade lost, target far away. Label updated to name the real price and that it was never reached."
+        }
+      ],
+      "reason": "Lesson teaches a worked losing trade: 'Entry $11,749 | Stop $10,590 | Target $15,375 | Swing Long' and 'actual exit at $10,340 (significant slippage below stop)'. (1) The actual fill at $10,340 (scales to ~92, below both the Original Stop line at 96 and the Stop Moved Down line at 94) is currently only a markPoint pin with no price level — so the slippage gap between the stop and the real fill is never shown as a level. Adding a pink markLine at 92 (inside the 76-113 band, clearly below the lowest stop line) makes the slippage visible. Auditor's yAxis 90 also works but 92 matches the true scaled exit and sits just below the moved stop. (2) The Target line clips off-chart and is fixed per the fixes array."
+    }
+  ],
+  "alreadyGood": ["introChart", "quiz.chart"],
+  "notes": "introChart is a concept illustration of the recurring loss->sleep pattern; its 5 markPoints (4 'Loss — Nh Sleep' + 'Pattern! Journal Reveals') fully annotate what the intro teaches; no concrete price levels are taught, so nothing to add — confirmed complete, agreeing with auditor. quiz.chart is a cutIndex:9 decision scenario; revealMarkPoints correctly route the OUTCOME (losses pink @5/7/9, wins teal @11/14) to post-answer reveal and the pre-cut shows no spoiler — confirmed complete, agreeing with auditor. On lessonChart I ACCEPTED both auditor gaps in substance but MODIFIED their coordinates: exit-slippage line moved 90->92 (true scaled fill, still clearly below the moved stop), and the Target fix moved 125->116 instead of 125->112 because 112 overlaps the pump high and would misrepresent the never-reached target as nearly hit. Note: the existing chart draws 'Stop Moved Down' (94) BELOW 'Original Stop' (96), which is inverted vs the real prices ($10,790 > $10,590); did NOT propose touching it since the chart's intent (moved stop deeper into the danger zone) is internally consistent and the exit line at 92 still reads correctly below whichever stop."
+}

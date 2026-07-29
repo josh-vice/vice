@@ -1,0 +1,18 @@
+{
+  "course": 2,
+  "chapterId": 2,
+  "title": "Entering Trades — The LTE Methodology",
+  "module": "Defining a Trade Setup",
+  "edits": [
+    {
+      "slot": "lessonChart",
+      "addMarkLines": [
+        { "yAxis": 103, "label": "Invalidation / Stop — below flip", "color": "#ff2e88" },
+        { "yAxis": 111, "label": "First Barrier (FB)", "color": "#ff2e88" }
+      ],
+      "reason": "Lesson teaches two headline concepts that the Sr-Flip chart never draws. Invalidation: 'the predefined level where your trade thesis is WRONG; this IS your stop loss placement; never move it' — the Sr-flip long (entry ~105/107) is invalidated on a close back below the flipped level; yAxis 103 sits inside the 88-123 band, just under the flip line @105 and the retest low. First Barrier: 'the earliest minor S/R where price could stall or begin to fail — not the stop loss, but the first warning sign' — 111 is the prior swing high (leg 2 to:111) the post-entry rally must reclaim, the earliest stall point above the entry; inside band, above the flip. Both pink per palette (a stop against a long / minor resistance)."
+    }
+  ],
+  "alreadyGood": ["introChart", "quiz.chart"],
+  "notes": "introChart: REJECTED both auditor gaps. (1) 'Bias: Bullish' caption — auditor itself rated low/skip; the L→T→E sequence already implies direction; skip. (2) 'Higher Low forms' markPoint at dataIndex:8 — WRONG BAR: idx8 is leg2's high (to:92, the bounce), the higher-low dip is at idx9 (leg3 to:89), which is ALREADY labelled 'E — Entry (HL)'. Adding a HL pin at idx8 mislocates it onto the high and is redundant with the existing E point. introChart is complete. quiz.chart: complete and correct — cutIndex:10 hides the outcome and the T/E/LTE✓ outcome pins are correctly routed to revealMarkPoints (no pre-reveal spoiler). lessonChart: ACCEPTED both auditor gaps (Invalidation/Stop @103, First Barrier @111) — coordinates verified inside the 88-123 band, indices not used (markLines), colors correct."
+}

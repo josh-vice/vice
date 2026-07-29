@@ -1,0 +1,428 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   BloFin Academy — staging theme (/blofintest)
+   BloFin branding: signature orange #FF8802 ("Pizazz", official brand hex) on
+   BloFin's neutral blue-black; market green/red replaces LT cyan/pink.
+   ─────────────────────────────────────────────────────────────────────────
+   lt-settings.js applies the saved palette as INLINE vars on <html> at parse
+   time and on every settings change; `!important` here outranks normal inline
+   declarations, so these overrides survive both without any JS wrapping.
+   Hardcoded literals in lt-styles/player/renderer/vocabulary are handled by
+   the recolored copies from build-blofin-skin.sh; JS-side colours (candles,
+   echarts remap, course accents) live in blofin-boot.js. */
+
+/* ── Dark theme (default) ── */
+:root:not(.theme-light) {
+  /* BloFin neutral blue-black replaces LT's purple-tinted stack */
+  --bg:   #0b0d11 !important;
+  --bg2:  #10131a !important;
+  --bg3:  #161a22 !important;
+  --bg4:  #1e232d !important;
+  --bg5:  #282e3a !important;
+
+  --border:  #232833 !important;
+  --border2: #333a47 !important;
+  --border3: #495261 !important;
+
+  /* UI accent is ALWAYS BloFin orange (owner ruling) — green/red live only
+     inside charts (candles + market semantics) */
+  --teal:       #ff8802 !important;
+  --teal2:      #e67a00 !important;
+  --teal3:      #c96b00 !important;
+  --teal-dim:   rgba(255, 136, 2, 0.10) !important;
+  --teal-glow:  rgba(255, 136, 2, 0.22) !important;
+  --teal-faint: rgba(255, 136, 2, 0.05) !important;
+
+  /* LT pink (bearish/sell) → market red */
+  --pink:       #f13c54 !important;
+  --pink2:      #f4677a !important;
+  --pink-dim:   rgba(241, 60, 84, 0.12) !important;
+  --pink-glow:  rgba(241, 60, 84, 0.24) !important;
+  --pink-faint: rgba(241, 60, 84, 0.06) !important;
+  --bear:       #f13c54 !important;
+
+  /* purple / coral accents fold into the BloFin orange family */
+  --purple:       #e67a00 !important;
+  --purple-dim:   rgba(230, 122, 0, 0.14) !important;
+  --purple-faint: rgba(230, 122, 0, 0.06) !important;
+  --coral:        #ff8802 !important;
+  --coral-dim:    rgba(255, 136, 2, 0.14) !important;
+}
+
+/* ── Light theme ── */
+:root.theme-light {
+  --teal:       #e07000 !important;   /* darkened brand orange: AA on white */
+  --teal2:      #c26100 !important;
+  --teal3:      #a35200 !important;
+  --teal-dim:   rgba(224, 112, 0, 0.10) !important;
+  --teal-glow:  rgba(224, 112, 0, 0.14) !important;
+  --teal-faint: rgba(224, 112, 0, 0.06) !important;
+
+  --pink:       #d92c44 !important;
+  --pink2:      #b52539 !important;
+  --pink-dim:   rgba(217, 44, 68, 0.10) !important;
+  --pink-glow:  rgba(217, 44, 68, 0.14) !important;
+  --pink-faint: rgba(217, 44, 68, 0.06) !important;
+  --bear:       #d92c44 !important;
+
+  --purple:       #b35a00 !important;
+  --purple-dim:   rgba(179, 90, 0, 0.12) !important;
+  --purple-faint: rgba(179, 90, 0, 0.06) !important;
+  --coral:        #e07000 !important;
+  --coral-dim:    rgba(224, 112, 0, 0.12) !important;
+}
+
+/* BloFin "B" symbol in the sidebar: body follows theme, flag stays orange */
+.logo-icon { color: #fff; }
+.theme-light .logo-icon { color: #0b0d11; }
+
+/* LT-community surfaces are LT-branded (Discord/socials) — hidden on the stage */
+#community-sidebar-btn,
+[onclick*="showCommunity"] { display: none !important; }
+
+/* Mascots: the stage serves the ORIGINAL pepe images (pre-flamingo redesign,
+   recovered from Backup-2026-06-17 in git history) via filesystem-first
+   routing — blofintest/perpingo-*-160.webp shadows the root flamingo set. */
+
+/* Candle colours are brand-forced to green/red on the stage (blofin-boot.js);
+   the pickers would show LT cyan/pink swatches AND write to localStorage that
+   the real site shares — hide both rows. */
+.lt-settings-row:has(#lt-color-cyan),
+.lt-settings-row:has(#lt-bear-pink) { display: none !important; }
+
+/* Glossary/flashcard figures draw candles with var(--teal)/var(--bear)
+   (lt-glossary.js _GT/_GR; lt-flashcards.js reuses the same figures inside
+   .fc-figure). Inside figure SVGs only, teal means BULLISH → market green;
+   the buttons/links around them keep the orange accent. */
+.gl-fig-frame svg, .gl-lightbox svg, .fc-figure svg {
+  --teal: #04b97d;
+  --teal-dim: rgba(4, 185, 125, 0.10);
+  --teal-glow: rgba(4, 185, 125, 0.22);
+  --teal-faint: rgba(4, 185, 125, 0.05);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   1:1 BLOFIN SYSTEM — real BloFinNova font (their public CDN, same files
+   blofin.com loads cross-origin from s2.blofin.com), their text colours,
+   their radii, and the replica masthead. Measured live off blofin.com
+   2026-07-27: body #0B0D11 / text #E6E8EB / headings #FCFDFF w500 /
+   header 56px / Sign-up = orange pill, near-black #050505 text. */
+
+@font-face {
+  font-family: 'BloFinNova';
+  src: url('https://s2.blofin.com/frontend/_home_website/_next/static/home-public-static/fonts/BloFinNova-Regular.woff2') format('woff2');
+  font-weight: 400; font-display: swap;
+}
+@font-face {
+  font-family: 'BloFinNova';
+  src: url('https://s2.blofin.com/frontend/_home_website/_next/static/home-public-static/fonts/BloFinNova-Medium.woff2') format('woff2');
+  font-weight: 500 600; font-display: swap;
+}
+@font-face {
+  font-family: 'BloFinNova';
+  src: url('https://s2.blofin.com/frontend/_home_website/_next/static/home-public-static/fonts/BloFinNova-Bold.woff2') format('woff2');
+  font-weight: 700 800; font-display: swap;
+}
+@font-face {
+  font-family: 'BloFinNova';
+  src: url('https://s2.blofin.com/frontend/_home_website/_next/static/home-public-static/fonts/BloFinNova-Black.woff2') format('woff2');
+  font-weight: 900; font-display: swap;
+}
+
+:root, :root.theme-light {
+  --font-display: 'BloFinNova', 'PingFang SC', sans-serif !important;
+  --radius: 8px !important;
+  --radius-lg: 12px !important;
+  --radius-sm: 6px !important;
+}
+:root:not(.theme-light) {
+  --text:  #fcfdff !important;
+  --text2: #9ba0ab !important;
+  --text3: #7d828e !important;
+}
+
+/* BloFin is a sans-serif brand — the terminal mono goes away wholesale */
+body, .app-layout, .app-layout *, .toast, .sidebar-overlay,
+.lt-search-results, .lt-search-results * {
+  font-family: 'BloFinNova', 'PingFang SC', -apple-system, sans-serif !important;
+}
+
+/* Their orange CTAs are pills with near-black text (Sign up spec) — and FLAT
+   orange: the LT gradient tops out pale and reads gold next to the real brand */
+.nav-btn.nav-next,
+.btn-primary,
+.lt-home-continue-btn, .lt-home-cta {
+  background: #ff8802 !important;
+  background-image: none !important;
+  border-color: transparent !important;
+  border-radius: 9999px !important;
+  color: #050505 !important;
+}
+.nav-btn.nav-next:hover, .btn-primary:hover { filter: brightness(1.08); }
+.nav-btn.nav-prev { border-radius: 9999px !important; }
+
+/* ── Replica masthead (56px, matches blofin.com's top bar) ── */
+.bf-masthead {
+  display: flex; align-items: center; gap: 24px;
+  height: 56px; padding: 0 24px;
+  background: rgba(11, 13, 17, 0.72);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  backdrop-filter: saturate(180%) blur(20px);
+  border-bottom: 1px solid rgba(235, 236, 245, 0.08);
+  font-family: 'BloFinNova', 'PingFang SC', sans-serif;
+  position: sticky; top: 0; z-index: 300;   /* their bar is sticky */
+}
+.bf-chev { width: 12px; height: 12px; opacity: .55; margin-left: 1px; vertical-align: -1px; }
+.bf-flame { width: 14px; height: 14px; vertical-align: -2px; margin-right: 1px; }
+.bf-gift { width: 14px; height: 14px; margin-right: 6px; }
+.bf-mast-link { display: inline-flex; align-items: center; gap: 3px; }
+.bf-mast-more { cursor: default; letter-spacing: 2px; font-size: 11px; }
+.bf-mast-icons { display: inline-flex; align-items: center; gap: 4px; margin-left: 2px; }
+.bf-ic {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 32px; height: 32px; border-radius: 8px;
+  color: rgba(235, 236, 245, 0.75); cursor: pointer;
+  transition: background .15s, color .15s;
+}
+.bf-ic:hover { background: rgba(255, 255, 255, 0.07); color: #fcfdff; }
+.bf-ic svg { width: 17px; height: 17px; }
+.theme-light .bf-masthead { background: #0b0d11; }  /* their bar is always dark */
+.bf-mast-logo { display: inline-flex; align-items: center; flex-shrink: 0; }
+.bf-mast-logo svg { height: 20px; width: auto; display: block; }
+.bf-mast-nav { display: flex; align-items: center; gap: 4px; min-width: 0; }
+.bf-mast-link {
+  color: rgba(235, 236, 245, 0.6);
+  font-size: 14px; font-weight: 500; text-decoration: none;
+  padding: 6px 12px; border-radius: 6px; white-space: nowrap;
+  transition: color .15s;
+}
+.bf-mast-link:hover { color: #fcfdff; }
+.bf-mast-link.active { color: #ff8802; }
+.bf-mast-spacer { flex: 1; }
+.bf-mast-login {
+  color: #fcfdff; font-size: 12px; font-weight: 500; text-decoration: none;
+  height: 28px; display: inline-flex; align-items: center;
+  padding: 0 12px; border-radius: 6px; white-space: nowrap;
+  transition: background .15s;
+}
+.bf-mast-login:hover { background: rgba(255, 255, 255, 0.06); }
+.bf-mast-signup {
+  background: #ff8802; color: #050505;
+  font-size: 14px; font-weight: 500; text-decoration: none;
+  height: 32px; display: inline-flex; align-items: center;
+  padding: 0 14px; border-radius: 9999px; white-space: nowrap;
+  transition: filter .15s;
+}
+.bf-mast-signup:hover { filter: brightness(1.08); }
+
+/* App fills the viewport minus the masthead. blofin-boot.js sets the exact
+   pixel height empirically (the body{zoom} display-scale tiers mix zoomed and
+   physical px, so a static calc can't hit every tier); this calc is the
+   no-JS fallback. Sidebar/main-wrap hardcode their own 100dvh in lt-styles —
+   they must inherit the shortened app instead or the Next/Back bar lands
+   below the fold. */
+.app-layout {
+  height: calc(100vh / var(--app-zoom, 1) - 56px) !important;
+  height: calc(100dvh / var(--app-zoom, 1) - 56px) !important;
+}
+.app-layout .sidebar,
+.app-layout .main-wrap {
+  height: 100% !important;
+}
+
+@media (max-width: 900px) { .bf-mast-nav { display: none; } }
+@media (max-width: 520px) { .bf-mast-login { display: none; } }
+
+/* ── Replica site footer (blofin.com foot: pure black) ──
+   Sits BELOW the app viewport; scroll past the app to reach it. Inside course
+   views blofin-boot.js pins the window to the top on every render, so the
+   footer can never ride up over the Next/Back bar. */
+html, body { height: auto !important; overflow-y: auto !important; }
+
+.bf-foot {
+  background: #000;
+  padding: 72px 60px 96px;
+  font-family: 'BloFinNova', 'PingFang SC', sans-serif;
+  border-top: 1px solid rgba(235, 236, 245, 0.06);
+}
+.bf-foot-grid {
+  display: grid;
+  grid-template-columns: 1.6fr repeat(4, 1fr);
+  gap: 40px;
+  max-width: 1280px; margin: 0 auto;
+}
+.bf-foot-brand svg { height: 24px; width: auto; color: #fcfdff; }
+.bf-foot-tag { margin-top: 14px; color: rgba(235, 236, 245, 0.55); font-size: 13px; line-height: 1.6; max-width: 260px; }
+.bf-foot-social { display: flex; gap: 14px; margin-top: 22px; }
+.bf-foot-social a {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 34px; height: 34px; border-radius: 50%;
+  background: rgba(235, 236, 245, 0.06); color: rgba(235, 236, 245, 0.75);
+  transition: background .15s, color .15s;
+}
+.bf-foot-social a:hover { background: #ff8802; color: #050505; }
+.bf-foot-social svg { width: 16px; height: 16px; }
+.bf-foot-col h4 {
+  color: #fcfdff; font-size: 14px; font-weight: 600;
+  margin: 0 0 16px; letter-spacing: 0.01em;
+}
+.bf-foot-col a {
+  display: block; color: rgba(235, 236, 245, 0.55);
+  font-size: 13px; line-height: 2.1; text-decoration: none;
+  transition: color .15s;
+}
+.bf-foot-col a:hover { color: #ff8802; }
+.bf-foot-legal {
+  max-width: 1280px; margin: 56px auto 0; padding-top: 24px;
+  border-top: 1px solid rgba(235, 236, 245, 0.08);
+  display: flex; justify-content: space-between; align-items: center; gap: 16px;
+  color: rgba(235, 236, 245, 0.4); font-size: 12px;
+}
+@media (max-width: 900px) {
+  .bf-foot { padding: 48px 24px 64px; }
+  .bf-foot-grid { grid-template-columns: 1fr 1fr; }
+  .bf-foot-legal { flex-direction: column; align-items: flex-start; }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   LIQUID / FROSTED GLASS PASS — BloFin's surfaces are deep black with
+   translucent frosted layers. App chrome + primary cards go glass. */
+
+:root:not(.theme-light) {
+  /* deepen the base toward BloFin's black sections */
+  --bg2: rgba(255, 255, 255, 0.025) !important;
+  --bg3: rgba(255, 255, 255, 0.045) !important;
+  --border:  rgba(235, 236, 245, 0.08) !important;
+  --border2: rgba(235, 236, 245, 0.14) !important;
+  --border3: rgba(235, 236, 245, 0.22) !important;
+}
+
+/* chrome bars: frosted */
+:root:not(.theme-light) .top-header,
+:root:not(.theme-light) .nav-footer {
+  background: rgba(11, 13, 17, 0.72) !important;
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  backdrop-filter: saturate(180%) blur(20px);
+  border-color: rgba(235, 236, 245, 0.08) !important;
+}
+:root:not(.theme-light) .sidebar {
+  background: rgba(9, 11, 14, 0.66) !important;
+  -webkit-backdrop-filter: saturate(160%) blur(24px);
+  backdrop-filter: saturate(160%) blur(24px);
+  border-right: 1px solid rgba(235, 236, 245, 0.07) !important;
+}
+
+/* primary surfaces: liquid-glass cards — EXACT blofin.com recipe (measured):
+   white @2% fill, white @10% border, generous radius */
+:root:not(.theme-light) .lt-home-course-card,
+:root:not(.theme-light) .lt-home-tool,
+:root:not(.theme-light) .lt-home-continue,
+:root:not(.theme-light) .lt-home-term,
+:root:not(.theme-light) .cm-card,
+:root:not(.theme-light) .lt-search-results,
+:root:not(.theme-light) .gl-fig-frame {
+  background: rgba(255, 255, 255, 0.02) !important;
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.10) !important;
+  border-radius: 20px !important;
+}
+:root:not(.theme-light) .lt-home-course-card:hover,
+:root:not(.theme-light) .lt-home-tool:hover {
+  background: rgba(255, 255, 255, 0.045) !important;
+  border-color: rgba(255, 136, 2, 0.5) !important;
+}
+
+/* ═══ AUDIT POLISH — measured off blofin.com 2026-07-27 ═══ */
+
+/* text tiers: theirs are alpha-on-white, not solid grays */
+:root:not(.theme-light) {
+  --text2: rgba(235, 236, 245, 0.6) !important;
+  --text3: rgba(235, 236, 245, 0.4) !important;
+  --text4: rgba(235, 236, 245, 0.22) !important;
+}
+
+/* BloFin writes labels in sentence case, no terminal letterspacing */
+.lt-home-section-label, .lt-home-course-label, .header-tag,
+.lt-home-continue-eyebrow, .lt-home-term-eyebrow,
+.lt-home-course-adv, .lt-home-term-cat {
+  text-transform: none !important;
+  letter-spacing: 0.01em !important;
+  font-weight: 500 !important;
+}
+
+/* hero: their section headings are large, weight 500, near-white */
+.lt-home-hero-title {
+  font-size: 30px !important;
+  font-weight: 500 !important;
+  letter-spacing: -0.01em !important;
+  color: #fcfdff !important;
+}
+
+/* secondary controls: borderless soft fills (their Log in / icon buttons) */
+:root:not(.theme-light) .icon-btn,
+:root:not(.theme-light) .nav-btn.nav-prev,
+:root:not(.theme-light) .gl-filter-btn,
+:root:not(.theme-light) .gl-back-btn {
+  background: rgba(255, 255, 255, 0.05) !important;
+  border-color: transparent !important;
+  border-radius: 8px !important;
+}
+:root:not(.theme-light) .icon-btn:hover,
+:root:not(.theme-light) .nav-btn.nav-prev:hover,
+:root:not(.theme-light) .gl-filter-btn:hover {
+  background: rgba(255, 255, 255, 0.09) !important;
+}
+
+/* inputs: dark fill, white@10 border, orange focus (their sign-up field) */
+:root:not(.theme-light) .header-search {
+  background: rgba(255, 255, 255, 0.05) !important;
+  border: 1px solid rgba(255, 255, 255, 0.10) !important;
+  border-radius: 8px !important;
+}
+:root:not(.theme-light) .header-search:focus-within {
+  border-color: rgba(255, 136, 2, 0.7) !important;
+}
+
+/* the ADVANCED chip still carried LT's purple-slate — neutralize */
+:root:not(.theme-light) .lt-home-course-adv {
+  background: rgba(255, 255, 255, 0.07) !important;
+  border-color: transparent !important;
+  color: rgba(235, 236, 245, 0.65) !important;
+  border-radius: 999px !important;
+}
+
+/* focus ring: brand orange, replaces any legacy teal outline — but NOT on
+   text inputs whose container already shows focus via its border (the header
+   search pill was double-ringed) */
+.app-layout :focus-visible, .bf-masthead :focus-visible {
+  outline: 2px solid rgba(255, 136, 2, 0.75) !important;
+  outline-offset: 2px;
+}
+.header-search input:focus-visible,
+.header-search input:focus,
+input[type="text"]:focus-visible, input[type="search"]:focus-visible,
+textarea:focus-visible {
+  outline: none !important;
+}
+
+/* header BTC ticker doubles as the shortcut into the simulator's live chart */
+.btc-ticker { cursor: pointer; transition: background .15s; border-radius: 8px; }
+.btc-ticker:hover { background: rgba(255, 255, 255, 0.06); }
+
+/* toast: pill, glassy */
+:root:not(.theme-light) .toast {
+  background: rgba(20, 23, 29, 0.85) !important;
+  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.10) !important;
+  border-radius: 12px !important;
+}
+
+/* thin neutral scrollbars, BloFin-style */
+:root:not(.theme-light) ::-webkit-scrollbar { width: 8px; height: 8px; }
+:root:not(.theme-light) ::-webkit-scrollbar-thumb {
+  background: rgba(235, 236, 245, 0.14); border-radius: 99px;
+  border: 2px solid transparent; background-clip: content-box;
+}
+:root:not(.theme-light) ::-webkit-scrollbar-thumb:hover { background: rgba(235, 236, 245, 0.24); border: 2px solid transparent; background-clip: content-box; }
+:root:not(.theme-light) ::-webkit-scrollbar-track { background: transparent; }

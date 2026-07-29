@@ -1,0 +1,16 @@
+{
+  "course": "4",
+  "file": "26_Kijun_Sen.js",
+  "lessonId": "course4/26_kijun_sen",
+  "edits": [],
+  "noAnchorGaps": [
+    {
+      "beatId": "chart",
+      "concept": "Risk/stop placement just below the Kijun for the pullback entry",
+      "quote": "we wait for price to return to the Kijun and buy the reaction, with risk just below it",
+      "why": "move ichimoku exposes only point anchors (pullback, aboveCloud); a stop/risk LEVEL line needs an (L) level anchor, which this move does not provide, so it cannot be drawn without inventing one"
+    }
+  ],
+  "alreadyGood": ["chart"],
+  "notes": "Lesson has one CHART beat ('chart', move ichimoku, stage all); the other three beats are CONCEPT (no chart, skipped). The two existing show items are both valid and non-redundant: note@pullback 'price pulls back to the Kijun -> bounce' (below) is justified by 'every time price pulls back, it finds the Kijun and bounces'; note@aboveCloud 'trend stays above the cloud' (above) supports the uptrend context. Both use the note kind on valid point anchors (pullback, aboveCloud are the only ichimoku anchors). The auditor's single proposed gap is the stop/risk level ('with risk just below it'); confirmed it is a genuine noAnchorGap because ichimoku exposes no level anchor, so the auditor correctly did NOT invent one. No additional gaps found."
+}

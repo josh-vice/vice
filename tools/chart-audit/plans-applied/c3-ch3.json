@@ -1,0 +1,18 @@
+{
+  "course": 3,
+  "chapterId": 3,
+  "title": "Understanding the Order Book",
+  "module": "Getting Started with Derivatives",
+  "edits": [
+    {
+      "slot": "introChart",
+      "addMarkLines": [
+        { "yAxis": 84, "label": "Bid Wall = Support", "color": "#00d4d4" },
+        { "yAxis": 93, "label": "Ask Wall = Resistance", "color": "#ff2e88" }
+      ],
+      "reason": "Lesson bullet teaches 'Large resting order blocks = potential support or resistance — the order book maps supply and demand visually.' The chart shows the heaviest bid (84, size 9) and ask (93, size 9) only as depth-ladder rungs, and the candles literally bounce off 84 (all leg lows) and reject at 93 (all leg highs), but the S/R *level* that those walls create is never drawn. These two markLines make the taught support/resistance function visible as the horizontal levels the price respects. yAxis 84 and 93 both sit inside the visible band (~82-95). Colors follow the palette and the chapter's existing convention: bids/buyers/support = teal, asks/sellers/resistance = pink."
+    }
+  ],
+  "alreadyGood": ["quiz.chart"],
+  "notes": "introChart: ACCEPTED both auditor markLines (84 support / 93 resistance). Coordinates are inside the band, text-justified by the 'potential support or resistance' bullet, non-redundant with the orderBook rungs (they teach the S/R LEVEL, a different fact from the depth-ladder weight), and correctly colored. lessonChart: REJECTED the auditor's 'Spot Price' markLine at yAxis 120. The text teaches 'price anchored to spot via 8-hour funding payments,' but spot is a dynamic peg the perp continuously tracks, not a fixed horizontal level. Drawing a single line at 120 (the top of the clean uptrend) would read as a resistance/target and mischaracterize the funding-anchor concept rather than teach it; the 'no expiry / stays open / no roll' lesson is the locatable point and is already captured by the three existing markPoints. No locatable level to add here, so lessonChart is left untouched. quiz.chart: confirmed complete — cutIndex:9 hides the outcome, pre-cut markAreas (Bid Zone teal 81-86, Ask Zone pink 91-97) annotate decision context without spoiling, and revealMarkPoints carry the post-answer outcome. No additions found that the auditor missed."
+}

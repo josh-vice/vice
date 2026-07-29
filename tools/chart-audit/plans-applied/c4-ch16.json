@@ -1,0 +1,32 @@
+{
+  "course": 4,
+  "chapterId": 16,
+  "title": "Crayons",
+  "module": "Indicator Suite",
+  "edits": [
+    {
+      "slot": "introChart",
+      "addMarkLines": [
+        { "yAxis": 109, "label": "Orange Pivot High — S/R", "color": "#ff9f1a" }
+      ],
+      "reason": "Intro bullet teaches 'Orange: bearish pivot — use candle high/low as S/R; take profit on longs'. The orange candles (idx7-9) top out at the leg1 peak of 109; this markLine draws the candle-high S/R level the bullet names but the chart currently only marks as an event pin. yAxis 109 sits at the orange candle high, inside the 80-109 band. Orange color matches the candleColors so the level reads as the Orange-pivot level."
+    },
+    {
+      "slot": "lessonChart",
+      "addMarkLines": [
+        { "yAxis": 82, "label": "Entry — B Signal Long", "color": "#00d4d4" },
+        { "yAxis": 120, "label": "Target", "color": "#ffcc00" }
+      ],
+      "reason": "Lesson teaches the B-signal long off the DBS zone: 'B marker: confirmed reversal ... best Crayons entry trigger' and 'Crayons B signal at a pre-identified DBS zone'. The 'Lime Green — Long Entry' pin (idx9) marks the event but no entry PRICE is drawn — entry at ~82 sits just above the 78 DBS line where the leg3 reversal (78->120) begins, teal for the long. 'Target Achieved' pin (idx15) likewise marks the event with no level; the final leg .to=120 is the take-profit magnet, drawn in gold per the target palette. Both yAxis values are inside the 78-120 band."
+    },
+    {
+      "slot": "quiz.chart",
+      "addRevealMarkPoints": [
+        { "dataIndex": 8, "label": "Orange High = S/R / Stop", "position": "bottom", "color": "#ff9f1a" }
+      ],
+      "reason": "The explanation teaches 'The candle's high and low become key S/R levels for stop placement.' This is OUTCOME context, so it must be reveal-gated: the engine renders markLines in BOTH pre-cut and reveal modes (lt-engine.js line 1003 has no revealMode gate), so a markLine would spoil the cut decision — only revealMarkPoints are reveal-only. Routed as a reveal pin on the Orange candle (idx8, the second orange bar, position bottom to avoid colliding with the existing 'Orange Pivot — TP Longs!' top pin at idx7). Orange color matches the candle."
+    }
+  ],
+  "alreadyGood": [],
+  "notes": "Auditor's intro and lesson proposals are accepted (lesson Entry yAxis nudged 80->82 so it sits at the idx9 entry candle clearly above the 78 DBS line, still inside band). Auditor's quiz proposal of a 'markLine in the reveal layer' is REJECTED AS SPECIFIED and CONVERTED: there is no reveal-markLine mechanism (revealMarkPoints carry markPoints only), and a plain markLine renders pre-cut, spoiling the cutIndex:8 decision. The taught S/R-for-stop concept is instead delivered as a reveal-only markPoint on the Orange candle. Color #ff9f1a (orange) is the chapter's own Crayons orange-candle color, used here for S/R/stop levels tied to the orange pivot rather than the standard teal/pink palette, to stay consistent with the candleColors the chapter paints."
+}
