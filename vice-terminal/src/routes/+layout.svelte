@@ -7,7 +7,7 @@
 	import { SUITE_CONTEXT, suiteContext } from '$lib/suite/context';
 
 	let { children } = $props();
-	let isDocumentation = $derived(page.url.pathname.startsWith('/docs'));
+	let isTerminalWorkspace = $derived(page.url.pathname === '/trade');
 	setContext(SUITE_CONTEXT, suiteContext);
 
 	onMount(() => {
@@ -60,6 +60,6 @@
 	<meta name="description" content="Non-custodial Hyperliquid terminal for core perpetuals, HIP-3 markets, and spot." />
 </svelte:head>
 
-	<div class={isDocumentation ? 'min-h-screen bg-terminal-bg text-terminal-text font-sans' : 'h-screen w-screen overflow-hidden bg-terminal-bg text-terminal-text font-sans'}>
+	<div class={isTerminalWorkspace ? 'h-screen w-screen overflow-hidden bg-terminal-bg text-terminal-text font-sans' : 'min-h-screen bg-terminal-bg text-terminal-text font-sans'}>
 	{@render children()}
 </div>

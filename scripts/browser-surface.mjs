@@ -15,7 +15,12 @@ async function expect(name, url, predicate) {
 	console.log(`✓ ${name}`);
 }
 
-await expect('SSR terminal shell', `${frontend}/`, (response, body) =>
+await expect('SSR suite shell', `${frontend}/`, (_response, body) =>
+	body.includes('data-testid="suite-shell"') &&
+	body.includes('Research with context. Trade with control.')
+);
+
+await expect('SSR terminal shell', `${frontend}/trade`, (response, body) =>
 	response.headers.get('content-security-policy')?.includes("style-src 'self'") === true &&
 	body.includes('Vice Terminal') &&
 	body.includes('data-testid="terminal-shell"') &&
