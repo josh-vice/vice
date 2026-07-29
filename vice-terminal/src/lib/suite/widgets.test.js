@@ -24,6 +24,17 @@ describe('native widget ports', () => {
 		});
 	});
 
+	test('maps Top Movers to the shared canonical market registry', () => {
+		expect(nativeWidgetPorts.vMovers).toEqual({
+			legacyId: 'vMovers',
+			title: 'Top Movers',
+			story: 'US-014',
+			nativeRoute: '/hub/native/movers',
+			provenance: 'Hyperliquid canonical public market registry (venue 24-hour context)',
+			status: 'ported'
+		});
+	});
+
 	test('maps device-local notes to their own native route', () => {
 		expect(nativeWidgetPorts.vNotes).toEqual({
 			legacyId: 'vNotes',

@@ -20,6 +20,14 @@ export const nativeWidgetPorts = {
 		provenance: 'Hyperliquid canonical public market registry (browser-local alerts)',
 		status: 'ported'
 	},
+	vMovers: {
+		legacyId: 'vMovers',
+		title: 'Top Movers',
+		story: 'US-014',
+		nativeRoute: '/hub/native/movers',
+		provenance: 'Hyperliquid canonical public market registry (venue 24-hour context)',
+		status: 'ported'
+	},
 	vNotes: {
 		legacyId: 'vNotes',
 		title: 'Notes',
