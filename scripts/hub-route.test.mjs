@@ -32,7 +32,10 @@ describe('Vice Hub SvelteKit migration boundary', () => {
 		expect(persistence).toContain("const LEGACY_KEY = 'viceHub.v1'");
 		expect(persistence).toContain("db.createObjectStore('hubLayouts'");
 		expect(persistence).toContain('window.viceHubPersistMirror = scheduleMirror');
-		expect(persistence).toContain('Never make Hub boot depend');
+		expect(persistence).toContain('window.viceHubRestorePromise = restoreLegacySnapshot()');
+		expect(persistence).toContain("objectStore('hubLayouts').get('legacy-v1')");
+		expect(persistence).toContain('Never delay a Hub boot that already has a localStorage record');
 		expect(hubScript).toContain('window.viceHubPersistMirror?.(raw)');
+		expect(hubScript).toContain('restore.finally(boot)');
 	});
 });

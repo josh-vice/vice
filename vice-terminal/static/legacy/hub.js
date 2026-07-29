@@ -7890,6 +7890,11 @@
     }
   }
 
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
-  else boot();
+  const bootAfterLegacyRestore = () => {
+    const restore = window.viceHubRestorePromise;
+    if (restore?.then) void restore.finally(boot);
+    else boot();
+  };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bootAfterLegacyRestore);
+  else bootAfterLegacyRestore();
 })();

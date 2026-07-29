@@ -67,6 +67,30 @@
   // remains best-effort: the legacy local-first UX never waits on IndexedDB.
   window.viceHubPersistMirror = scheduleMirror;
 
-  // Never make Hub boot depend on this best-effort mirror.
+  async function restoreLegacySnapshot() {
+    // localStorage remains authoritative while it exists; never overwrite a
+    // current or corrupt record with a mirror during normal startup.
+    if (readLegacySnapshot()) return false;
+    const db = await openDatabase();
+    try {
+      const record = await new Promise((resolve, reject) => {
+        const request = db.transaction('hubLayouts', 'readonly').objectStore('hubLayouts').get('legacy-v1');
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error ?? new Error('IndexedDB read failed'));
+      });
+      const snapshot = parseLegacySnapshot(record?.raw);
+      if (!snapshot) return false;
+      try { localStorage.setItem(LEGACY_KEY, snapshot.raw); }
+      catch { return false; }
+      return true;
+    } finally { db.close(); }
+  }
+
+  // Hub awaits this only when its normal local record is absent. The promise
+  // is intentionally public to the immediately-following legacy script, not
+  // to a remote service or execution surface.
+  window.viceHubRestorePromise = restoreLegacySnapshot().catch(() => false);
+
+  // Never delay a Hub boot that already has a localStorage record.
   void mirrorLegacySnapshot().catch(() => {});
 })();
