@@ -3,7 +3,8 @@ import { describe, expect, test } from 'bun:test';
 describe('US-003 chart interaction safety', () => {
 	test('keeps context-menu submission explicitly armed and restores drag pending state when identity is missing', async () => {
 		const source = await Bun.file(new URL('../components/Chart.svelte', import.meta.url)).text();
-		expect(source).toContain('if (!$clickPlacementMode || !$selectedMarket) return;');
+		expect(source).toContain('if (readOnly || !$clickPlacementMode || !$selectedMarket) return;');
+		expect(source).toContain('if (readOnly) return;');
 		expect(source).toContain('event.preventDefault();');
 		expect(source).toContain('Order has no authoritative Hyperliquid identity; modification was not sent');
 		expect(source).toContain('candidate.id === orderId ? { ...candidate, pending: false }');

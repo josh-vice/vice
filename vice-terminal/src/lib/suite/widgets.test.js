@@ -56,4 +56,15 @@ describe('native widget ports', () => {
 			status: 'ported'
 		});
 	});
+
+	test('maps the shared-data price chart to its read-only native route', () => {
+		expect(nativeWidgetPorts.vPrice).toEqual({
+			legacyId: 'vPrice',
+			title: 'Price',
+			story: 'US-014',
+			nativeRoute: '/hub/native/price',
+			provenance: 'Shared canonical public market and candle data plane',
+			status: 'ported'
+		});
+	});
 });

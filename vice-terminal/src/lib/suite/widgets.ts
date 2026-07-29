@@ -43,6 +43,14 @@ export const nativeWidgetPorts = {
 		nativeRoute: '/hub/native/candle-countdown',
 		provenance: 'Browser clock with UTC-aligned candle boundaries',
 		status: 'ported'
+	},
+	vPrice: {
+		legacyId: 'vPrice',
+		title: 'Price',
+		story: 'US-014',
+		nativeRoute: '/hub/native/price',
+		provenance: 'Shared canonical public market and candle data plane',
+		status: 'ported'
 	}
 } as const;
 

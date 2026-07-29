@@ -36,6 +36,9 @@
 	import { unavailableFeedMessage } from '$lib/productionTruth';
 	import { formatSize } from '$lib/format';
 
+	/** Research surfaces can reuse the live chart without exposing private overlays or chart trading. */
+	export let readOnly = false;
+
 	/** Bars visible by default when a chart first paints, before any user zoom. */
 	const DEFAULT_VISIBLE_BARS = 140;
 	/** Empty bars of breathing room kept to the right of the live candle. */
@@ -65,7 +68,7 @@
 	let appliedPrecisionKey = '';
 	let legend: { time: Time; open: number; high: number; low: number; close: number; volume: number } | null = null;
 	let hoveringChart = false;
-	$: privateStateLive = $isConnected && $accountSyncStatus === 'live' && !$privacyMode;
+	$: privateStateLive = !readOnly && $isConnected && $accountSyncStatus === 'live' && !$privacyMode;
 
 	function marketMatches(apiCoin?: string, marketKey?: string): boolean {
 		if (!$selectedMarket) return false;
@@ -79,6 +82,7 @@
 	}
 
 	function startOrderDrag(event: MouseEvent, orderId: string, price: number) {
+		if (readOnly) return;
 		event.preventDefault();
 		event.stopPropagation();
 		draggingOrderId = orderId;
@@ -86,6 +90,7 @@
 	}
 
 	function onChartMouseMove(e: MouseEvent) {
+		if (readOnly) return;
 		if ($clickPlacementMode) {
 			const hoverPrice = priceAtEvent(e);
 			if (hoverPrice != null) chartPreviewPrice.set(hoverPrice);
@@ -99,6 +104,7 @@
 	}
 
 	async function onChartMouseUp(e: MouseEvent) {
+		if (readOnly) return;
 		if (!draggingOrderId || !candlestickSeries || !chartContainer || !$selectedMarket) {
 			draggingOrderId = null;
 			return;
@@ -151,6 +157,7 @@
 	}
 
 	async function cancelChartOrder(event: MouseEvent, orderId: string, market: string) {
+		if (readOnly) return;
 		event.stopPropagation();
 		if (!privateStateLive) {
 			interactionError = 'Account state is stale; cancellation is paused until reconciliation completes';
@@ -175,7 +182,7 @@
 	}
 
 	async function onChartContextMenu(event: MouseEvent) {
-		if (!$clickPlacementMode || !$selectedMarket) return;
+		if (readOnly || !$clickPlacementMode || !$selectedMarket) return;
 		event.preventDefault();
 		if (!$isConnected || $executionStatus !== 'live' || $accountSyncStatus !== 'live' || $marketDataStatus !== 'live') {
 			interactionError = $isConnected
@@ -287,7 +294,7 @@
 				);
 			}
 		}
-		if ($designerMode) {
+		if (!readOnly && $designerMode) {
 			for (const [field, price] of Object.entries($chartDraft)) {
 				if (!price) continue;
 				next.set(
@@ -503,7 +510,7 @@
 		if ($chartCandles.length > 0 || $liveCandle) applyCandles($chartCandles, true);
 
 		chart.subscribeClick((param) => {
-			if (!chart || !candlestickSeries) return;
+			if (readOnly || !chart || !candlestickSeries) return;
 			const price = priceFromClick(chart, candlestickSeries, param);
 			if (price == null) return;
 			handleChartClick(price);
@@ -603,13 +610,13 @@
 		scheduleOverlayCoordinates();
 	}
 
-	$: if (candlestickSeries && ($positions || $chartDraft || $designerMode || $accountSyncStatus)) {
+	$: if (candlestickSeries && (readOnly || $positions || $chartDraft || $designerMode || $accountSyncStatus)) {
 		syncSupplementalLines();
 		scheduleOverlayCoordinates();
 	}
 
 	$: if (candlestickSeries) {
-		const price = $clickPlacementMode ? $chartPreviewPrice : null;
+		const price = !readOnly && $clickPlacementMode ? $chartPreviewPrice : null;
 		previewLine = setPreviewLine(candlestickSeries, previewLine, price, $orderSide);
 	}
 
@@ -642,7 +649,7 @@
 	onmousemove={onChartMouseMove}
 	onmouseup={onChartMouseUp}
 	onkeydown={(event) => {
-		if (event.key === 'Escape' && $clickPlacementMode) clickPlacementMode.set(false);
+		if (!readOnly && event.key === 'Escape' && $clickPlacementMode) clickPlacementMode.set(false);
 	}}
 />
 
@@ -679,6 +686,7 @@
 		</div>
 
 		<div class="flex items-center gap-2">
+			{#if !readOnly}
 			<button
 				class="px-2 py-1 text-2xs rounded transition-colors {$designerMode ? 'bg-terminal-cyan/20 text-terminal-cyan' : 'text-terminal-text-muted hover:text-terminal-text'}"
 				onclick={() => designerMode.update((v) => !v)}
@@ -699,6 +707,7 @@
 					<option value="buy">Buy</option>
 					<option value="sell">Sell</option>
 				</select>
+			{/if}
 			{/if}
 			<div class="flex items-center gap-1 bg-terminal-bg rounded p-0.5">
 				{#each timeframes as tf}
@@ -722,7 +731,7 @@
 		bind:this={chartContainer}
 		oncontextmenu={onChartContextMenu}
 		role="application"
-		aria-label="Trading chart"
+		aria-label={readOnly ? 'Read-only price chart' : 'Trading chart'}
 	>
 		{#if ($chartCandles.length > 0 || $liveCandle) && ($marketDataStatus === 'stale' || $marketDataStatus === 'degraded' || $marketDataStatus === 'error')}
 			<div class="dither-overlay z-10 dither-50 bg-terminal-bg/70" aria-hidden="true"></div>
@@ -790,13 +799,15 @@
 				</div>
 			{/if}
 		{/each}
-		{:else if $isConnected}
+		{:else if !readOnly && $isConnected}
 			<div class="absolute top-2 left-2 z-20 rounded border border-terminal-yellow/40 bg-terminal-bg/95 px-2 py-1 text-3xs text-terminal-yellow">
 				Private chart overlays paused while account state is {$accountSyncStatus}.
 			</div>
 		{/if}
 		<div class="absolute bottom-4 left-4 text-2xs text-terminal-text-muted bg-terminal-bg/80 px-2 py-1 rounded z-10 pointer-events-none">
-			{#if $designerMode}
+			{#if readOnly}
+				Read-only chart · public market data only
+			{:else if $designerMode}
 				Designer: click chart to preview order, then submit from ticket
 			{:else if $clickPlacementMode}
 				Click placement armed: right-click to submit · Escape to disarm
