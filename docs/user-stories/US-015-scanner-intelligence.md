@@ -25,3 +25,9 @@ As a research-driven trader, I want Scanner, Focus, alerts, news, and positionin
 - Telemetry: Record anonymous feature use and source health only.
 - Linked tests: Source-provenance, route, scope, stale, handoff, visual, and load-isolation suites.
 - Funded-testnet evidence: Certified downstream execution uses the relevant trade-story evidence.
+
+## Current evidence
+
+- A Scanner scope that exactly equals the shell's canonical public `apiCoin` shows a Trade action. The action delegates to the same public-only US-013 handoff builder as Hub and carries the validated key, venue, product kind, and bounded timeframe.
+- Scanner scopes for any other symbol, aliases such as `kPEPE`, missing context, metadata-only products, or unsupported timeframes have no Trade action. Scanner never receives a signer, account, credential, order, or execution API.
+- Coverage: `scripts/hub-route.test.mjs`, widget-catalog validation, source typecheck, Svelte check, and production build. This is static/build proof, not a browser action or funded execution result.

@@ -27,6 +27,25 @@
       typeof value.context.market.catalogStatus === 'string';
   }
 
+  function tradeUrlForCurrentMarket(expectedApiCoin) {
+    const publicMarket = window.viceSuitePublicContext?.market;
+    const market = publicMarket?.market;
+    const timeframe = publicMarket?.timeframe;
+    if (!market || market.tradingAvailability === 'metadataOnly' || market.instrument?.venue !== 'hyperliquid') return null;
+    if (typeof expectedApiCoin === 'string' && expectedApiCoin.toUpperCase() !== market.apiCoin.toUpperCase()) return null;
+    if (!['1m', '5m', '15m', '1h', '4h', '1D'].includes(timeframe)) return null;
+    const handoff = { version: VERSION, venue: 'hyperliquid', marketKey: market.marketKey, apiCoin: market.apiCoin, kind: market.kind, timeframe };
+    return `/trade?handoff=${encodeURIComponent(JSON.stringify(handoff))}`;
+  }
+
+  // A research surface may request navigation only for the exact current
+  // public market. It never receives an execution handle or a signer.
+  window.viceSuiteOpenTrade = (expectedApiCoin) => {
+    const url = tradeUrlForCurrentMarket(expectedApiCoin);
+    if (url) window.top.location.assign(url);
+    return Boolean(url);
+  };
+
   window.addEventListener('message', (event) => {
     if (event.origin !== window.location.origin || !validContext(event.data) || event.data.type !== TYPE) return;
     window.viceSuitePublicContext = Object.freeze(event.data.context);
@@ -35,13 +54,10 @@
     const market = window.viceSuitePublicContext.market.market;
     const trade = document.getElementById('hub-open-trade');
     if (!trade || !market || market.tradingAvailability === 'metadataOnly' || market.instrument?.venue !== 'hyperliquid') return;
-    const timeframe = window.viceSuitePublicContext.market.timeframe;
-    if (!['1m', '5m', '15m', '1h', '4h', '1D'].includes(timeframe)) return;
-    const handoff = { version: VERSION, venue: 'hyperliquid', marketKey: market.marketKey, apiCoin: market.apiCoin, kind: market.kind, timeframe };
+    const url = tradeUrlForCurrentMarket(market.apiCoin);
+    if (!url) return;
     trade.disabled = false;
-    trade.onclick = () => {
-      window.top.location.assign(`/trade?handoff=${encodeURIComponent(JSON.stringify(handoff))}`);
-    };
+    trade.onclick = () => window.viceSuiteOpenTrade(market.apiCoin);
   });
 
   if (window.parent !== window) {

@@ -5763,9 +5763,13 @@
           return { ntl, upl, side, entry: enDen > 0 ? enNum / enDen : null, lev };
         };
         const paintScope = () => {
+          const suiteCoin = window.viceSuitePublicContext?.market?.market?.apiCoin;
+          const canTrade = state.scope && suiteCoin && String(state.scope).toUpperCase() === String(suiteCoin).toUpperCase() && typeof window.viceSuiteOpenTrade === 'function';
           scopeEl.innerHTML = state.scope
             ? `<span class="vsc-scope">${coinIconFor(state.scope)}<b>${esc(state.scope)}</b> traders` +
-              '<button type="button" data-unscope title="Show every wallet"><i data-lucide="x"></i></button></span>'
+              '<button type="button" data-unscope title="Show every wallet"><i data-lucide="x"></i></button>' +
+              (canTrade ? '<button type="button" data-suite-trade title="Open this exact Suite trade context"><i data-lucide="arrow-right"></i>Trade</button>' : '') +
+              '</span>'
             : '';
           icons();
         };
@@ -5780,7 +5784,10 @@
           paintScope();
           paintView();
         };
-        scopeEl.addEventListener('click', (e) => { if (e.target.closest('[data-unscope]')) setScope(null); });
+        scopeEl.addEventListener('click', (e) => {
+          if (e.target.closest('[data-unscope]')) { setScope(null); return; }
+          if (e.target.closest('[data-suite-trade]')) window.viceSuiteOpenTrade?.(state.scope);
+        });
         // closeWallet is declared below — destroy only runs at teardown, long after
         pageMounts.push({ handle: { destroy() {
           dead = true;

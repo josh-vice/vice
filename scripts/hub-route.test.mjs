@@ -23,6 +23,10 @@ describe('Vice Hub SvelteKit migration boundary', () => {
 		expect(bridge).toContain('marketKey');
 		expect(bridge).toContain('timeframe');
 		expect(bridge).toContain('window.top.location.assign');
+		expect(bridge).toContain('window.viceSuiteOpenTrade');
+		expect(bridge).toContain('expectedApiCoin');
+		expect(hubScript).toContain('data-suite-trade');
+		expect(hubScript).toContain('window.viceSuiteOpenTrade?.(state.scope)');
 		expect(bridge).not.toContain('walletAddress');
 		expect(bridge).not.toContain('context.account');
 		expect(persistence).toContain("const LEGACY_KEY = 'viceHub.v1'");
