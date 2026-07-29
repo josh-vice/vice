@@ -45,6 +45,16 @@ await expect('SSR Gallery shell', `${frontend}/gallery`, (_response, body) =>
 	body.includes('data-hub-section="gallery"') && body.includes('index.html#/gallery')
 );
 
+await expect('SSR native Price port', `${frontend}/hub/native/price`, (_response, body) =>
+	body.includes('data-testid="native-price-chart-port"') &&
+	body.includes('Read-only mode disables chart trading and private account overlays')
+);
+
+await expect('SSR native Top Movers port', `${frontend}/hub/native/movers`, (_response, body) =>
+	body.includes('data-testid="native-market-movers-port"') &&
+	body.includes('No second feed, account, signer, order, or execution path is created')
+);
+
 await expect('local execution session policy', `${frontend}/api/hl/session`, (_response, body) => {
 	const session = JSON.parse(body);
 	return session.tradingMode === 'local-encrypted-agent' && session.serverSigning === false;
