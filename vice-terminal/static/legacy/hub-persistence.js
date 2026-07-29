@@ -4,6 +4,8 @@
   const DB_NAME = 'vice-suite';
   const DB_VERSION = 1;
   const LEGACY_KEY = 'viceHub.v1';
+  let queuedRaw = null;
+  let mirrorTimer = null;
 
   function openDatabase() {
     return new Promise((resolve, reject) => {
@@ -19,9 +21,8 @@
     });
   }
 
-  function readLegacySnapshot() {
-    const raw = localStorage.getItem(LEGACY_KEY);
-    if (!raw) return null;
+  function parseLegacySnapshot(raw) {
+    if (!raw || typeof raw !== 'string') return null;
     try {
       const parsed = JSON.parse(raw);
       if (!parsed || typeof parsed !== 'object' || !parsed.layouts || typeof parsed.layouts !== 'object') return null;
@@ -29,8 +30,13 @@
     } catch { return null; }
   }
 
-  async function mirrorLegacySnapshot() {
-    const snapshot = readLegacySnapshot();
+  function readLegacySnapshot() {
+    try { return parseLegacySnapshot(localStorage.getItem(LEGACY_KEY)); }
+    catch { return null; }
+  }
+
+  async function mirrorLegacySnapshot(raw) {
+    const snapshot = raw ? parseLegacySnapshot(raw) : readLegacySnapshot();
     if (!snapshot) return;
     const db = await openDatabase();
     try {
@@ -45,6 +51,21 @@
       });
     } finally { db.close(); }
   }
+
+  function scheduleMirror(raw) {
+    if (!parseLegacySnapshot(raw)) return;
+    queuedRaw = raw;
+    clearTimeout(mirrorTimer);
+    mirrorTimer = setTimeout(() => {
+      const next = queuedRaw;
+      queuedRaw = null;
+      void mirrorLegacySnapshot(next).catch(() => {});
+    }, 300);
+  }
+
+  // The preserved Hub calls this only after its own localStorage commit. It
+  // remains best-effort: the legacy local-first UX never waits on IndexedDB.
+  window.viceHubPersistMirror = scheduleMirror;
 
   // Never make Hub boot depend on this best-effort mirror.
   void mirrorLegacySnapshot().catch(() => {});

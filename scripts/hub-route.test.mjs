@@ -27,6 +27,8 @@ describe('Vice Hub SvelteKit migration boundary', () => {
 		expect(bridge).not.toContain('context.account');
 		expect(persistence).toContain("const LEGACY_KEY = 'viceHub.v1'");
 		expect(persistence).toContain("db.createObjectStore('hubLayouts'");
+		expect(persistence).toContain('window.viceHubPersistMirror = scheduleMirror');
 		expect(persistence).toContain('Never make Hub boot depend');
+		expect(hubScript).toContain('window.viceHubPersistMirror?.(raw)');
 	});
 });

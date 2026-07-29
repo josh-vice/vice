@@ -3695,7 +3695,9 @@
         // first user-made change stamps the store — the backup nudge only
         // speaks to people who actually built something (boot writes don't count)
         if (Date.now() - bootedAt > 5000) (store.meta ??= {}).touched ??= Date.now();
-        localStorage.setItem(LS_KEY, JSON.stringify(store));
+        const raw = JSON.stringify(store);
+        localStorage.setItem(LS_KEY, raw);
+        window.viceHubPersistMirror?.(raw);
       }
       catch { /* storage full/blocked — dashboard still works, just won't stick */ }
     }, 250);
@@ -3705,7 +3707,11 @@
     if (!saveT) return;
     clearTimeout(saveT);
     saveT = null;
-    try { localStorage.setItem(LS_KEY, JSON.stringify(store)); } catch { /* best effort */ }
+    try {
+      const raw = JSON.stringify(store);
+      localStorage.setItem(LS_KEY, raw);
+      window.viceHubPersistMirror?.(raw);
+    } catch { /* best effort */ }
   });
 
   // gentle backup nudge (audit C4): edited layouts + no export for 14 days →
