@@ -123,8 +123,10 @@ export function attributePayloadToAccount<T>(row: AggregatedAccountRow<T>, accou
  * Anonymous per-venue health summary for telemetry. Counts only; never emits
  * account keys, markets, prices, sizes, or credential references.
  */
-export function summarizeVenueHealth<T>(rows: readonly AggregatedAccountRow<T>[]): Record<VenueId, Partial<Record<VenueHealth, number>>> {
-	const summary: Record<VenueId, Partial<Record<VenueHealth, number>>> = {};
+export function summarizeVenueHealth<T>(
+	rows: readonly AggregatedAccountRow<T>[]
+): Partial<Record<VenueId, Partial<Record<VenueHealth, number>>>> {
+	const summary: Partial<Record<VenueId, Partial<Record<VenueHealth, number>>>> = {};
 	for (const row of rows) {
 		assertAccountHealthRow(row);
 		const venue = summary[row.venue] ?? (summary[row.venue] = {});
