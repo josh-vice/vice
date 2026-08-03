@@ -25,3 +25,10 @@ As a power user, I want a PWA, Stream Deck/local bridge, encrypted preference sy
 - Telemetry: Opt-in anonymous health aggregates only; no secrets, addresses, markets, prices, sizes, or strategies.
 - Linked tests: Pairing, encryption-envelope, replay, expiry, offline, bridge-policy, runner-restart, and browser suites.
 - Funded-testnet evidence: Runner action evidence per certified strategy plus kill/restart/revocation proof.
+
+## Current evidence
+
+- `src/lib/runner/pairing.ts` defines versioned pairing records (device identity, key fingerprint, epoch, revocation) and cross-device encrypted-envelope contracts. Validation rejects malformed records, non-base64url ciphertext, missing fingerprints, envelopes that expire before creation, and any envelope carrying plaintext secret fields (`accountKey`, `secret`, `mnemonic`, `privateKey`, `strategy`, `balances`) so the relay cannot read payload contents. Revocation bumps the epoch and fails freshness immediately. Actual end-to-end encryption is performed by Web Crypto at runtime; this module validates format and fail-closed rules only.
+- `src/lib/runner/runner.ts` is the user-controlled runner engine. Jobs dispatch only through the injected certified action boundary (`services.execute`) and never through a runner-owned transport, signer, or credential path. `canDispatchJob` fails closed on an engaged kill switch, missing consent or focus, revoked or expired pairing, a stale feed for the job, an expired command, or an unavailable clock. `runJob` re-checks every rule at dispatch time and re-checks the runner state; an uncertain outcome pauses the runner rather than replaying or reporting success. Restart requires a fresh, un-revoked pairing before any job resumes.
+- Telemetry (`runnerTelemetry`) records status and outcome counts only, never job ids, accounts, markets, prices, sizes, or strategies.
+- Coverage: `runner/runner.test.js` (15 tests) plus the full source typecheck, Svelte check, and production build. This is local engine/build proof; browser offline-PWA, Stream Deck/local bridge, real relay encryption, and funded runner action evidence remain open.
