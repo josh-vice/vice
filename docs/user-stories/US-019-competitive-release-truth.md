@@ -25,3 +25,8 @@ As an operator, I want a dated feature-by-feature Insilico comparison tied to us
 - Telemetry: None required beyond CI outcome and matrix version.
 - Linked tests: Matrix schema, source-date, status, release-gate, and documentation consistency tests.
 - Funded-testnet evidence: Any execution comparison row references the owning action's funded evidence.
+
+## Current evidence
+
+- `scripts/competitive-matrix.mjs` validates the dated `docs/competitive/insilico-matrix.json`: every capability carries an official `https` source URL, owning Vice stories, status, and next gate; `meets`/`exceeds` rows additionally require direct evidence and a `verificationDate`; the matrix `lastIndexed` date and every green-row verification date must be within 30 days or validation fails (an outdated source date blocks a current-parity claim). `scripts/competitive-matrix.test.mjs` covers stale dates, green rows without current verification, and the positive control.
+- The checked-in matrix is dated 2026-07-29 and every row remains partial or behind; no parity claim is implied. Documentation consistency and release-note matching remain open.

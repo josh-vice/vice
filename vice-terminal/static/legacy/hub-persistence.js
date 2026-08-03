@@ -42,12 +42,28 @@
     try {
       await new Promise((resolve, reject) => {
         const tx = db.transaction(['migrations', 'hubLayouts'], 'readwrite');
-        const metadata = { id: 'hub-localstorage-v1', source: LEGACY_KEY, schemaVersion: 1, migratedAt: Date.now() };
-        tx.objectStore('hubLayouts').put({ id: 'legacy-v1', schemaVersion: 1, source: LEGACY_KEY, raw: snapshot.raw, payload: snapshot.parsed, mirroredAt: Date.now() });
-        tx.objectStore('migrations').put(metadata);
+        const previous = tx.objectStore('hubLayouts').get('legacy-v1');
         tx.oncomplete = resolve;
         tx.onerror = () => reject(tx.error ?? new Error('IndexedDB transaction failed'));
         tx.onabort = () => reject(tx.error ?? new Error('IndexedDB transaction aborted'));
+        previous.onsuccess = () => {
+          const existing = previous.result;
+          // Keep the last validated raw for rollback when the newest mirror
+          // record is later found corrupt; a torn or edited record can then
+          // still restore the trader's prior valid state.
+          const previousRaw = existing && parseLegacySnapshot(existing.raw) ? existing.raw : existing && parseLegacySnapshot(existing.previousRaw) ? existing.previousRaw : null;
+          const metadata = { id: 'hub-localstorage-v1', source: LEGACY_KEY, schemaVersion: 1, migratedAt: Date.now() };
+          tx.objectStore('hubLayouts').put({
+            id: 'legacy-v1',
+            schemaVersion: 1,
+            source: LEGACY_KEY,
+            raw: snapshot.raw,
+            payload: snapshot.parsed,
+            previousRaw,
+            mirroredAt: Date.now()
+          });
+          tx.objectStore('migrations').put(metadata);
+        };
       });
     } finally { db.close(); }
   }
@@ -80,11 +96,38 @@
         request.onerror = () => reject(request.error ?? new Error('IndexedDB read failed'));
       });
       const snapshot = parseLegacySnapshot(record?.raw);
-      if (!snapshot) return false;
+      if (!snapshot) {
+        // Corruption recovery: never write a bad raw into localStorage. If the
+        // newest mirror record is corrupt but a previous validated raw exists,
+        // roll back to it and quarantine the corrupt raw for user recovery.
+        const fallback = record && parseLegacySnapshot(record.previousRaw);
+        if (fallback) {
+          try { localStorage.setItem(LEGACY_KEY, fallback.raw); }
+          catch { return false; }
+          await quarantineCorruptRecord(db, record, 'corrupt-raw-fallback');
+          return true;
+        }
+        return false;
+      }
       try { localStorage.setItem(LEGACY_KEY, snapshot.raw); }
       catch { return false; }
       return true;
     } finally { db.close(); }
+  }
+
+  // Preserve the corrupt raw as a recoverable export on the record and mark it
+  // quarantined so a later healthy mirror visibly replaces it.
+  async function quarantineCorruptRecord(db, record, reason) {
+    if (!record) return;
+    try {
+      await new Promise((resolve, reject) => {
+        const tx = db.transaction('hubLayouts', 'readwrite');
+        tx.objectStore('hubLayouts').put({ ...record, quarantined: true, quarantineReason: reason, quarantineAt: Date.now() });
+        tx.oncomplete = resolve;
+        tx.onerror = () => reject(tx.error ?? new Error('IndexedDB quarantine failed'));
+        tx.onabort = () => reject(tx.error ?? new Error('IndexedDB quarantine aborted'));
+      });
+    } catch { /* Best-effort: the trader's prior valid state is already restored. */ }
   }
 
   // Hub awaits this only when its normal local record is absent. The promise

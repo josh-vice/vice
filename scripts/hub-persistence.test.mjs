@@ -78,4 +78,36 @@ describe('Hub IndexedDB migration', () => {
 		await Bun.sleep(350);
 		expect(state.indexedDB.stores.get('hubLayouts').get('legacy-v1').raw).toBe(raw);
 	});
+
+	test('rolls back to the previous validated raw when the newest mirror record is corrupt', async () => {
+		const first = JSON.stringify({ v: 1, active: 'DeFi', layouts: { DeFi: { grid: [] } } });
+		const state = await loadPersistence({
+			records: { hubLayouts: { 'legacy-v1': { id: 'legacy-v1', raw: '{bad', previousRaw: first } }, migrations: {} }
+		});
+		expect(state.localStorage.getItem('viceHub.v1')).toBe(first);
+		const record = state.indexedDB.stores.get('hubLayouts').get('legacy-v1');
+		expect(record.quarantined).toBe(true);
+		expect(record.quarantineReason).toBe('corrupt-raw-fallback');
+		expect(record.raw).toBe('{bad');
+	});
+
+	test('a corrupt mirror with no valid previous raw starts safely without a restore', async () => {
+		const state = await loadPersistence({
+			records: { hubLayouts: { 'legacy-v1': { id: 'legacy-v1', raw: '{bad' } }, migrations: {} }
+		});
+		expect(state.localStorage.getItem('viceHub.v1')).toBeNull();
+	});
+
+	test('keeps the last validated raw for rollback across successive mirrors', async () => {
+		const state = await loadPersistence();
+		const first = JSON.stringify({ v: 1, active: 'DeFi', layouts: { DeFi: { grid: [] } } });
+		const second = JSON.stringify({ v: 1, active: 'Spot', layouts: { Spot: { grid: [] } } });
+		state.window.viceHubPersistMirror(first);
+		await Bun.sleep(350);
+		state.window.viceHubPersistMirror(second);
+		await Bun.sleep(350);
+		const record = state.indexedDB.stores.get('hubLayouts').get('legacy-v1');
+		expect(record.raw).toBe(second);
+		expect(record.previousRaw).toBe(first);
+	});
 });
