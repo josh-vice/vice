@@ -19,11 +19,22 @@ describe('exact feed identity boundary', () => {
 
 	test('public feeds are not blocked by the full HIP-3 catalog sweep', async () => {
 		const source = await Bun.file(new URL('./subscriptions.ts', import.meta.url)).text();
-		expect(source).toContain('catalogRefresh');
-		expect(source).toContain('STARTUP_CATALOG_TIMEOUT_MS');
 		expect(source).toContain('createCoreBtcBootstrapMarket()');
 		expect(source).toContain('startMarketRegistryRefresh();');
 		expect(source).toContain('await subscribeMarket(coin);');
+		expect(source.indexOf('await subscribeMarket(coin);')).toBeLessThan(source.indexOf('startMarketRegistryRefresh();'));
+	});
+
+	test('cached candle history hydrates before network refresh and history does not wait on the book socket', async () => {
+		const source = await Bun.file(new URL('./subscriptions.ts', import.meta.url)).text();
+		const startupSource = source.slice(source.indexOf('export async function startHlFeeds'));
+		expect(source).toContain('hydrateCachedCandleHistory(coin, tf, generation);');
+		expect(startupSource).toContain('renderCachedCandleHistory(coin, get(chartTimeframe));');
+		expect(startupSource.indexOf('renderCachedCandleHistory(coin, get(chartTimeframe));')).toBeLessThan(startupSource.indexOf('await subscribeAllMids();'));
+		expect(source).toContain('const candleHistoryPromise = withTimeout(');
+		expect(source).toContain('const bookSubscriptionPromise = bookClient.l2Book');
+		expect(source.indexOf('const candleHistoryPromise = withTimeout(')).toBeLessThan(source.indexOf('const bookSubscriptionPromise = bookClient.l2Book'));
+		expect(source).toContain('activeSubs.l2Book = await bookSubscriptionPromise;');
 	});
 
 	test('catalog-driven selection replacements switch the exact live feed', async () => {
@@ -171,7 +182,7 @@ describe('exact feed identity boundary', () => {
 		const source = await Bun.file(new URL('./subscriptions.ts', import.meta.url)).text();
 		expect(source).toContain("import { closeHlClients, getBookSubscriptionClient, getBookTransport, getSubscriptionClient, getInfoClient, getTransport } from './client';");
 		expect(source).toContain('const bookClient = getBookSubscriptionClient();');
-		expect(source).toContain('activeSubs.l2Book = await bookClient.l2Book');
+		expect(source).toContain('activeSubs.l2Book = await bookSubscriptionPromise');
 		expect(source).toContain('activeSubs.l2Book = await getBookSubscriptionClient().l2Book');
 		expect(source).toContain('bindMarketSocketHealth(getBookTransport().socket, feedLifecycle);');
 		expect(source).toContain("import { hyperliquidBookEvent } from '$lib/venue/hyperliquid';");
