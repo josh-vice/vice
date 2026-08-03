@@ -14,8 +14,10 @@ describe('SSR browser-surface smoke boundary', () => {
 		expect(script).toContain('SSR Gallery shell');
 		expect(script).toContain('SSR native Price port');
 		expect(script).toContain('SSR native Top Movers port');
+		expect(script).toContain('SSR native Suite links port');
 		expect(script).toContain('`${frontend}/hub/native/price`');
 		expect(script).toContain('`${frontend}/hub/native/movers`');
+		expect(script).toContain('`${frontend}/hub/native/suite`');
 		expect(script).toContain('`${frontend}/trade`');
 		expect(script).toContain('/review/blofin');
 		expect(script).toContain('https://openapi.blofin.com');

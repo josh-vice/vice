@@ -55,6 +55,12 @@ await expect('SSR native Top Movers port', `${frontend}/hub/native/movers`, (_re
 	body.includes('No second feed, account, signer, order, or execution path is created')
 );
 
+await expect('SSR native Suite links port', `${frontend}/hub/native/suite`, (_response, body) =>
+	body.includes('data-testid="native-suite-links-port"') &&
+	body.includes('https://vicesuite.com/pricebots') &&
+	body.includes('no market feed, account, signer, order, telemetry, or execution path')
+);
+
 await expect('local execution session policy', `${frontend}/api/hl/session`, (_response, body) => {
 	const session = JSON.parse(body);
 	return session.tradingMode === 'local-encrypted-agent' && session.serverSigning === false;

@@ -35,6 +35,17 @@ describe('native widget ports', () => {
 		});
 	});
 
+	test('maps Vice Suite links to the native navigation port', () => {
+		expect(nativeWidgetPorts.vSuite).toEqual({
+			legacyId: 'vSuite',
+			title: 'Vice Suite',
+			story: 'US-014',
+			nativeRoute: '/hub/native/suite',
+			provenance: 'First-party Suite routes and preserved public community destinations',
+			status: 'ported'
+		});
+	});
+
 	test('maps device-local notes to their own native route', () => {
 		expect(nativeWidgetPorts.vNotes).toEqual({
 			legacyId: 'vNotes',

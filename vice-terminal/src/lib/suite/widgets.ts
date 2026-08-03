@@ -28,6 +28,14 @@ export const nativeWidgetPorts = {
 		provenance: 'Hyperliquid canonical public market registry (venue 24-hour context)',
 		status: 'ported'
 	},
+	vSuite: {
+		legacyId: 'vSuite',
+		title: 'Vice Suite',
+		story: 'US-014',
+		nativeRoute: '/hub/native/suite',
+		provenance: 'First-party Suite routes and preserved public community destinations',
+		status: 'ported'
+	},
 	vNotes: {
 		legacyId: 'vNotes',
 		title: 'Notes',
