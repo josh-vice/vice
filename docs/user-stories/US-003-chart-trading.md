@@ -60,3 +60,7 @@ As an active trader, I want authenticated orders, positions, and local drafts to
 - Latest rapid-switch slice: market and timeframe subscription transitions are serialized with lifecycle invalidation, so rapid clicks or reconnect teardown cannot let an older unsubscribe detach a newer exact-coin feed. Focused identity coverage, source typecheck, production build, and live runtime verification pass.
 - Funded-testnet evidence: Compare every chart place/modify/cancel/trigger mutation against authoritative open orders and positions, including partial fills and rejection rollback.
 - Given an armed chart interaction, when the trader right-clicks a valid non-crossing price, then exactly one local command is created and its authoritative result is reflected on the chart.
+
+## Current evidence
+
+- The funded-testnet slice of the chart-action family executed 2026-08-03: the same signed action boundary `src/lib/hl/orders.ts` exposes (which `chart/clickTrading.ts` invokes) placed and cancelled orders on Hyperliquid testnet with definitive venue responses, and produced a genuine two-account partial fill (maker resting sell 0.001 BTC partially filled 0.0004 by a second venue-funded account) observed live over the venue `userFills` WebSocket, with the remaining size reconciled and cancelled. Manifest: `docs/evidence/funded-testnet-2026-08-03.json` (venue order IDs `57392234166`, `57392234881`). Browser-chart click replay and mobile chart evidence remain open.

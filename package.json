@@ -30,6 +30,8 @@
     "test:launcher": "bun test scripts/dev-launcher.test.mjs",
     "test:smoke-policy": "bun test scripts/smoke-policy.test.mjs",
     "test:release-evidence": "bun test scripts/mainnet-evidence.test.mjs",
+    "test:funded-evidence": "bun scripts/validate-funded-evidence.mjs",
+    "capture:funded:testnet": "bun scripts/capture-funded-testnet-evidence.mjs --phase=place && bun scripts/capture-funded-testnet-evidence.mjs --phase=partial && bun scripts/capture-funded-testnet-evidence.mjs --phase=trigger && bun scripts/capture-funded-testnet-evidence.mjs --phase=revoke && bun scripts/capture-funded-testnet-evidence.mjs --phase=final",
     "test:preflight-policy": "bun test scripts/preflight-policy.test.mjs",
     "test:gateway-policy": "bun test scripts/gateway-policy.test.mjs",
     "test:stories": "bun test scripts/user-story-catalog.test.mjs && bun scripts/user-story-catalog.mjs",
