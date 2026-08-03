@@ -5,7 +5,25 @@
  * hydration, so interactive controls belong to the browser replay gate.
  */
 
-const frontend = process.env.VICE_FRONTEND_URL ?? 'http://127.0.0.1:5173';
+async function resolveFrontend() {
+	// macOS vite binds IPv6 localhost by default; fall back to the IPv4 loopback
+	// alias when the default 127.0.0.1 probe fails so the gate runs one-command.
+	const requested = process.env.VICE_FRONTEND_URL ?? 'http://127.0.0.1:5173';
+	try {
+		const probe = await fetch(`${requested}/`);
+		if (probe.ok) return requested;
+	} catch { /* fall through */ }
+	if (requested.includes('127.0.0.1')) {
+		const fallback = requested.replace('127.0.0.1', 'localhost');
+		try {
+			const probe = await fetch(`${fallback}/`);
+			if (probe.ok) return fallback;
+		} catch { /* fall through */ }
+	}
+	return requested;
+}
+
+const frontend = await resolveFrontend();
 
 async function expect(name, url, predicate) {
 	const response = await fetch(url);
