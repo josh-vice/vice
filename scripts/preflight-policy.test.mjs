@@ -15,4 +15,9 @@ describe('mainnet promotion policy wiring', () => {
 		expect(source).toContain("const builderRevenueEnabled = process.env.VITE_HL_ENABLE_BUILDER_REVENUE === 'true'");
 		expect(source).toContain('network === \'mainnet\' && builderRevenueEnabled');
 	});
+
+	test('wires PLAN_3 fail-closed mainnet guardrails into the mainnet branch', () => {
+		expect(source).toContain("import { assertMainnetPromotable, runtimeFromEnv } from './mainnet-guardrails.mjs'");
+		expect(source).toContain('await assertMainnetPromotable(runtimeFromEnv(process.env))');
+	});
 });

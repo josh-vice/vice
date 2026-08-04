@@ -3,6 +3,7 @@ import { resolve } from 'node:path';
 import { readMainnetEvidence } from './mainnet-evidence.mjs';
 import { runLatencyGate } from './latency-gate.mjs';
 import { validateGatewayExposure } from './gateway-policy.mjs';
+import { assertMainnetPromotable, runtimeFromEnv } from './mainnet-guardrails.mjs';
 
 const root = resolve(import.meta.dir, '..');
 const forbidden = ['HL_PRIVATE_KEY', 'HL_WALLET_ADDRESS'];
@@ -52,6 +53,10 @@ if (network === 'mainnet') {
 	const latency = await runLatencyGate(process.env.VICE_LATENCY_EVIDENCE);
 	if (latency.network !== 'testnet') throw new Error('Mainnet release requires latency evidence captured on testnet');
 	if (!latency.pass) throw new Error(`Mainnet release latency gate failed: ${latency.failures.join('; ')}`);
+	// PLAN_3 external gates: deny-by-default until the release authority records
+	// Gate 0 funded certification, allowlist, cap, observation window, named
+	// operator, and the separate final go/no-go for the same release/build.
+	await assertMainnetPromotable(runtimeFromEnv(process.env));
 }
 const cspConfig = await Bun.file(resolve(root, 'vice-terminal/svelte.config.js')).text();
 if (!cspConfig.includes("mode: 'nonce'")) throw new Error('CSP must use per-response nonces for the SSR trading surface');
