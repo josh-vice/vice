@@ -22,9 +22,10 @@
 // mainnet was blocked until the gates opened. Canary (testnet) operations
 // never consult the mainnet gates and are unaffected.
 
-import { resolve, dirname } from 'node:path';
+import { resolve, dirname, basename } from 'node:path';
 import { homedir } from 'node:os';
 import { appendFile, mkdir } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
 
 export const GUARDRAIL_SCHEMA_VERSION = 1;
 export const APPROVAL_RECORD_KIND = 'mainnet-release-approval';
@@ -138,12 +139,32 @@ export function evaluatePromotion({ approval, runtime }) {
 		block(blocks, gates, 'authority', 'canary deployer cannot self-authorize mainnet promotion (canary operator equals release authority)', 'forbidden');
 	}
 
-	// Gate 0 — funded certification prerequisite (recorded and validated).
+	// Gate 0 — funded certification prerequisite (recorded, validated, and
+	// anchored to the EXACT manifest the release authority certified). The
+	// runtime evidence file (VICE_FUNDED_TESTNET_EVIDENCE) must byte-match the
+	// sha256 recorded in the approval record and resolve to the same reference,
+	// so a different-but-valid manifest can never satisfy the gate.
 	if (cert.validated !== true) {
 		block(blocks, gates, 'gate0', 'Gate 0 funded certification is not validated in the approval record', 'missing');
 	}
 	if (!cert.evidenceRef?.trim()) {
 		block(blocks, gates, 'gate0', 'Gate 0 funded certification evidence reference is empty', 'missing');
+	}
+	const certSha = (cert.sha256 ?? '').trim().toLowerCase();
+	if (!certSha) {
+		block(blocks, gates, 'gate0', 'Gate 0 funded certification sha256 is not recorded in the approval record; the exact certified manifest cannot be verified', 'missing');
+	} else if (!runtime.fundedEvidenceSha256) {
+		block(blocks, gates, 'gate0', 'runtime funded evidence sha256 (VICE_FUNDED_TESTNET_EVIDENCE) could not be computed or is not set', 'missing');
+	} else if (runtime.fundedEvidenceSha256.toLowerCase() !== certSha) {
+		block(blocks, gates, 'gate0', `funded-certification manifest mismatch: runtime evidence sha256=${runtime.fundedEvidenceSha256} does not match the approval record sha256=${certSha}; the exact approved manifest is required`, 'mismatch');
+	}
+	// Secondary anchor: the runtime evidence path must resolve to the same
+	// reference the release authority approved (basename compare so an absolute
+	// vs relative spelling of the same file is not a false mismatch).
+	const runtimeRef = (runtime.fundedEvidencePath ?? '').trim();
+	const certRef = (cert.evidenceRef ?? '').trim();
+	if (certRef && runtimeRef && basename(certRef) !== basename(runtimeRef)) {
+		block(blocks, gates, 'gate0', `funded-certification evidence reference mismatch: approved=${certRef} runtime=${runtimeRef}`, 'mismatch');
 	}
 
 	// Approval 1 — allowlist (non-empty, bounded, exact match).
@@ -287,13 +308,32 @@ export function runtimeFromEnv(env = process.env) {
 		canaryOperator: env.VICE_CANARY_OPERATOR ?? '',
 		releaseAuthority: env.VICE_MAINNET_RELEASE_AUTHORITY ?? RELEASE_AUTHORITY_DEFAULT,
 		approvalPath: env.VICE_MAINNET_RELEASE_AUTHORITY_APPROVAL ?? '',
-		journalPath: env.VICE_MAINNET_GATE_JOURNAL ?? ''
+		journalPath: env.VICE_MAINNET_GATE_JOURNAL ?? '',
+		fundedEvidencePath: env.VICE_FUNDED_TESTNET_EVIDENCE ?? ''
 	};
+}
+
+// Byte-hash the runtime funded-certification evidence file. Mirrors the exact
+// hash recorded by scripts/release-approval.mjs (checkFundedCertification) so
+// promotion can prove it is running the manifest the release authority certified.
+export async function sha256File(path) {
+	const file = Bun.file(resolve(path));
+	if (!(await file.exists())) return null;
+	return createHash('sha256').update(await file.text()).digest('hex');
 }
 
 // Evaluate + journal. Throws on blocked mainnet promotion so callers (preflight)
 // fail closed with the full reason list surfaced.
 export async function assertMainnetPromotable(runtime) {
+	// Gate 0 anchoring: compute the runtime evidence hash up front (I/O side of
+	// the boundary) so evaluatePromotion can compare it purely against the
+	// approval record. A missing/unreadable file yields an empty hash and the
+	// gate fails closed with a 'missing' block.
+	if (runtime.fundedEvidencePath) {
+		runtime.fundedEvidenceSha256 = (await sha256File(runtime.fundedEvidencePath)) ?? '';
+	} else {
+		runtime.fundedEvidenceSha256 = '';
+	}
 	const approval = await loadApprovalRecord(runtime.approvalPath);
 	const result = evaluatePromotion({ approval, runtime });
 	await appendGateJournal(runtime.journalPath, {

@@ -2,6 +2,7 @@ import { describe, expect, test, beforeAll, afterAll } from 'bun:test';
 import { mkdtempSync, rmSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { createHash } from 'node:crypto';
 import {
 	evaluatePromotion,
 	assertMainnetPromotable,
@@ -82,6 +83,10 @@ const fullRuntime = (overrides = {}) => ({
 	canaryOperator: 'canary-bot',
 	releaseAuthority: RELEASE_AUTHORITY_DEFAULT,
 	now: new Date('2026-08-05T00:00:00Z'),
+	// Gate 0 anchoring: default runtime points at the approved manifest with a
+	// matching sha256, so gate-specific tests do not trip the anchor.
+	fundedEvidencePath: 'docs/evidence/funded-testnet-2026-08-03.json',
+	fundedEvidenceSha256: 'a'.repeat(64),
 	...overrides
 });
 
@@ -193,6 +198,34 @@ describe('fail-closed mainnet promotion guardrails', () => {
 		expect(blockGates(result)['release']).toContain('release/build mismatch');
 	});
 
+	test('approval record without a funded certification sha256 blocks promotion', () => {
+		const approval = validApproval();
+		delete approval.fundedCertification.sha256;
+		const result = evaluatePromotion({ approval, runtime: fullRuntime() });
+		expect(result.promotable).toBe(false);
+		expect(blockGates(result)['gate0']).toContain('sha256 is not recorded');
+	});
+
+	test('runtime funded evidence sha256 unset/unreadable blocks promotion', () => {
+		const result = evaluatePromotion({ approval: validApproval(), runtime: fullRuntime({ fundedEvidenceSha256: '' }) });
+		expect(result.promotable).toBe(false);
+		expect(blockGates(result)['gate0']).toContain('could not be computed or is not set');
+	});
+
+	test('a different-but-valid evidence file than the recorded sha256 blocks promotion (exact manifest enforced)', () => {
+		const result = evaluatePromotion({ approval: validApproval(), runtime: fullRuntime({ fundedEvidenceSha256: 'b'.repeat(64) }) });
+		expect(result.promotable).toBe(false);
+		expect(blockGates(result)['gate0']).toContain('funded-certification manifest mismatch');
+		expect(blockGates(result)['gate0']).toContain('a'.repeat(64)); // names the approved hash
+		expect(blockGates(result)['gate0']).toContain('b'.repeat(64)); // names the runtime hash
+	});
+
+	test('evidence reference path mismatch blocks promotion', () => {
+		const result = evaluatePromotion({ approval: validApproval(), runtime: fullRuntime({ fundedEvidencePath: 'other/evidence/other-manifest.json' }) });
+		expect(result.promotable).toBe(false);
+		expect(blockGates(result)['gate0']).toContain('evidence reference mismatch');
+	});
+
 	test('all gates set and matched: promotion allowed', () => {
 		const result = evaluatePromotion({ approval: validApproval(), runtime: fullRuntime() });
 		expect(result.promotable).toBe(true);
@@ -231,9 +264,30 @@ describe('audit journal (state trail)', () => {
 	});
 
 	test('allowed attempt appends an allowed journal record', async () => {
+		// The runtime must hash the EXACT certified manifest: write a real
+		// evidence file, record its actual sha256 in the approval, and point
+		// the runtime at that file.
+		const certFile = join(dir, 'evidence.json');
+		const certBody = JSON.stringify({
+			schemaVersion: 1,
+			network: 'testnet',
+			pilot: { allowlisted: true, lowNotional: true },
+			uncertainOutcomes: 0,
+			duplicateOrders: 0,
+			venueOrderIds: ['1001', '1002'],
+			stories: {
+				'US-002': { passes: 2, reconnect: true, restart: true },
+				'US-003': { passes: 2, reconnect: true, restart: true },
+				'US-004': { passes: 2, reconnect: true, restart: true }
+			}
+		});
+		writeFileSync(certFile, certBody);
+		const approval = validApproval();
+		approval.fundedCertification.sha256 = createHash('sha256').update(certBody).digest('hex');
+		approval.fundedCertification.evidenceRef = certFile;
 		const approvalPath = join(dir, 'approval.json');
-		await Bun.write(approvalPath, JSON.stringify(validApproval()));
-		const runtime = fullRuntime({ approvalPath, journalPath });
+		await Bun.write(approvalPath, JSON.stringify(approval));
+		const runtime = fullRuntime({ approvalPath, journalPath, fundedEvidencePath: certFile });
 		const result = await assertMainnetPromotable(runtime);
 		expect(result.promotable).toBe(true);
 		const lines = readFileSync(journalPath, 'utf8').trim().split('\n').filter(Boolean);
@@ -317,7 +371,9 @@ describe('integration with the release-authority recording workflow', () => {
 		const approvalPath = join(dir, 'approval.json');
 		writeFileSync(approvalPath, JSON.stringify(record));
 		const journalPath = join(dir, 'journal.jsonl');
-		const result = await assertMainnetPromotable(fullRuntime({ approvalPath, journalPath }));
+		// Runtime must point at the exact certified manifest so its hash matches
+		// the sha256 the recording workflow embedded in the record.
+		const result = await assertMainnetPromotable(fullRuntime({ approvalPath, journalPath, fundedEvidencePath: certPath }));
 		expect(result.promotable).toBe(true);
 		expect(result.scope).toBe(MAINNET_SCOPE);
 	});
@@ -351,7 +407,7 @@ describe('integration with the release-authority recording workflow', () => {
 		const journalPath = join(dir, 'journal-partial.jsonl');
 		let err;
 		try {
-			await assertMainnetPromotable(fullRuntime({ approvalPath, journalPath, allowlist: 'BTC' }));
+			await assertMainnetPromotable(fullRuntime({ approvalPath, journalPath, allowlist: 'BTC', fundedEvidencePath: certPath }));
 		} catch (e) {
 			err = e;
 		}

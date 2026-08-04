@@ -14,6 +14,8 @@ Scope: low-notional canary and mainnet promotion
 
 Before any item below can be approved, the release packet must contain a passing funded-certification manifest for the exact release scope. Acceptable certification evidence is the validated, versioned testnet manifest proving the required funded lifecycle coverage (including repeated US-002/003/004 passes, reconnect and restart behavior, venue order IDs, zero duplicate outcomes, zero uncertain outcomes, and the allowlisted low-notional pilot). The manifest must identify the release/build, network, and capture timestamps; it must contain no keys or signatures.
 
+At promotion time the runtime funded-evidence file (`VICE_FUNDED_TESTNET_EVIDENCE`) must be byte-identical to the manifest that satisfied Gate 0: its sha256 must equal the `fundedCertification.sha256` recorded in the approval record and its path must resolve to the same evidence reference. A different-but-valid manifest never satisfies the gate.
+
 If Gate 0 is absent, stale, malformed, wrong-network, or failing, all four approvals are invalid and mainnet remains blocked.
 
 ## 3. Ordered approval matrix
