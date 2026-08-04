@@ -1,5 +1,6 @@
 import { BLOFIN_DEMO_REST_URL, BLOFIN_REST_URL } from './public';
 import { blofinAuthHeaders } from './signing';
+import { assertBlofinSignedPathAllowed } from './guardrail';
 import { blofinAccountRef, blofinKeyFingerprint, type BlofinCredentials, type BlofinEnvironment } from './vault';
 import type { AccountRef } from '$lib/venue/identity';
 
@@ -80,6 +81,7 @@ async function get<T>(
 	now: number,
 	nonce: string
 ): Promise<T> {
+	assertBlofinSignedPathAllowed(path);
 	const response = await fetcher(`${root}${path}`, { headers: await blofinAuthHeaders(credentials, path, 'GET', '', now, nonce) });
 	if (!response.ok) throw new Error(`BloFin private API returned HTTP ${response.status}`);
 	const envelope = await response.json() as Envelope<T>;

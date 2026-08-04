@@ -1,4 +1,5 @@
 import { signBlofinRequest } from './signing';
+import { assertBlofinCredentialsNoTransfer } from './guardrail';
 import { blofinKeyFingerprint, type BlofinCredentials, type BlofinEnvironment } from './vault';
 import { assertAccountRef, assertEventEnvelope, eventTimeUsFromMs, type AccountRef, type EventEnvelope } from '$lib/venue/identity';
 import { markFeedReconnect } from '$lib/native/performance';
@@ -67,6 +68,7 @@ function validChannels(channels: BlofinPrivateChannel[]): BlofinPrivateChannel[]
 
 /** Builds the documented, secret-bearing login frame without writing it to storage or logs. */
 export async function blofinPrivateLogin(credentials: BlofinCredentials, now = Date.now(), nonce: string = crypto.randomUUID()): Promise<string> {
+	assertBlofinCredentialsNoTransfer(credentials);
 	if (!credentials.permissions.includes('READ')) throw new Error('BloFin private feed requires READ permission');
 	const timestamp = String(now);
 	const sign = await signBlofinRequest(credentials.secretKey, LOGIN_PATH, 'GET', timestamp, nonce);

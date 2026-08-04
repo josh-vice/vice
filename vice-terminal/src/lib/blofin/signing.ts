@@ -1,4 +1,5 @@
 import type { BlofinCredentials } from './vault';
+import { assertBlofinSigningAllowed } from './guardrail';
 
 function bytesToBase64(bytes: Uint8Array): string {
 	let binary = '';
@@ -36,6 +37,7 @@ export async function blofinAuthHeaders(
 	now = Date.now(),
 	nonce: string = crypto.randomUUID()
 ): Promise<Record<string, string>> {
+	assertBlofinSigningAllowed(credentials, requestPath);
 	const timestamp = String(now);
 	return {
 		'ACCESS-KEY': credentials.apiKey,
