@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { assertAccountRef, assertEventEnvelope, assertInstrumentId, assertVenueCapabilities, eventTimeUsFromMs, MAX_EVENT_TIMESTAMP_MS } from './identity.ts';
+import { assertAccountRef, assertBookSubscriptionIdentity, assertEventEnvelope, assertInstrumentId, assertVenueCapabilities, bookSubscriptionKey, eventTimeUsFromMs, MAX_EVENT_TIMESTAMP_MS } from './identity.ts';
 
 const instrument = {
 	instrumentKey: 'blofin:linearPerp:BTC-USDT',
@@ -53,5 +53,30 @@ describe('canonical multi-venue identity', () => {
 		expect(() => assertVenueCapabilities({ ...capabilities, supportsAmend: true })).toThrow('amend support');
 		expect(() => assertVenueCapabilities({ ...capabilities, nativeAlgorithmTypes: [] })).toThrow('native algorithm');
 		expect(() => assertVenueCapabilities({ ...capabilities, privateStreamGuarantee: 'none' })).toThrow('private-stream');
+	});
+
+	test('builds a grouping-aware book subscription key that disambiguates same-coin traffic', () => {
+		const base = { venue: 'hyperliquid', instrumentKey: 'hyperliquid:linearPerp:BTC', coin: 'BTC', sequenceSupport: 'none' };
+		expect(bookSubscriptionKey({ ...base, grouping: { kind: 'significantFigures', nSigFigs: 4 } })).toBe('hyperliquid:l2Book:BTC@nSigFigs=4');
+		expect(bookSubscriptionKey({ ...base, grouping: { kind: 'significantFigures', nSigFigs: 5 } })).toBe('hyperliquid:l2Book:BTC@nSigFigs=5');
+		expect(bookSubscriptionKey({ venue: 'blofin', instrumentKey: 'blofin:linearPerp:BTC-USDT', coin: 'BTC-USDT', grouping: { kind: 'fixedIncrement', increment: '0.5' }, sequenceSupport: 'venueSequence' })).toBe('blofin:l2Book:BTC-USDT@tick=0.5');
+	});
+
+	test('rejects ambiguous or unsupported book subscription identities', () => {
+		const base = { venue: 'hyperliquid', instrumentKey: 'hyperliquid:linearPerp:BTC', coin: 'BTC', grouping: { kind: 'significantFigures', nSigFigs: 4 }, sequenceSupport: 'none' };
+		expect(assertBookSubscriptionIdentity(base)).toEqual(base);
+		expect(() => assertBookSubscriptionIdentity({ ...base, instrumentKey: 'blofin:linearPerp:BTC' })).toThrow('scoped to its venue');
+		expect(() => assertBookSubscriptionIdentity({ ...base, grouping: { kind: 'significantFigures', nSigFigs: 1 } })).toThrow('significant-figure');
+		expect(() => assertBookSubscriptionIdentity({ ...base, grouping: { kind: 'significantFigures', nSigFigs: 6 } })).toThrow('significant-figure');
+		expect(() => assertBookSubscriptionIdentity({ ...base, grouping: { kind: 'significantFigures', nSigFigs: 4.5 } })).toThrow('significant-figure');
+		expect(() => assertBookSubscriptionIdentity({ ...base, grouping: { kind: 'fixedIncrement', increment: '0' } })).toThrow('positive decimal');
+		expect(() => assertBookSubscriptionIdentity({ ...base, sequenceSupport: 'unknown' })).toThrow('sequence support');
+	});
+
+	test('accepts a venue-scoped subscriptionKey on the event envelope', () => {
+		const event = { venue: 'hyperliquid', instrumentKey: 'hyperliquid:linearPerp:BTC', subscriptionKey: 'hyperliquid:l2Book:BTC@nSigFigs=4', connectionEpoch: 3, receivedTimeUs: '1700000000000000', dedupeKey: 'book:BTC:4:3:8:2', payload: {} };
+		expect(assertEventEnvelope(event)).toEqual(event);
+		expect(() => assertEventEnvelope({ ...event, subscriptionKey: 'blofin:l2Book:BTC@nSigFigs=4' })).toThrow('subscriptionKey scoped to its venue');
+		expect(() => assertEventEnvelope({ ...event, subscriptionKey: ' hyperliquid:l2Book:BTC@nSigFigs=4' })).toThrow('trimmed subscriptionKey');
 	});
 });

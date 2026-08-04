@@ -298,7 +298,10 @@ function scheduleBookCommit(generation: number, epoch: number): void {
 function canonicalBookEvent(book: OrderBook, generation: number, subscriptionEpoch: number, eventTimeMs?: number): ReturnType<typeof hyperliquidBookEvent> {
 	const market = get(marketRegistry).find((candidate) => candidate.apiCoin === currentCoin);
 	if (!market) throw new Error(`Hyperliquid book event market identity is unavailable: ${currentCoin}`);
-	return hyperliquidBookEvent(market, book, generation, subscriptionEpoch, ++bookEventOrdinal, Date.now(), eventTimeMs);
+	// The grouping is captured at commit time because a grouping change tears
+	// down and rebuilds the book subscription with a fresh epoch; a frame from
+	// the old grouping is dropped by the epoch check before reaching here.
+	return hyperliquidBookEvent(market, book, get(bookSigFigs), generation, subscriptionEpoch, ++bookEventOrdinal, Date.now(), eventTimeMs);
 }
 
 /**
