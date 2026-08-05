@@ -3,7 +3,8 @@
 	"compilerOptions": {
 		"allowJs": false,
 		"checkJs": false,
-		"noEmit": true
+		"noEmit": true,
+		"types": ["node", "bun-types"]
 	},
 	"include": ["src/**/*.ts"],
 	"exclude": ["src/**/*.test.js"]

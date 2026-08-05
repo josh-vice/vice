@@ -8,6 +8,8 @@ let infoClient: InfoClient | null = null;
 export const READ_TIMEOUT_MS = 10_000;
 export const READ_RETRY_DELAY_MS = 100;
 const PERP_DEX_CACHE_MS = 5 * 60_000;
+const EVIDENCE_CORE_ONLY =
+	hyperliquidNetwork.isTestnet && (process.env as Record<string, string | undefined>).VICE_HL_EVIDENCE_CORE_ONLY === 'true';
 let perpDexNamesCache: { names: string[]; expiresAt: number } | null = null;
 let perpDexNamesPromise: Promise<string[]> | null = null;
 
@@ -77,7 +79,7 @@ type PerpAccountSlice = {
 async function fetchPerpAccountSlices(address: string): Promise<PerpAccountSlice[]> {
 	const client = getReadOnlyInfo();
 	const user = address as `0x${string}`;
-	const names = await fetchPerpDexNames();
+	const names = EVIDENCE_CORE_ONLY ? [''] : await fetchPerpDexNames();
 	return boundedReadMap(
 		names,
 		async (dex) => {
@@ -87,8 +89,8 @@ async function fetchPerpAccountSlices(address: string): Promise<PerpAccountSlice
 			]));
 			return { dex, orders, state };
 		},
-		2,
-		50
+		1,
+		250
 	);
 }
 
@@ -246,7 +248,7 @@ export async function fetchHlPositions(address: string): Promise<VicePosition[]>
 	});
 }
 
-async function fetchHlAccountSnapshotUnbounded(address: string) {
+export async function fetchHlAccountSnapshotUnbounded(address: string) {
 	const client = getReadOnlyInfo();
 	const user = address as `0x${string}`;
 	const [perpSlices, spotState, userFills, twapHistory, referralResult, feesResult] = await Promise.all([

@@ -26,8 +26,8 @@ const baselineWaiters: Array<(markets: MarketDescriptor[]) => void> = [];
 const MAX_INFO_RETRIES = 3;
 // The Info API is shared across the whole catalog. A small serialized window
 // avoids turning a large HIP-3 universe into a burst of 429s at startup.
-const MAX_CONCURRENT_INFO_REQUESTS = 2;
-const INFO_BATCH_DELAY_MS = 150;
+const MAX_CONCURRENT_INFO_REQUESTS = 1;
+const INFO_BATCH_DELAY_MS = 250;
 const MARKET_CATALOG_CACHE_KEY = 'vice.hl.market-catalog.v1';
 
 type CachedMarketCatalog = {

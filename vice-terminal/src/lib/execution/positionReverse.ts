@@ -24,7 +24,9 @@ export function buildPositionReversePlan(
 			close: close.intent,
 			open: {
 				...close.intent,
-				side: close.intent.side === 'buy' ? 'sell' : 'buy',
+				// The close-side order opens the opposite exposure once flat:
+				// long closes/switches with sell; short closes/switches with buy.
+				side: close.intent.side,
 				reduceOnly: false
 			}
 		}
