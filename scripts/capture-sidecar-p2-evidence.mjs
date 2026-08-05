@@ -78,13 +78,24 @@ async function info(payload) {
 				body: JSON.stringify(payload),
 				signal: AbortSignal.timeout(30000)
 			});
-			if (r.ok) return r.json();
+			// Read as text first: under 429 pressure CloudFront can return a
+			// non-JSON error page with HTTP 200, and r.json() would throw
+			// "Failed to parse JSON" — which the retry below must treat as
+			// transient, not a hard failure.
+			const text = await r.text();
+			let parsed;
+			try { parsed = JSON.parse(text); } catch (parseError) {
+				lastError = new Error(`info ${payload.type} non-JSON (HTTP ${r.status}): ${text.slice(0, 120)}`);
+				if (attempt < 5) { await slow(Math.min(10000 * (attempt + 1), 60000)); continue; }
+				throw lastError;
+			}
+			if (r.ok) return parsed;
 			const error = new Error(`info ${payload.type} HTTP ${r.status}`);
 			if (r.status !== 429) throw error;
 			lastError = error;
 		} catch (error) {
 			const text = error instanceof Error ? error.message : String(error);
-			if (!/429|Too Many|timed out|timeout/i.test(text)) throw error;
+			if (!/429|Too Many|timed out|timeout|non-JSON|Failed to parse/i.test(text)) throw error;
 			lastError = error;
 		}
 		if (attempt < 5) await slow(Math.min(10000 * (attempt + 1), 60000));
@@ -168,7 +179,11 @@ async function runPhase(phase, body, options = {}) {
 		};
 		if (path === 'unlock') request.signal = AbortSignal.timeout(UNLOCK_REQUEST_TIMEOUT_MS);
 		const r = await fetch(`${base}/api/${path}`, request);
-		return { status: r.status, body: await r.json() };
+		let body;
+		try { body = await r.json(); } catch {
+			body = { error: 'non-JSON response', status: r.status };
+		}
+		return { status: r.status, body };
 	};
 	try {
 		const deadline = Date.now() + 20000;
