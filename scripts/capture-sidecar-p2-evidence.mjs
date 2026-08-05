@@ -443,6 +443,32 @@ async function main() {
 			if (bestAskNow >= makerPx) break; // our order is at or better than the best ask
 			console.log(`MAKER_REPLACE bestAsk=${bestAskNow} makerPx=${makerPx}`);
 		}
+		// Sweep-cancel any STALE maker placements from earlier re-place
+		// iterations. A venue cancel can lag behind the ack, so the account
+		// may hold several resting makers; the taker's 5%-above-mid IOC would
+		// sweep ALL of them, filling an old oid instead of the one we watch
+		// (lost the 17:06 / 17:12 / 21:50 runs: openOrders=3, watched maker
+		// left resting). Cancel everything except the final maker, and wait
+		// until the venue confirms only it remains.
+		const openBefore = await venueOrders();
+		const stale = openBefore.filter((o) => String(o.oid) !== String(makerOid));
+		if (stale.length) {
+			for (const o of stale) {
+				const c = await api('POST', 'cancel', { coin: COIN, orderId: o.oid });
+				if (!c.body.ok) throw new Error(`stale-maker cancel failed: ${JSON.stringify(c.body)}`);
+			}
+			await slow(3000);
+			for (let attempt = 0; attempt < 8; attempt += 1) {
+				const openNow = await venueOrders();
+				const leftover = openNow.filter((o) => String(o.oid) !== String(makerOid));
+				if (leftover.length === 0) break;
+				if (attempt === 7) throw new Error(`stale makers not cleared: ${JSON.stringify(leftover.map((o) => o.oid))}`);
+				await slow(2000);
+			}
+		}
+		// Re-read the book AFTER the sweep: cancelling stale makers can shift
+		// the best ask back down, so confirm our maker is still at/better than
+		// the best ask before the taker fires.
 		const bookFinal = await info({ type: 'l2Book', coin: COIN });
 		const bestAskFinal = Number(bookFinal.levels[1][0].px);
 		if (bestAskFinal < makerPx) {
