@@ -52,6 +52,11 @@ const SIDECAR_VAULT = join(RUN_VAULT_DIR, 'vault.json');
 const COIN = 'BTC';
 const SIZE_MAKER = '0.001';
 const SIZE_TAKE = '0.0004';
+// Venue-native user-fills websocket: the same push channel the funded
+// evidence harness uses to observe fills the instant they land (the sidecar
+// snapshot carries no fills field, and its account sync lags minutes on the
+// hot testnet limiter).
+const WS_URL = 'wss://api.hyperliquid-testnet.xyz/ws';
 // The first unlock may include on-chain agent approval plus several
 // rate-limited, idempotent initialization retries. Keep the evidence client
 // alive for the documented 7–10 minute hot-testnet path, while leaving normal
@@ -263,6 +268,54 @@ async function waitForState(api, predicate, label, attempts = 80) {
 		await slow(3000);
 	}
 	throw new Error(`${label} not observed: ${JSON.stringify({ sync: last?.sync, openOrders: last?.openOrders?.length, positions: last?.positions?.length })}`);
+}
+
+/** Subscribe to venue-native user fills and resolve with the first event for a cloid. */
+function waitForUserFillByCloid(userAddress, cloid, timeoutMs = 30_000) {
+	let resolveReady;
+	let rejectReady;
+	const ready = new Promise((resolvePromise, reject) => {
+		resolveReady = resolvePromise;
+		rejectReady = reject;
+	});
+	const fill = new Promise((resolvePromise, reject) => {
+		const socket = new WebSocket(WS_URL);
+		const timer = setTimeout(() => {
+			close();
+			reject(new Error(`userFills timeout waiting for cloid ${cloid}`));
+		}, timeoutMs);
+		let closed = false;
+		let subscribed = false;
+		const close = () => {
+			if (closed) return;
+			closed = true;
+			clearTimeout(timer);
+			try { socket.close(); } catch { /* best effort */ }
+		};
+		socket.addEventListener('open', () => {
+			socket.send(JSON.stringify({ method: 'subscribe', subscription: { type: 'userFills', user: userAddress } }));
+			subscribed = true;
+			resolveReady();
+		});
+		socket.addEventListener('message', (event) => {
+			let message;
+			try { message = JSON.parse(event.data); } catch { return; }
+			if (!message || message.channel !== 'userFills') return;
+			const fills = Array.isArray(message.data) ? message.data : message.data?.fills;
+			if (!Array.isArray(fills)) return;
+			const entry = fills.find((candidate) => candidate.cloid?.toLowerCase() === cloid.toLowerCase());
+			if (entry) {
+				close();
+				resolvePromise(entry);
+			}
+		});
+		socket.addEventListener('error', () => {
+			close();
+			rejectReady?.(new Error('userFills websocket error'));
+			reject(new Error('userFills websocket error'));
+		});
+	});
+	return { ready, fill };
 }
 
 // ---------------------------------------------------------------------------
@@ -479,6 +532,14 @@ async function main() {
 		const { ExchangeClient } = await import('@nktkas/hyperliquid');
 		const takerClient = new ExchangeClient({ transport: new HttpTransport({ isTestnet: true }), wallet: takerAccount });
 		const fillCloid = `0x${randomBytes(16).toString('hex')}`;
+		// Observe the fill VENUE-NATIVE (userFills websocket push) rather than
+		// the sidecar's account state: the sidecar snapshot carries no fills
+		// field, and its account sync lags minutes on the hot testnet limiter.
+		// The venue push resolves the instant the taker's order fills — same
+		// proven pattern as scripts/capture-funded-testnet-evidence.mjs. The
+		// sidecar's own state is still captured as observations.after.
+		const { ready: wsReady, fill: wsFill } = waitForUserFillByCloid(takerAccount.address, fillCloid, 120_000);
+		await wsReady;
 		let takerOrder = null;
 		for (let attempt = 0; attempt < 4; attempt += 1) {
 			try {
@@ -498,10 +559,11 @@ async function main() {
 		if (typeof takerStatus === 'object' && 'error' in takerStatus) {
 			throw new Error(`taker order rejected: ${JSON.stringify(takerStatus)}`);
 		}
-		const stateAfterFill = await waitForState(api, (state) => (state.fills ?? []).some((fill) => String(fill.orderId) === String(makerOid)), `fill ${makerOid}`);
-		const fillAck = stateAfterFill.fills ?? [];
-		const observed = fillAck.find((f) => String(f.orderId) === String(makerOid));
-		if (!observed) throw new Error(`no fill observed for maker ${makerOid}: ${JSON.stringify(fillAck)}`);
+		// The venue push confirms the taker's buy actually filled. Wait on it
+		// with the sidecar still running so the post-fill snapshot shows the
+		// converged account state.
+		const venueFill = await wsFill;
+		const sidecarAfter = await snapshot(api);
 		return {
 			phase: 'p2-fill',
 			address: ADDRESS,
@@ -515,7 +577,7 @@ async function main() {
 			venueOrderIds: [makerOid],
 			cloids: [fillCloid],
 			partialFills: [{ venueOrderId: makerOid, filledSize: SIZE_TAKE, remainingSize: (Number(SIZE_MAKER) - Number(SIZE_TAKE)).toFixed(5) }],
-			observations: { after: await snapshot(api) },
+			observations: { after: sidecarAfter, venueFill: { cloid: venueFill?.cloid, px: venueFill?.px, sz: venueFill?.sz, oid: venueFill?.oid, time: venueFill?.time } },
 			uncertain: 0,
 			duplicates: 0
 		};
