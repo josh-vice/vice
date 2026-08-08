@@ -1,7 +1,27 @@
 import { describe, expect, test } from 'bun:test';
 import { createTradeHandoff, encodeTradeHandoff, parseTradeHandoff, resolveTradeHandoff, resolveTradeHandoffState } from './handoff';
 
-const market = { marketKey: 'hyperliquid:linearPerp:BTC', apiCoin: 'BTC', assetId: 0, kind: 'corePerp', dex: null, baseToken: 'BTC', quoteToken: 'USDC', szDecimals: 5, priceDecimals: 1, symbol: 'BTC', name: 'Bitcoin', type: 'perp', lastPrice: 1, change24h: 0, changePercent24h: 0, volume24h: 0, tradingAvailability: 'available', instrument: { venue: 'hyperliquid' } };
+const instrumentedMarket = (marketKey = 'perp:BTC', instrumentKey = 'hyperliquid:linearPerp:BTC') => ({
+	marketKey,
+	apiCoin: 'BTC',
+	assetId: 0,
+	kind: 'corePerp',
+	dex: null,
+	baseToken: 'BTC',
+	quoteToken: 'USDC',
+	szDecimals: 5,
+	priceDecimals: 1,
+	symbol: 'BTC',
+	name: 'Bitcoin',
+	type: 'perp',
+	lastPrice: 1,
+	change24h: 0,
+	changePercent24h: 0,
+	volume24h: 0,
+	tradingAvailability: 'available',
+	instrument: { venue: 'hyperliquid', instrumentKey }
+});
+const market = instrumentedMarket();
 
 describe('exact Suite trade handoff', () => {
 	test('round-trips only a canonical venue identity', () => {
@@ -9,6 +29,14 @@ describe('exact Suite trade handoff', () => {
 		expect(handoff).not.toBeNull();
 		expect(parseTradeHandoff(encodeTradeHandoff(handoff))).toEqual(handoff);
 		expect(resolveTradeHandoff([market], handoff)).toBe(market);
+	});
+
+	test('emits the venue-qualified instrument identity, never the display catalog key', () => {
+		const handoff = createTradeHandoff(instrumentedMarket('perp:BTC'), '1h');
+		expect(handoff?.marketKey).toBe('hyperliquid:linearPerp:BTC');
+		expect(handoff?.marketKey).not.toBe('perp:BTC');
+		expect(parseTradeHandoff(encodeTradeHandoff(handoff))).not.toBeNull();
+		expect(resolveTradeHandoff([instrumentedMarket('perp:BTC')], handoff)).not.toBeNull();
 	});
 
 	test('rejects display-derived, cross-venue, and metadata-only routing', () => {

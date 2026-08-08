@@ -34,7 +34,12 @@
     if (!market || market.tradingAvailability === 'metadataOnly' || market.instrument?.venue !== 'hyperliquid') return null;
     if (typeof expectedApiCoin === 'string' && expectedApiCoin.toUpperCase() !== market.apiCoin.toUpperCase()) return null;
     if (!['1m', '5m', '15m', '1h', '4h', '1D'].includes(timeframe)) return null;
-    const handoff = { version: VERSION, venue: 'hyperliquid', marketKey: market.marketKey, apiCoin: market.apiCoin, kind: market.kind, timeframe };
+    // The terminal resolves a handoff against its canonical venue-qualified
+    // instrument identity (hyperliquid:linearPerp:BTC), never the display
+    // catalog key (perp:BTC). Emitting the display key makes every real
+    // Hub→Trade handoff fail closed in parseTradeHandoff.
+    const marketKey = market.instrument?.instrumentKey ?? market.marketKey;
+    const handoff = { version: VERSION, venue: 'hyperliquid', marketKey, apiCoin: market.apiCoin, kind: market.kind, timeframe };
     return `/trade?handoff=${encodeURIComponent(JSON.stringify(handoff))}`;
   }
 

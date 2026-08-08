@@ -10,8 +10,8 @@ function account(accountKey) {
 	return { accountKey, venue: 'hyperliquid', credentialRef: 'creds:test', accountMode: 'single' };
 }
 
-function nadoAccount(accountKey) {
-	return { accountKey, venue: 'nado', credentialRef: 'creds:nado', accountMode: 'single' };
+function fixtureAccount(accountKey) {
+	return { accountKey, venue: 'fixture', credentialRef: 'creds:fixture', accountMode: 'single' };
 }
 
 function instrument(apiCoin) {
@@ -29,10 +29,10 @@ function instrument(apiCoin) {
 	};
 }
 
-function nadoInstrument(apiCoin) {
+function fixtureInstrument(apiCoin) {
 	return {
-		instrumentKey: `nado:linearPerp:${apiCoin}`,
-		venue: 'nado',
+		instrumentKey: `fixture:linearPerp:${apiCoin}`,
+		venue: 'fixture',
 		venueSymbol: apiCoin,
 		product: 'linearPerp',
 		baseAsset: apiCoin,
@@ -120,18 +120,18 @@ describe('US-017 basket planning', () => {
 
 	test('orders legs deterministically so identical baskets produce identical plans', () => {
 		const legsA = [
-			leg(0, nadoAccount('nado:bob'), nadoInstrument('SOL')),
+			leg(0, fixtureAccount('fixture:bob'), fixtureInstrument('SOL')),
 			leg(1, account('hyperliquid:alice'), instrument('ETH')),
 			leg(2, account('hyperliquid:alice'), instrument('BTC'))
 		];
 		const legsB = [...legsA].reverse();
-		const planA = planBasket(legsA, capabilities({ hyperliquid: certifiedHyperliquid(), nado: certifiedHyperliquid() }));
-		const planB = planBasket(legsB, capabilities({ hyperliquid: certifiedHyperliquid(), nado: certifiedHyperliquid() }));
+		const planA = planBasket(legsA, capabilities({ hyperliquid: certifiedHyperliquid(), fixture: certifiedHyperliquid() }));
+		const planB = planBasket(legsB, capabilities({ hyperliquid: certifiedHyperliquid(), fixture: certifiedHyperliquid() }));
 		expect(planA.basketId).toBe(planB.basketId);
 		expect(planA.legs.map((entry) => entry.instrument.instrumentKey)).toEqual([
+			'fixture:linearPerp:SOL',
 			'hyperliquid:linearPerp:BTC',
-			'hyperliquid:linearPerp:ETH',
-			'nado:linearPerp:SOL'
+			'hyperliquid:linearPerp:ETH'
 		]);
 	});
 
@@ -217,9 +217,9 @@ describe('US-017 basket execution', () => {
 		const plan = planBasket(
 			[
 				leg(0, account('hyperliquid:alice'), instrument('BTC')),
-				leg(1, nadoAccount('nado:bob'), nadoInstrument('SOL'))
+				leg(1, fixtureAccount('fixture:bob'), fixtureInstrument('SOL'))
 			],
-			capabilities({ hyperliquid: certifiedHyperliquid(), nado: certifiedHyperliquid() })
+			capabilities({ hyperliquid: certifiedHyperliquid(), fixture: certifiedHyperliquid() })
 		);
 		const result = await executeBasket(plan, {
 			dispatchLeg: async (entry) => acceptedDispatch(),
@@ -230,7 +230,7 @@ describe('US-017 basket execution', () => {
 			journal: inMemoryJournal()
 		});
 		expect(result.status).toBe('complete');
-		expect(reconciledVenues.sort()).toEqual(['hyperliquid', 'nado']);
+		expect(reconciledVenues.sort()).toEqual(['fixture', 'hyperliquid']);
 		expect(result.legs.every((outcome) => outcome.status === 'reconciled')).toBe(true);
 	});
 

@@ -24,7 +24,10 @@ export type TradeHandoffResolution =
 
 export function createTradeHandoff(market: MarketDescriptor, timeframe: string): SuiteTradeHandoff | null {
 	if (!market.instrument || market.instrument.venue !== 'hyperliquid' || market.tradingAvailability === 'metadataOnly' || !isTradeHandoffTimeframe(timeframe)) return null;
-	return { version: 1, venue: 'hyperliquid', marketKey: market.marketKey, apiCoin: market.apiCoin, kind: market.kind, timeframe };
+	// The terminal resolves a handoff against its canonical venue-qualified
+	// instrument identity (hyperliquid:linearPerp:BTC). The display catalog
+	// key (perp:BTC) is not venue-qualified and would fail parseTradeHandoff.
+	return { version: 1, venue: 'hyperliquid', marketKey: market.instrument.instrumentKey, apiCoin: market.apiCoin, kind: market.kind, timeframe };
 }
 
 export function encodeTradeHandoff(handoff: SuiteTradeHandoff): string {
@@ -47,7 +50,7 @@ export function parseTradeHandoff(value: string | null): SuiteTradeHandoff | nul
 
 export function resolveTradeHandoff(markets: readonly MarketDescriptor[], handoff: SuiteTradeHandoff): MarketDescriptor | null {
 	return markets.find((market) =>
-		market.marketKey === handoff.marketKey &&
+		(market.instrument?.instrumentKey === handoff.marketKey || market.marketKey === handoff.marketKey) &&
 		market.apiCoin === handoff.apiCoin &&
 		market.kind === handoff.kind &&
 		market.instrument?.venue === handoff.venue &&
