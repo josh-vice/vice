@@ -33,6 +33,7 @@
     "test:release-approval": "bun test scripts/release-approval.test.mjs",
     "test:mainnet-guardrails": "bun test scripts/mainnet-guardrails.test.mjs",
     "test:funded-evidence": "bun scripts/validate-funded-evidence.mjs",
+    "test:gate3:evidence": "bun scripts/validate-gate3-four-phase-evidence.mjs",
     "capture:funded:testnet": "bun scripts/capture-funded-testnet-evidence.mjs --phase=place && bun scripts/capture-funded-testnet-evidence.mjs --phase=partial && bun scripts/capture-funded-testnet-evidence.mjs --phase=trigger && bun scripts/capture-funded-testnet-evidence.mjs --phase=revoke && bun scripts/capture-funded-testnet-evidence.mjs --phase=final",
     "test:preflight-policy": "bun test scripts/preflight-policy.test.mjs",
     "test:gateway-policy": "bun test scripts/gateway-policy.test.mjs",

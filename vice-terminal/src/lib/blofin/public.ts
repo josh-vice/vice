@@ -112,7 +112,13 @@ function blofinInstrumentId(
 	});
 }
 
-async function read<T>(fetcher: typeof fetch, url: string): Promise<T> {
+/**
+ * A fetch-shaped callable that accepts SvelteKit's injected `fetch` (which does
+ * not carry Bun's `preconnect` init field) as well as the ambient global fetch.
+ */
+export type FetchLike = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
+
+async function read<T>(fetcher: FetchLike, url: string): Promise<T> {
 	const response = await fetcher(url, { headers: { accept: 'application/json' } });
 	if (!response.ok) throw new Error(`BloFin public API returned HTTP ${response.status}`);
 	const envelope = await response.json() as Envelope<T>;
@@ -122,7 +128,7 @@ async function read<T>(fetcher: typeof fetch, url: string): Promise<T> {
 
 /** Read only live SWAP contracts. Suspended, malformed, and unpriced entries stay absent. */
 export async function fetchBlofinMarkets(
-	options: { demo?: boolean; fetcher?: typeof fetch } = {}
+	options: { demo?: boolean; fetcher?: FetchLike } = {}
 ): Promise<BlofinMarketDescriptor[]> {
 	const fetcher = options.fetcher ?? fetch;
 	const root = options.demo ? BLOFIN_DEMO_REST_URL : BLOFIN_REST_URL;

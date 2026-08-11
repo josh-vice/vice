@@ -33,8 +33,13 @@ describe('US-003 chart interaction safety', () => {
 		const source = await Bun.file(new URL('../execution/localExecution.ts', import.meta.url)).text();
 		expect(source).toContain("const isTrigger = order.type === 'stop' || order.type === 'stop_limit' || order.triggerPrice != null;");
 		expect(source).toContain("tpsl: order.triggerKind === 'takeProfit' ? 'tp' : 'sl'");
-		expect(source).toContain("const field = isTrigger ? 'trigger price' : 'limit price';");
-		expect(source).toContain('venue ${field} is ${venuePrice}');
+		// Trigger identity is preserved into the journal's authoritative field so
+		// a trigger modify reconciles (and rejects) against triggerPx, not limitPx.
+		expect(source).toContain("targetField: isTrigger ? 'triggerPx' : 'limitPx'");
+		// The shared reconcile primitive picks the authoritative price field from
+		// that targetField when classifying the replacement order.
+		const primitive = await Bun.file(new URL('../execution/modifyReconcile.ts', import.meta.url)).text();
+		expect(primitive).toContain("opts.targetField === 'triggerPx' ? replacement.triggerPx : replacement.limitPx");
 	});
 
 	test('routes chart submissions with the exact selected market identity', async () => {

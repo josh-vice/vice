@@ -21,6 +21,7 @@ import { reconcileCloids } from './reconcileCloid';
 import { assertNoUnresolvedExecutionCommands, beginExecutionCommand, finishExecutionCommand, unresolvedExecutionCommands } from './commandJournal';
 import { monotonicNowUs } from './clock';
 import { classifyVenueResponse } from './responseOutcome';
+import { reconcileModifyPostState, type ModifyReconciliation } from './modifyReconcile';
 import { venueIdsProveComplete } from './reconciliationCompleteness';
 import { boundedReadMap } from '$lib/hl/boundedReads';
 import { assertHyperliquidMarketInstrument } from '$lib/venue/hyperliquid';
@@ -457,7 +458,13 @@ class LocalExecutionClient {
 		const expiresAfter = executionExpiresAfter();
 		const isTrigger = order.type === 'stop' || order.type === 'stop_limit' || order.triggerPrice != null;
 		const targetPrice = formatVenuePrice(newPrice, market);
-		beginExecutionCommand({ commandId, network: hyperliquidNetwork.network, account: this.mainAddress!, sequence, kind: 'modify', cloids: [], targetOrderId: order.id, targetPrice, targetField: isTrigger ? 'triggerPx' : 'limitPx', venueOrderIds: [] });
+		// Hyperliquid modify REPLACES the order with a new oid and returns
+		// `{type:"default"}` with no statuses. Carry a deterministic cloid so the
+		// replacement order can be reconciled by identity against the
+		// authoritative frontend projection, and record that cloid in the journal
+		// so a browser restart can reconcile this command by cloid as well.
+		const modifyCloid = deterministicCloid(sequence, 0);
+		beginExecutionCommand({ commandId, network: hyperliquidNetwork.network, account: this.mainAddress!, sequence, kind: 'modify', cloids: [modifyCloid], targetOrderId: order.id, targetPrice, targetField: isTrigger ? 'triggerPx' : 'limitPx', venueOrderIds: [] });
 		try {
 			await exchange.modify({
 				oid: Number(order.id),
@@ -467,6 +474,7 @@ class LocalExecutionClient {
 					p: formatVenuePrice(isTrigger && order.type === 'stop_limit' ? (order.price ?? newPrice) : newPrice, market),
 					s: formatVenueSize(order.remaining, market),
 					r: order.reduceOnly,
+					c: modifyCloid,
 					t: isTrigger
 						? {
 								trigger: {
@@ -478,25 +486,59 @@ class LocalExecutionClient {
 						: { limit: { tif: order.postOnly ? 'Alo' : 'Gtc' } }
 				}
 			}, { expiresAfter });
-			finishExecutionCommand(this.mainAddress!, commandId, { status: 'accepted', venueOrderIds: [order.id] });
-			return this.ack(commandId, sequence, receiveUs, sendUs, true, [order.id]);
-		} catch (error) {
-			const target = targetPrice;
-			const status = await this.orderStatus(Number(order.id));
-			const authoritativePrice = isTrigger ? status?.status === 'order' ? status.order.order.triggerPx : undefined : status?.status === 'order' ? status.order.order.limitPx : undefined;
-			if (status?.status === 'order' && status.order.status === 'open' && authoritativePrice === target) {
-				finishExecutionCommand(this.mainAddress!, commandId, { status: 'reconciled', venueOrderIds: [order.id] });
-				return this.ack(commandId, sequence, receiveUs, sendUs, true, [order.id], undefined, false, true);
+			// Transport ack is NOT venue confirmation. Reconcile the authoritative
+			// post-state (frontend projection) by the modify cloid to find the NEW
+			// oid and prove the target price was applied.
+			const outcome = await this.reconcileModifyPostState(modifyCloid, order.id, targetPrice, isTrigger);
+			if (outcome.status === 'applied') {
+				finishExecutionCommand(this.mainAddress!, commandId, { status: 'reconciled', venueOrderIds: [outcome.orderId!] });
+				return this.ack(commandId, sequence, receiveUs, sendUs, true, [outcome.orderId!], undefined, false, true);
 			}
-			if (status?.status === 'order') {
-				const field = isTrigger ? 'trigger price' : 'limit price';
-				const venuePrice = authoritativePrice ?? 'unknown';
-				const message = `Modify was not applied; venue ${field} is ${venuePrice}`;
-				finishExecutionCommand(this.mainAddress!, commandId, { status: 'rejected', venueOrderIds: [order.id], error: message });
-				return this.ack(commandId, sequence, receiveUs, sendUs, false, [order.id], message, false, true);
+			if (outcome.status === 'rejected') {
+				finishExecutionCommand(this.mainAddress!, commandId, { status: 'rejected', venueOrderIds: [outcome.orderId ?? order.id], error: outcome.reason ?? 'Modify was not applied by the venue' });
+				return this.ack(commandId, sequence, receiveUs, sendUs, false, [outcome.orderId ?? order.id], outcome.reason ?? 'Modify was not applied by the venue', false, true);
+			}
+			finishExecutionCommand(this.mainAddress!, commandId, { status: 'uncertain', venueOrderIds: [], error: outcome.reason ?? 'Modify post-state could not be proven; manual reconciliation required' });
+			return this.ack(commandId, sequence, receiveUs, sendUs, false, [], outcome.reason ?? 'Modify post-state could not be proven; manual reconciliation required', true);
+		} catch (error) {
+			const outcome = await this.reconcileModifyPostState(modifyCloid, order.id, targetPrice, isTrigger);
+			if (outcome.status === 'applied') {
+				finishExecutionCommand(this.mainAddress!, commandId, { status: 'reconciled', venueOrderIds: [outcome.orderId!] });
+				return this.ack(commandId, sequence, receiveUs, sendUs, true, [outcome.orderId!], undefined, false, true);
+			}
+			if (outcome.status === 'rejected') {
+				finishExecutionCommand(this.mainAddress!, commandId, { status: 'rejected', venueOrderIds: [outcome.orderId ?? order.id], error: outcome.reason ?? 'Modify was not applied by the venue' });
+				return this.ack(commandId, sequence, receiveUs, sendUs, false, [outcome.orderId ?? order.id], outcome.reason ?? 'Modify was not applied by the venue', false, true);
 			}
 			finishExecutionCommand(this.mainAddress!, commandId, { status: 'uncertain', venueOrderIds: [], error: `Modify outcome uncertain: ${error instanceof Error ? error.message : 'transport failure'}` });
 			return this.ack(commandId, sequence, receiveUs, sendUs, false, [], `Modify outcome uncertain: ${error instanceof Error ? error.message : 'transport failure'}`, true);
+		}
+	}
+
+	/**
+	 * Read the authoritative frontend open-order projection (the only shape that
+	 * carries isTrigger/triggerPx/orderType/cloid) and classify the modify.
+	 */
+	private async reconcileModifyPostState(
+		modifyCloid: `0x${string}`,
+		oldOrderId: string,
+		targetPrice: string,
+		isTrigger: boolean
+	): Promise<ModifyReconciliation> {
+		if (!this.info || !this.mainAddress) {
+			return { status: 'uncertain', reason: 'Info client unavailable; modify post-state cannot be proven' };
+		}
+		try {
+			const orders = await this.allDexOpenOrders();
+			return reconcileModifyPostState({
+				modifyCloid,
+				targetField: isTrigger ? 'triggerPx' : 'limitPx',
+				targetPrice,
+				oldOrderId,
+				orders
+			});
+		} catch {
+			return { status: 'uncertain', reason: 'Failed to read the authoritative projection; modify post-state cannot be proven' };
 		}
 	}
 
@@ -623,13 +665,27 @@ class LocalExecutionClient {
 				continue;
 			}
 			if (command.kind === 'modify') {
-				const authoritativePrice = target && (command.targetField === 'triggerPx' ? target.triggerPx : target.limitPx);
-				const applied = target && command.targetPrice != null && String(authoritativePrice) === command.targetPrice;
-				finishExecutionCommand(this.mainAddress!, command.commandId, applied
-					? { status: 'reconciled', venueOrderIds: [command.targetOrderId!] }
-					: target
-						? { status: 'rejected', venueOrderIds: [command.targetOrderId!], error: `Modify was not applied; venue price is ${authoritativePrice ?? 'unknown'}` }
-						: { status: 'uncertain', venueOrderIds: [], error: 'Modified order is absent after restart; manual reconciliation required' });
+				// Reconcile by the deterministic modify cloid recorded in the
+				// journal, not the stale original oid: Hyperliquid modify REPLACES
+				// the order with a new oid, so the original oid is gone after an
+				// applied modify. Use normalized price comparison because the venue
+				// canonicalizes prices (e.g. "53847.0") differently from the local
+				// format ("53847").
+				const modifyCloid = command.cloids[0];
+				const outcome = reconcileModifyPostState({
+					modifyCloid,
+					targetField: command.targetField ?? 'limitPx',
+					targetPrice: command.targetPrice ?? '',
+					oldOrderId: command.targetOrderId ?? '',
+					orders: projections[0]
+				});
+				if (outcome.status === 'applied') {
+					finishExecutionCommand(this.mainAddress!, command.commandId, { status: 'reconciled', venueOrderIds: [outcome.orderId!] });
+				} else if (outcome.status === 'rejected') {
+					finishExecutionCommand(this.mainAddress!, command.commandId, { status: 'rejected', venueOrderIds: [outcome.orderId ?? command.targetOrderId!], error: outcome.reason ?? 'Modify was not applied' });
+				} else {
+					finishExecutionCommand(this.mainAddress!, command.commandId, { status: 'uncertain', venueOrderIds: [], error: 'Modified order is absent after restart; manual reconciliation required' });
+				}
 			}
 		}
 		if (unresolvedExecutionCommands(this.mainAddress!).length > 0) {

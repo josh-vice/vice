@@ -10,6 +10,7 @@ const commands = [
 	['test:widgets'],
 	['test:competitive'],
 	['test:release-evidence'],
+	['test:gate3:evidence'],
 	['test:release-approval'],
 	['test:mainnet-guardrails'],
 	['test:preflight-policy'],

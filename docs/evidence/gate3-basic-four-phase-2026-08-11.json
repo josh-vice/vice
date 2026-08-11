@@ -1,0 +1,68 @@
+{
+  "schemaVersion": 1,
+  "kind": "gate3-basic-four-phase",
+  "network": "testnet",
+  "scope": "core BTC; browser-local signing; low notional (0.001 BTC)",
+  "address": "0x60e5f5ec558a1e7E5399765f58a0a245bab0142e",
+  "uncertainOutcomes": 0,
+  "duplicateOrders": 0,
+  "phases": [
+    {
+      "phase": "limit-maker",
+      "cloid": "0x19ccb95127abef9aa289baedd1d028bb",
+      "oid": 57729477519,
+      "limitPx": "57003.0",
+      "expected": "57003",
+      "reconcile": "cloid-identity + normalized limitPx"
+    },
+    {
+      "phase": "stop",
+      "cloid": "0x6ac3f2ceb8ecf1714c0c9689236513b8",
+      "oid": 57729479788,
+      "isTrigger": true,
+      "triggerPx": "60804.0",
+      "orderType": "Stop Market",
+      "reconcile": "authoritative frontend isTrigger + triggerPx"
+    },
+    {
+      "phase": "stop-limit",
+      "cloid": "0xe7904c24937c73a9a65c108b93f8e763",
+      "oid": 57729482591,
+      "isTrigger": true,
+      "triggerPx": "60170.0",
+      "orderType": "Stop Limit",
+      "reconcile": "authoritative frontend isTrigger + triggerPx"
+    },
+    {
+      "phase": "modify",
+      "oldOid": 57729477519,
+      "oldPx": "57003.0",
+      "newCloid": "0x628d53c658b74a9b6155390c46bf44ee",
+      "newOid": 57729484848,
+      "limitPx": "58270.0",
+      "expected": "58270",
+      "oldOrderGone": true,
+      "reconcile": "post-state by modify cloid; new oid recorded"
+    }
+  ],
+  "phasesPassed": 4,
+  "phasesTotal": 4,
+  "venueOrderIds": [
+    "57729477519",
+    "57729479788",
+    "57729482591",
+    "57729484848"
+  ],
+  "cleanup": {
+    "verified": true,
+    "cancelStatuses": [
+      "success",
+      "success",
+      "success"
+    ],
+    "cancelStatusesSecondPass": [],
+    "finalOpenOrders": 0,
+    "finalPositions": 0
+  },
+  "capturedAt": "2026-08-11T19:49:46.022Z"
+}
