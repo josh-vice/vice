@@ -1,9 +1,14 @@
 import { writable, derived, get, type Writable, type Readable } from 'svelte/store';
 import type { MarketDescriptor, OrderBook, Position, Order, Fill, Balance, OptionChain, Trade, Subaccount, CLICommand, MarketType, OrderSide, OrderType, OptionContract, ChartCandle, ChartInteractionMode, ChartDraft, ChartActiveField, RevenueSnapshot, OrderPreset, AdvancedOrderConfig } from './types';
 import { emptyFatFingerLimits, type FatFingerLimits } from './execution/fatFinger';
-import { onTimeframeChanged, startHlFeeds, stopHlFeeds, stopHlFeedsForDexSwitch, setActiveAccountAsset } from './hl';
+import { onTimeframeChanged, startHlFeeds, stopHlFeeds, stopHlFeedsForDexSwitch } from './hl';
 import { fixturesEnabled, type HealthStatus } from './productionTruth';
 import { hyperliquidNetwork } from './hl/network';
+import {
+	type EnablementReporter,
+	noopEnablementReporter,
+	classifyEnablementError
+} from './execution/enablement';
 
 export type { HealthStatus } from './productionTruth';
 
@@ -411,7 +416,9 @@ export const totalEquity: Readable<number> = derived(
 export function selectMarket(market: MarketDescriptor) {
 	selectedMarket.set(market);
 	orderPrice.set(market.lastPrice);
-	void setActiveAccountAsset(market).catch((e) => console.error('[hl] active account asset change failed:', e));
+	void import('./hl/account')
+		.then(({ setActiveAccountAsset }) => setActiveAccountAsset(market))
+		.catch((e) => console.error('[hl] active account asset change failed:', e));
 }
 
 /** Switch the one selected public feed and wait for that exact market to prove live. */
@@ -425,6 +432,7 @@ export async function selectMarketForExecution(market: MarketDescriptor, timeout
 	selectedMarket.set(registered);
 	orderPrice.set(registered.lastPrice);
 	try {
+		const { setActiveAccountAsset } = await import('./hl/account');
 		await setActiveAccountAsset(registered);
 	} catch {
 		return false;
@@ -564,12 +572,22 @@ export async function connectWallet(): Promise<void> {
 	walletStatus.set('idle');
 }
 
-export async function enableTrading(options: { approveBuilder?: boolean } = {}): Promise<void> {
+export async function enableTrading(
+	options: { approveBuilder?: boolean } = {},
+	onPhase?: EnablementReporter
+): Promise<void> {
+	const report = onPhase ?? noopEnablementReporter;
 	const { assertTradingAllowed, assertFreshExecutionState } = await import('./execution/releaseSafety');
 	assertTradingAllowed();
 	const address = get(walletAddress);
 	const provider = typeof window !== 'undefined' ? (window as any).ethereum : null;
-	if (!address || !provider) throw new Error('Connect a browser wallet before enabling trading');
+	if (!address || !provider) {
+		const notConnected = classifyEnablementError(
+			new Error('Connect a browser wallet before enabling trading')
+		);
+		report({ kind: 'error', error: notConnected, detail: notConnected.message });
+		throw new Error('Connect a browser wallet before enabling trading');
+	}
 	// Do not prompt for a master-wallet signature or start persisted local
 	// algorithms while either authoritative account state or the selected public
 	// market feed is stale. Mutations enforce the same invariant, but rejecting
@@ -578,7 +596,7 @@ export async function enableTrading(options: { approveBuilder?: boolean } = {}):
 	executionStatus.set('connecting');
 	try {
 		const { localExecution } = await import('./execution/localExecution');
-		await localExecution.initialize(provider, address, options);
+		await localExecution.initialize(provider, address, options, report);
 		// Establish the account scope before any algorithm recovery. Every local
 		// state machine must read/write the same unlocked wallet namespace; relying
 		// on one recovery helper to set this creates order-dependent recovery bugs.
@@ -616,6 +634,8 @@ export async function enableTrading(options: { approveBuilder?: boolean } = {}):
 		const { localExecution } = await import('./execution/localExecution');
 		localExecution.lock();
 		executionStatus.set('error');
+		const classified = classifyEnablementError(error);
+		report({ kind: 'error', error: classified, detail: classified.message });
 		throw error;
 	}
 }

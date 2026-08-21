@@ -1,0 +1,17 @@
+# Vice Terminal (Root Directory: vice-terminal) — build-upload excludes.
+# Vercel already excludes .git/node_modules by default; these keep internal and
+# local-only files out of the build sandbox even if the project Root Directory
+# is ever misconfigured. The SERVED artifact is further bounded and verified by
+# scripts/pwa-artifact.test.mjs.
+
+# Local build/runtime junk
+.svelte-kit
+.vercel
+node_modules
+*.tsbuildinfo
+
+# Local environment files (never upload; the Vercel project env vars are set in
+# the dashboard — names only, see docs/VERCEL_DEPLOYMENT.md)
+.env
+.env.*
+!.env.example

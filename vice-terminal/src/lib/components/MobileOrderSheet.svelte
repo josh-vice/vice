@@ -32,7 +32,10 @@
 		dragging = false;
 	}
 
-	$: sheetY = dragging && dragY > 0 ? dragY : 0;
+	// The swipe threshold still closes the sheet; the live drag offset is not
+	// rendered because the production CSP (style-src 'self', nonce mode) blocks
+	// inline style application — the sheet hides via the compiled
+	// `translate-y-full` class instead.
 </script>
 
 <!-- Backdrop -->
@@ -47,8 +50,7 @@
 
 <!-- Bottom Sheet -->
 <div
-	class="fixed bottom-0 left-0 right-0 z-50 flex flex-col bg-terminal-bg-panel border-t border-terminal-border rounded-t-2xl shadow-2xl transition-transform duration-300"
-	style="transform: translateY({open ? sheetY + 'px' : '100%'}); max-height: 90dvh;"
+	class="fixed bottom-0 left-0 right-0 z-50 flex flex-col bg-terminal-bg-panel border-t border-terminal-border rounded-t-2xl shadow-2xl transition-transform duration-300 max-h-[90dvh] {open ? '' : 'translate-y-full'}"
 	aria-hidden={!open}
 	aria-modal="true"
 	role="dialog"
@@ -83,8 +85,12 @@
 		</button>
 	</div>
 
-	<!-- Full OrderTicket — same component as desktop, same stores -->
-	<div class="flex-1 min-h-0 overflow-hidden">
-		<OrderTicket />
-	</div>
+	<!-- Full OrderTicket — same component as desktop, same stores. Only mount
+	     it while the sheet is open so the closed, off-screen sheet does not
+	     duplicate the desktop ticket's DOM markers (order-persistence-class). -->
+	{#if open}
+		<div class="flex-1 min-h-0 overflow-hidden">
+			<OrderTicket />
+		</div>
+	{/if}
 </div>

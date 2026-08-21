@@ -22,7 +22,13 @@ describe('US-003 mobile chart parity', () => {
 
 		expect(sheet).toContain("import OrderTicket from '$lib/components/OrderTicket.svelte'");
 		expect(sheet).toContain('<OrderTicket />');
-		expect(sheet).toContain('max-height: 90dvh');
+		// The sheet hides via a compiled Tailwind class (translate-y-full) so
+		// it survives the production CSP (style-src 'self', nonce mode), which
+		// blocks inline style attributes/CSSOM. Assert the CSP-safe form.
+		expect(sheet).toContain('translate-y-full');
+		expect(sheet).not.toContain('style="transform: translateY');
+		expect(sheet).not.toContain('style:transform');
+		expect(sheet).toContain('max-h-[90dvh]');
 		expect(sheet).toContain('role="dialog"');
 		expect(sheet).toContain('ontouchend={onTouchEnd}');
 	});

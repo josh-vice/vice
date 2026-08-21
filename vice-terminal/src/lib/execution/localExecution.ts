@@ -4,6 +4,12 @@ import type { EIP1193Provider } from 'viem';
 import type { MarketDescriptor, Order } from '$lib/types';
 import type { ExecutionAck, NativeOrderIntent } from './client';
 import { assertProviderAccount, unlockOrCreateAgent } from './agentVault';
+import {
+	ENABLEMENT_ENABLED_DETAIL,
+	ENABLEMENT_STEP_DETAIL,
+	noopEnablementReporter,
+	type EnablementReporter
+} from './enablement';
 import { formatVenuePrice, formatVenueSize } from './venueFormat';
 import { buildScaleLevels } from './scaleMath';
 import { hyperliquidNetwork } from '$lib/hl/network';
@@ -62,9 +68,25 @@ class LocalExecutionClient {
 	private sequence = 0;
 	private actionStartedUs = new Map<string, number>();
 
-	async initialize(provider: EIP1193Provider, mainAddress: string, options: { approveBuilder?: boolean } = {}): Promise<void> {
+	async initialize(
+		provider: EIP1193Provider,
+		mainAddress: string,
+		options: { approveBuilder?: boolean } = {},
+		onPhase?: EnablementReporter
+	): Promise<void> {
+		const report = onPhase ?? noopEnablementReporter;
 		assertTradingAllowed();
-		const session = await unlockOrCreateAgent(provider, mainAddress, options);
+		report({
+			kind: 'step',
+			step: 'connecting',
+			detail: ENABLEMENT_STEP_DETAIL['connecting']
+		});
+		const session = await unlockOrCreateAgent(provider, mainAddress, options, report);
+		report({
+			kind: 'step',
+			step: 'synchronizing-account',
+			detail: ENABLEMENT_STEP_DETAIL['synchronizing-account']
+		});
 		this.provider = provider;
 		this.builder = session.builder;
 		this.mainAddress = session.mainAddress;
@@ -77,6 +99,7 @@ class LocalExecutionClient {
 		});
 		this.info = new InfoClient({ transport });
 		await this.reconcilePersistedCommands();
+		report({ kind: 'enabled', detail: ENABLEMENT_ENABLED_DETAIL });
 	}
 
 	lock(): void {

@@ -1,0 +1,8 @@
+[
+  {
+    "id": "GHSA-0000-0000-0000",
+    "exposure": "TEMPLATE — remove this entry. Copy this shape for a real time-bounded exception.",
+    "owner": "l0k1",
+    "expires": "2099-01-01"
+  }
+]

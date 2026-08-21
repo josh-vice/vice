@@ -26,8 +26,8 @@ As an experienced Insilico terminal user, I want an order ticket that never lies
 - Latency expectations: action→signed dispatch p99 < 10ms; local processing p99 < 2ms; ticket field edits do not block feed-to-frame work.
 - Telemetry: Record ticket action class and latency without prices, sizes, or account contents.
 - Linked tests: `orderAmount.test.js`, `orderPresets.test.js`, `orderSizing.test.js`, `fatFinger.test.js`, `orderTicketStopTrigger.test.js`, `execution/venueFormat.test.js`, `execution/commandIdentity.test.js`, `execution/commandJournal.test.js`, `execution/advancedOrderSurface.test.js`.
-- Funded-testnet evidence: Funded ticket lifecycle for certified types covered by `docs/evidence/advanced-order-certification-2026-08-06.json` (15/15 phases, 22 real venue order IDs, 37 observed fills).
+- Funded-testnet evidence: Funded ticket lifecycle for certified types covered by `docs/evidence/advanced-order-certification-2026-08-06.json` (15/15 phases, 22 real venue order IDs, 37 observed fills). **INVALIDATED 2026-08-11** — the manifest failed the hardened validator (`scripts/advanced-order-evidence.mjs`): phase-level `ok: true` masked 44 nested `ok: false` pause/resume/cancel outcomes ("Unregistered market identity"). Certification flags stay disabled pending recertification with event-honest phase outcomes.
 
 ## Evidence log
 
-- 2026-08-07: Ticket surface tests green in `bun run check` (561 tests); advanced-order certification evidence dated 2026-08-06 covers the certified dispatch path.
+- 2026-08-11: Ticket surface tests green; the 2026-08-06 advanced-order certification manifest was INVALIDATED by the hardened validator (phase `ok: true` masked 44 nested `ok: false` pause/resume/cancel outcomes) — ticket certification status stays locked pending recertification.

@@ -2,4 +2,3 @@ export { getSubscriptionClient, getInfoClient, getTransport, closeHlClients } fr
 export { startHlFeeds, stopHlFeeds, onMarketSelected, onTimeframeChanged, subscribeMarket, stopHlFeedsForDexSwitch } from './subscriptions';
 export { toHlInterval } from './symbols';
 export * from './normalize';
-export { startAccountSubscriptions, stopAccountSubscriptions, refreshAccountSnapshot, setActiveAccountAsset } from './account';

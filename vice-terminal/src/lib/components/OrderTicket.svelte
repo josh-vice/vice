@@ -10,6 +10,18 @@
 	import { advancedOrderTypes, isAdvancedOrderCertified, unavailableOrderTypeMessage } from '$lib/execution/capabilities';
 	import { tradingKillSwitchActive, tradingKillSwitchMessage } from '$lib/execution/releaseSafety';
 	import { privacyMode } from '$lib/privacyMode';
+	import { onDestroy } from 'svelte';
+	import {
+		ENABLEMENT_STEP_DETAIL,
+		ENABLEMENT_STEP_LABEL,
+		boundedEnablementBackoffMs,
+		classifyEnablementError,
+		enablementIsCancellable,
+		enablementIsRetryable,
+		enablementProgressLabel,
+		type EnablementErrorKind,
+		type EnablementPhase
+	} from '$lib/execution/enablement';
 
 	// Full Insilico-style order type catalog, grouped
 	const orderTypeGroups: { group: string; types: { id: OrderType; label: string; desc: string }[] }[] = [
@@ -80,6 +92,55 @@
 	let referralConfirmOpen = false;
 	let referralBusy = false;
 	let builderOptIn = false;
+	// Secure-trading enablement lifecycle (explicit state machine, not a spinner).
+	let enablePhase: EnablementPhase = { kind: 'idle' };
+	let enableRetryAvailable = true;
+	let enableCountdown = 0;
+	let enableRetryTimer: ReturnType<typeof setInterval> | null = null;
+
+	const ENABLEMENT_ERROR_LABEL: Record<EnablementErrorKind, string> = {
+		rejected: 'Approval rejected',
+		'wallet-mismatch': 'Wallet account changed',
+		'stale-account': 'Account state is stale',
+		'rate-limited': 'Venue rate limit reached',
+		timeout: 'Request timed out',
+		offline: 'Connection unavailable',
+		uncertain: 'Unable to enable secure trading',
+		'not-connected': 'Wallet not connected'
+	};
+
+	function stopEnableRetryTimer() {
+		if (enableRetryTimer) {
+			clearInterval(enableRetryTimer);
+			enableRetryTimer = null;
+		}
+	}
+
+	function scheduleEnableRetry(backoffMs?: number) {
+		stopEnableRetryTimer();
+		const total = boundedEnablementBackoffMs(backoffMs);
+		enableCountdown = Math.ceil(total / 1000);
+		enableRetryAvailable = false;
+		enableRetryTimer = setInterval(() => {
+			enableCountdown -= 1;
+			if (enableCountdown <= 0) {
+				enableCountdown = 0;
+				enableRetryAvailable = true;
+				stopEnableRetryTimer();
+			}
+		}, 1000);
+	}
+
+	function dismissEnablement() {
+		stopEnableRetryTimer();
+		enablePhase = { kind: 'idle' };
+	}
+
+	function retryEnableSecureTrading() {
+		void enableSecureTrading();
+	}
+
+	onDestroy(stopEnableRetryTimer);
 	let presetName = '';
 	let presetMessage = '';
 	let amountUnit: 'base' | 'quote' = 'base';
@@ -252,13 +313,29 @@
 
 	async function enableSecureTrading() {
 		submitError = '';
-		submitting = true;
+		enablePhase = {
+			kind: 'step',
+			step: 'connecting',
+			detail: ENABLEMENT_STEP_DETAIL['connecting']
+		};
+		stopEnableRetryTimer();
 		try {
-			await enableTrading({ approveBuilder: builderOptIn });
+			await enableTrading(
+				{ approveBuilder: builderOptIn },
+				(phase) => {
+					enablePhase = phase;
+					if (phase.kind === 'error' && phase.error.kind === 'rate-limited') {
+						scheduleEnableRetry(phase.error.backoffMs);
+					}
+				}
+			);
 		} catch (error) {
-			submitError = error instanceof Error ? error.message : 'Could not enable secure trading';
-		} finally {
-			submitting = false;
+			// The stores reporter emits an 'error' phase on the paths it covers;
+			// this fallback guarantees a classified state even if a guard threw
+			// before the reporter could fire.
+			const classified = classifyEnablementError(error);
+			enablePhase = { kind: 'error', error: classified, detail: classified.message };
+			if (classified.kind === 'rate-limited') scheduleEnableRetry(classified.backoffMs);
 		}
 	}
 
@@ -829,11 +906,47 @@
 				Enable an encrypted, device-local Hyperliquid agent. The key never reaches Vice servers.
 				{#if orderTypeRevenueDisclosure($orderType)} {orderTypeRevenueDisclosure($orderType)}{:else if revenueDisclosure()} {revenueDisclosure()}{/if}
 			</p>
-			{#if builderRevenueEnabled() && configuredBuilder()}
+			{#if builderRevenueEnabled() && configuredBuilder() && enablePhase.kind !== 'step'}
 				<label class="mb-1.5 flex items-start gap-1.5 rounded border border-terminal-border/60 bg-terminal-bg-secondary px-2 py-1.5 text-3xs text-terminal-text-muted">
 					<input type="checkbox" bind:checked={builderOptIn} class="mt-0.5 accent-terminal-cyan" />
 					<span>I approve the optional 0.1 bp Vice builder fee for eligible orders. This requests a one-time wallet approval; leaving it unchecked still enables local trading without builder attribution.</span>
 				</label>
+			{/if}
+			{#if enablePhase.kind === 'step'}
+				<div
+					data-testid="enablement-progress"
+					role="status"
+					aria-live="polite"
+					aria-busy="true"
+					class="mb-1.5 rounded border border-terminal-cyan/40 bg-terminal-cyan/5 px-2 py-1.5 text-3xs"
+				>
+					<div class="font-medium text-terminal-cyan">{enablementProgressLabel(enablePhase.step)}</div>
+					<div class="mt-0.5 text-terminal-text-muted">{enablePhase.detail}</div>
+					{#if enablementIsCancellable(enablePhase)}
+						<button class="mt-1.5 text-terminal-cyan hover:underline" onclick={dismissEnablement}>Cancel</button>
+					{/if}
+				</div>
+			{:else if enablePhase.kind === 'error'}
+				<div
+					data-testid="enablement-error"
+					role="alert"
+					class="mb-1.5 rounded border border-terminal-red/40 bg-terminal-red/5 px-2 py-1.5 text-3xs"
+				>
+					<div class="font-medium text-terminal-red">{ENABLEMENT_ERROR_LABEL[enablePhase.error.kind]}</div>
+					<div class="mt-0.5 text-terminal-text-muted">{enablePhase.error.message}</div>
+					<div class="mt-1.5 flex items-center gap-1.5">
+						{#if enablementIsRetryable(enablePhase)}
+							<button
+								class="rounded border border-terminal-cyan/60 px-1.5 py-0.5 text-terminal-cyan hover:bg-terminal-cyan/10 disabled:opacity-50"
+								disabled={!enableRetryAvailable}
+								onclick={retryEnableSecureTrading}
+							>
+								{enableRetryAvailable ? 'Retry' : `Retry in ${enableCountdown}s`}
+							</button>
+						{/if}
+						<button class="rounded border border-terminal-border px-1.5 py-0.5 hover:bg-terminal-bg" onclick={dismissEnablement}>Dismiss</button>
+					</div>
+				</div>
 			{/if}
 		{/if}
 		{#if $isConnected && $executionStatus === 'live' && $orderType === 'twap' && orderTypeRevenueDisclosure($orderType)}
@@ -872,10 +985,20 @@
 					? 'bg-terminal-cyan text-terminal-bg hover:bg-terminal-cyan/90'
 					: 'bg-terminal-red text-white hover:bg-terminal-red-dim'}"
 			onclick={$isConnected && $executionStatus !== 'live' ? enableSecureTrading : submitOrder}
-			disabled={submitting || !$isConnected || tradingKillSwitchActive() || ($executionStatus === 'live' && $orderSize === 0)}
+			disabled={submitting || !$isConnected || tradingKillSwitchActive() || enablePhase.kind === 'step' || ($executionStatus === 'live' && $orderSize === 0)}
 		>
 			<Zap class="w-3.5 h-3.5" />
-			{!$isConnected ? 'Connect to trade' : submitting ? 'Working…' : $executionStatus !== 'live' ? 'Enable secure trading' : $orderSide === 'buy' ? 'Buy / Long' : 'Sell / Short'} {baseAsset}
+			{!$isConnected
+				? 'Connect to trade'
+				: enablePhase.kind === 'step'
+					? `Enabling… ${ENABLEMENT_STEP_LABEL[enablePhase.step]}`
+					: submitting
+						? 'Working…'
+						: $executionStatus !== 'live'
+							? 'Enable secure trading'
+							: $orderSide === 'buy'
+								? 'Buy / Long'
+								: 'Sell / Short'} {baseAsset}
 		</button>
 	</div>
 </div>

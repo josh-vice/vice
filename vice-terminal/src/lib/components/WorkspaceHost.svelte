@@ -8,14 +8,15 @@
 	import OrderTicket from './OrderTicket.svelte';
 	import BottomPanel from './BottomPanel.svelte';
 	import MarketSnapshotPanel from './MarketSnapshotPanel.svelte';
+	import PitChat from './PitChat.svelte';
 	import { loadWorkspaceLayout, removeWorkspaceLayout, saveWorkspaceLayout } from '$lib/workspaceLayout';
-	import { workspacePanels, workspacePreset } from '$lib/workspacePreset';
+	import { workspaceLocked, workspacePanels, workspacePreset } from '$lib/workspacePreset';
 	import { chartTimeframe, selectedMarket } from '$lib/stores';
 	import { startRuntimeHealthTelemetry } from '$lib/native/performance';
 	import { loadWorkspaceLinkContexts, setWorkspaceLinkContext, WORKSPACE_LINK_GROUPS } from '$lib/workspaceLinks';
 	import 'dockview/dist/styles/dockview.css';
 
-	type PanelName = 'watchlist' | 'chart' | 'market-data' | 'ticket' | 'activity' | 'market-snapshot';
+	type PanelName = 'watchlist' | 'chart' | 'market-data' | 'ticket' | 'activity' | 'chat' | 'market-snapshot';
 	let host: HTMLDivElement;
 
 	const componentFor: Record<PanelName, any> = {
@@ -24,6 +25,7 @@
 		'market-data': MarketDataWorkspacePanel,
 		ticket: OrderTicket,
 		activity: BottomPanel,
+		chat: PitChat,
 		'market-snapshot': MarketSnapshotPanel
 	};
 
@@ -33,6 +35,7 @@
 		let layoutSubscription: (() => void) | undefined;
 		let panelSubscription: (() => void) | undefined;
 		let presetSubscription: (() => void) | undefined;
+		let lockSubscription: (() => void) | undefined;
 		let api: DockviewApi | undefined;
 		let subscriptionsReady = false;
 		const stopRuntimeHealthTelemetry = startRuntimeHealthTelemetry();
@@ -40,6 +43,8 @@
 
 		const persist = () => {
 			if (disposed || !api) return;
+			// Locked workspace: layout is canonical by design; nothing to persist.
+			if ($workspaceLocked) return;
 			const layout = api.toJSON() as Record<string, unknown>;
 			// Floating and popout groups are transient views. Persisting either can
 			// make a later restore treat a detached group as the trader's primary
@@ -55,13 +60,16 @@
 			// Build the vertical chart/activity split before adding side columns.
 			// Dockview otherwise nests the chart last and can collapse it to its
 			// minimum width when a stored layout is rebuilt.
-			if ($workspacePanels.bottom) api.addPanel({ id: 'activity', component: 'activity', title: 'Account activity', position: { referencePanel: chart, direction: 'below' }, initialHeight: 250, inactive: true });
-			if ($workspacePreset !== 'chart' && $workspacePanels.watchlist) api.addPanel({ id: 'watchlist', component: 'watchlist', title: 'Markets', position: { referencePanel: chart, direction: 'left' }, initialWidth: 280, minimumWidth: 200, inactive: true });
+			if ($workspacePanels.bottom) api.addPanel({ id: 'activity', component: 'activity', title: 'Account activity', position: { referencePanel: chart, direction: 'below' }, initialHeight: 250 });
+			if ($workspacePreset !== 'chart' && $workspacePanels.watchlist) api.addPanel({ id: 'watchlist', component: 'watchlist', title: 'Markets', position: { referencePanel: chart, direction: 'left' }, initialWidth: 280, minimumWidth: 200 });
+			// The Pit (chat) sits under Markets in the left column — a compact
+			// social rail that does not steal horizontal space from the book.
+			if ($workspacePreset !== 'chart' && $workspacePanels.chat) api.addPanel({ id: 'chat', component: 'chat', title: 'The Pit', position: { referencePanel: 'watchlist', direction: 'below' }, initialHeight: 220, minimumHeight: 140 });
 			const ticket = $workspacePreset !== 'chart' && $workspacePanels.ticket
-				? api.addPanel({ id: 'ticket', component: 'ticket', title: 'Order ticket', position: { referencePanel: chart, direction: 'right' }, initialWidth: 320, minimumWidth: 280, inactive: true })
+				? api.addPanel({ id: 'ticket', component: 'ticket', title: 'Order ticket', position: { referencePanel: chart, direction: 'right' }, initialWidth: 320, minimumWidth: 280 })
 				: undefined;
 			const marketData = $workspacePreset !== 'chart' && $workspacePanels.marketData
-				? api.addPanel({ id: 'market-data', component: 'market-data', title: 'Depth & tape', position: { referencePanel: ticket ?? chart, direction: ticket ? 'left' : 'right' }, initialWidth: 270, minimumWidth: 200, inactive: true })
+				? api.addPanel({ id: 'market-data', component: 'market-data', title: 'Depth & tape', position: { referencePanel: ticket ?? chart, direction: ticket ? 'left' : 'right' }, initialWidth: 270, minimumWidth: 200 })
 				: undefined;
 			// Dockview's insertion sequence preserves the newest edge panel but can
 			// compress its prior sibling. Set all three sibling sizes after its first
@@ -80,18 +88,26 @@
 			const chart = api.getPanel('chart') ?? api.addPanel({ id: 'chart', component: 'chart', title: 'Chart' });
 			const desired: Array<{ id: string; component: PanelName; title: string; visible: boolean; position: Record<string, unknown> }> = [
 				{ id: 'watchlist', component: 'watchlist', title: 'Markets', visible: $workspacePreset !== 'chart' && $workspacePanels.watchlist, position: { referencePanel: chart, direction: 'left' } },
+				{ id: 'chat', component: 'chat', title: 'The Pit', visible: $workspacePreset !== 'chart' && $workspacePanels.chat, position: { referencePanel: 'watchlist', direction: 'below' } },
 				{ id: 'market-data', component: 'market-data', title: 'Depth & tape', visible: $workspacePreset !== 'chart' && $workspacePanels.marketData, position: { referencePanel: chart, direction: 'right' } },
 				{ id: 'ticket', component: 'ticket', title: 'Order ticket', visible: $workspacePreset !== 'chart' && $workspacePanels.ticket, position: { referencePanel: api.getPanel('market-data') ?? chart, direction: 'right' } },
 				{ id: 'activity', component: 'activity', title: 'Account activity', visible: $workspacePanels.bottom, position: { referencePanel: chart, direction: 'below' } }
 			];
 			for (const panel of desired) {
 				const existing = api.getPanel(panel.id);
-				if (panel.visible && !existing) api.addPanel({ id: panel.id, component: panel.component, title: panel.title, position: panel.position, inactive: true });
+				if (panel.visible && !existing) api.addPanel({ id: panel.id, component: panel.component, title: panel.title, position: panel.position });
 				if (!panel.visible && existing) api.removePanel(existing);
 			}
 		};
 
 		const restore = () => {
+			// Locked workspace: always the canonical default layout; never restore
+			// a user's drifted arrangement.
+			if ($workspaceLocked) {
+				createDefaultLayout();
+				applyLock();
+				return;
+			}
 			const saved = loadWorkspaceLayout($workspacePreset);
 			if (saved) {
 				try { api.fromJSON(saved.layout as Parameters<DockviewApi['fromJSON']>[0]); synchronizePanelVisibility(); return; }
@@ -100,10 +116,18 @@
 			createDefaultLayout();
 		};
 
+		const applyLock = () => {
+			if (!api) return;
+			for (const group of api.groups) {
+				group.api.locked = $workspaceLocked ? true : false;
+			}
+		};
+
 		const resetWorkspace = () => {
 			if (!api) return;
 			removeWorkspaceLayout($workspacePreset);
 			createDefaultLayout();
+			applyLock();
 			persist();
 		};
 
@@ -120,11 +144,13 @@
 				floatingGroupDragHandle: 'titlebar',
 				popoutUrl: '/popout.html',
 				keyboardNavigation: true,
-				getTabContextMenuItems: ({ panel, api: dockApi }) => [
-					{
-						label: 'Float panel',
-						action: () => dockApi.addFloatingGroup(panel)
-					},
+				getTabContextMenuItems: ({ panel, api: dockApi }) => {
+					if ($workspaceLocked) return [];
+					return [
+						{
+							label: 'Float panel',
+							action: () => dockApi.addFloatingGroup(panel)
+						},
 					{
 						label: 'Pop out panel',
 						action: () => void dockApi.addPopoutGroup(panel, { popoutUrl: '/popout.html' })
@@ -164,7 +190,8 @@
 							});
 						}
 					}))
-				],
+					];
+					},
 				createComponent: (options: { name: string }) => {
 					const component = componentFor[options.name as PanelName];
 					if (!component) throw new Error(`Unknown Vice workspace panel: ${options.name}`);
@@ -181,6 +208,7 @@
 				}
 			});
 			restore();
+			applyLock();
 			const listener = api.onDidLayoutChange(() => persist());
 			layoutSubscription = () => listener.dispose();
 			panelSubscription = workspacePanels.subscribe(() => {
@@ -188,6 +216,17 @@
 			});
 			presetSubscription = workspacePreset.subscribe(() => {
 				if (api && subscriptionsReady) restore();
+			});
+			lockSubscription = workspaceLocked.subscribe((locked) => {
+				if (!api || !subscriptionsReady) return;
+				if (locked) {
+					// Reverting to the canonical default; discard any drifted layout.
+					createDefaultLayout();
+				} else {
+					// Unlock: restore any previously saved arrangement.
+					restore();
+				}
+				applyLock();
 			});
 			window.addEventListener('vice:workspace-layout-reset', resetWorkspace);
 			subscriptionsReady = true;
@@ -199,6 +238,7 @@
 			layoutSubscription?.();
 			panelSubscription?.();
 			presetSubscription?.();
+			lockSubscription?.();
 			window.removeEventListener('vice:workspace-layout-reset', resetWorkspace);
 			stopRuntimeHealthTelemetry();
 			api?.dispose();

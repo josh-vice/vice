@@ -6,7 +6,7 @@ describe('secure trading initialization failure boundary', () => {
 		const start = source.indexOf('export async function enableTrading');
 		const end = source.indexOf('\nexport function disconnectWallet', start);
 		const block = source.slice(start, end);
-		expect(block).toContain('localExecution.initialize(provider, address, options);');
+		expect(block).toContain('localExecution.initialize(provider, address, options, report);');
 		expect(block).toContain('assertFreshExecutionState(get(isConnected), get(accountSyncStatus), get(marketDataStatus));');
 		expect(block).toContain('localExecution.lock();');
 		expect(block).toContain("executionStatus.set('error');");

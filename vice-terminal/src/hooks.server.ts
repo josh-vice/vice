@@ -1,7 +1,11 @@
-import type { Handle } from '@sveltejs/kit';
+import { json, redirect, type Handle } from '@sveltejs/kit';
+import { betaGateEnabled, betaIdentity, betaLoginRedirect, safeReturnTarget } from '$lib/server/betaAuth';
 
-export const handle: Handle = async ({ event, resolve }) => {
-	const response = await resolve(event);
+function isStaticAsset(pathname: string): boolean {
+	return pathname.startsWith('/_app/') || /\.[a-z0-9]+$/i.test(pathname);
+}
+
+function withSecurityHeaders(response: Response, pathname: string, protocol: string): Response {
 	response.headers.set('Cross-Origin-Opener-Policy', 'same-origin');
 	response.headers.set('Cross-Origin-Embedder-Policy', 'credentialless');
 	response.headers.set('Origin-Agent-Cluster', '?1');
@@ -11,12 +15,39 @@ export const handle: Handle = async ({ event, resolve }) => {
 	response.headers.set('Cross-Origin-Resource-Policy', 'same-origin');
 	response.headers.set('X-Permitted-Cross-Domain-Policies', 'none');
 	response.headers.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), payment=()');
-	if (event.url.pathname.startsWith('/api/')) response.headers.set('Cache-Control', 'no-store');
-	if (event.url.protocol === 'https:') response.headers.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+	if (pathname.startsWith('/api/')) response.headers.set('Cache-Control', 'no-store');
+	if (protocol === 'https:') response.headers.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+	if (pathname.startsWith('/wasm/')) response.headers.set('Cache-Control', 'public, max-age=31536000, immutable');
+	return response;
+}
 
-	if (event.url.pathname.startsWith('/wasm/')) {
-		response.headers.set('Cache-Control', 'public, max-age=31536000, immutable');
+export const handle: Handle = async ({ event, resolve }) => {
+	const pathname = event.url.pathname;
+	const gateEnabled = betaGateEnabled();
+	const isLogin = pathname === '/login';
+	const isLoginApi = pathname === '/api/beta/login';
+	const isPublicAsset = isStaticAsset(pathname);
+	const identity = betaIdentity(event.cookies);
+
+	if (!gateEnabled) {
+		if (isLogin) throw redirect(303, '/');
+		return withSecurityHeaders(await resolve(event), pathname, event.url.protocol);
 	}
 
-	return response;
+	if (isLoginApi || isPublicAsset) {
+		return withSecurityHeaders(await resolve(event), pathname, event.url.protocol);
+	}
+
+	if (isLogin) {
+		if (identity) throw redirect(303, safeReturnTarget(event.url));
+		return withSecurityHeaders(await resolve(event), pathname, event.url.protocol);
+	}
+
+	if (identity) return withSecurityHeaders(await resolve(event), pathname, event.url.protocol);
+
+	if (pathname.startsWith('/api/')) {
+		return withSecurityHeaders(json({ ok: false, error: 'beta_auth_required' }, { status: 401 }), pathname, event.url.protocol);
+	}
+
+	throw redirect(303, betaLoginRedirect(event.url));
 };

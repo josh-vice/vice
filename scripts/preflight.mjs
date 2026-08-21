@@ -4,6 +4,7 @@ import { readMainnetEvidence } from './mainnet-evidence.mjs';
 import { runLatencyGate } from './latency-gate.mjs';
 import { validateGatewayExposure } from './gateway-policy.mjs';
 import { assertMainnetPromotable, runtimeFromEnv } from './mainnet-guardrails.mjs';
+import { runDependencyAudit } from './dependency-audit.mjs';
 
 const root = resolve(import.meta.dir, '..');
 const forbidden = ['HL_PRIVATE_KEY', 'HL_WALLET_ADDRESS'];
@@ -61,4 +62,37 @@ if (network === 'mainnet') {
 const cspConfig = await Bun.file(resolve(root, 'vice-terminal/svelte.config.js')).text();
 if (!cspConfig.includes("mode: 'nonce'")) throw new Error('CSP must use per-response nonces for the SSR trading surface');
 if (cspConfig.includes("'style-src': ['self', 'unsafe-inline']")) throw new Error('CSP style-src must not allow unsafe-inline');
-console.log(`✓ custody boundary scan\n✓ Hyperliquid ${network} release policy\n✓ gateway exposure policy\n✓ nonce-based CSP policy`);
+
+// Promo signer isolation: the normal vite dev/preview/build config must never
+// proxy a signing shim, and release scripts must never load the promo config.
+// The promo shim proxy lives ONLY in the explicit test-only
+// vite.config.promo.ts (loaded via --config vite.config.promo.ts, never by
+// dev/preview/build/release CI).
+const viteConfig = await Bun.file(resolve(root, 'vice-terminal/vite.config.ts')).text();
+for (const token of ['/shim', '18990', 'promo-sign-shim']) {
+	if (viteConfig.includes(token)) violations.push(`vice-terminal/vite.config.ts: promo signing shim must not be proxied by the normal config (${token})`);
+}
+const promoConfig = await Bun.file(resolve(root, 'vice-terminal/vite.config.promo.ts')).text();
+if (!promoConfig.includes("'/shim'")) violations.push('vice-terminal/vite.config.promo.ts: expected the isolated promo shim proxy');
+const rootPackage = JSON.parse(await Bun.file(resolve(root, 'package.json')).text());
+for (const [name, command] of Object.entries(rootPackage.scripts ?? {})) {
+	if ((name === 'dev' || name === 'dev:frontend' || name === 'build' || name === 'build:terminal' || name === 'check' || name.startsWith('test')) &&
+		command.includes('vite.config.promo')) {
+		violations.push(`package.json script ${name}: promo config must never be reachable from dev/build/check/test paths`);
+	}
+}
+if (violations.length) throw new Error(`Promo signer isolation violations:\n${violations.join('\n')}`);
+
+// Dependency integrity gate: fail release on unapproved advisories (no blanket
+// allowlist; only documented, time-bounded exceptions in
+// scripts/dependency-audit.exceptions.json) and verify the lockfile is in sync.
+const audit = await runDependencyAudit({
+	root,
+	exceptionsPath: resolve(root, process.env.VICE_AUDIT_EXCEPTIONS ?? 'scripts/dependency-audit.exceptions.json')
+});
+if (!audit.ok) {
+	const lines = [...audit.violations, ...audit.exceptionsErrors];
+	throw new Error(`Dependency integrity gate failed:\n${lines.join('\n')}`);
+}
+
+console.log(`✓ custody boundary scan\n✓ Hyperliquid ${network} release policy\n✓ gateway exposure policy\n✓ nonce-based CSP policy\n✓ promo signer isolation\n✓ dependency audit (${audit.advisories.length} advisories, ${audit.exempted.length} exempted)\n✓ lockfile in sync`);

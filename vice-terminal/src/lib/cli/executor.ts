@@ -15,7 +15,6 @@ import {
 } from '$lib/stores';
 import type { CLICommand } from '$lib/types';
 import { placeOrder, startAlgoOrder, cancelOrder, fetchOpenOrders, fetchPositions } from '$lib/hl/orders';
-import { refreshAccountSnapshot } from '$lib/hl/account';
 import { isAdvancedOrderCertified, unavailableOrderTypeMessage } from '$lib/execution/capabilities';
 import { deleteCliPreference, expandCliInput, loadCliPreferences, setCliPreference } from './preferences';
 
@@ -53,6 +52,11 @@ async function ensureAccount(): Promise<string | null> {
 		return null;
 	}
 	return addr;
+}
+
+async function refreshCliAccountSnapshot(address: string): Promise<void> {
+	const { refreshAccountSnapshot } = await import('$lib/hl/account');
+	await refreshAccountSnapshot(address);
 }
 
 async function handleBuySell(input: string, side: 'buy' | 'sell'): Promise<CLICommand> {
@@ -417,7 +421,7 @@ async function handlePositions(input: string): Promise<CLICommand> {
 	if (addr) {
 		await fetchPositions();
 		try {
-			await refreshAccountSnapshot(addr);
+			await refreshCliAccountSnapshot(addr);
 		} catch {
 			/* ignore */
 		}
@@ -437,7 +441,7 @@ async function handleBalance(input: string): Promise<CLICommand> {
 	const addr = await ensureAccount();
 	if (addr) {
 		try {
-			await refreshAccountSnapshot(addr);
+			await refreshCliAccountSnapshot(addr);
 		} catch {
 			/* ignore */
 		}

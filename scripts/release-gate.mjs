@@ -6,12 +6,16 @@ const commands = [
 	['check'],
 	['test:bundle'],
 	['test:smoke-policy'],
+	['test:launcher'],
 	['test:stories'],
 	['test:widgets'],
 	['test:competitive'],
 	['test:release-evidence'],
 	['test:gate3:evidence'],
 	['test:release-approval'],
+	['test:release-manifest'],
+	['test:workflow-boundary'],
+	['test:pwa'],
 	['test:mainnet-guardrails'],
 	['test:preflight-policy'],
 	['test:gateway-policy'],
@@ -22,6 +26,9 @@ const commands = [
 	['test:mobile'],
 	['test:load'],
 	['test:latency:boundary'],
+	['test:audit'],
+	['test:advanced-evidence'],
+	['test:e2e:static'],
 	['test:security']
 ];
 

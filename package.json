@@ -30,10 +30,15 @@
     "test:launcher": "bun test scripts/dev-launcher.test.mjs",
     "test:smoke-policy": "bun test scripts/smoke-policy.test.mjs",
     "test:release-evidence": "bun test scripts/mainnet-evidence.test.mjs",
+    "test:pwa": "bun test vice-terminal/src/lib/pwa.test.js vice-terminal/scripts/pwa-prod.test.mjs && cd vice-terminal && bun test scripts/pwa-artifact.test.mjs",
     "test:release-approval": "bun test scripts/release-approval.test.mjs",
+    "test:release-manifest": "bun test scripts/release-manifest.test.mjs",
+    "test:workflow-boundary": "bun test scripts/workflow-boundary.test.mjs && actionlint",
     "test:mainnet-guardrails": "bun test scripts/mainnet-guardrails.test.mjs",
     "test:funded-evidence": "bun scripts/validate-funded-evidence.mjs",
+    "test:advanced-evidence": "bun test scripts/advanced-order-evidence.test.mjs",
     "test:gate3:evidence": "bun scripts/validate-gate3-four-phase-evidence.mjs",
+    "test:audit": "bun test scripts/dependency-audit.test.mjs && bun scripts/dependency-audit.mjs",
     "capture:funded:testnet": "bun scripts/capture-funded-testnet-evidence.mjs --phase=place && bun scripts/capture-funded-testnet-evidence.mjs --phase=partial && bun scripts/capture-funded-testnet-evidence.mjs --phase=trigger && bun scripts/capture-funded-testnet-evidence.mjs --phase=revoke && bun scripts/capture-funded-testnet-evidence.mjs --phase=final",
     "test:preflight-policy": "bun test scripts/preflight-policy.test.mjs",
     "test:gateway-policy": "bun test scripts/gateway-policy.test.mjs",
@@ -41,6 +46,9 @@
 	"test:widgets": "bun test scripts/widget-catalog.test.mjs scripts/hub-route.test.mjs scripts/hub-persistence.test.mjs vice-terminal/src/lib/suite/widgets.test.js vice-terminal/src/lib/marketMovers.test.js vice-terminal/src/lib/nativeNotes.test.js vice-terminal/src/lib/sessionClocks.test.js vice-terminal/src/lib/candleCountdown.test.js vice-terminal/src/lib/components/chartReadOnlySurface.test.js vice-terminal/src/lib/components/nativeWatchlistPortSurface.test.js vice-terminal/src/lib/components/nativeMarketMoversPortSurface.test.js vice-terminal/src/lib/components/nativeSuiteLinksPortSurface.test.js vice-terminal/src/lib/components/nativeNotesPortSurface.test.js vice-terminal/src/lib/components/nativeSessionClocksPortSurface.test.js vice-terminal/src/lib/components/nativeCandleCountdownPortSurface.test.js vice-terminal/src/lib/components/nativePriceChartPortSurface.test.js && bun scripts/widget-catalog.mjs",
     "test:competitive": "bun test scripts/competitive-matrix.test.mjs && bun scripts/competitive-matrix.mjs",
     "test:browser": "bun test scripts/browser-surface.test.mjs && bun scripts/browser-surface.mjs",
+    "test:e2e": "bun test scripts/e2e-gate.test.mjs && bun scripts/e2e-gate.mjs",
+    "test:e2e:static": "bun test scripts/e2e-gate.test.mjs",
+    "test:e2e:funded": "bun test scripts/e2e-gate.test.mjs && VICE_E2E_FUNDED=1 bun scripts/e2e-gate.mjs --funded",
     "test:live-feed": "bun scripts/live-feed-smoke.mjs",
     "test:blofin:public": "bun scripts/blofin-public-ws-smoke.mjs",
     "smoke": "bun scripts/smoke.mjs",
@@ -50,5 +58,10 @@
   },
   "dependencies": {
     "@vercel/analytics": "^2.0.1"
+  },
+  "overrides": {
+    "cookie": "^0.7.0",
+    "valibot": "^1.4.2",
+    "nanoid": "^3.3.17"
   }
 }

@@ -19,13 +19,19 @@
 	} from '$lib/stores';
 	import { setSoundMuted, soundMuted } from '$lib/soundNotifications';
 	import { privacyMode, setPrivacyMode } from '$lib/privacyMode';
-	import { requestWorkspaceLayoutReset, setWorkspacePanel, setWorkspacePreset, workspacePanels, workspacePreset, type WorkspacePanel, type WorkspacePreset } from '$lib/workspacePreset';
+	import { requestWorkspaceLayoutReset, setWorkspaceLocked, setWorkspacePanel, setWorkspacePreset, workspaceLocked, workspacePanels, workspacePreset, type WorkspacePanel, type WorkspacePreset } from '$lib/workspacePreset';
 	import { DEFAULT_HOTKEYS, hotkeyFromEvent, loadHotkeys, setHotkeyBinding, type HotkeyAction, type HotkeyBindings } from '$lib/hotkeys';
 	import { canPresentAccountState, healthLabel } from '$lib/productionTruth';
-	import { Terminal, Wallet, LogOut, Download, Volume2, VolumeX, Eye, EyeOff } from 'lucide-svelte';
+	import { Terminal, Wallet, LogOut, Download, Volume2, VolumeX, Eye, EyeOff, Lock, Unlock, LifeBuoy } from 'lucide-svelte';
 	import { hyperliquidNetwork } from '$lib/hl/network';
 	import { tradingKillSwitchActive } from '$lib/execution/releaseSafety';
 	import { downloadLatencyEvidence } from '$lib/execution/latencyEvidence';
+	import ReportIssue from './ReportIssue.svelte';
+	import { onMount } from 'svelte';
+	import { installDiagnostics } from '$lib/diagnostics/wire';
+
+	let reportIssueOpen = $state(false);
+	onMount(() => installDiagnostics());
 
 	function formatAddress(address: string | null): string {
 		return address ? `${address.slice(0, 6)}...${address.slice(-4)}` : '';
@@ -40,10 +46,10 @@
 		return 'bg-terminal-text-muted';
 	}
 
-	let panelMenuOpen = false;
-	let hotkeyMenuOpen = false;
-	let hotkeyMessage = '';
-	let bindings: HotkeyBindings = DEFAULT_HOTKEYS;
+	let panelMenuOpen = $state(false);
+	let hotkeyMenuOpen = $state(false);
+	let hotkeyMessage = $state('');
+	let bindings = $state<HotkeyBindings>(DEFAULT_HOTKEYS);
 	const panels: Array<{ id: WorkspacePanel; label: string }> = [
 		{ id: 'watchlist', label: 'Watchlist' }, { id: 'marketData', label: 'Book & tape' },
 		{ id: 'ticket', label: 'Order ticket' }, { id: 'bottom', label: 'Account panel' }
@@ -101,17 +107,27 @@
 		{/if}
 		<button
 			class="hidden xl:flex items-center rounded border border-terminal-border bg-terminal-bg-secondary px-1 py-0.5 text-3xs text-terminal-text-secondary"
+			title="Lock the default layout (disable drag/customize). Unlock to rearrange."
+			onclick={() => setWorkspaceLocked(!$workspaceLocked)}
+			aria-label={$workspaceLocked ? 'Unlock workspace layout' : 'Lock workspace layout'}
+		>
+			{#if $workspaceLocked}<Lock class="w-3.5 h-3.5 text-terminal-cyan" />{:else}<Unlock class="w-3.5 h-3.5 text-terminal-yellow" />{/if}
+			<span class="px-1 text-terminal-text-muted">{ $workspaceLocked ? 'LOCKED' : 'UNLOCKED' }</span>
+		</button>
+		<button
+			class="hidden xl:flex items-center rounded border border-terminal-border bg-terminal-bg-secondary px-1 py-0.5 text-3xs text-terminal-text-secondary"
 			title="Saved workspace layout"
+			disabled={$workspaceLocked}
 		>
 			<span class="px-1 text-terminal-text-muted">VIEW</span>
-			<select aria-label="Workspace preset" bind:value={$workspacePreset} onchange={(event) => setWorkspacePreset(event.currentTarget.value as WorkspacePreset)} class="bg-transparent outline-none text-terminal-text">
+			<select aria-label="Workspace preset" bind:value={$workspacePreset} onchange={(event) => setWorkspacePreset(event.currentTarget.value as WorkspacePreset)} class="bg-transparent outline-none text-terminal-text" disabled={$workspaceLocked}>
 				<option value="default">Default</option>
 				<option value="chart">Chart max</option>
 				<option value="data">Data dense</option>
 			</select>
 		</button>
 		<div class="hidden xl:block relative">
-			<button class="rounded border border-terminal-border bg-terminal-bg-secondary px-2 py-1 text-3xs text-terminal-text-secondary hover:text-terminal-text" onclick={() => panelMenuOpen = !panelMenuOpen} aria-expanded={panelMenuOpen}>PANELS</button>
+			<button class="rounded border border-terminal-border bg-terminal-bg-secondary px-2 py-1 text-3xs text-terminal-text-secondary hover:text-terminal-text disabled:opacity-40" onclick={() => panelMenuOpen = !panelMenuOpen} aria-expanded={panelMenuOpen} disabled={$workspaceLocked}>PANELS</button>
 			{#if panelMenuOpen}
 				<div class="absolute right-0 top-full z-50 mt-1 w-32 rounded border border-terminal-border bg-terminal-bg-panel p-1 shadow-xl">
 					{#each panels as panel}
@@ -160,6 +176,13 @@
 			title="Download measured client latency evidence"
 			aria-label="Download measured client latency evidence"
 		><Download class="w-4 h-4" /></button>
+		<button
+			class="hidden lg:flex p-1.5 rounded text-terminal-text-secondary hover:text-terminal-text hover:bg-terminal-bg-hover"
+			onclick={() => (reportIssueOpen = true)}
+			title="Report an issue — download a privacy-safe support bundle"
+			aria-label="Report an issue"
+			data-testid="report-issue-open"
+		><LifeBuoy class="w-4 h-4" /></button>
 
 		<div class="hidden md:flex items-center gap-2 px-1 text-3xs text-terminal-text-muted">
 			<div data-testid="market-data-health" data-feed-status={$marketDataStatus} class="flex items-center gap-1" title="Hyperliquid market data">
@@ -206,5 +229,9 @@
 				<span class="hidden sm:inline">{$walletStatus === 'connecting' ? 'Connecting…' : 'Connect'}</span>
 			</button>
 		{/if}
-	</div>
-</nav>
+		</div>
+		</nav>
+
+		{#if reportIssueOpen}
+		<ReportIssue onClose={() => (reportIssueOpen = false)} />
+		{/if}

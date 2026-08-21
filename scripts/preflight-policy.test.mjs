@@ -20,4 +20,11 @@ describe('mainnet promotion policy wiring', () => {
 		expect(source).toContain("import { assertMainnetPromotable, runtimeFromEnv } from './mainnet-guardrails.mjs'");
 		expect(source).toContain('await assertMainnetPromotable(runtimeFromEnv(process.env))');
 	});
+
+	test('wires the dependency audit gate into preflight (test:security)', () => {
+		expect(source).toContain("import { runDependencyAudit } from './dependency-audit.mjs'");
+		expect(source).toContain("await runDependencyAudit({");
+		expect(source).toContain('Dependency integrity gate failed');
+		expect(source).toContain('VICE_AUDIT_EXCEPTIONS');
+	});
 });

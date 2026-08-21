@@ -1,0 +1,254 @@
+{
+	"artifactProvenance": {
+		"status": "reconstructed-negative-fixture",
+		"reconstructedAt": "2026-08-11",
+		"source": "durable Gate 1 task logs and documented invalid lifecycle structure",
+		"originalBytesRecovered": false,
+		"releaseEvidence": false,
+		"note": "This is not the original runtime artifact. It exists only to prove the hardened validator rejects the historically documented nested-failure class."
+	},
+	"schemaVersion": 1,
+	"network": "testnet",
+	"transport": "hermes-sidecar /api/algo + /api/execute",
+	"pilot": { "allowlisted": true, "lowNotional": true, "deadmanDisabled": "venue entitlement" },
+	"executionModes": { "market": ["twap"], "limit": ["twap"] },
+	"capturedAt": "2026-08-06T00:00:00.000Z",
+	"address": "0x0000000000000000000000000000000000000000",
+	"phases": [
+		{
+			"phase": "bracket",
+			"ok": true,
+			"events": [
+				{ "action": "sidecar-start", "ok": true },
+				{ "action": "start", "ok": true },
+				{ "action": "pause", "ok": false, "detail": { "ok": false, "error": "Unregistered market identity" } },
+				{ "action": "resume", "ok": false, "detail": { "ok": false, "error": "Unregistered market identity" } },
+				{ "action": "cancel", "ok": false, "detail": { "ok": false, "error": "Unregistered market identity" } },
+				{ "action": "clean", "ok": true, "openOrders": 0, "positions": 0 }
+			],
+			"venueOrderIds": ["s1", "s2"],
+			"fillsObserved": 2,
+			"durationMs": 12000
+		},
+		{
+			"phase": "twap",
+			"ok": true,
+			"events": [
+				{ "action": "sidecar-start", "ok": true },
+				{ "action": "start", "ok": true },
+				{ "action": "pause", "ok": false, "detail": { "ok": false, "error": "Unregistered market identity" } },
+				{ "action": "resume", "ok": false, "detail": { "ok": false, "error": "Unregistered market identity" } },
+				{ "action": "cancel", "ok": false, "detail": { "ok": false, "error": "Unregistered market identity" } },
+				{ "action": "clean", "ok": true, "openOrders": 0, "positions": 0 }
+			],
+			"venueOrderIds": ["s3"],
+			"fillsObserved": 3,
+			"durationMs": 11000
+		},
+		{
+			"phase": "adaptive_twap",
+			"ok": true,
+			"events": [
+				{ "action": "sidecar-start", "ok": true },
+				{ "action": "start", "ok": true },
+				{ "action": "pause", "ok": false, "detail": { "ok": false, "error": "Unregistered market identity" } },
+				{ "action": "resume", "ok": false, "detail": { "ok": false, "error": "Unregistered market identity" } },
+				{ "action": "cancel", "ok": false, "detail": { "ok": false, "error": "Unregistered market identity" } },
+				{ "action": "clean", "ok": true, "openOrders": 0, "positions": 0 }
+			],
+			"venueOrderIds": ["s4", "s5"],
+			"fillsObserved": 2,
+			"durationMs": 13000
+		},
+		{
+			"phase": "vwap",
+			"ok": true,
+			"events": [
+				{ "action": "sidecar-start", "ok": true },
+				{ "action": "start", "ok": true },
+				{ "action": "pause", "ok": false, "detail": { "ok": false, "error": "Unregistered market identity" } },
+				{ "action": "resume", "ok": false, "detail": { "ok": false, "error": "Unregistered market identity" } },
+				{ "action": "cancel", "ok": false, "detail": { "ok": false, "error": "Unregistered market identity" } },
+				{ "action": "clean", "ok": true, "openOrders": 0, "positions": 0 }
+			],
+			"venueOrderIds": ["s6"],
+			"fillsObserved": 3,
+			"durationMs": 14000
+		},
+		{
+			"phase": "pov",
+			"ok": true,
+			"events": [
+				{ "action": "sidecar-start", "ok": true },
+				{ "action": "start", "ok": true },
+				{ "action": "pause", "ok": false, "detail": { "ok": false, "error": "Unregistered market identity" } },
+				{ "action": "resume", "ok": false, "detail": { "ok": false, "error": "Unregistered market identity" } },
+				{ "action": "cancel", "ok": false, "detail": { "ok": false, "error": "Unregistered market identity" } },
+				{ "action": "clean", "ok": true, "openOrders": 0, "positions": 0 }
+			],
+			"venueOrderIds": ["s7", "s8"],
+			"fillsObserved": 3,
+			"durationMs": 15000
+		},
+		{
+			"phase": "scale",
+			"ok": true,
+			"events": [
+				{ "action": "sidecar-start", "ok": true },
+				{ "action": "start", "ok": true },
+				{ "action": "pause", "ok": false, "detail": { "ok": false, "error": "Unregistered market identity" } },
+				{ "action": "resume", "ok": false, "detail": { "ok": false, "error": "Unregistered market identity" } },
+				{ "action": "cancel", "ok": false, "detail": { "ok": false, "error": "Unregistered market identity" } },
+				{ "action": "clean", "ok": true, "openOrders": 0, "positions": 0 }
+			],
+			"venueOrderIds": ["s9"],
+			"fillsObserved": 2,
+			"durationMs": 12000
+		},
+		{
+			"phase": "chase",
+			"ok": true,
+			"events": [
+				{ "action": "sidecar-start", "ok": true },
+				{ "action": "start", "ok": true },
+				{ "action": "pause", "ok": false, "detail": { "ok": false, "error": "Unregistered market identity" } },
+				{ "action": "resume", "ok": false, "detail": { "ok": false, "error": "Unregistered market identity" } },
+				{ "action": "cancel", "ok": false, "detail": { "ok": false, "error": "Unregistered market identity" } },
+				{ "action": "clean", "ok": true, "openOrders": 0, "positions": 0 }
+			],
+			"venueOrderIds": ["s10", "s11"],
+			"fillsObserved": 2,
+			"durationMs": 11000
+		},
+		{
+			"phase": "swarm",
+			"ok": true,
+			"events": [
+				{ "action": "sidecar-start", "ok": true },
+				{ "action": "start", "ok": true },
+				{ "action": "pause", "ok": false, "detail": { "ok": false, "error": "Unregistered market identity" } },
+				{ "action": "resume", "ok": false, "detail": { "ok": false, "error": "Unregistered market identity" } },
+				{ "action": "cancel", "ok": false, "detail": { "ok": false, "error": "Unregistered market identity" } },
+				{ "action": "clean", "ok": true, "openOrders": 0, "positions": 0 }
+			],
+			"venueOrderIds": ["s12"],
+			"fillsObserved": 3,
+			"durationMs": 13000
+		},
+		{
+			"phase": "iceberg",
+			"ok": true,
+			"events": [
+				{ "action": "sidecar-start", "ok": true },
+				{ "action": "start", "ok": true },
+				{ "action": "pause", "ok": false, "detail": { "ok": false, "error": "Unregistered market identity" } },
+				{ "action": "resume", "ok": false, "detail": { "ok": false, "error": "Unregistered market identity" } },
+				{ "action": "cancel", "ok": false, "detail": { "ok": false, "error": "Unregistered market identity" } },
+				{ "action": "clean", "ok": true, "openOrders": 0, "positions": 0 }
+			],
+			"venueOrderIds": ["s13", "s14"],
+			"fillsObserved": 3,
+			"durationMs": 14000
+		},
+		{
+			"phase": "oco",
+			"ok": true,
+			"events": [
+				{ "action": "sidecar-start", "ok": true },
+				{ "action": "start", "ok": true },
+				{ "action": "pause", "ok": false, "detail": { "ok": false, "error": "Unregistered market identity" } },
+				{ "action": "resume", "ok": false, "detail": { "ok": false, "error": "Unregistered market identity" } },
+				{ "action": "cancel", "ok": false, "detail": { "ok": false, "error": "Unregistered market identity" } },
+				{ "action": "clean", "ok": true, "openOrders": 0, "positions": 0 }
+			],
+			"venueOrderIds": ["s15"],
+			"fillsObserved": 2,
+			"durationMs": 12000
+		},
+		{
+			"phase": "ping_pong",
+			"ok": true,
+			"events": [
+				{ "action": "sidecar-start", "ok": true },
+				{ "action": "start", "ok": true },
+				{ "action": "pause", "ok": false, "detail": { "ok": false, "error": "Unregistered market identity" } },
+				{ "action": "resume", "ok": false, "detail": { "ok": false, "error": "Unregistered market identity" } },
+				{ "action": "cancel", "ok": false, "detail": { "ok": false, "error": "Unregistered market identity" } },
+				{ "action": "clean", "ok": true, "openOrders": 0, "positions": 0 }
+			],
+			"venueOrderIds": ["s16", "s17"],
+			"fillsObserved": 2,
+			"durationMs": 11000
+		},
+		{
+			"phase": "trailing_stop",
+			"ok": true,
+			"events": [
+				{ "action": "sidecar-start", "ok": true },
+				{ "action": "start", "ok": true },
+				{ "action": "pause", "ok": false, "detail": { "ok": false, "error": "Unregistered market identity" } },
+				{ "action": "resume", "ok": false, "detail": { "ok": false, "error": "Unregistered market identity" } },
+				{ "action": "cancel", "ok": false, "detail": { "ok": false, "error": "Unregistered market identity" } },
+				{ "action": "clean", "ok": true, "openOrders": 0, "positions": 0 }
+			],
+			"venueOrderIds": ["s18"],
+			"fillsObserved": 3,
+			"durationMs": 13000
+		},
+		{
+			"phase": "break_even",
+			"ok": true,
+			"events": [
+				{ "action": "sidecar-start", "ok": true },
+				{ "action": "start", "ok": true },
+				{ "action": "pause", "ok": false, "detail": { "ok": false, "error": "Unregistered market identity" } },
+				{ "action": "resume", "ok": false, "detail": { "ok": false, "error": "Unregistered market identity" } },
+				{ "action": "cancel", "ok": false, "detail": { "ok": false, "error": "Unregistered market identity" } },
+				{ "action": "clean", "ok": true, "openOrders": 0, "positions": 0 }
+			],
+			"venueOrderIds": ["s19", "s20"],
+			"fillsObserved": 2,
+			"durationMs": 12000
+		},
+		{
+			"phase": "maker",
+			"ok": true,
+			"events": [
+				{ "action": "sidecar-start", "ok": true },
+				{ "action": "start", "ok": true },
+				{ "action": "pause", "ok": false, "detail": { "ok": false, "error": "Unregistered market identity" } },
+				{ "action": "resume", "ok": false, "detail": { "ok": false, "error": "Unregistered market identity" } },
+				{ "action": "cancel", "ok": false, "detail": { "ok": false, "error": "Unregistered market identity" } },
+				{ "action": "clean", "ok": true, "openOrders": 0, "positions": 0 }
+			],
+			"venueOrderIds": ["s21"],
+			"fillsObserved": 3,
+			"durationMs": 15000
+		},
+		{
+			"phase": "conditional_ladder",
+			"ok": true,
+			"events": [
+				{ "action": "sidecar-start", "ok": true },
+				{ "action": "start", "ok": true },
+				{ "action": "pause", "ok": false, "detail": { "ok": false, "error": "Unregistered market identity" } },
+				{ "action": "resume", "ok": false, "detail": { "ok": false, "error": "Unregistered market identity" } },
+				{ "action": "cancel", "ok": false, "detail": { "ok": false, "error": "Unregistered market identity" } },
+				{ "action": "clean", "ok": true, "openOrders": 0, "positions": 0 }
+			],
+			"venueOrderIds": ["s22"],
+			"fillsObserved": 2,
+			"durationMs": 13000
+		}
+	],
+	"summary": {
+		"passed": ["bracket", "twap", "adaptive_twap", "vwap", "pov", "scale", "chase", "swarm", "iceberg", "oco", "ping_pong", "trailing_stop", "break_even", "maker", "conditional_ladder"],
+		"failed": [],
+		"passedCount": 15,
+		"failedCount": 0,
+		"totalFillsObserved": 37
+	},
+	"venueOrderIds": ["s1", "s2", "s3", "s4", "s5", "s6", "s7", "s8", "s9", "s10", "s11", "s12", "s13", "s14", "s15", "s16", "s17", "s18", "s19", "s20", "s21", "s22"],
+	"uncertainOutcomes": 0,
+	"duplicateOrders": 0
+}

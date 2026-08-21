@@ -1,16 +1,18 @@
 import { get, writable, type Writable } from 'svelte/store';
 
 export type WorkspacePreset = 'default' | 'chart' | 'data';
-export type WorkspacePanel = 'watchlist' | 'marketData' | 'ticket' | 'bottom';
+export type WorkspacePanel = 'watchlist' | 'marketData' | 'ticket' | 'bottom' | 'chat';
 export type WorkspacePanels = Record<WorkspacePanel, boolean>;
 
 const STORAGE_KEY = 'vice.workspace-preset.v1';
 const PANELS_STORAGE_KEY = 'vice.workspace-panels.v1';
+const LOCK_STORAGE_KEY = 'vice.workspace-lock.v1';
 const VALID = new Set<WorkspacePreset>(['default', 'chart', 'data']);
-const DEFAULT_PANELS: WorkspacePanels = { watchlist: true, marketData: true, ticket: true, bottom: true };
+const DEFAULT_PANELS: WorkspacePanels = { watchlist: true, marketData: true, ticket: true, bottom: true, chat: true };
 
 export const workspacePreset: Writable<WorkspacePreset> = writable('default');
 export const workspacePanels: Writable<WorkspacePanels> = writable(DEFAULT_PANELS);
+export const workspaceLocked: Writable<boolean> = writable(true);
 let loaded = false;
 
 export function loadWorkspacePreset(): WorkspacePreset {
@@ -27,9 +29,14 @@ export function loadWorkspacePreset(): WorkspacePreset {
 				watchlist: typeof panelValue.watchlist === 'boolean' ? panelValue.watchlist : true,
 				marketData: typeof panelValue.marketData === 'boolean' ? panelValue.marketData : true,
 				ticket: typeof panelValue.ticket === 'boolean' ? panelValue.ticket : true,
-				bottom: typeof panelValue.bottom === 'boolean' ? panelValue.bottom : true
+				bottom: typeof panelValue.bottom === 'boolean' ? panelValue.bottom : true,
+				chat: typeof panelValue.chat === 'boolean' ? panelValue.chat : true
 			});
 		}
+		// Locked by default; only a deliberate user toggle (or existing stored
+		// preference) unlocks the workspace for customization.
+		const storedLock = localStorage.getItem(LOCK_STORAGE_KEY);
+		workspaceLocked.set(storedLock === null ? true : storedLock !== 'false');
 		return preset;
 	} catch { return 'default'; }
 }
@@ -49,6 +56,12 @@ export function setWorkspacePreset(preset: WorkspacePreset): void {
 	loaded = true;
 	if (typeof localStorage === 'undefined') return;
 	try { localStorage.setItem(STORAGE_KEY, preset); } catch { /* local preference only */ }
+}
+
+export function setWorkspaceLocked(locked: boolean): void {
+	workspaceLocked.set(locked);
+	if (typeof localStorage === 'undefined') return;
+	try { localStorage.setItem(LOCK_STORAGE_KEY, locked ? 'true' : 'false'); } catch { /* local preference only */ }
 }
 
 /** Ask the client-only workspace host to rebuild the selected local layout. */

@@ -4,6 +4,11 @@ import { createWalletClient, custom, isAddress, type Address, type EIP1193Provid
 import { generatePrivateKey, privateKeyToAccount, type PrivateKeyAccount } from 'viem/accounts';
 import { BUILDER_APPROVAL_RATE, builderFeeIsApproved, configuredBuilder } from './revenueConfig';
 import { hyperliquidNetwork } from '$lib/hl/network';
+import {
+	ENABLEMENT_STEP_DETAIL,
+	noopEnablementReporter,
+	type EnablementReporter
+} from './enablement';
 
 const VERSION = 1;
 const AGENT_NAME = 'Vice Terminal';
@@ -144,7 +149,17 @@ export function assertConnectedAccount(accounts: string[], expected: string): vo
 }
 
 /** Re-read the provider immediately before a master-wallet mutation. */
-export async function assertProviderAccount(provider: EIP1193Provider, expected: string): Promise<void> {
+export async function assertProviderAccount(
+	provider: EIP1193Provider,
+	expected: string,
+	onPhase?: EnablementReporter
+): Promise<void> {
+	if (onPhase)
+		onPhase({
+			kind: 'step',
+			step: 'verifying-wallet',
+			detail: ENABLEMENT_STEP_DETAIL['verifying-wallet']
+		});
 	const accounts = (await provider.request({ method: 'eth_accounts' })) as string[];
 	assertConnectedAccount(accounts, expected);
 }
@@ -152,14 +167,26 @@ export async function assertProviderAccount(provider: EIP1193Provider, expected:
 export async function unlockOrCreateAgent(
 	provider: EIP1193Provider,
 	address: string,
-	options: { approveBuilder?: boolean } = {}
+	options: { approveBuilder?: boolean } = {},
+	onPhase?: EnablementReporter
 ): Promise<AgentSession> {
+	const report = onPhase ?? noopEnablementReporter;
 	if (!isAddress(address)) throw new Error('Connected wallet returned an invalid address');
 	if (!window.isSecureContext) throw new Error('Secure local agent storage requires HTTPS or localhost');
 
 	const mainAddress = address as Address;
-	await assertProviderAccount(provider, mainAddress);
+	await assertProviderAccount(provider, mainAddress, report);
+	report({
+		kind: 'step',
+		step: 'checking-authority',
+		detail: ENABLEMENT_STEP_DETAIL['checking-authority']
+	});
 	const signature = await requestUnlockSignature(provider, mainAddress);
+	report({
+		kind: 'step',
+		step: 'approval-submitted',
+		detail: ENABLEMENT_STEP_DETAIL['approval-submitted']
+	});
 	let record = readRecord(mainAddress);
 	let agent: PrivateKeyAccount;
 
