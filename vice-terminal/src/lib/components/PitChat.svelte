@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount, onDestroy, tick } from 'svelte';
 	import { selectedMarket, activeSubaccount, demoFixturesEnabled, positions, openOrders } from '$lib/stores';
-	import { ExternalLink, X, Minimize2, Hash, AlertTriangle, ChevronDown, Rss, Heart, Repeat2, MessageCircle, UserCheck, UserPlus, Settings2, ShieldAlert, Ban } from 'lucide-svelte';
+	import { ExternalLink, Hash, AlertTriangle, Rss, Heart, Repeat2, MessageCircle, UserCheck, UserPlus, Settings2, ShieldAlert, Ban } from 'lucide-svelte';
 	import type { TrollboxXAccount } from '$lib/trollboxFixtures';
 	import { ChatPolicy } from '$lib/chat/policy';
 	import { runChatCommand, isChatCommand, type ChatCommandResult } from '$lib/chat/commands';
