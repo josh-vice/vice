@@ -1,7 +1,7 @@
 import type { ISubscription } from '@nktkas/hyperliquid';
 import { get } from 'svelte/store';
 import type { MarketDescriptor } from '$lib/types';
-import { getSubscriptionClient, getTransport } from './client';
+import { getTradingSubscriptionClient, getTradingTransport } from './client';
 import {
 	activeSubaccount,
 	accountSyncStatus,
@@ -59,7 +59,7 @@ const snapshotCoordinator = createSnapshotCoordinator(async () => {
 
 function bindTransportHealth(): void {
 	if (transportHealthBound) return;
-	const socket = getTransport().socket;
+	const socket = getTradingTransport().socket;
 	transportHealthBound = true;
 	socket.addEventListener('close', () => {
 		if (!currentAddress) return;
@@ -114,7 +114,7 @@ export async function startAccountSubscriptions(address: string): Promise<void> 
 	} catch {
 		if (currentAddress === address) accountSyncStatus.set('stale');
 	}
-	const client = getSubscriptionClient();
+	const client = getTradingSubscriptionClient();
 	let ordersSub: ISubscription;
 	let fillsSub: ISubscription;
 	let twapsSub: ISubscription;
@@ -162,7 +162,8 @@ export async function startAccountSubscriptions(address: string): Promise<void> 
 /** Keep the selected market's account/asset stream aligned with the chart. */
 export async function setActiveAccountAsset(market?: Pick<MarketDescriptor, 'apiCoin' | 'kind'>): Promise<void> {
 	const generation = ++activeAssetGeneration;
-	activeAssetSyncStatus.set(market?.kind === 'spot' ? 'idle' : market ? 'connecting' : 'idle');
+	const isNonPerp = market?.kind === 'spot' || market?.kind === 'outcome';
+	activeAssetSyncStatus.set(isNonPerp ? 'idle' : market ? 'connecting' : 'idle');
 	try {
 		await activeAssetSubscription?.unsubscribe();
 	} catch {
@@ -170,11 +171,12 @@ export async function setActiveAccountAsset(market?: Pick<MarketDescriptor, 'api
 	}
 	activeAssetSubscription = null;
 	const address = currentAddress;
-	// Hyperliquid activeAssetData is a perp account/asset stream. Spot account
-	// state is covered by spotState and must never be routed through this API.
-	if (generation !== activeAssetGeneration || !address || !market || market.kind === 'spot') return;
+	// Hyperliquid activeAssetData is a perp account/asset stream. Spot and
+	// prediction metadata are covered by public/catalog state and must never be
+	// routed through this API.
+	if (generation !== activeAssetGeneration || !address || !market || isNonPerp) return;
 	try {
-		const subscription = await getSubscriptionClient().activeAssetData(
+		const subscription = await getTradingSubscriptionClient().activeAssetData(
 			{ user: address as `0x${string}`, coin: market.apiCoin },
 			() => {
 				if (generation === activeAssetGeneration && address === currentAddress) activeAssetSyncStatus.set('live');

@@ -18,6 +18,7 @@ export function marketMatchesWatchlistQuery(market: MarketDescriptor, rawQuery: 
 				? ['prediction', 'outcome', 'metadata']
 				: ['spot'];
 	return [
+		market.marketKey,
 		market.symbol,
 		market.name,
 		market.apiCoin,

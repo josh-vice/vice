@@ -1,9 +1,11 @@
 import { writable, derived, get, type Writable, type Readable } from 'svelte/store';
 import type { MarketDescriptor, OrderBook, Position, Order, Fill, Balance, OptionChain, Trade, Subaccount, CLICommand, MarketType, OrderSide, OrderType, OptionContract, ChartCandle, ChartInteractionMode, ChartDraft, ChartActiveField, RevenueSnapshot, OrderPreset, AdvancedOrderConfig } from './types';
+import { marketMatchesWatchlistQuery } from './marketWatchlist';
 import { emptyFatFingerLimits, type FatFingerLimits } from './execution/fatFinger';
 import { onTimeframeChanged, startHlFeeds, stopHlFeeds, stopHlFeedsForDexSwitch } from './hl';
 import { fixturesEnabled, type HealthStatus } from './productionTruth';
 import { hyperliquidNetwork } from './hl/network';
+import { marketCapabilities } from './marketCapabilities';
 import {
 	type EnablementReporter,
 	noopEnablementReporter,
@@ -27,6 +29,7 @@ export const dexMeta: Record<Dex, { label: string; abbr: string; color: string }
 export const marketRegistry: Writable<MarketDescriptor[]> = writable([]);
 export const perpMarketsList: Writable<MarketDescriptor[]> = writable([]);
 export const spotMarketsList: Writable<MarketDescriptor[]> = writable([]);
+export const outcomeMarketsList: Writable<MarketDescriptor[]> = writable([]);
 
 // Chart state. chartCandles holds only completed/committed history bars;
 // the current in-progress bar lives in liveCandle so every trade/candle tick
@@ -231,6 +234,7 @@ export function setOrderSizePercent(percent: number): void {
 	const market = get(selectedMarket);
 	const account = get(activeSubaccount);
 	const leverage = get(orderLeverage);
+	const capabilities = marketCapabilities(market); // market.quoteToken remains authoritative.
 	const quoteAvailable = market?.kind === 'spot'
 		? get(balances).find((balance) => balance.asset.toUpperCase() === market.quoteToken.toUpperCase())?.available ?? 0
 		: account.marginFree;
@@ -247,8 +251,7 @@ export function setOrderSizePercent(percent: number): void {
 	orderSize.set(Math.floor(maxSize * (clampedPercent / 100) * precision) / precision);
 }
 
-// Advanced order configuration (Insilico-style)
-export const advancedConfig: Writable<AdvancedOrderConfig> = writable({
+const DEFAULT_ADVANCED_CONFIG: AdvancedOrderConfig = {
 	autoTakeProfitEnabled: false,
 	autoTakeProfitStartPrice: 0,
 	autoTakeProfitEndPrice: 0,
@@ -289,7 +292,8 @@ export const advancedConfig: Writable<AdvancedOrderConfig> = writable({
 	trailOffset: 0.5,
 	pingPongRange: 1,
 	pingPongCycles: 5
-});
+};
+export const advancedConfig: Writable<AdvancedOrderConfig> = writable({ ...DEFAULT_ADVANCED_CONFIG });
 
 // UI state
 export const bottomPanelTab: Writable<'positions' | 'orders' | 'twaps' | 'algos' | 'fills'> = writable('positions');
@@ -364,21 +368,15 @@ if (demoFixturesEnabled) void loadDevelopmentFixtures();
 
 // Derived stores
 export const filteredMarkets: Readable<MarketDescriptor[]> = derived(
-	[marketType, searchQuery, perpMarketsList, spotMarketsList],
-	([$marketType, $searchQuery, $perpMarketsList, $spotMarketsList]) => {
-		let markets: MarketDescriptor[] = [];
-		if ($marketType === 'perp') markets = $perpMarketsList;
-		else if ($marketType === 'spot') markets = $spotMarketsList;
-		else markets = $perpMarketsList;
-
-		if ($searchQuery) {
-			const query = $searchQuery.toLowerCase();
-			return markets.filter(m =>
-				m.symbol.toLowerCase().includes(query) ||
-				m.name.toLowerCase().includes(query)
-			);
-		}
-		return markets;
+	[marketType, searchQuery, perpMarketsList, spotMarketsList, outcomeMarketsList],
+	([$marketType, $searchQuery, $perpMarketsList, $spotMarketsList, $outcomeMarketsList]) => {
+		const markets =
+			$marketType === 'spot'
+				? $spotMarketsList
+				: $marketType === 'prediction'
+					? $outcomeMarketsList
+					: $perpMarketsList;
+		return markets.filter((market) => marketMatchesWatchlistQuery(market, $searchQuery));
 	}
 );
 
@@ -413,9 +411,33 @@ export const totalEquity: Readable<number> = derived(
 );
 
 // Actions
+function resetMarketBoundState(market: MarketDescriptor | null): void {
+	orderType.set('limit');
+	orderSide.set('buy');
+	orderPrice.set(market && market.lastPrice > 0 ? market.lastPrice : null);
+	orderSize.set(0);
+	orderLeverage.set(1);
+	reduceOnly.set(false);
+	postOnly.set(true);
+	ioc.set(false);
+	advancedConfig.set({ ...DEFAULT_ADVANCED_CONFIG });
+	designerMode.set(false);
+	clickPlacementMode.set(false);
+	clickPlacementSide.set('auto');
+	chartPreviewPrice.set(null);
+	chartDraft.set({});
+	chartInteraction.set({ kind: 'idle' });
+	chartActiveField.set('entry');
+	chartCandles.set([]);
+	liveCandle.set(null);
+	orderBook.set(emptyOrderBook);
+	recentTrades.set([]);
+	marketDataStatus.set('connecting');
+}
+
 export function selectMarket(market: MarketDescriptor) {
 	selectedMarket.set(market);
-	orderPrice.set(market.lastPrice);
+	resetMarketBoundState(market);
 	void import('./hl/account')
 		.then(({ setActiveAccountAsset }) => setActiveAccountAsset(market))
 		.catch((e) => console.error('[hl] active account asset change failed:', e));
@@ -426,11 +448,8 @@ export async function selectMarketForExecution(market: MarketDescriptor, timeout
 	if (typeof window === 'undefined' || !Number.isFinite(timeoutMs) || timeoutMs <= 0) return false;
 	const registered = get(marketRegistry).find((candidate) => candidate.marketKey === market.marketKey && candidate.apiCoin === market.apiCoin);
 	if (!registered) return false;
-	// A previous market may still be live while its replacement is subscribing.
-	// Reset the status first so this method cannot borrow that old readiness.
-	marketDataStatus.set('connecting');
+	resetMarketBoundState(registered);
 	selectedMarket.set(registered);
-	orderPrice.set(registered.lastPrice);
 	try {
 		const { setActiveAccountAsset } = await import('./hl/account');
 		await setActiveAccountAsset(registered);
@@ -467,12 +486,20 @@ export function setChartTimeframe(tf: string) {
 
 export function setMarketType(type: MarketType) {
 	marketType.set(type);
+	const query = get(searchQuery);
 	const registry = get(marketRegistry);
 	const next =
 		type === 'spot'
-			? registry.find((market) => market.kind === 'spot')
-			: registry.find((market) => market.kind !== 'spot');
-	if (next) selectMarket(next);
+			? registry.find((market) => market.kind === 'spot' && marketMatchesWatchlistQuery(market, query))
+			: type === 'prediction'
+				? registry.find((market) => market.kind === 'outcome' && marketMatchesWatchlistQuery(market, query))
+				: registry.find((market) => (market.kind === 'corePerp' || market.kind === 'hip3Perp') && marketMatchesWatchlistQuery(market, query));
+	if (next) {
+		selectMarket(next);
+		return;
+	}
+	selectedMarket.set(null);
+	resetMarketBoundState(null);
 }
 
 export function selectOptionContract(contract: OptionContract) {
@@ -572,11 +599,23 @@ export async function connectWallet(): Promise<void> {
 	walletStatus.set('idle');
 }
 
+let activeEnablementAbortController: AbortController | null = null;
+
+export function cancelEnableTrading(): void {
+	activeEnablementAbortController?.abort();
+	activeEnablementAbortController = null;
+	executionStatus.set('idle');
+	void import('./execution/localExecution').then(({ localExecution }) => localExecution.lock());
+}
+
 export async function enableTrading(
 	options: { approveBuilder?: boolean } = {},
 	onPhase?: EnablementReporter
 ): Promise<void> {
 	const report = onPhase ?? noopEnablementReporter;
+	activeEnablementAbortController?.abort();
+	const controller = new AbortController();
+	activeEnablementAbortController = controller;
 	const { assertTradingAllowed, assertFreshExecutionState } = await import('./execution/releaseSafety');
 	assertTradingAllowed();
 	const address = get(walletAddress);
@@ -597,6 +636,11 @@ export async function enableTrading(
 	try {
 		const { localExecution } = await import('./execution/localExecution');
 		await localExecution.initialize(provider, address, options, report);
+		if (controller.signal.aborted) {
+			localExecution.lock();
+			executionStatus.set('idle');
+			return;
+		}
 		// Establish the account scope before any algorithm recovery. Every local
 		// state machine must read/write the same unlocked wallet namespace; relying
 		// on one recovery helper to set this creates order-dependent recovery bugs.
@@ -626,13 +670,24 @@ export async function enableTrading(
 		resumePersistedConditionalLadders();
 		const { resumePersistedScales } = await import('./execution/scale');
 		resumePersistedScales();
+		if (controller.signal.aborted) {
+			localExecution.lock();
+			executionStatus.set('idle');
+			return;
+		}
+		activeEnablementAbortController = null;
 		executionStatus.set('live');
 	} catch (error) {
+		const { localExecution } = await import('./execution/localExecution');
+		localExecution.lock();
+		if (controller.signal.aborted) {
+			activeEnablementAbortController = null;
+			executionStatus.set('idle');
+			return;
+		}
 		// Initialization may have unlocked a local agent before reconciliation or
 		// persisted-algorithm recovery failed. Do not leave a usable signer behind
 		// while the UI reports an errored trading session.
-		const { localExecution } = await import('./execution/localExecution');
-		localExecution.lock();
 		executionStatus.set('error');
 		const classified = classifyEnablementError(error);
 		report({ kind: 'error', error: classified, detail: classified.message });
@@ -641,6 +696,7 @@ export async function enableTrading(
 }
 
 export function disconnectWallet() {
+	cancelEnableTrading();
 	unbindWalletProvider();
 	void import('./hl/account').then(({ stopAccountSubscriptions }) => stopAccountSubscriptions());
 	void import('./execution/localExecution').then(({ localExecution }) => localExecution.lock());

@@ -27,10 +27,11 @@ import {
 	marketCatalogStatus,
 	perpMarketsList,
 	spotMarketsList,
+	outcomeMarketsList,
 	isConnected
 } from '../stores';
 import { refreshMarketRegistry, waitForMarketCatalogBaseline } from '../hl/markets';
-import { hyperliquidNetwork } from '../hl/network';
+import { hyperliquidPublicNetwork } from '../hl/network';
 import type { MarketDescriptor } from '../types';
 import { fetchHlAccountSnapshotUnbounded, fetchHlOpenOrders, fetchHlPositions, withReadTimeout } from '../hl/server';
 import { hydrateMarketIdentity } from '../hl/accountIdentity';
@@ -99,8 +100,9 @@ export async function initializeMarketRegistry(): Promise<void> {
 			// refreshMarketRegistry, warm-catalog branch) so store consumers
 			// see exactly the same state a browser warm boot would produce.
 			marketRegistry.set(cached);
-			perpMarketsList.set(cached.filter((market) => market.kind !== 'spot'));
+			perpMarketsList.set(cached.filter((market) => market.kind === 'corePerp' || market.kind === 'hip3Perp'));
 			spotMarketsList.set(cached.filter((market) => market.kind === 'spot'));
+			outcomeMarketsList.set(cached.filter((market) => market.kind === 'outcome'));
 			marketCatalogStatus.set('stale');
 			const current = get(selectedMarket);
 			const replacement = current
@@ -125,7 +127,7 @@ function readWarmCatalog(): MarketDescriptor[] {
 		const raw = globalThis.localStorage?.getItem(MARKET_CATALOG_CACHE_KEY);
 		if (!raw) return [];
 		const parsed = JSON.parse(raw) as { network?: string; markets?: MarketDescriptor[] } | null;
-		if (!parsed || parsed.network !== hyperliquidNetwork.network || !Array.isArray(parsed.markets) || parsed.markets.length === 0) {
+		if (!parsed || parsed.network !== hyperliquidPublicNetwork.network || !Array.isArray(parsed.markets) || parsed.markets.length === 0) {
 			return [];
 		}
 		return parsed.markets;

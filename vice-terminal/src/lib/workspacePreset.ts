@@ -3,12 +3,17 @@ import { get, writable, type Writable } from 'svelte/store';
 export type WorkspacePreset = 'default' | 'chart' | 'data';
 export type WorkspacePanel = 'watchlist' | 'marketData' | 'ticket' | 'bottom' | 'chat';
 export type WorkspacePanels = Record<WorkspacePanel, boolean>;
+export const WORKSPACE_TOPOLOGIES: Record<WorkspacePreset, Readonly<Record<WorkspacePanel, boolean>>> = {
+	default: { watchlist: true, marketData: true, ticket: true, bottom: true, chat: false },
+	chart: { watchlist: false, marketData: false, ticket: false, bottom: false, chat: false },
+	data: { watchlist: true, marketData: true, ticket: false, bottom: true, chat: false }
+};
 
 const STORAGE_KEY = 'vice.workspace-preset.v1';
 const PANELS_STORAGE_KEY = 'vice.workspace-panels.v1';
 const LOCK_STORAGE_KEY = 'vice.workspace-lock.v1';
 const VALID = new Set<WorkspacePreset>(['default', 'chart', 'data']);
-const DEFAULT_PANELS: WorkspacePanels = { watchlist: true, marketData: true, ticket: true, bottom: true, chat: true };
+const DEFAULT_PANELS: WorkspacePanels = { ...WORKSPACE_TOPOLOGIES.default };
 
 export const workspacePreset: Writable<WorkspacePreset> = writable('default');
 export const workspacePanels: Writable<WorkspacePanels> = writable(DEFAULT_PANELS);

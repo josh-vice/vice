@@ -12,13 +12,14 @@ import {
 	marketCatalogStatus,
 	perpMarketsList,
 	selectedMarket,
-	spotMarketsList
+	spotMarketsList,
+	outcomeMarketsList
 } from '$lib/stores';
 import type { MarketDescriptor } from '$lib/types';
 import { assertInstrumentId, type InstrumentId } from '$lib/venue/identity';
-import { hyperliquidNetwork } from './network';
+import { hyperliquidPublicNetwork } from './network';
 
-const transport = new HttpTransport({ isTestnet: hyperliquidNetwork.isTestnet });
+const transport = new HttpTransport({ isTestnet: hyperliquidPublicNetwork.isTestnet });
 let refreshPromise: Promise<MarketDescriptor[]> | null = null;
 let refreshTimer: ReturnType<typeof setInterval> | null = null;
 const baselineWaiters: Array<(markets: MarketDescriptor[]) => void> = [];
@@ -36,13 +37,13 @@ type CachedMarketCatalog = {
 	markets: MarketDescriptor[];
 };
 
-function readCachedMarketCatalog(): MarketDescriptor[] {
+export function readCachedMarketCatalog(): MarketDescriptor[] {
 	if (typeof localStorage === 'undefined') return [];
 	try {
 		const parsed = JSON.parse(localStorage.getItem(MARKET_CATALOG_CACHE_KEY) ?? 'null') as CachedMarketCatalog | null;
 		if (
 			!parsed ||
-			parsed.network !== hyperliquidNetwork.network ||
+			parsed.network !== hyperliquidPublicNetwork.network ||
 			!Array.isArray(parsed.markets) ||
 			parsed.markets.length === 0 ||
 			parsed.markets.length > 10_000 ||
@@ -64,7 +65,7 @@ function writeCachedMarketCatalog(markets: MarketDescriptor[]): void {
 	try {
 		localStorage.setItem(
 			MARKET_CATALOG_CACHE_KEY,
-			JSON.stringify({ network: hyperliquidNetwork.network, savedAt: Date.now(), markets })
+			JSON.stringify({ network: hyperliquidPublicNetwork.network, savedAt: Date.now(), markets })
 		);
 	} catch {
 		// Cache is an optimization only; storage quotas/private browsing must not
@@ -131,15 +132,15 @@ export function canonicalSpotSizeDecimals(value: unknown): number | null {
 
 /** Hyperliquid has a significant-figure price rule, not a static tick. */
 export function hyperliquidInstrumentId(market: Pick<MarketDescriptor, 'apiCoin' | 'kind' | 'type' | 'baseToken' | 'quoteToken' | 'szDecimals' | 'priceDecimals'>): InstrumentId {
-	if (market.kind === 'outcome') throw new Error('Hyperliquid outcome metadata lacks complete execution terms');
 	if (!Number.isInteger(market.priceDecimals) || market.priceDecimals < 0 || market.priceDecimals > 18) {
 		throw new Error('Hyperliquid identity has invalid price decimals');
 	}
+	const product = market.kind === 'outcome' ? 'outcome' : market.type === 'spot' ? 'spot' : 'linearPerp';
 	return assertInstrumentId({
-		instrumentKey: `hyperliquid:${market.type === 'spot' ? 'spot' : 'linearPerp'}:${market.apiCoin}`,
+		instrumentKey: `hyperliquid:${product}:${market.apiCoin}`,
 		venue: 'hyperliquid',
 		venueSymbol: market.apiCoin,
-		product: market.type === 'spot' ? 'spot' : 'linearPerp',
+		product,
 		baseAsset: market.baseToken,
 		quoteAsset: market.quoteToken,
 		settlementAsset: market.quoteToken,
@@ -149,15 +150,14 @@ export function hyperliquidInstrumentId(market: Pick<MarketDescriptor, 'apiCoin'
 	});
 }
 
-/** Outcome rows remain metadata-only until their venue terms are complete. */
+/** Public outcome rows have canonical data identity but remain metadata-only for execution. */
 export function withHyperliquidInstrument(market: MarketDescriptor): MarketDescriptor {
-	return market.kind === 'outcome' ? market : { ...market, instrument: hyperliquidInstrumentId(market) };
+	return { ...market, instrument: hyperliquidInstrumentId(market) };
 }
 
 export function derivePriceDecimals(szDecimals: number, spot: boolean): number {
 	return Math.max(0, (spot ? 8 : 6) - szDecimals);
 }
-
 export function derivePerpAssetId(index: number, dexIndex: number | null): number {
 	return dexIndex === null ? index : 100_000 + dexIndex * 10_000 + index;
 }
@@ -176,6 +176,25 @@ export function deriveOutcomeAssetId(outcome: number, side: number): number {
 
 type OutcomeMetadata = Awaited<ReturnType<typeof outcomeMeta>>;
 
+function parseOutcomeDescription(value: unknown): { rawDescription?: string; outcomeContext?: NonNullable<MarketDescriptor['outcome']>['outcomeContext'] } {
+	if (typeof value !== 'string') return {};
+	const rawDescription = value;
+	const outcomeContext: NonNullable<MarketDescriptor['outcome']>['outcomeContext'] = {};
+	try {
+		const parsed = JSON.parse(value) as Record<string, unknown>;
+		for (const key of ['underlying', 'expiry', 'period'] as const) if (typeof parsed[key] === 'string' && parsed[key].trim() === parsed[key] && parsed[key].length > 0) outcomeContext[key] = parsed[key];
+		if (typeof parsed.targetPrice === 'number' && Number.isFinite(parsed.targetPrice)) outcomeContext.targetPrice = parsed.targetPrice;
+	} catch {
+		for (const key of ['underlying', 'expiry', 'period'] as const) {
+			const match = value.match(new RegExp('(?:^|[\\n;,])\\s*' + key + '\\s*[:=]\\s*([^;,\\n]+)', 'i'));
+			if (match?.[1]) outcomeContext[key] = match[1].trim();
+		}
+		const target = value.match(/(?:^|[\\n;,])\\s*targetPrice\\s*[:=]\\s*(-?(?:\\d+\\.?\\d*|\\.\\d+))/i);
+		if (target) outcomeContext.targetPrice = Number(target[1]);
+	}
+	return { rawDescription, ...(Object.keys(outcomeContext).length ? { outcomeContext } : {}) };
+}
+
 /**
  * Preserve every venue-provided outcome identity and question label. outcomeMeta
  * does not include tick, lot, or complete execution terms, so these rows are
@@ -189,6 +208,7 @@ export function descriptorsFromOutcomeMeta(metadata: OutcomeMetadata): MarketDes
 	return metadata.outcomes.flatMap((outcome) => {
 		const question = questionsByOutcome.get(outcome.outcome);
 		return outcome.sideSpecs.slice(0, 2).map((sideSpec, side) => {
+			const parsedDescription = parseOutcomeDescription((outcome as { description?: unknown }).description);
 			const encoding = 10 * outcome.outcome + side;
 			return {
 				marketKey: `outcome:${outcome.outcome}:${side}`,
@@ -199,21 +219,24 @@ export function descriptorsFromOutcomeMeta(metadata: OutcomeMetadata): MarketDes
 				baseToken: sideSpec.name,
 				quoteToken: 'USDC',
 				szDecimals: 0,
-				priceDecimals: 0,
+				priceDecimals: 5,
 				symbol: `${outcome.name} · ${sideSpec.name}`,
 				name: question?.name ?? outcome.name,
 				type: 'spot' as const,
 				lastPrice: 0,
-				change24h: 0,
-				changePercent24h: 0,
-				volume24h: 0,
+				change24h: undefined,
+				changePercent24h: undefined,
+				volume24h: undefined,
 				outcome: {
 					outcomeId: outcome.outcome,
 					side,
 					questionName: question?.name,
 					questionDescription: question?.description,
 					outcomeDescription: outcome.description,
-					settled: question?.settledNamedOutcomes.includes(outcome.outcome) ?? false
+						sideName: sideSpec.name,
+						rawDescription: parsedDescription.rawDescription,
+						outcomeContext: parsedDescription.outcomeContext,
+						settled: question?.settledNamedOutcomes.includes(outcome.outcome) ?? false
 				},
 				tradingAvailability: 'metadataOnly' as const,
 				tradingUnavailableReason: 'Hyperliquid outcome metadata does not provide lot, tick, or complete execution terms.'
@@ -407,7 +430,7 @@ async function fetchMarketRegistry(onPartial?: (markets: MarketDescriptor[]) => 
 			}));
 		}
 	}
-	const baseline = [...markets].sort((a, b) => b.volume24h - a.volume24h || a.symbol.localeCompare(b.symbol));
+	const baseline = [...markets].sort((a, b) => (b.volume24h ?? 0) - (a.volume24h ?? 0) || a.symbol.localeCompare(b.symbol));
 	onPartial?.(baseline);
 
 	// Outcome identity is venue-authoritative. Keep it separate from the perp
@@ -465,7 +488,7 @@ async function fetchMarketRegistry(onPartial?: (markets: MarketDescriptor[]) => 
 
 	marketCatalogStatus.set(hip3Failure ? 'degraded' : 'live');
 	return categorizedMarkets.sort(
-		(a, b) => b.volume24h - a.volume24h || a.symbol.localeCompare(b.symbol)
+		(a, b) => (b.volume24h ?? 0) - (a.volume24h ?? 0) || a.symbol.localeCompare(b.symbol)
 	);
 }
 
@@ -477,8 +500,9 @@ export async function refreshMarketRegistry(): Promise<MarketDescriptor[]> {
 		if (cached.length > 0) {
 			hasWarmCatalog = true;
 			marketRegistry.set(cached);
-			perpMarketsList.set(cached.filter((market) => market.kind !== 'spot'));
+			perpMarketsList.set(cached.filter((market) => market.kind === 'corePerp' || market.kind === 'hip3Perp'));
 			spotMarketsList.set(cached.filter((market) => market.kind === 'spot'));
+			outcomeMarketsList.set(cached.filter((market) => market.kind === 'outcome'));
 			marketCatalogStatus.set('stale');
 			const current = get(selectedMarket);
 			const replacement = current
@@ -492,8 +516,9 @@ export async function refreshMarketRegistry(): Promise<MarketDescriptor[]> {
 	marketCatalogStatus.set(hasWarmCatalog ? 'stale' : 'connecting');
 	const publish = (markets: MarketDescriptor[]) => {
 		marketRegistry.set(markets);
-		perpMarketsList.set(markets.filter((market) => market.kind !== 'spot'));
+		perpMarketsList.set(markets.filter((market) => market.kind === 'corePerp' || market.kind === 'hip3Perp'));
 		spotMarketsList.set(markets.filter((market) => market.kind === 'spot'));
+		outcomeMarketsList.set(markets.filter((market) => market.kind === 'outcome'));
 		while (baselineWaiters.length > 0) baselineWaiters.shift()?.(markets);
 		const current = get(selectedMarket);
 		const replacement = current

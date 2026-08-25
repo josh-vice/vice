@@ -11,7 +11,7 @@ describe('US-003 chart interaction safety', () => {
 		expect(source).toContain('crossSpreadWarning = warning ??');
 		expect(source).toContain("order.pending ? 'PENDING' : order.status.toUpperCase()");
 		expect(source).toContain('liquidation:${position.id}');
-		expect(source).toContain("$selectedMarket?.apiCoin ?? $selectedMarket?.marketKey");
+		expect(source).toContain("$selectedMarket?.marketKey ?? $selectedMarket?.apiCoin");
 		expect(source).toContain('scheduleOverlayCoordinates();');
 		expect(source).toContain('transition-[top] duration-150');
 		expect(source).toContain("$accountSyncStatus === 'live'");
@@ -42,9 +42,10 @@ describe('US-003 chart interaction safety', () => {
 		expect(primitive).toContain("opts.targetField === 'triggerPx' ? replacement.triggerPx : replacement.limitPx");
 	});
 
-	test('routes chart submissions with the exact selected market identity', async () => {
-		const source = await Bun.file(new URL('./clickTrading.ts', import.meta.url)).text();
-		expect(source).toContain('selectedMarket');
-		expect(source).toContain('marketKey: get(selectedMarket)?.marketKey');
+	test('uses the shared chart execution boundary without a dead submit helper', async () => {
+		const source = await Bun.file(new URL('../components/Chart.svelte', import.meta.url)).text();
+		expect(source).toContain('marketKey: $selectedMarket.marketKey');
+		const clickTrading = await Bun.file(new URL('./clickTrading.ts', import.meta.url)).text();
+		expect(clickTrading).not.toContain('submitChartOrder');
 	});
 });

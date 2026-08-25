@@ -7,11 +7,11 @@ describe('US-004 advanced order surface', () => {
 		for (const type of advancedOrderTypes()) expect(source).toContain(`id: '${type}'`);
 		expect(advancedOrderTypes().every((type) => !isAdvancedOrderCertified(type, undefined))).toBe(true);
 		expect(advancedOrderTypes().every((type) => isAdvancedOrderCertified(type, 'true', 'true'))).toBe(true);
-		expect(source).toContain('availableOrderTypeGroups = orderTypeGroups;');
+		expect(source).toContain('marketProfile.supportsAdvancedOrders && isAdvancedOrderCertified(type.id)');
 		expect(source).toContain('Testnet certification required');
 		expect(source).toContain('disabled={!certified}');
 		expect(source).toContain('unavailableOrderTypeMessage(t.id)');
-		expect(source).toContain('availableQuickTypes = quickTypes.filter((type) => isAdvancedOrderCertified(type.id))');
+		expect(source).toContain('marketProfile.allowedOrderTypes.includes(type.id) && isAdvancedOrderCertified(type.id)');
 		expect(source).toContain('{#each availableQuickTypes as quick}');
 		expect(source).toContain('data-testid="advanced-certification-status"');
 		expect(source).toContain('advanced strategies are listed in the order-type menu but locked');

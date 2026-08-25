@@ -19,3 +19,10 @@ export function resolveHyperliquidNetwork(input: {
 	}
 	return { network, isTestnet: network === 'testnet' };
 }
+
+/** Public market data is read-only and may use mainnet without enabling trading. */
+export function resolveHyperliquidPublicNetwork(input: { network?: string } = {}): { network: HyperliquidNetwork; isTestnet: boolean } {
+	const network = input.network?.trim().toLowerCase() || 'mainnet';
+	if (network !== 'testnet' && network !== 'mainnet') throw new Error(`Invalid Hyperliquid public network: ${network}`);
+	return { network, isTestnet: network === 'testnet' };
+}

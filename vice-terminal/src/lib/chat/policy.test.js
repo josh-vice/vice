@@ -126,4 +126,22 @@ describe('slash commands (live stores)', () => {
 			expect(result.badge.pnl).toBe(1000);
 		}
 	});
+	test('/mute and /unmute update the shared moderation set', () => {
+		const muted = new Set();
+		const ctx = {
+			displayName: 'You',
+			isMuted: (name) => muted.has(name.toLowerCase()),
+			setMuted: (name, value) => value ? muted.add(name.toLowerCase()) : muted.delete(name.toLowerCase())
+		};
+		expect(runChatCommand('/mute @Alice', ctx)?.text).toContain('muted locally');
+		expect(muted.has('alice')).toBe(true);
+		expect(runChatCommand('/unmute Alice', ctx)?.text).toContain('unmuted');
+		expect(muted.has('alice')).toBe(false);
+	});
+
+	test('/mute does not mutate the set when the user is already muted', () => {
+		const setMuted = () => { throw new Error('already-muted user must not be written twice'); };
+		const result = runChatCommand('/mute Alice', { displayName: 'You', isMuted: () => true, setMuted });
+		expect(result?.text).toContain('already muted');
+	});
 });

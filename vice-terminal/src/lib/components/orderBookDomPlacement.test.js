@@ -20,7 +20,7 @@ test('US-009 armed DOM placement uses the shared exact-identity limit boundary',
 	expect(source).toContain('data-testid={`dom-position-${position.id}`}');
 	expect(source).toContain('async function cancelLadderOrder(orderId: string, marketIdentity?: string)');
 	expect(source).toContain('cancelOrder(orderId, marketIdentity)');
-	expect(source).toContain("$: canCancelKnownOrders = $isConnected && $executionStatus === 'live';");
+	expect(source).toContain("$: canCancelKnownOrders = marketProfile.executable && $isConnected && $executionStatus === 'live' && $accountSyncStatus === 'live' && $marketDataStatus === 'live';");
 	expect(source).toContain('return canCancelKnownOrders');
 	expect(source).toContain('if (!canCancelKnownOrders)');
 	expect(source).toContain("async function cancelLadderSide(side: 'buy' | 'sell')");

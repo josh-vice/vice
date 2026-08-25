@@ -3,6 +3,7 @@ import { selectedMarket, marketRegistry, openOrders, positions, walletAddress, o
 import type { MarketDescriptor, OrderSide, OrderType } from '$lib/types';
 import { hydrateMarketIdentity } from './accountIdentity';
 import { isAdvancedOrderCertified, unavailableOrderTypeMessage } from '$lib/execution/capabilities';
+import { marketCapabilities } from '$lib/marketCapabilities';
 import { validateAutoTakeProfit, type AutoTakeProfitConfig } from '$lib/execution/autoTakeProfit';
 
 export interface PlaceOrderParams {
@@ -35,14 +36,20 @@ export function validateOrderFlags(postOnly = false, ioc = false, type: OrderTyp
 }
 
 export async function placeOrder(params: PlaceOrderParams): Promise<{ ok: boolean; error?: string; data?: unknown; autoTakeProfit?: { ok: boolean; jobId?: string; error?: string } }> {
-	const flagError = validateOrderFlags(params.postOnly, params.ioc, params.type);
-	if (flagError) return { ok: false, error: flagError };
 	const market = get(selectedMarket);
 	const descriptor = params.marketKey
 		? resolveMarketIdentity(params.marketKey)
 		: get(marketRegistry).find((candidate) => candidate.marketKey === market?.marketKey);
 	if (!descriptor) return { ok: false, error: 'Selected market has no authoritative Hyperliquid identity' };
-	if (descriptor.tradingAvailability === 'metadataOnly') return { ok: false, error: descriptor.tradingUnavailableReason ?? 'This market is metadata-only until the venue provides complete execution terms' };
+	const capabilities = marketCapabilities(descriptor);
+	if (!capabilities.executable) return { ok: false, error: capabilities.readOnlyReason ?? 'This market is not executable' };
+	if (!capabilities.allowedOrderTypes.includes(params.type)) return { ok: false, error: `Order type ${params.type} is not supported for ${descriptor.kind}` };
+	if (params.postOnly && !capabilities.supportsPostOnly) return { ok: false, error: 'Post Only is not supported for this market' };
+	if (params.ioc && !capabilities.supportsIoc) return { ok: false, error: 'IOC is not supported for this market' };
+	if (params.reduceOnly && !capabilities.supportsReduceOnly) return { ok: false, error: 'Reduce-only is not supported for this market' };
+	if (params.triggerPrice !== undefined && !capabilities.supportsTriggers) return { ok: false, error: 'Triggers are not supported for this market' };
+	const flagError = validateOrderFlags(params.postOnly, params.ioc, params.type);
+	if (flagError) return { ok: false, error: flagError };
 	if (!market || market.marketKey !== descriptor.marketKey) {
 		return { ok: false, error: 'Select the requested market so its live feed is authoritative before trading' };
 	}
@@ -180,10 +187,15 @@ export async function cancelTwap(twapId: number, marketIdentity: string): Promis
 }
 
 export async function startAlgoOrder(params: PlaceOrderParams): Promise<{ ok: boolean; error?: string; jobId?: string }> {
-	if (!isAdvancedOrderCertified(params.type)) return { ok: false, error: unavailableOrderTypeMessage(params.type) };
 	const selected = get(selectedMarket);
 	const market = params.marketKey ? resolveMarketIdentity(params.marketKey) : get(marketRegistry).find((candidate) => candidate.marketKey === selected?.marketKey);
 	if (!market) return { ok: false, error: 'Selected market has no authoritative Hyperliquid identity' };
+	const capabilities = marketCapabilities(market);
+	if (!capabilities.executable) return { ok: false, error: capabilities.readOnlyReason ?? 'This market is not executable' };
+	if (!isAdvancedOrderCertified(params.type)) return { ok: false, error: unavailableOrderTypeMessage(params.type) };
+	if (!capabilities.supportsPostOnly && params.postOnly) return { ok: false, error: 'Post Only is not supported for this market' };
+	if (!capabilities.supportsIoc && params.ioc) return { ok: false, error: 'IOC is not supported for this market' };
+	if (!capabilities.supportsAdvancedOrders) return { ok: false, error: `Advanced orders are not supported for ${market.kind}` };
 	if (!selected || selected.marketKey !== market.marketKey) {
 		return { ok: false, error: 'Select the requested market so its live feed is authoritative before trading' };
 	}

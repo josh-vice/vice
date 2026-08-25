@@ -131,4 +131,10 @@ describe('trimAndSanitize', () => {
 		expect(out.environment.userAgent.length).toBeLessThan(2000);
 		expect(out.environment.userAgent.endsWith('…[truncated]')).toBe(true);
 	});
+	test('includes a bounded redacted operator note without screenshots', () => {
+		const bundle = buildSupportBundle(FALLBACK_BUILD_META, undefined, `0x${'a'.repeat(40)} operator note ${'x'.repeat(900)}`);
+		expect(bundle.operatorNote?.length).toBeLessThanOrEqual(500);
+		expect(bundle.operatorNote).toContain('[REDACTED]');
+		expect(JSON.stringify(bundle)).not.toContain('data:image');
+	});
 });

@@ -23,6 +23,7 @@
 	import { cancelConditionalLadder, pauseConditionalLadder, resumeConditionalLadder } from '$lib/execution/conditionalLadder';
 	import { cancelScale, pauseScale, resumeScale } from '$lib/execution/scale';
 	import type { LocalAlgoJob } from '$lib/execution/algoJobs';
+	import { marketCapabilities } from '$lib/marketCapabilities';
 
 	async function pauseAlgo(id: string, type: string) {
 		if (type === 'iceberg') return pauseIcebergJob(id);
@@ -91,6 +92,7 @@
 	async function closePosition(positionId: string, mode: PositionCloseMode) {
 		positionActionError = '';
 		positionActionMessage = '';
+		if (!ensurePositionMarket(positionId)) return;
 		if (!privateStateLive) {
 			positionActionError = 'Account state is stale; position controls are paused until reconciliation completes';
 			return;
@@ -118,6 +120,7 @@
 	async function closePositionTwap(positionId: string, minutes: number) {
 		positionActionError = '';
 		positionActionMessage = '';
+		if (!ensurePositionMarket(positionId)) return;
 		if (!privateStateLive) {
 			positionActionError = 'Account state is stale; position controls are paused until reconciliation completes';
 			return;
@@ -137,6 +140,7 @@
 
 	function openScaleClose(positionId: string) {
 		positionActionError = '';
+		if (!ensurePositionMarket(positionId)) return;
 		const position = $positions.find((candidate) => candidate.id === positionId);
 		if (!position || !Number.isFinite(position.markPrice) || position.markPrice <= 0) {
 			positionActionError = 'Scale close needs an authoritative position mark price';
@@ -151,6 +155,7 @@
 	async function closePositionScale(positionId: string) {
 		positionActionError = '';
 		positionActionMessage = '';
+		if (!ensurePositionMarket(positionId)) return;
 		if (!privateStateLive) {
 			positionActionError = 'Account state is stale; position controls are paused until reconciliation completes';
 			return;
@@ -180,8 +185,9 @@
 	async function reversePosition(positionId: string) {
 		positionActionError = '';
 		positionActionMessage = '';
+		if (!ensurePositionMarket(positionId)) return;
 		if (!privateStateLive) {
-			positionActionError = 'Account state is stale; reverse is paused until reconciliation completes';
+			positionActionError = 'Account state is stale; position controls are paused until reconciliation completes';
 			return;
 		}
 		const position = $positions.find((candidate) => candidate.id === positionId);
@@ -266,6 +272,11 @@
 		flattenBusy = true;
 		try {
 			for (const target of plan.targets) {
+				const targetProfile = marketCapabilities(target.market);
+				if (!targetProfile.supportsPositionLifecycle) {
+					outcomes.push({ market: target.market.symbol, positionId: target.positionId, ok: false, error: targetProfile.readOnlyReason ?? 'Position lifecycle is not applicable for this market' });
+					continue;
+				}
 				const candidates = get(positions).filter((position) => position.apiCoin === target.apiCoin || position.marketKey === target.marketKey);
 				if (candidates.some((position) => position.apiCoin !== target.apiCoin || position.marketKey !== target.marketKey)) {
 					outcomes.push({ market: target.market.symbol, positionId: target.positionId, ok: false, error: 'position identity is incomplete; reconciliation required' });
@@ -314,7 +325,7 @@
 		link.href = url;
 		link.download = `vice-execution-audit-${$walletAddress.slice(0, 8).toLowerCase()}-${Date.now()}.json`;
 		link.click();
-		URL.revokeObjectURL(url);
+		setTimeout(() => URL.revokeObjectURL(url), 0);
 		auditExportMessage = 'Downloaded a local audit record. It includes your account and command IDs, but no private key, signature, request body, or venue error text.';
 	}
 	async function stopTwap(twapId: number, market: string) {
@@ -326,12 +337,32 @@
 		const result = await cancelHlTwap(twapId, market);
 		if (!result.ok) twapError = result.error ?? 'TWAP cancel failed';
 	}
-
 	$: privateStateLive = $isConnected && $accountSyncStatus === 'live' && !$privacyMode;
+	$: selectedMarketProfile = marketCapabilities($selectedMarket);
 	$: visiblePositions = privateStateLive ? $positions : [];
 	$: visibleOrders = privateStateLive ? $openOrders : [];
 	$: visibleFills = privateStateLive ? $fills : [];
 	$: totalUnrealizedPnl = privateStateLive ? $positions.reduce((sum, p) => sum + p.unrealizedPnl, 0) : 0;
+	function positionDescriptor(positionId: string) {
+		const position = $positions.find((candidate) => candidate.id === positionId);
+		return position ? $marketRegistry.find((market) => market.marketKey === position.marketKey && market.apiCoin === position.apiCoin) : undefined;
+	}
+	function positionSupportsLifecycle(positionId: string): boolean {
+		return marketCapabilities(positionDescriptor(positionId)).supportsPositionLifecycle;
+	}
+	function ensurePositionMarket(positionId: string): boolean {
+		const descriptor = positionDescriptor(positionId);
+		if (!descriptor) {
+			positionActionError = 'Position market identity is unavailable; reconcile before retrying';
+			return false;
+		}
+		if ($selectedMarket?.marketKey !== descriptor.marketKey) {
+			selectMarket(descriptor);
+			positionActionMessage = `Switched to ${descriptor.symbol}. Select the close action again after its live feed is ready.`;
+			return false;
+		}
+		return positionSupportsLifecycle(positionId);
+	}
 </script>
 
 <div class="h-full flex flex-col bg-terminal-bg-secondary">
@@ -341,46 +372,33 @@
 		</div>
 	{/if}
 	<!-- Tab Header - FTX style -->
-	<div class="h-8 flex items-center justify-between px-2 border-b border-terminal-border bg-terminal-bg">
+	<div role="tablist" aria-label="Account activity" class="h-8 min-w-0 flex items-center justify-between overflow-x-auto px-2 border-b border-terminal-border bg-terminal-bg">
 		<div class="flex items-center">
-			<button
+			<button role="tab" aria-selected={$bottomPanelTab === 'positions'} aria-controls="account-panel-content"
 				class="px-3 py-1.5 text-2xs font-medium border-b-2 {$bottomPanelTab === 'positions' ? 'border-terminal-cyan text-terminal-cyan' : 'border-transparent text-terminal-text-secondary hover:text-terminal-text'}"
-				onclick={() => bottomPanelTab.set('positions')}
-			>
-				Positions ({privateStateLive ? $positions.length : 0})
-			</button>
-			<button
+				onclick={() => bottomPanelTab.set('positions')}>Positions ({privateStateLive ? $positions.length : 0})</button>
+			<button role="tab" aria-selected={$bottomPanelTab === 'algos'} aria-controls="account-panel-content"
 				class="px-3 py-1.5 text-2xs font-medium border-b-2 {$bottomPanelTab === 'algos' ? 'border-terminal-cyan text-terminal-cyan' : 'border-transparent text-terminal-text-secondary hover:text-terminal-text'}"
-				onclick={() => bottomPanelTab.set('algos')}
-			>
-				Algorithms ({$privacyMode ? '—' : $localAlgoJobs.filter((job) => job.status === 'running').length})
-			</button>
-			<button
+				onclick={() => bottomPanelTab.set('algos')}>Algorithms ({$privacyMode ? '—' : $localAlgoJobs.filter((job) => job.status === 'running').length})</button>
+			<button role="tab" aria-selected={$bottomPanelTab === 'orders'} aria-controls="account-panel-content"
 				class="px-3 py-1.5 text-2xs font-medium border-b-2 {$bottomPanelTab === 'orders' ? 'border-terminal-cyan text-terminal-cyan' : 'border-transparent text-terminal-text-secondary hover:text-terminal-text'}"
-				onclick={() => bottomPanelTab.set('orders')}
-			>
-				Open Orders ({privateStateLive ? $openOrders.length : 0})
-			</button>
-			<button
+				onclick={() => bottomPanelTab.set('orders')}>Open Orders ({privateStateLive ? $openOrders.length : 0})</button>
+			<button role="tab" aria-selected={$bottomPanelTab === 'twaps'} aria-controls="account-panel-content"
 				class="px-3 py-1.5 text-2xs font-medium border-b-2 {$bottomPanelTab === 'twaps' ? 'border-terminal-cyan text-terminal-cyan' : 'border-transparent text-terminal-text-secondary hover:text-terminal-text'}"
-				onclick={() => bottomPanelTab.set('twaps')}
-			>
-				TWAP ({$privacyMode ? '—' : $twapJobs.filter((job) => job.status === 'active').length})
-			</button>
-			<button
+				onclick={() => bottomPanelTab.set('twaps')}>TWAP ({$privacyMode ? '—' : $twapJobs.filter((job) => job.status === 'active').length})</button>
+			<button role="tab" aria-selected={$bottomPanelTab === 'fills'} aria-controls="account-panel-content"
 				class="px-3 py-1.5 text-2xs font-medium border-b-2 {$bottomPanelTab === 'fills' ? 'border-terminal-cyan text-terminal-cyan' : 'border-transparent text-terminal-text-secondary hover:text-terminal-text'}"
-				onclick={() => bottomPanelTab.set('fills')}
-			>
-				Trade History
-			</button>
+				onclick={() => bottomPanelTab.set('fills')}>Trade History</button>
 		</div>
 
-		<span class="dither-rule mx-3 text-terminal-text-muted" aria-hidden="true"></span>
-
 		<!-- P&L Summary - FTX style right side -->
-		<div class="flex items-center gap-4 text-2xs">
-			<span class="text-terminal-text-muted">Dead-man: <span class="font-mono {$deadmanStatus === 'armed' ? 'text-terminal-yellow' : $deadmanStatus === 'uncertain' ? 'text-terminal-red' : 'text-terminal-text-secondary'}">{$deadmanStatus.toUpperCase()}</span></span>
-			<span class="text-terminal-text-muted">Net P&L: <span class="font-mono {totalUnrealizedPnl >= 0 ? 'text-terminal-green' : 'text-terminal-red'}">{totalUnrealizedPnl >= 0 ? '+' : ''}${totalUnrealizedPnl.toFixed(2)}</span></span>
+		<div class="hidden sm:flex items-center gap-4 text-2xs">
+			<span class="text-terminal-text-muted">Dead-man: <span class="font-mono {$deadmanStatus === 'armed' && privateStateLive ? 'text-terminal-yellow' : $deadmanStatus === 'uncertain' && privateStateLive ? 'text-terminal-red' : 'text-terminal-text-secondary'}">{privateStateLive ? $deadmanStatus.toUpperCase() : '—'}</span></span>
+			{#if privateStateLive}
+				<span class="text-terminal-text-muted">Net P&L: <span class="font-mono {totalUnrealizedPnl >= 0 ? 'text-terminal-green' : 'text-terminal-red'}">{totalUnrealizedPnl >= 0 ? '+' : ''}${totalUnrealizedPnl.toFixed(2)}</span></span>
+			{:else}
+				<span class="text-terminal-text-muted">Net P&L: <span class="font-mono text-terminal-text-muted">—</span></span>
+			{/if}
 			{#if privateStateLive}
 				<button class="rounded border border-terminal-border px-1.5 py-0.5 text-3xs text-terminal-text-muted hover:text-terminal-cyan" onclick={downloadExecutionAudit}>Export audit</button>
 			{/if}
@@ -389,22 +407,25 @@
 	{#if auditExportMessage}<div class="border-b border-terminal-border px-3 py-1 text-3xs text-terminal-text-muted" role="status">{auditExportMessage}</div>{/if}
 
 	<!-- Content -->
-	<div class="flex-1 overflow-auto">
+	<div id="account-panel-content" role="tabpanel" class="min-w-0 flex-1 overflow-auto">
 		{#if $bottomPanelTab === 'positions'}
 			<div class="flex items-center justify-between gap-2 border-b border-terminal-border px-3 py-1.5">
 				<span class="text-3xs text-terminal-text-muted">Close-all switches to each exact market and waits for its live feed. It stops only that market when a close cannot be reconciled.</span>
-				{#if !flattenConfirm}
-					<div class="flex gap-1">
-						<button class="rounded border border-terminal-border px-1.5 py-0.5 text-3xs text-terminal-text-muted hover:text-terminal-text disabled:opacity-50" disabled={flattenBusy} onclick={() => (flattenConfirm = 'long')}>CLOSE LONGS</button>
-						<button class="rounded border border-terminal-border px-1.5 py-0.5 text-3xs text-terminal-text-muted hover:text-terminal-text disabled:opacity-50" disabled={flattenBusy} onclick={() => (flattenConfirm = 'short')}>CLOSE SHORTS</button>
-						<button class="rounded border border-terminal-red/60 px-1.5 py-0.5 text-3xs text-terminal-red hover:bg-terminal-red/10 disabled:opacity-50" disabled={flattenBusy} onclick={() => (flattenConfirm = 'both')}>FLATTEN ALL</button>
-					</div>
+				{#if visiblePositions.some((position) => positionSupportsLifecycle(position.id))}
+					{#if !flattenConfirm}
+						<div class="flex gap-1">
+							<button class="rounded border border-terminal-border px-1.5 py-0.5 text-3xs text-terminal-text-muted hover:text-terminal-text disabled:opacity-50" disabled={flattenBusy} onclick={() => (flattenConfirm = 'long')}>CLOSE LONGS</button>
+							<button class="rounded border border-terminal-border px-1.5 py-0.5 text-3xs text-terminal-text-muted hover:text-terminal-text disabled:opacity-50" disabled={flattenBusy} onclick={() => (flattenConfirm = 'short')}>CLOSE SHORTS</button>
+							<button class="rounded border border-terminal-red/60 px-1.5 py-0.5 text-3xs text-terminal-red hover:bg-terminal-bg-hover disabled:opacity-50" disabled={flattenBusy} onclick={() => (flattenConfirm = 'both')}>FLATTEN ALL</button>
+						</div>
+					{:else}
+						<div class="flex items-center gap-1 text-3xs text-terminal-yellow">
+							<span>Close {flattenConfirm === 'both' ? 'all positions' : flattenConfirm === 'long' ? 'all longs' : 'all shorts'}?</span>
+							<button class="rounded border border-terminal-border px-1.5 py-0.5" onclick={() => (flattenConfirm = null)}>No</button>
+						</div>
+					{/if}
 				{:else}
-					<div class="flex items-center gap-1 text-3xs text-terminal-yellow">
-						<span>Close {flattenConfirm === 'both' ? 'all positions' : flattenConfirm === 'long' ? 'all longs' : 'all shorts'}?</span>
-						<button class="rounded border border-terminal-border px-1.5 py-0.5" onclick={() => (flattenConfirm = null)}>No</button>
-						<button class="rounded bg-terminal-red/20 px-1.5 py-0.5 text-terminal-red" onclick={() => flattenPositions(flattenConfirm!)}>Confirm</button>
-					</div>
+					<span data-testid="position-controls-unavailable" class="text-3xs text-terminal-yellow">Position lifecycle is not applicable for this market.</span>
 				{/if}
 			</div>
 			{#if flattenError}<div class="border-b border-terminal-border px-3 py-1.5 text-2xs text-terminal-red">{flattenError}</div>{/if}
@@ -428,7 +449,6 @@
 						<th class="cell-md text-right font-normal">Mark price</th>
 						<th class="cell-md text-right font-normal">PnL</th>
 						<th class="cell-md text-right font-normal">Avg open price</th>
-						<th class="cell-md text-right font-normal">Break-even price</th>
 						<th class="cell-md text-center font-normal"></th>
 					</tr>
 				</thead>
@@ -458,7 +478,6 @@
 							<td class="cell-md text-right font-mono {position.unrealizedPnl >= 0 ? 'text-terminal-green' : 'text-terminal-red'}">
 								{position.unrealizedPnl >= 0 ? '+' : ''}${position.unrealizedPnl.toFixed(2)}
 							</td>
-							<td class="cell-md text-right font-mono">${formatPrice(position.entryPrice)}</td>
 							<td class="cell-md text-right font-mono">${formatPrice(position.entryPrice)}</td>
 							<td class="cell-md text-center">
 								<div class="relative inline-flex gap-1">

@@ -26,6 +26,8 @@ export interface ChatCommandContext {
 	displayName: string;
 	/** Optional per-session mute set (persisted by the panel). */
 	isMuted: (name: string) => boolean;
+	/** Applies a local-only moderation change to the shared mute set. */
+	setMuted?: (name: string, muted: boolean) => void;
 }
 
 function resolveMarketSymbol(raw: string | undefined): string | undefined {
@@ -128,14 +130,16 @@ export function runChatCommand(
 		case '/mute': {
 			if (!arg) return { type: 'system', text: 'Usage: /mute <name>' };
 			const name = arg.replace(/^@/, '');
-			if (ctx.displayName === name) return { type: 'system', text: "You can't mute yourself." };
+			if (ctx.displayName.toLowerCase() === name.toLowerCase()) return { type: 'system', text: "You can't mute yourself." };
 			if (ctx.isMuted(name)) return { type: 'system', text: `${name} is already muted.` };
+			ctx.setMuted?.(name, true);
 			return { type: 'system', text: `/mute ${name} — muted locally.` };
 		}
 		case '/unmute': {
 			if (!arg) return { type: 'system', text: 'Usage: /unmute <name>' };
 			const name = arg.replace(/^@/, '');
 			if (!ctx.isMuted(name)) return { type: 'system', text: `${name} is not muted.` };
+			ctx.setMuted?.(name, false);
 			return { type: 'system', text: `/unmute ${name} — unmuted.` };
 		}
 		default:

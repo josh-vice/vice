@@ -1,6 +1,6 @@
 /** Canonical routing types shared by every current and future venue adapter. */
 export type VenueId = 'hyperliquid' | 'binance' | 'bybit' | 'blofin' | 'lighter' | 'nado' | 'blofinDex';
-export type ProductKind = 'linearPerp' | 'inversePerp' | 'datedFuture' | 'spot' | 'option';
+export type ProductKind = 'linearPerp' | 'inversePerp' | 'datedFuture' | 'spot' | 'option' | 'outcome';
 export type DecimalString = string;
 
 /** A venue may publish a fixed tick or a price-dependent significant-figure rule. */

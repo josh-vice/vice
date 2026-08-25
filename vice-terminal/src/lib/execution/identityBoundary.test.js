@@ -30,6 +30,15 @@ describe('execution identity boundary', () => {
 		expect(source).toContain('const marketPrice = params.price ?? descriptor.lastPrice ?? 0;');
 		expect(source).toContain("selected.marketKey !== market.marketKey");
 	});
+	test('algorithm entry rejects metadata-only markets before importing local execution', async () => {
+		const source = await Bun.file(new URL('../hl/orders.ts', import.meta.url)).text();
+		expect(source).toContain('if (!capabilities.executable)');
+		expect(source).toContain('if (!capabilities.supportsAdvancedOrders)');
+		const gateIndex = source.indexOf('if (!capabilities.executable)');
+		const importIndex = source.indexOf("await import('$lib/execution/localExecution')");
+		expect(gateIndex).toBeGreaterThan(-1);
+		expect(importIndex).toBeGreaterThan(gateIndex);
+	});
 
 	test('live market normalization cannot synthesize a routing descriptor from a coin string', async () => {
 		const source = await Bun.file(new URL('../hl/normalize.ts', import.meta.url)).text();

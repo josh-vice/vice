@@ -51,24 +51,17 @@ export interface MarketDescriptor {
 	name: string;
 	type: 'perp' | 'spot';
 	lastPrice: number;
-	change24h: number;
-	changePercent24h: number;
-	volume24h: number;
+	change24h?: number;
+	changePercent24h?: number;
+	volume24h?: number;
 	openInterest?: number;
 	fundingRate?: number;
 	markPrice?: number;
 	indexPrice?: number;
 	/** Exact public category from Hyperliquid's perpCategories response. */
 	venueCategory?: string;
-	/** Venue-supplied prediction-market context. Absent fields were not supplied by the venue. */
-	outcome?: {
-		outcomeId: number;
-		side: number;
-		questionName?: string;
-		questionDescription?: string;
-		outcomeDescription?: string;
-		settled?: boolean;
-	};
+	/** Venue-supplied prediction-market context; absent fields remain absent. */
+	outcome?: { outcomeId: number; side: number; questionName?: string; questionDescription?: string; outcomeDescription?: string; sideName?: string; rawDescription?: string; settled?: boolean; outcomeContext?: { underlying?: string; expiry?: string; targetPrice?: number; period?: string } };
 	/** A catalog item may be discoverable before the venue supplies enough terms to trade safely. */
 	tradingAvailability?: 'available' | 'metadataOnly';
 	tradingUnavailableReason?: string;
@@ -275,7 +268,7 @@ export type OrderType =
 	| 'bracket'
 	| 'oco'
 	| 'ping_pong';
-export type MarketType = 'perp' | 'option' | 'spot';
+export type MarketType = 'perp' | 'spot' | 'prediction';
 
 export type ChartActiveField =
 	| 'entry'
@@ -397,7 +390,6 @@ export interface OrderPreset {
 	createdAt: number;
 	updatedAt: number;
 }
-
 export interface ChartCandle {
 	time: number;
 	open: number;

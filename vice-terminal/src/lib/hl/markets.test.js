@@ -57,6 +57,23 @@ describe('Hyperliquid market identity', () => {
 		expect(markets.map((market) => market.apiCoin)).toEqual(['#120', '#121']);
 		expect(markets[0]).toMatchObject({ kind: 'outcome', tradingAvailability: 'metadataOnly', outcome: { questionName: 'Election result', side: 0 } });
 	});
+	test('keeps outcome stats unavailable until authoritative public data arrives', () => {
+		const [market] = descriptorsFromOutcomeMeta({
+			outcomes: [{ outcome: 12, name: 'Election', description: '{"underlying":"ETH","expiry":"2026-12-31","targetPrice":4000}', sideSpecs: [{ name: 'Yes' }, { name: 'No' }] }],
+			questions: [{ question: 3, name: 'Election result', description: 'Who wins?', fallbackOutcome: 12, namedOutcomes: [12], settledNamedOutcomes: [] }]
+		});
+		expect(market).toMatchObject({
+			lastPrice: 0,
+			priceDecimals: 5,
+			volume24h: undefined,
+			change24h: undefined,
+			changePercent24h: undefined,
+			outcome: {
+				rawDescription: '{"underlying":"ETH","expiry":"2026-12-31","targetPrice":4000}',
+				outcomeContext: { underlying: 'ETH', expiry: '2026-12-31', targetPrice: 4000 }
+			}
+		});
+	});
 
 	test('uses venue precision rules', () => {
 		expect(derivePriceDecimals(5, false)).toBe(1);
@@ -67,7 +84,7 @@ describe('Hyperliquid market identity', () => {
 			pricePrecision: { kind: 'significantFigures', maxSignificantFigures: 5, maxDecimals: 1, integerPricesAllowed: true },
 			sizeIncrement: '0.00001'
 		}));
-		expect(() => hyperliquidInstrumentId({ ...createCoreBtcBootstrapMarket(), kind: 'outcome' })).toThrow('lacks complete execution terms');
+		expect(hyperliquidInstrumentId({ ...createCoreBtcBootstrapMarket(), kind: 'outcome', apiCoin: '#120', priceDecimals: 5, szDecimals: 0 })).toEqual(expect.objectContaining({ instrumentKey: 'hyperliquid:outcome:#120', product: 'outcome', sizeIncrement: '1' }));
 	});
 
 	test('preserves sparse official perp DEX indexes', () => {
@@ -123,7 +140,7 @@ describe('Hyperliquid market identity', () => {
 	test('warm catalog uses only validated same-network authoritative identities', async () => {
 		const source = await Bun.file(new URL('./markets.ts', import.meta.url)).text();
 		expect(source).toContain("const MARKET_CATALOG_CACHE_KEY = 'vice.hl.market-catalog.v1';");
-		expect(source).toContain("parsed.network !== hyperliquidNetwork.network");
+		expect(source).toContain("parsed.network !== hyperliquidPublicNetwork.network");
 		expect(source).toContain("marketCatalogStatus.set('stale');");
 		expect(source).toContain("marketCatalogStatus.set(hasWarmCatalog ? 'stale' : 'connecting');");
 		expect(source).toContain('writeCachedMarketCatalog(markets);');

@@ -2,7 +2,6 @@
 	import { onMount, onDestroy } from 'svelte';
 	import {
 		selectedMarket,
-		marketType,
 		chartCandles,
 		liveCandle,
 		chartTimeframe,
@@ -35,9 +34,12 @@
 	import { markUiFrameReady } from '$lib/native/performance';
 	import { unavailableFeedMessage } from '$lib/productionTruth';
 	import { formatSize } from '$lib/format';
+	import { marketCapabilities } from '$lib/marketCapabilities';
 
 	/** Research surfaces can reuse the live chart without exposing private overlays or chart trading. */
 	export let readOnly = false;
+	$: marketProfile = marketCapabilities($selectedMarket);
+	$: chartActionsEnabled = !readOnly && marketProfile.executable && (marketProfile.supportsPositionLifecycle || marketProfile.allowedOrderTypes.length > 0);
 
 	/** Bars visible by default when a chart first paints, before any user zoom. */
 	const DEFAULT_VISIBLE_BARS = 140;
@@ -68,7 +70,22 @@
 	let appliedPrecisionKey = '';
 	let legend: { time: Time; open: number; high: number; low: number; close: number; volume: number } | null = null;
 	let hoveringChart = false;
-	$: privateStateLive = !readOnly && $isConnected && $accountSyncStatus === 'live' && !$privacyMode;
+	$: privateStateLive = chartActionsEnabled && $isConnected && $accountSyncStatus === 'live' && !$privacyMode;
+	let interactionMarketKey = '';
+
+	$: {
+		const identity = $selectedMarket ? `${$selectedMarket.kind}:${$selectedMarket.marketKey}:${$selectedMarket.apiCoin}` : '';
+		if (interactionMarketKey && identity !== interactionMarketKey) {
+			designerMode.set(false);
+			clickPlacementMode.set(false);
+			clickPlacementSide.set('auto');
+			chartPreviewPrice.set(null);
+			chartDraft.set({});
+			draggingOrderId = null;
+			interactionError = '';
+		}
+		interactionMarketKey = identity;
+	}
 
 	function marketMatches(apiCoin?: string, marketKey?: string): boolean {
 		if (!$selectedMarket) return false;
@@ -83,6 +100,7 @@
 
 	function startOrderDrag(event: MouseEvent, orderId: string, price: number) {
 		if (readOnly) return;
+		if (!chartActionsEnabled || !privateStateLive) return;
 		event.preventDefault();
 		event.stopPropagation();
 		draggingOrderId = orderId;
@@ -91,6 +109,7 @@
 
 	function onChartMouseMove(e: MouseEvent) {
 		if (readOnly) return;
+		if (!chartActionsEnabled) return;
 		if ($clickPlacementMode) {
 			const hoverPrice = priceAtEvent(e);
 			if (hoverPrice != null) chartPreviewPrice.set(hoverPrice);
@@ -105,6 +124,7 @@
 
 	async function onChartMouseUp(e: MouseEvent) {
 		if (readOnly) return;
+		if (!chartActionsEnabled) return;
 		if (!draggingOrderId || !candlestickSeries || !chartContainer || !$selectedMarket) {
 			draggingOrderId = null;
 			return;
@@ -158,6 +178,7 @@
 
 	async function cancelChartOrder(event: MouseEvent, orderId: string, market: string) {
 		if (readOnly) return;
+		if (!chartActionsEnabled) return;
 		event.stopPropagation();
 		if (!privateStateLive) {
 			interactionError = 'Account state is stale; cancellation is paused until reconciliation completes';
@@ -183,6 +204,7 @@
 
 	async function onChartContextMenu(event: MouseEvent) {
 		if (readOnly || !$clickPlacementMode || !$selectedMarket) return;
+		if (!chartActionsEnabled) return;
 		event.preventDefault();
 		if (!$isConnected || $executionStatus !== 'live' || $accountSyncStatus !== 'live' || $marketDataStatus !== 'live') {
 			interactionError = $isConnected
@@ -214,6 +236,7 @@
 			return;
 		}
 		const result = await placeOrder({
+			marketKey: $selectedMarket.marketKey,
 			side,
 			type: 'limit',
 			price,
@@ -506,11 +529,12 @@
 		};
 		handleResize();
 
-		appliedDatasetKey = `${$selectedMarket?.apiCoin ?? $selectedMarket?.marketKey ?? ''}:${$chartTimeframe}`;
+		appliedDatasetKey = `${$selectedMarket?.kind ?? ''}:${$selectedMarket?.marketKey ?? $selectedMarket?.apiCoin ?? ''}:${$chartTimeframe}`;
 		if ($chartCandles.length > 0 || $liveCandle) applyCandles($chartCandles, true);
 
 		chart.subscribeClick((param) => {
 			if (readOnly || !chart || !candlestickSeries) return;
+			if (!chartActionsEnabled) return;
 			const price = priceFromClick(chart, candlestickSeries, param);
 			if (price == null) return;
 			handleChartClick(price);
@@ -553,7 +577,7 @@
 
 	// Clear stale candles immediately when market or timeframe changes.
 	$: if (candlestickSeries && volumeSeries) {
-		const datasetKey = `${$selectedMarket?.apiCoin ?? $selectedMarket?.marketKey ?? ''}:${$chartTimeframe}`;
+		const datasetKey = `${$selectedMarket?.kind ?? ''}:${$selectedMarket?.marketKey ?? $selectedMarket?.apiCoin ?? ''}:${$chartTimeframe}`;
 		if (datasetKey !== appliedDatasetKey) {
 			appliedDatasetKey = datasetKey;
 			clearChartSeries();
@@ -566,7 +590,7 @@
 	// tick), so this block only needs to decide whether a full setData reset
 	// is required; it never re-paints the last bar directly.
 	$: if ($chartCandles.length && candlestickSeries && volumeSeries) {
-		const datasetKey = `${$selectedMarket?.apiCoin ?? $selectedMarket?.marketKey ?? ''}:${$chartTimeframe}`;
+		const datasetKey = `${$selectedMarket?.kind ?? ''}:${$selectedMarket?.marketKey ?? $selectedMarket?.apiCoin ?? ''}:${$chartTimeframe}`;
 		const first = $chartCandles[0];
 		const last = $chartCandles[$chartCandles.length - 1];
 		const requiresReset =
@@ -616,10 +640,10 @@
 	}
 
 	$: if (candlestickSeries) {
-		const price = !readOnly && $clickPlacementMode ? $chartPreviewPrice : null;
+		const price = chartActionsEnabled && $clickPlacementMode ? $chartPreviewPrice : null;
 		previewLine = setPreviewLine(candlestickSeries, previewLine, price, $orderSide);
-	}
 
+	}
 	onDestroy(() => {
 		disposed = true;
 		if (previewLine && candlestickSeries) candlestickSeries.removePriceLine(previewLine);
@@ -649,34 +673,35 @@
 	onmousemove={onChartMouseMove}
 	onmouseup={onChartMouseUp}
 	onkeydown={(event) => {
-		if (!readOnly && event.key === 'Escape' && $clickPlacementMode) clickPlacementMode.set(false);
+		if (chartActionsEnabled && event.key === 'Escape' && $clickPlacementMode) clickPlacementMode.set(false);
 	}}
 />
 
 <div class="h-full flex flex-col bg-terminal-bg-secondary rounded-lg overflow-hidden">
-	<div class="flex items-center justify-between px-4 py-2 border-b border-terminal-border">
+	<div class="hidden sm:flex items-center justify-between px-4 py-2 border-b border-terminal-border">
 		<div class="flex items-center gap-4">
 			<div class="flex items-center gap-2">
 				<span class="text-lg font-semibold whitespace-nowrap">{$selectedMarket?.symbol || 'Select market'}</span>
-				{#if $marketType === 'option'}
-					<span class="text-xs px-2 py-0.5 bg-terminal-purple/20 text-terminal-purple rounded">Options</span>
+				{#if $selectedMarket}
+					<span data-testid="chart-market-kind" class="text-xs px-2 py-0.5 rounded {marketProfile.executable ? 'bg-terminal-cyan/15 text-terminal-cyan' : 'bg-terminal-yellow/15 text-terminal-yellow'}">{marketProfile.executable ? ($selectedMarket.kind === 'spot' ? 'Spot' : 'Perpetual') : 'Prediction · read only'}</span>
 				{/if}
 			</div>
 			{#if $selectedMarket}
-				{@const isPositive = $selectedMarket.changePercent24h >= 0}
+				{@const hasChange = $selectedMarket.changePercent24h !== undefined}
+				{@const isPositive = ($selectedMarket.changePercent24h ?? 0) >= 0}
 				<div class="flex items-center gap-3 text-sm">
-					<span class="tabular-nums text-lg {isPositive ? 'text-terminal-green' : 'text-terminal-red'}">
-						${$selectedMarket.lastPrice.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+					<span class="tabular-nums text-lg {hasChange && isPositive ? 'text-terminal-green' : hasChange ? 'text-terminal-red' : 'text-terminal-text-muted'}">
+						{Number.isFinite($selectedMarket.lastPrice) && ($selectedMarket.lastPrice !== 0 || $selectedMarket.kind === 'outcome') ? `$${$selectedMarket.lastPrice.toLocaleString('en-US', { minimumFractionDigits: $selectedMarket.priceDecimals })}` : '—'}
 					</span>
-					<span class="tabular-nums text-sm {isPositive ? 'text-terminal-green' : 'text-terminal-red'}">
-						{isPositive ? '+' : ''}{$selectedMarket.changePercent24h.toFixed(2)}%
+					<span class="tabular-nums text-sm {hasChange && isPositive ? 'text-terminal-green' : hasChange ? 'text-terminal-red' : 'text-terminal-text-muted'}">
+						{hasChange ? `${isPositive ? '+' : ''}${$selectedMarket.changePercent24h!.toFixed(2)}%` : '—'}
 					</span>
-					{#if $selectedMarket.markPrice}
+					{#if marketProfile.meaningfulStats.markPrice && $selectedMarket.markPrice !== undefined}
 						<span class="text-terminal-text-muted text-xs">
-							Mark: ${$selectedMarket.markPrice.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+							Mark: ${$selectedMarket.markPrice.toLocaleString('en-US', { minimumFractionDigits: $selectedMarket.priceDecimals })}
 						</span>
 					{/if}
-					{#if $selectedMarket.fundingRate !== undefined}
+					{#if marketProfile.meaningfulStats.fundingRate && $selectedMarket.fundingRate !== undefined}
 						<span class="text-terminal-text-muted text-xs">
 							Funding: <span class="{$selectedMarket.fundingRate >= 0 ? 'text-terminal-green' : 'text-terminal-red'}">{($selectedMarket.fundingRate * 100).toFixed(4)}%</span>
 						</span>
@@ -686,16 +711,16 @@
 		</div>
 
 		<div class="flex items-center gap-2">
-			{#if !readOnly}
+			{#if chartActionsEnabled}
 			<button
 				class="px-2 py-1 text-2xs rounded transition-colors {$designerMode ? 'bg-terminal-cyan/20 text-terminal-cyan' : 'text-terminal-text-muted hover:text-terminal-text'}"
 				onclick={() => designerMode.update((v) => !v)}
-				title="Designer mode — preview orders on chart before submit"
+				title="Design draft — preview order levels on the chart before submitting from the ticket"
 			>
 				Design
 			</button>
 			<button
-				class="px-2 py-1 text-2xs rounded transition-colors {$clickPlacementMode ? 'bg-terminal-green/20 text-terminal-green' : 'text-terminal-text-muted hover:text-terminal-text'}"
+				class="hidden sm:inline-flex px-2 py-1 text-2xs rounded transition-colors {$clickPlacementMode ? 'bg-terminal-green/20 text-terminal-green' : 'text-terminal-text-muted hover:text-terminal-text'}"
 				onclick={() => clickPlacementMode.update((v) => !v)}
 				title="Click placement — right-click the chart to submit an armed limit order"
 			>
@@ -733,9 +758,6 @@
 		role="application"
 		aria-label={readOnly ? 'Read-only price chart' : 'Trading chart'}
 	>
-		{#if ($chartCandles.length > 0 || $liveCandle) && ($marketDataStatus === 'stale' || $marketDataStatus === 'degraded' || $marketDataStatus === 'error')}
-			<div class="dither-overlay z-10 dither-50 bg-terminal-bg/70" aria-hidden="true"></div>
-		{/if}
 		{#if legend}
 			{@const decimals = $selectedMarket?.priceDecimals ?? 2}
 			{@const changeUp = legend.close >= legend.open}
@@ -759,12 +781,11 @@
 		{#each $openOrders.filter((order) => marketMatches(order.apiCoin, order.marketKey)) as order (order.id)}
 			{@const y = overlayCoordinates.get(`order:${order.id}`)}
 			{#if y !== undefined}
+				<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 				<div
-					role="button"
-					tabindex="0"
-					aria-label="Drag to modify order price"
+					role="group"
+					aria-label="Open order overlay"
 					class="absolute right-14 z-20 flex items-center rounded overflow-hidden shadow-lg tabular-nums text-3xs select-none transition-[top] duration-150 {order.side === 'buy' ? 'bg-terminal-green text-terminal-bg' : 'bg-terminal-red text-white'} {order.pending ? 'opacity-60' : ''}"
-					style={`top:${Math.max(0, y - 11)}px`}
 					onmousedown={(event) => startOrderDrag(event, order.id, order.triggerPrice || order.price || 0)}
 				>
 					<span class="cursor-ns-resize px-2 py-1">
@@ -808,11 +829,11 @@
 			{#if readOnly}
 				Read-only chart · public market data only
 			{:else if $designerMode}
-				Designer: click chart to preview order, then submit from ticket
+				Design draft: click chart to preview order levels, then submit from ticket
 			{:else if $clickPlacementMode}
 				Click placement armed: right-click to submit · Escape to disarm
 			{:else}
-				Click chart to autofill price · Shift+Design for preview
+				Click chart to autofill price · Design opens a draft
 			{/if}
 		</div>
 		{#if crossSpreadWarning}

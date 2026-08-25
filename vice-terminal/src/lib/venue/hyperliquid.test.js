@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { createCoreBtcBootstrapMarket } from '$lib/hl/markets.ts';
+import { createCoreBtcBootstrapMarket, hyperliquidInstrumentId } from '$lib/hl/markets.ts';
 import { assertHyperliquidMarketInstrument, hyperliquidBookEvent, HYPERLIQUID_BOOK_SEQUENCE_SUPPORT } from './hyperliquid.ts';
 
 const book = { bids: [{ price: 100, size: 1, total: 1 }], asks: [{ price: 101, size: 1, total: 1 }], spread: 1, spreadPercent: 1 };
@@ -46,5 +46,12 @@ describe('Hyperliquid canonical public-book events', () => {
 		const market = createCoreBtcBootstrapMarket();
 		expect(assertHyperliquidMarketInstrument(market)).toBe(market);
 		expect(() => assertHyperliquidMarketInstrument({ ...market, apiCoin: 'ETH' })).toThrow('does not match');
+	});
+	test('accepts canonical public outcome books but rejects outcome execution', () => {
+		const market = { ...createCoreBtcBootstrapMarket(), kind: 'outcome', apiCoin: '#120', szDecimals: 0, priceDecimals: 5, tradingAvailability: 'metadataOnly', tradingUnavailableReason: 'read only', instrument: undefined };
+		market.instrument = hyperliquidInstrumentId(market);
+		const event = hyperliquidBookEvent(market, book, 4, 1, 1, 1, 1700000000000);
+		expect(event.instrumentKey).toBe('hyperliquid:outcome:#120');
+		expect(() => assertHyperliquidMarketInstrument(market)).toThrow('read only');
 	});
 });

@@ -10,16 +10,18 @@
 	import { buildPositionReversePlan, reverseCloseReconciliation } from '$lib/execution/positionReverse';
 	import { get } from 'svelte/store';
 	import { topOfBookImbalance } from '$lib/bookAnalytics';
+	import { marketCapabilities } from '$lib/marketCapabilities';
 
 	$: baseAsset = $selectedMarket?.baseToken ?? 'Asset';
 	$: quoteAsset = $selectedMarket?.quoteToken ?? 'USD';
+	$: marketProfile = marketCapabilities($selectedMarket);
 	$: hasBook = $orderBook.bids.length > 0 || $orderBook.asks.length > 0;
 	$: bookImbalance = topOfBookImbalance($orderBook);
 	$: visibleAsks = $orderBook.asks.slice(0, $bookDepth).reverse();
 	$: visibleBids = $orderBook.bids.slice(0, $bookDepth);
 	$: maxTotal = Math.max(visibleBids.at(-1)?.total ?? 0, visibleAsks[0]?.total ?? 0);
 	$: privateStateLive = $isConnected && $executionStatus === 'live' && $accountSyncStatus === 'live' && $marketDataStatus === 'live';
-	$: canCancelKnownOrders = $isConnected && $executionStatus === 'live';
+	$: canCancelKnownOrders = marketProfile.executable && $isConnected && $executionStatus === 'live' && $accountSyncStatus === 'live' && $marketDataStatus === 'live';
 	let placementError = '';
 	let placingPrice: number | null = null;
 	let cancellingOrderId = '';
@@ -88,6 +90,7 @@
 
 	async function clickLadderPrice(side: 'buy' | 'sell', price: number, stop = false): Promise<void> {
 		placementError = '';
+		if (!marketProfile.executable || (stop && !marketProfile.supportsTriggers)) { placementError = marketProfile.readOnlyReason ?? 'This market does not support DOM placement'; return; }
 		if (!$clickPlacementMode) {
 			orderPrice.set(price);
 			return;
@@ -120,6 +123,7 @@
 
 	async function cancelLadderOrder(orderId: string, marketIdentity?: string): Promise<boolean> {
 		placementError = '';
+		if (!marketProfile.executable) { placementError = marketProfile.readOnlyReason ?? 'This market does not support order cancellation'; return false; }
 		if (!canCancelKnownOrders) {
 			placementError = 'Enable secure trading before cancelling a known DOM order';
 			return false;
@@ -139,9 +143,14 @@
 			}
 			if (!await fetchOpenOrders()) {
 				placementError = 'Cancel was accepted but authoritative order reconciliation is unavailable';
+				openOrders.update((orders) => orders.map((order) => order.id === orderId ? { ...order, pending: false, error: placementError } : order));
 				return false;
 			}
 			return true;
+		} catch (error) {
+			placementError = error instanceof Error ? error.message : 'DOM cancel failed; reconcile open orders';
+			openOrders.update((orders) => orders.map((order) => order.id === orderId ? { ...order, pending: false, error: placementError } : order));
+			return false;
 		} finally {
 			cancellingOrderId = '';
 		}
@@ -175,6 +184,10 @@
 
 	async function modifyLadderOrder(orderId: string, newPrice: number): Promise<void> {
 		placementError = '';
+		if (!marketProfile.executable) {
+			placementError = marketProfile.readOnlyReason ?? 'This market does not support order modification';
+			return;
+		}
 		if (!privateStateLive) {
 			placementError = 'Account state is stale; DOM order changes are paused until reconciliation completes';
 			return;
@@ -188,13 +201,20 @@
 		const decimals = $selectedMarket?.priceDecimals ?? 2;
 		if ((order.triggerPrice ?? order.price)?.toFixed(decimals) === newPrice.toFixed(decimals)) return;
 		openOrders.update((orders) => orders.map((candidate) => candidate.id === orderId ? { ...candidate, pending: true, error: undefined } : candidate));
-		const result = await modifyOrderPrice(orderId, marketIdentity, newPrice);
-		if (!result.ok) {
-			placementError = result.error ?? 'DOM modify was rejected';
-			openOrders.update((orders) => orders.map((candidate) => candidate.id === orderId ? { ...candidate, pending: false, error: result.error } : candidate));
-			return;
+		try {
+			const result = await modifyOrderPrice(orderId, marketIdentity, newPrice);
+			if (!result.ok) {
+				placementError = result.error ?? 'DOM modify was rejected';
+				openOrders.update((orders) => orders.map((candidate) => candidate.id === orderId ? { ...candidate, pending: false, error: result.error } : candidate));
+				return;
+			}
+			const refreshed = await fetchOpenOrders();
+			if (!refreshed) placementError = 'Modify was accepted but authoritative order reconciliation is unavailable';
+			openOrders.update((orders) => orders.map((candidate) => candidate.id === orderId ? { ...candidate, pending: false, error: refreshed ? undefined : placementError } : candidate));
+		} catch (error) {
+			placementError = error instanceof Error ? error.message : 'DOM modify failed; reconcile open orders';
+			openOrders.update((orders) => orders.map((candidate) => candidate.id === orderId ? { ...candidate, pending: false, error: placementError } : candidate));
 		}
-		await fetchOpenOrders();
 	}
 
 	function finishLadderOrderDrag(price: number): void {
@@ -217,11 +237,19 @@
 
 	async function flattenDomMarket(): Promise<void> {
 		placementError = '';
+		if (!marketProfile.supportsPositionLifecycle) {
+			placementError = marketProfile.readOnlyReason ?? 'Position lifecycle is not applicable for this market';
+			return;
+		}
 		if (!privateStateLive) {
 			placementError = 'Account state is stale; DOM flatten is paused until reconciliation completes';
 			return;
 		}
 		const position = $positions.find((candidate) => orderMatchesSelectedMarket(candidate.apiCoin, candidate.marketKey));
+		if (!position) {
+			placementError = 'DOM flatten is unavailable';
+			return;
+		}
 		const close = buildPositionCloseIntent(position, $marketRegistry, $selectedMarket, $orderBook, 'market');
 		if (!close.intent) {
 			placementError = close.error ?? 'DOM flatten is unavailable';
@@ -244,11 +272,19 @@
 
 	async function reverseDomMarket(): Promise<void> {
 		placementError = '';
+		if (!marketProfile.supportsPositionLifecycle) {
+			placementError = marketProfile.readOnlyReason ?? 'Position lifecycle is not applicable for this market';
+			return;
+		}
 		if (!privateStateLive) {
 			placementError = 'Account state is stale; DOM reverse is paused until reconciliation completes';
 			return;
 		}
 		const position = $positions.find((candidate) => orderMatchesSelectedMarket(candidate.apiCoin, candidate.marketKey));
+		if (!position) {
+			placementError = 'DOM reverse is unavailable';
+			return;
+		}
 		const planned = buildPositionReversePlan(position, $marketRegistry, $selectedMarket, $orderBook);
 		if (!planned.plan) {
 			placementError = planned.error ?? 'DOM reverse is unavailable';
@@ -290,16 +326,15 @@
 
 </script>
 
-	<div data-testid="order-book" data-feed-status={$marketDataStatus} data-row-count={$orderBook.bids.length + $orderBook.asks.length} class="h-full flex flex-col bg-terminal-bg-panel" class:dither-stale={hasBook && ($marketDataStatus === 'stale' || $marketDataStatus === 'degraded' || $marketDataStatus === 'error')}>
+	<div data-testid="order-book" data-feed-status={$marketDataStatus} data-row-count={$orderBook.bids.length + $orderBook.asks.length} class="h-full flex flex-col bg-terminal-bg-panel">
 	<div class="h-8 px-2 border-b border-terminal-border flex items-center justify-between text-2xs">
 		<span class="text-terminal-text-secondary">Order book</span>
 		{#if $clickPlacementMode}<span class="text-3xs text-terminal-green">DOM ARMED</span>{/if}
-		<button aria-label="Recenter DOM ladder" onclick={recenterLadder} class="ml-1 text-3xs text-terminal-cyan hover:underline">Center</button>
+		{#if hasBook}<button aria-label="Recenter DOM ladder" onclick={recenterLadder} class="ml-1 text-3xs text-terminal-cyan hover:underline">Center</button>{/if}
 		<span data-testid="dom-follow-status" class="text-3xs {followLastPrice ? 'text-terminal-text-muted' : 'text-terminal-yellow'}">{followLastPrice ? 'AUTO' : 'MANUAL'}</span>
-		<span data-testid="book-imbalance" title="Displayed size imbalance across the top 12 validated book levels" class="text-3xs {bookImbalance.label === 'bid' ? 'text-terminal-green' : bookImbalance.label === 'ask' ? 'text-terminal-red' : 'text-terminal-text-muted'}">{bookImbalance.label === 'unavailable' ? 'IMB —' : `IMB ${bookImbalance.imbalance >= 0 ? '+' : ''}${(bookImbalance.imbalance * 100).toFixed(0)}% ${bookImbalance.label === 'balanced' ? 'BAL' : bookImbalance.label.toUpperCase()}`}</span>
+		{#if hasBook}<span data-testid="book-imbalance" title={`Displayed size imbalance across the top ${$bookDepth} validated book levels`} class="text-3xs {bookImbalance.label === 'bid' ? 'text-terminal-green' : bookImbalance.label === 'ask' ? 'text-terminal-red' : 'text-terminal-text-muted'}">{bookImbalance.label === 'unavailable' ? 'IMB —' : `IMB ${bookImbalance.imbalance >= 0 ? '+' : ''}${(bookImbalance.imbalance * 100).toFixed(0)}% ${bookImbalance.label === 'balanced' ? 'BAL' : bookImbalance.label.toUpperCase()}`}</span>{/if}
 		<button aria-label="Cancel buy DOM orders" disabled={!canCancelKnownOrders || cancellingOrderId !== ''} onclick={() => void cancelLadderSide('buy')} class="ml-1 text-3xs text-terminal-green hover:underline disabled:opacity-40">Cancel buys</button>
 		<button aria-label="Cancel sell DOM orders" disabled={!canCancelKnownOrders || cancellingOrderId !== ''} onclick={() => void cancelLadderSide('sell')} class="ml-1 text-3xs text-terminal-red hover:underline disabled:opacity-40">Cancel sells</button>
-		<span class="dither-rule mx-2 text-terminal-text-muted" aria-hidden="true"></span>
 		<select aria-label="Order book precision grouping" bind:value={$bookSigFigs} onchange={(event) => changeGrouping(Number(event.currentTarget.value))} class="ml-auto bg-terminal-bg-secondary text-3xs text-terminal-text-secondary outline-none">
 			<option value={2}>2 sig</option><option value={3}>3 sig</option><option value={4}>4 sig</option><option value={5}>5 sig</option>
 		</select>
@@ -322,7 +357,7 @@
 				{#each visibleAsks as ask (ask.price)}
 					<div class="relative">
 					<button aria-label={`Sell at ${ask.price}`} disabled={placingPrice !== null} class="w-full relative grid grid-cols-3 px-2 py-0.5 text-2xs tabular-nums text-left hover:bg-terminal-red-bg/70 disabled:opacity-50" onmouseup={() => finishLadderOrderDrag(ask.price)} onclick={(event) => handleLadderRowClick('sell', ask.price, event)}>
-						<span class="absolute right-0 inset-y-0 bg-terminal-red/30 dither-fade-l pointer-events-none" style="width:{getDepthPercent(ask.total)}%"></span>
+						<span class="absolute right-0 inset-y-0 bg-terminal-red/30 pointer-events-none" style="width:{getDepthPercent(ask.total)}%"></span>
 						<span class="relative text-terminal-red">{formatPrice(ask.price)}</span>
 						<span class="relative text-right text-terminal-text-secondary">{formatSize(ask.size)}</span>
 						<span class="relative text-right text-terminal-text-muted">{formatSize(ask.total)}</span>
@@ -348,7 +383,7 @@
 				{#each visibleBids as bid (bid.price)}
 					<div class="relative">
 					<button aria-label={`Buy at ${bid.price}`} disabled={placingPrice !== null} class="w-full relative grid grid-cols-3 px-2 py-0.5 text-2xs tabular-nums text-left hover:bg-terminal-green-bg/70 disabled:opacity-50" onmouseup={() => finishLadderOrderDrag(bid.price)} onclick={(event) => handleLadderRowClick('buy', bid.price, event)}>
-						<span class="absolute right-0 inset-y-0 bg-terminal-green/30 dither-fade-l pointer-events-none" style="width:{getDepthPercent(bid.total)}%"></span>
+						<span class="absolute right-0 inset-y-0 bg-terminal-green/30 pointer-events-none" style="width:{getDepthPercent(bid.total)}%"></span>
 						<span class="relative text-terminal-green">{formatPrice(bid.price)}</span>
 						<span class="relative text-right text-terminal-text-secondary">{formatSize(bid.size)}</span>
 						<span class="relative text-right text-terminal-text-muted">{formatSize(bid.total)}</span>
@@ -372,14 +407,18 @@
 					<button aria-label={`Set DOM size to ${percent} percent`} onclick={() => setOrderSizePercent(percent)} class="rounded bg-terminal-bg-secondary px-1 py-0.5 text-3xs text-terminal-text-secondary hover:bg-terminal-bg-hover">{percent === 100 ? 'MAX' : `${percent}%`}</button>
 				{/each}
 			</div>
-			<button aria-label="Flatten selected market position" disabled={flattening || !privateStateLive} onclick={() => void flattenDomMarket()} class="mt-1 w-full rounded border border-terminal-red/60 px-1 py-0.5 text-3xs text-terminal-red hover:bg-terminal-red-bg disabled:opacity-40">{flattening ? 'Reconciling flatten…' : 'Flatten market'}</button>
-			{#if reverseConfirm}
-				<div class="mt-1 rounded border border-terminal-yellow/50 bg-terminal-yellow/5 p-1 text-3xs text-terminal-text">
-					<p>Reverse closes first. It opens the other side only after a flat account snapshot.</p>
-					<div class="mt-1 flex justify-end gap-1"><button onclick={() => (reverseConfirm = false)} class="rounded border border-terminal-border px-1 py-0.5">Cancel</button><button disabled={reversing} onclick={() => void reverseDomMarket()} class="rounded bg-terminal-yellow/20 px-1 py-0.5 text-terminal-yellow disabled:opacity-40">{reversing ? 'Reconciling…' : 'Confirm reverse'}</button></div>
-				</div>
+			{#if marketProfile.supportsPositionLifecycle}
+				<button aria-label="Flatten selected market position" disabled={flattening || !privateStateLive} onclick={() => void flattenDomMarket()} class="mt-1 w-full rounded border border-terminal-red/60 px-1 py-0.5 text-3xs text-terminal-red hover:bg-terminal-red-bg disabled:opacity-40">{flattening ? 'Reconciling flatten…' : 'Flatten market'}</button>
+				{#if reverseConfirm}
+					<div class="mt-1 rounded border border-terminal-yellow/50 bg-terminal-yellow/5 p-1 text-3xs text-terminal-text">
+						<p>Reverse closes first. It opens the other side only after a flat account snapshot.</p>
+						<div class="mt-1 flex justify-end gap-1"><button onclick={() => (reverseConfirm = false)} class="rounded border border-terminal-border px-1 py-0.5">Cancel</button><button disabled={reversing} onclick={() => void reverseDomMarket()} class="rounded bg-terminal-yellow/20 px-1 py-0.5 text-terminal-yellow disabled:opacity-40">{reversing ? 'Reconciling…' : 'Confirm reverse'}</button></div>
+					</div>
+				{:else}
+					<button aria-label="Reverse selected market position" disabled={reversing || !privateStateLive} onclick={() => (reverseConfirm = true)} class="mt-1 w-full rounded border border-terminal-yellow/60 px-1 py-0.5 text-3xs text-terminal-yellow hover:bg-terminal-yellow/10 disabled:opacity-40">Reverse market</button>
+				{/if}
 			{:else}
-				<button aria-label="Reverse selected market position" disabled={reversing || !privateStateLive} onclick={() => (reverseConfirm = true)} class="mt-1 w-full rounded border border-terminal-yellow/60 px-1 py-0.5 text-3xs text-terminal-yellow hover:bg-terminal-yellow/10 disabled:opacity-40">Reverse market</button>
+				<div data-testid="dom-position-controls-unavailable" class="mt-1 text-center text-3xs text-terminal-text-muted">Position lifecycle not applicable</div>
 			{/if}
 		</div>
 		</div>

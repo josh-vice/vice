@@ -1,22 +1,11 @@
 <script lang="ts">
 	/**
-	 * In-app Report Issue flow.
-	 *
-	 * Gives a beta tester a privacy-safe way to hand support the diagnostics
-	 * they need: an optional screenshot, an optional description, and a
-	 * downloadable support bundle (JSON). The bundle is the ONLY automated
-	 * artifact; nothing is uploaded — the user downloads it and attaches it to
-	 * a support ticket themselves. The description and screenshot never leave
-	 * this device automatically either.
-	 *
-	 * Privacy contract enforced here + in `$lib/diagnostics/redact.ts`:
-	 *   - The bundle never contains addresses, keys, signatures, tokens, or
-	 *     order payloads (asserted by unit tests).
-	 *   - The screenshot is user-driven and user-owned; the tester reviews it
-	 *     before attaching. It is NOT part of the automated bundle.
+	 * Privacy-safe local support bundle flow. Screenshots remain separate
+	 * user-owned artifacts and are never embedded in the JSON bundle.
 	 */
 	import { downloadSupportBundle, supportBundleFilename } from '$lib/diagnostics/download';
 	import { X, Download, Camera, ShieldCheck } from 'lucide-svelte';
+	import { onMount } from 'svelte';
 
 	let { onClose }: { onClose: () => void } = $props();
 	let description = $state('');
@@ -25,19 +14,40 @@
 	let captureError = $state<string | null>(null);
 	let downloading = $state(false);
 	let bundleSummary: { filename: string; bytes: number } | null = $state(null);
+	let dialogElement: HTMLDivElement;
+	let previousFocus: HTMLElement | null = null;
+
+	onMount(() => {
+		previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+		dialogElement?.focus();
+		const handleTab = (event: KeyboardEvent) => {
+			if (event.key !== 'Tab' || !dialogElement) return;
+			const focusable = [...dialogElement.querySelectorAll<HTMLElement>('button, textarea, input, select, [tabindex]:not([tabindex="-1"])')]
+				.filter((element) => !element.hasAttribute('disabled'));
+			if (focusable.length === 0) return;
+			const first = focusable[0];
+			const last = focusable[focusable.length - 1];
+			if (event.shiftKey && document.activeElement === first) {
+				event.preventDefault();
+				last.focus();
+			} else if (!event.shiftKey && document.activeElement === last) {
+				event.preventDefault();
+				first.focus();
+			}
+		};
+		dialogElement?.addEventListener('keydown', handleTab);
+		return () => {
+			dialogElement?.removeEventListener('keydown', handleTab);
+			previousFocus?.focus();
+		};
+	});
 
 	async function captureScreenshot() {
 		capturing = true;
 		captureError = null;
 		try {
-			// html2canvas is a client-side DOM rasterizer — it never makes a
-			// network request and sends nothing anywhere.
 			const { default: html2canvas } = await import('html2canvas');
-			const canvas = await html2canvas(document.body, {
-				backgroundColor: '#08070f',
-				useCORS: true,
-				logging: false
-			});
+			const canvas = await html2canvas(document.body, { backgroundColor: '#08070f', useCORS: true, logging: false });
 			screenshotDataUrl = canvas.toDataURL('image/png');
 		} catch (err) {
 			captureError = err instanceof Error ? err.message : 'Screenshot capture failed';
@@ -50,7 +60,7 @@
 	async function exportBundle() {
 		downloading = true;
 		try {
-			const bundle = downloadSupportBundle();
+			const bundle = downloadSupportBundle(undefined, description);
 			const text = JSON.stringify(bundle);
 			bundleSummary = { filename: supportBundleFilename(), bytes: text.length };
 		} finally {
@@ -60,6 +70,7 @@
 </script>
 
 <div
+	bind:this={dialogElement}
 	class="fixed inset-0 z-[10000] flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
 	role="dialog"
 	aria-modal="true"

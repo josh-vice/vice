@@ -104,6 +104,12 @@ test('support bundle downloads as a deterministic-schema, privacy-safe JSON file
 test('The Pit is a local command console and refuses plain peer messages', async ({ page, evidence }) => {
 	await page.goto('/trade', { waitUntil: 'domcontentloaded', timeout: 60_000 });
 	await expect(page.getByTestId('workspace-host')).toBeAttached({ timeout: 20_000 });
+	await page.getByTestId('workspace-customize-toggle').click();
+	await page.getByTestId('workspace-widgets-toggle').click();
+	const widgetsMenu = page.locator('[role="menu"]');
+	await widgetsMenu.locator('label').filter({ hasText: 'The Pit' }).locator('input').check();
+	await expect(page.getByRole('tab', { name: 'The Pit', exact: true })).toBeAttached({ timeout: 20_000 });
+	await page.getByRole('tab', { name: 'The Pit', exact: true }).click();
 
 	// The Pit panel is present and labelled local + beta command console.
 	const host = page.getByTestId('workspace-host');

@@ -9,34 +9,22 @@ function decimalIncrement(decimals: number): string {
 	return decimals === 0 ? '1' : `0.${'0'.repeat(decimals - 1)}1`;
 }
 
-/** Require the catalog identity used at every Hyperliquid signing boundary. */
-export function assertHyperliquidMarketInstrument(market: MarketDescriptor): MarketDescriptor {
-	if (market.kind === 'outcome' || market.tradingAvailability === 'metadataOnly') {
-		throw new Error('Hyperliquid market lacks complete execution terms');
-	}
+/** Validate canonical public identity, including metadata-only outcome books. */
+export function assertHyperliquidPublicMarketInstrument(market: MarketDescriptor): MarketDescriptor {
 	const instrument = market.instrument;
-	if (!instrument || instrument.venue !== 'hyperliquid') {
-		throw new Error('Hyperliquid market lacks a canonical instrument identity');
-	}
+	if (!instrument || instrument.venue !== 'hyperliquid') throw new Error('Hyperliquid market lacks a canonical instrument identity');
 	assertInstrumentId(instrument);
-	const product = market.type === 'spot' ? 'spot' : 'linearPerp';
-	if (
-		instrument.instrumentKey !== `hyperliquid:${product}:${market.apiCoin}` ||
-		instrument.venueSymbol !== market.apiCoin ||
-		instrument.product !== product ||
-		instrument.baseAsset !== market.baseToken ||
-		instrument.quoteAsset !== market.quoteToken ||
-		instrument.settlementAsset !== market.quoteToken ||
-		instrument.contractMultiplier !== '1' ||
-		instrument.sizeIncrement !== decimalIncrement(market.szDecimals) ||
-		instrument.pricePrecision.kind !== 'significantFigures' ||
-		instrument.pricePrecision.maxSignificantFigures !== 5 ||
-		instrument.pricePrecision.maxDecimals !== market.priceDecimals ||
-		instrument.pricePrecision.integerPricesAllowed !== true
-	) {
+	const product = market.kind === 'outcome' ? 'outcome' : market.type === 'spot' ? 'spot' : 'linearPerp';
+	if (instrument.instrumentKey !== `hyperliquid:${product}:${market.apiCoin}` || instrument.venueSymbol !== market.apiCoin || instrument.product !== product || instrument.baseAsset !== market.baseToken || instrument.quoteAsset !== market.quoteToken || instrument.settlementAsset !== market.quoteToken || instrument.contractMultiplier !== '1' || instrument.sizeIncrement !== decimalIncrement(market.szDecimals) || instrument.pricePrecision.kind !== 'significantFigures' || instrument.pricePrecision.maxSignificantFigures !== 5 || instrument.pricePrecision.maxDecimals !== market.priceDecimals || instrument.pricePrecision.integerPricesAllowed !== true) {
 		throw new Error('Hyperliquid canonical instrument does not match the selected market');
 	}
 	return market;
+}
+
+/** Require complete execution terms at every signing boundary. */
+export function assertHyperliquidMarketInstrument(market: MarketDescriptor): MarketDescriptor {
+	if (market.kind === 'outcome' || market.tradingAvailability === 'metadataOnly') throw new Error(market.tradingUnavailableReason ?? 'Hyperliquid market lacks complete execution terms');
+	return assertHyperliquidPublicMarketInstrument(market);
 }
 
 /**
@@ -57,7 +45,7 @@ export function hyperliquidBookEvent(
 	receivedAtMs: number,
 	eventTimeMs?: number
 ): EventEnvelope<OrderBook> {
-	try { assertHyperliquidMarketInstrument(market); }
+	try { assertHyperliquidPublicMarketInstrument(market); }
 	catch { throw new Error('Hyperliquid book event requires a canonical Hyperliquid instrument'); }
 	const instrument = market.instrument;
 	if (!instrument) throw new Error('Hyperliquid book event requires a canonical Hyperliquid instrument');

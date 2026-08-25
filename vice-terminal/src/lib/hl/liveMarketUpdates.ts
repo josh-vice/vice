@@ -26,7 +26,7 @@ function finite(value: string | null | undefined): number | undefined {
 function applyPerp(market: MarketDescriptor, context: PerpContext): MarketDescriptor {
 	const mark = finite(context.markPx) ?? finite(context.midPx) ?? market.lastPrice;
 	const previous = finite(context.prevDayPx);
-	const change = previous == null ? market.change24h : mark - previous;
+	const change = previous == null ? (market.change24h ?? 0) : mark - previous;
 	market.lastPrice = finite(context.midPx) ?? mark;
 	market.markPrice = mark;
 	market.indexPrice = finite(context.oraclePx) ?? market.indexPrice;
@@ -41,7 +41,7 @@ function applyPerp(market: MarketDescriptor, context: PerpContext): MarketDescri
 function applySpot(market: MarketDescriptor, context: SpotContext): MarketDescriptor {
 	const mark = finite(context.markPx) ?? finite(context.midPx) ?? market.lastPrice;
 	const previous = finite(context.prevDayPx);
-	const change = previous == null ? market.change24h : mark - previous;
+	const change = previous == null ? (market.change24h ?? 0) : mark - previous;
 	market.lastPrice = finite(context.midPx) ?? mark;
 	market.markPrice = mark;
 	market.change24h = change;
@@ -58,6 +58,7 @@ export function applyAllDexPerpContexts(
 	const byDex = new Map<string, PerpContext[]>();
 	for (const [dex, values] of contexts) byDex.set(dex, values);
 	for (const market of markets) {
+		if (market.kind !== 'corePerp' && market.kind !== 'hip3Perp') continue;
 		const dex = market.dex ?? '';
 		const values = byDex.get(dex);
 		if (!values) continue;

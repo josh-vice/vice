@@ -11,10 +11,10 @@
  * injected), so no signature is ever requested.
  */
 import { expect } from '@playwright/test';
-import { test, assertCleanRuntime } from './_fixtures.js';
+import { test, assertCleanRuntime, seedMarketTaxonomyFixture } from './_fixtures.js';
 
 test('wallet-disconnected: no account balance, no address, ticket preconditions', async ({ page, evidence }) => {
-	await page.goto('/trade', { waitUntil: 'domcontentloaded', timeout: 60_000 });
+	await page.goto('http://127.0.0.1:4173/trade', { waitUntil: 'domcontentloaded', timeout: 60_000 });
 	await expect(page.getByTestId('workspace-host')).toBeAttached({ timeout: 20_000 });
 
 	// Account chip shows the honest disconnected placeholder, not a number.
@@ -49,7 +49,7 @@ test('secure-trading preconditions render without triggering a signature (MOCK p
 		});
 	});
 
-	await page.goto('/trade', { waitUntil: 'domcontentloaded', timeout: 60_000 });
+	await page.goto('http://127.0.0.1:4173/trade', { waitUntil: 'domcontentloaded', timeout: 60_000 });
 	await expect(page.getByTestId('order-persistence-class')).toBeAttached({ timeout: 20_000 });
 
 	// With a wallet present but not connected, the ticket offers the enable
@@ -63,4 +63,14 @@ test('secure-trading preconditions render without triggering a signature (MOCK p
 		// already whitelisted by the fixture.
 		ignoreConsole: []
 	});
+});
+test('wallet-disconnected prediction outcome never exposes signer preconditions', async ({ page, evidence }) => {
+	await seedMarketTaxonomyFixture(page);
+	await page.goto('http://127.0.0.1:4173/trade', { waitUntil: 'domcontentloaded', timeout: 60_000 });
+	await page.getByRole('button', { name: 'Prediction', exact: true }).click();
+	await page.getByRole('button', { name: /Toggle ETH \$4000 · Yes favorite ETH \$4000 · Yes/ }).click();
+	await expect(page.getByTestId('workspace-host').getByTestId('prediction-market-panel')).toBeVisible({ timeout: 20_000 });
+	await expect(page.getByTestId('workspace-host').getByTestId('prediction-read-only-reason')).toContainText('lot, tick');
+	await expect(page.getByText('Connect to trade', { exact: false })).not.toBeVisible();
+	await assertCleanRuntime(evidence);
 });

@@ -12,8 +12,7 @@ import { expect } from '@playwright/test';
 import { test, assertCleanRuntime } from './_fixtures.js';
 
 async function lockButton(page) {
-	// The lock toggle flips aria-label between Unlock/Lock.
-	return page.locator('button[aria-label="Unlock workspace layout"], button[aria-label="Lock workspace layout"]');
+	return page.getByTestId('workspace-customize-toggle');
 }
 
 test('workspace starts locked and only a deliberate unlock enables customization', async ({ page, evidence }) => {
@@ -23,15 +22,14 @@ test('workspace starts locked and only a deliberate unlock enables customization
 	const btn = await lockButton(page);
 	await expect(btn.first()).toBeAttached({ timeout: 20_000 });
 
-	// Default is locked. (Use exact text; "LOCKED" also appears inside the
-	// advanced-certification-status prose, e.g. "LOCKED pending ...".)
+	// Default is locked.
 	const lockedLabel = page.getByRole('button', { name: 'Unlock workspace layout' }).locator('span');
 	await expect(lockedLabel).toHaveText('LOCKED');
-	// Panels/preset controls are disabled while locked.
 	const preset = page.getByLabel('Workspace preset');
 	await expect(preset).toBeDisabled();
-	const panels = page.getByText('PANELS', { exact: true });
-	await expect(panels).toBeDisabled();
+	const widgets = page.getByTestId('workspace-widgets-toggle');
+	await widgets.click();
+	await expect(page.getByText('Minimal workspace is intentionally simplified.', { exact: false })).toBeVisible();
 
 	// Deliberate unlock.
 	await btn.first().click();
@@ -67,15 +65,10 @@ test('panel visibility and preset persist across reload, reset restores default'
 	// The unlock preference persisted, so the preset stays enabled+chart.
 	await expect(reloadedPreset).toHaveValue('chart');
 
-	// Open the PANELS menu and use "Reset this layout". (The menu is what
-	// exposes the reset action; ensure we're unlocked first.)
-	const unlockToggle = await lockButton(page);
-	await expect(unlockToggle.first()).toBeAttached();
-	const presetEnabled = await reloadedPreset.isEnabled();
-	if (!presetEnabled) await unlockToggle.first().click();
-	const panelsBtn = page.getByRole('button', { name: 'PANELS', exact: true });
-	await expect(panelsBtn).toBeEnabled();
-	await panelsBtn.click();
+	// Open the WIDGETS menu and use "Reset this layout".
+	const widgetsBtn = page.getByTestId('workspace-widgets-toggle');
+	await expect(widgetsBtn).toBeEnabled();
+	await widgetsBtn.click();
 	const resetBtn = page.getByRole('button', { name: 'Reset this layout', exact: true });
 	await expect(resetBtn).toBeAttached();
 	await resetBtn.click();

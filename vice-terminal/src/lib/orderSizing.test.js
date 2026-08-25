@@ -12,8 +12,8 @@ describe('US-003 order sizing hotkeys', () => {
 		expect(stores).toContain('account.marginFree');
 		expect(stores).toContain("market.kind === 'spot'");
 		expect(stores).toContain('market.quoteToken');
-		expect(ticket).toContain("$selectedMarket?.kind === 'spot'");
-		expect(stores).toContain('Math.min(leverage, market?.maxLeverage ?? leverage)');
+		expect(ticket).toContain("marketCapabilities($selectedMarket)");
+		expect(ticket).toContain('marketProfile.amountUnits');
 		expect(ticket).toContain('venueMaxLeverage');
 	});
 });

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { selectedMarket, orderBook, orderSide, chartTimeframe, setChartTimeframe, marketContextStatus, marketCatalogStatus, marketRegistry, selectMarket } from '$lib/stores';
+	import { selectedMarket, orderBook, orderSide, chartTimeframe, setChartTimeframe, marketContextStatus, marketCatalogStatus, marketDataStatus, marketRegistry, selectMarket } from '$lib/stores';
 	import { startPriceAlertMonitoring } from '$lib/priceAlerts';
 	import { startSoundNotifications } from '$lib/soundNotifications';
 	import { loadPrivacyMode } from '$lib/privacyMode';
@@ -13,16 +13,19 @@
 	import Chart from '$lib/components/Chart.svelte';
 	import OrderBook from '$lib/components/OrderBook.svelte';
 	import OrderTicket from '$lib/components/OrderTicket.svelte';
+	import PredictionMarketPanel from '$lib/components/PredictionMarketPanel.svelte';
+	import BottomPanel from '$lib/components/BottomPanel.svelte';
 	import RecentTrades from '$lib/components/RecentTrades.svelte';
 	import WorkspaceHost from '$lib/components/WorkspaceHost.svelte';
 	import CLIPanel from '$lib/components/CLIPanel.svelte';
 	import MobileOrderSheet from '$lib/components/MobileOrderSheet.svelte';
 	import { formatPrice } from '$lib/format';
 	import { describeMarketClass } from '$lib/marketClass';
-	import { BarChart3, LineChart } from 'lucide-svelte';
+	import { marketCapabilities } from '$lib/marketCapabilities';
+	import { BarChart3, LineChart, Wallet } from 'lucide-svelte';
 	import { parseTradeHandoff, resolveTradeHandoffState } from '$lib/suite/handoff';
 
-	type MobileTab = 'markets' | 'trade';
+	type MobileTab = 'markets' | 'trade' | 'account';
 
 	function formatCompact(value: number | undefined): string {
 		if (!value || !Number.isFinite(value)) return '—';
@@ -30,6 +33,19 @@
 		if (value >= 1e6) return `$${(value / 1e6).toFixed(0)}M`;
 		if (value >= 1e3) return `$${(value / 1e3).toFixed(0)}K`;
 		return `$${value.toFixed(0)}`;
+	}
+	function marketKindLabel(kind: string): string {
+		if (kind === 'spot') return 'Spot market';
+		if (kind === 'outcome') return 'Prediction outcome';
+		if (kind === 'hip3Perp') return 'HIP-3 perpetual';
+		return 'Perpetual market';
+	}
+
+	function marketKindGlyph(kind: string): string {
+		if (kind === 'spot') return 'S';
+		if (kind === 'outcome') return '?';
+		if (kind === 'hip3Perp') return 'H';
+		return 'P';
 	}
 
 	// Mobile bottom-tab navigation
@@ -41,10 +57,12 @@
 	let statsNow = Date.now();
 	let handoffMessage = '';
 	$: marketClass = describeMarketClass($selectedMarket);
-
+	$: marketProfile = marketCapabilities($selectedMarket);
+	$: statsChange = $selectedMarket?.changePercent24h;
 	const mobileTabs: { id: MobileTab; label: string; icon: any }[] = [
 		{ id: 'markets', label: 'Markets', icon: BarChart3 },
-		{ id: 'trade',   label: 'Trade',   icon: LineChart }
+		{ id: 'trade', label: 'Trade', icon: LineChart },
+		{ id: 'account', label: 'Account', icon: Wallet }
 	];
 
 	onMount(() => {
@@ -93,28 +111,28 @@
 	<Navbar />
 	{#if handoffMessage}<div data-testid="trade-handoff-status" class="border-b border-terminal-border bg-terminal-bg-secondary px-3 py-1 text-2xs text-terminal-cyan">{handoffMessage}</div>{/if}
 
-	<!-- Market Info Bar -->
 	{#if $selectedMarket}
 		{@const activeFunding = $selectedMarket.fundingRate}
 		{@const activeSpread = $orderBook.spread || 0}
 		{@const activeVolume = $selectedMarket.volume24h}
 		{@const activeOI = $selectedMarket.openInterest}
+		{@const activeChange = $selectedMarket.changePercent24h}
 		{@const statsHealth = $marketContextStatus}
 		{@const statsLabel = healthLabel(statsHealth)}
-		<div class="hidden lg:flex h-10 bg-terminal-bg-secondary border-b border-terminal-border items-center px-3 gap-4 text-xs overflow-hidden scrollbar-none">
+		<div class="hidden h-10 bg-terminal-bg-secondary border-b border-terminal-border items-center px-3 gap-4 text-xs overflow-hidden scrollbar-none">
 			<!-- Symbol + Price -->
 			<div class="flex items-center gap-3 flex-shrink-0">
 				<div class="flex items-center gap-2">
-					<div class="w-5 h-5 rounded bg-terminal-yellow/20 flex items-center justify-center text-terminal-yellow text-2xs font-bold">₿</div>
+					<div class="w-5 h-5 rounded bg-terminal-yellow/20 flex items-center justify-center text-terminal-yellow text-2xs font-bold" title={marketKindLabel($selectedMarket.kind)} aria-label={marketKindLabel($selectedMarket.kind)}>{marketKindGlyph($selectedMarket.kind)}</div>
 					<span class="font-semibold text-sm">{$selectedMarket.symbol}</span>
 					{#if marketClass}<span data-testid="market-class-badge" title={marketClass.detail} class="rounded px-1.5 py-0.5 text-3xs {marketClass.metadataOnly ? 'bg-terminal-yellow/10 text-terminal-yellow' : 'bg-terminal-cyan/10 text-terminal-cyan'}">{marketClass.label}</span>{/if}
 				</div>
 				<div class="flex items-center gap-1.5">
-					<span class="font-mono text-base font-medium {$selectedMarket.change24h >= 0 ? 'text-terminal-green' : 'text-terminal-red'}">
-						{formatPrice($selectedMarket.lastPrice)}
+					<span class="font-mono text-base font-medium {activeChange === undefined ? 'text-terminal-text-muted' : activeChange >= 0 ? 'text-terminal-green' : 'text-terminal-red'}">
+					{($marketDataStatus === 'live' || $selectedMarket.kind === 'outcome') && Number.isFinite($selectedMarket.lastPrice) && ($selectedMarket.lastPrice !== 0 || $selectedMarket.kind === 'outcome') ? formatPrice($selectedMarket.lastPrice, $selectedMarket.priceDecimals) : '—'}
 					</span>
-					<span class="px-1.5 py-0.5 rounded text-2xs font-medium {$selectedMarket.changePercent24h >= 0 ? 'bg-terminal-green-bg text-terminal-green' : 'bg-terminal-red-bg text-terminal-red'}">
-						{$selectedMarket.changePercent24h >= 0 ? '+' : ''}{$selectedMarket.changePercent24h.toFixed(2)}%
+					<span class="px-1.5 py-0.5 rounded text-2xs font-medium {activeChange === undefined ? 'bg-terminal-bg-tertiary text-terminal-text-muted' : activeChange >= 0 ? 'bg-terminal-green-bg text-terminal-green' : 'bg-terminal-red-bg text-terminal-red'}">
+						{activeChange === undefined ? '—' : `${activeChange >= 0 ? '+' : ''}${activeChange.toFixed(2)}%`}
 					</span>
 				</div>
 			</div>
@@ -127,6 +145,7 @@
 					<span class="text-3xs text-terminal-text-muted uppercase tracking-wide">Spread</span>
 					<span class="font-mono text-2xs text-terminal-text">${activeSpread.toFixed(1)}</span>
 				</div>
+				{#if marketProfile.meaningfulStats.fundingRate}
 				<div class="flex flex-col">
 					<span class="text-3xs text-terminal-text-muted uppercase tracking-wide">Funding /hr · {statsLabel}</span>
 					<span class="font-mono text-2xs {activeFunding === undefined ? 'text-terminal-text-muted' : activeFunding >= 0 ? 'text-terminal-green' : 'text-terminal-red'}">
@@ -134,34 +153,40 @@
 					</span>
 					<span class="text-3xs text-terminal-text-muted font-mono">Next {statsHealth === 'live' ? formatFundingCountdown(statsNow) : statsLabel}</span>
 				</div>
+				{/if}
+				{#if marketProfile.meaningfulStats.volume24h}
 				<div class="flex flex-col">
 					<span class="text-3xs text-terminal-text-muted uppercase tracking-wide">24h Volume · {statsLabel}</span>
-					<span class="font-mono text-2xs text-terminal-text">
-						{formatCompact(activeVolume)}
-					</span>
+					<span class="font-mono text-2xs text-terminal-text">{activeVolume === undefined ? '—' : formatCompact(activeVolume)}</span>
 				</div>
+				{/if}
+				{#if marketProfile.meaningfulStats.openInterest}
 				<div class="flex flex-col">
 					<span class="text-3xs text-terminal-text-muted uppercase tracking-wide">Open Interest · {statsLabel}</span>
-					<span class="font-mono text-2xs text-terminal-text">
-						{formatCompact(activeOI)}
-					</span>
+					<span class="font-mono text-2xs text-terminal-text">{formatCompact(activeOI)}</span>
 				</div>
+				{/if}
 			</div>
 
 			<div class="h-5 w-px bg-terminal-border flex-shrink-0"></div>
 
-			<!-- Global stats -->
+			{#if marketProfile.meaningfulStats.indexPrice || marketProfile.meaningfulStats.markPrice}
 			<div class="flex items-center gap-4">
+				{#if marketProfile.meaningfulStats.indexPrice}
 				<div class="flex flex-col">
 					<span class="text-3xs text-terminal-text-muted uppercase tracking-wide">Index · {statsLabel}</span>
-					<span class="font-mono text-2xs text-terminal-text">{formatPrice($selectedMarket.indexPrice || $selectedMarket.lastPrice)}</span>
+					<span class="font-mono text-2xs text-terminal-text">{$selectedMarket.indexPrice === undefined ? '—' : formatPrice($selectedMarket.indexPrice, $selectedMarket.priceDecimals)}</span>
 				</div>
+				{/if}
+				{#if marketProfile.meaningfulStats.markPrice}
 				<div class="flex flex-col">
 					<span class="text-3xs text-terminal-text-muted uppercase tracking-wide">Mark · {statsLabel}</span>
-					<span class="font-mono text-2xs text-terminal-text">{formatPrice($selectedMarket.markPrice || $selectedMarket.lastPrice)}</span>
+					<span class="font-mono text-2xs text-terminal-text">{$selectedMarket.markPrice === undefined ? '—' : formatPrice($selectedMarket.markPrice, $selectedMarket.priceDecimals)}</span>
 				</div>
+				{/if}
 			</div>
-		</div>
+			{/if}
+			</div>
 	{/if}
 
 	<!-- Desktop workspace: Dockview owns presentation only; all trading paths stay shared. -->
@@ -185,17 +210,18 @@
 					<div class="flex items-baseline gap-2">
 						<span class="font-semibold text-sm leading-none">{$selectedMarket?.symbol ?? '—'}</span>
 						{#if marketClass}<span data-testid="mobile-market-class-badge" title={marketClass.detail} class="rounded px-1 py-0.5 text-3xs {marketClass.metadataOnly ? 'bg-terminal-yellow/10 text-terminal-yellow' : 'bg-terminal-cyan/10 text-terminal-cyan'}">{marketClass.label}</span>{/if}
-						<span class="font-mono text-sm font-bold {($selectedMarket?.change24h ?? 0) >= 0 ? 'text-terminal-green' : 'text-terminal-red'} leading-none">
-							{#if $selectedMarket}{formatPrice($selectedMarket.lastPrice)}{/if}
+						<span class="font-mono text-sm font-bold {($selectedMarket?.changePercent24h ?? 0) >= 0 && $selectedMarket?.changePercent24h !== undefined ? 'text-terminal-green' : $selectedMarket?.changePercent24h === undefined ? 'text-terminal-text-muted' : 'text-terminal-red'} leading-none">
+							{#if $selectedMarket && ($marketDataStatus === 'live' || $selectedMarket.kind === 'outcome') && Number.isFinite($selectedMarket.lastPrice) && ($selectedMarket.lastPrice !== 0 || $selectedMarket.kind === 'outcome')}{formatPrice($selectedMarket.lastPrice, $selectedMarket.priceDecimals)}{:else}—{/if}
 						</span>
-						<span class="text-2xs {($selectedMarket?.change24h ?? 0) >= 0 ? 'text-terminal-green' : 'text-terminal-red'}">
-							{($selectedMarket?.change24h ?? 0) >= 0 ? '+' : ''}{($selectedMarket?.change24h ?? 0).toFixed(2)}%
+						<span class="text-2xs {($selectedMarket?.changePercent24h ?? 0) >= 0 && $selectedMarket?.changePercent24h !== undefined ? 'text-terminal-green' : $selectedMarket?.changePercent24h === undefined ? 'text-terminal-text-muted' : 'text-terminal-red'}">
+							{#if $selectedMarket?.changePercent24h === undefined}—{:else}{($selectedMarket.changePercent24h >= 0 ? '+' : '')}{$selectedMarket.changePercent24h.toFixed(2)}%{/if}
 						</span>
 					</div>
 					<div class="flex items-center gap-3 mt-0.5">
-						<span class="text-3xs text-terminal-text-muted">Funding <span class="text-terminal-cyan font-mono">{$selectedMarket?.fundingRate === undefined ? '—' : `${$selectedMarket.fundingRate >= 0 ? '+' : ''}${($selectedMarket.fundingRate * 100).toFixed(4)}%`}</span></span>
-						<span class="text-3xs text-terminal-text-muted">OI <span class="font-mono text-terminal-text">{formatCompact($selectedMarket?.openInterest)}</span></span>
+						{#if marketProfile.meaningfulStats.fundingRate}<span class="text-3xs text-terminal-text-muted">Funding <span class="text-terminal-cyan font-mono">{$selectedMarket?.fundingRate === undefined ? '—' : `${$selectedMarket.fundingRate >= 0 ? '+' : ''}${($selectedMarket.fundingRate * 100).toFixed(4)}%`}</span></span>{/if}
+						{#if marketProfile.meaningfulStats.openInterest}<span class="text-3xs text-terminal-text-muted">OI <span class="font-mono text-terminal-text">{formatCompact($selectedMarket?.openInterest)}</span></span>{/if}
 					</div>
+						<span data-testid="mobile-connection-health" role="status" aria-live="polite" class="text-3xs text-terminal-text-muted">Data {healthLabel($marketDataStatus)}</span>
 				</div>
 			</div>
 
@@ -213,6 +239,11 @@
 
 			<!-- Chart — takes remaining flex space minus the bottom sections -->
 			<div class="flex-1 min-h-0">
+			{#if $selectedMarket?.kind === 'outcome'}
+				<div data-testid="mobile-prediction-panel" class="max-h-64 flex-shrink-0 overflow-hidden border-t border-terminal-border">
+					<PredictionMarketPanel />
+				</div>
+			{/if}
 				<Chart />
 			</div>
 
@@ -246,7 +277,7 @@
 				</div>
 			</div>
 
-			<!-- Sticky Buy / Sell bar — always visible -->
+			{#if marketProfile.executable}
 			<div class="h-14 flex-shrink-0 border-t border-terminal-border bg-terminal-bg-secondary flex items-center gap-3 px-3">
 				<div class="flex flex-col">
 					<span class="text-3xs text-terminal-text-muted">Ask</span>
@@ -265,9 +296,15 @@
 					<span class="font-mono text-xs text-terminal-green font-semibold">{$orderBook.bids[0] ? formatPrice($orderBook.bids[0].price) : '—'}</span>
 				</div>
 			</div>
+			{:else}
+			<div data-testid="mobile-read-only-market" class="h-14 flex items-center justify-center border-t border-terminal-border bg-terminal-bg-secondary px-3 text-2xs text-terminal-yellow text-center">{marketProfile.readOnlyReason}</div>
+			{/if}
 		</div>
 
 	</div>
+		<div class="flex-1 min-h-0 {mobileTab === 'account' ? 'flex flex-col' : 'hidden'}" data-testid="mobile-account-panel">
+			<BottomPanel />
+		</div>
 
 	<!-- Mobile Bottom Tab Bar -->
 	<nav class="lg:hidden flex-shrink-0 h-14 border-t border-terminal-border bg-terminal-bg-secondary flex items-stretch safe-area-pb">
@@ -276,8 +313,9 @@
 			<button
 				class="flex-1 flex flex-col items-center justify-center gap-0.5 transition-colors relative"
 				onclick={() => (mobileTab = tab.id)}
-				aria-label={tab.label}
+				aria-pressed={active}
 				aria-current={active ? 'page' : undefined}
+				aria-label={tab.label}
 			>
 				{#if active}
 					<div class="absolute top-0 left-1/2 -translate-x-1/2 h-0.5 w-8 rounded-full bg-terminal-cyan"></div>

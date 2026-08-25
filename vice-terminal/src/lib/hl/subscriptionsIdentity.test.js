@@ -81,10 +81,10 @@ describe('exact feed identity boundary', () => {
 		const source = await Bun.file(new URL('./subscriptions.ts', import.meta.url)).text();
 		expect(source).toContain('marketByApiCoin = new Map');
 		expect(source).toContain('marketByApiCoin.get(apiCoin)');
-		expect(source).toContain('startHyperliquidPublicPlane(hyperliquidNetwork.network');
+		expect(source).toContain('startHyperliquidPublicPlane(hyperliquidPublicNetwork.network');
 		expect(source).toContain('Object.entries(event.mids)');
 		expect(source).toContain('const lastAllMidByApiCoin = new Map<string, number>();');
-		expect(source).toContain('lastAllMidByApiCoin.set(apiCoin, event.receivedAt);');
+		expect(source).toContain('lastAllMidByApiCoin.set(apiCoin, Date.now());');
 		expect(source).toContain('export function exactAllMidIsLive(apiCoin: string');
 		expect(source).not.toContain('for (const market of markets) {\n\t\t\t\t\tconst mid = data.mids[market.apiCoin]');
 	});
@@ -180,11 +180,11 @@ describe('exact feed identity boundary', () => {
 
 	test('accepted live books commit through the canonical Hyperliquid event boundary', async () => {
 		const source = await Bun.file(new URL('./subscriptions.ts', import.meta.url)).text();
-		expect(source).toContain("import { closeHlClients, getBookSubscriptionClient, getBookTransport, getSubscriptionClient, getInfoClient, getTransport } from './client';");
-		expect(source).toContain('const bookClient = getBookSubscriptionClient();');
+		expect(source).toContain("import { closeHlClients, getPublicBookSubscriptionClient, getPublicBookTransport, getPublicSubscriptionClient, getPublicInfoClient, getPublicTransport } from './client';");
+		expect(source).toContain('const bookClient = getPublicBookSubscriptionClient();');
 		expect(source).toContain('activeSubs.l2Book = await bookSubscriptionPromise');
-		expect(source).toContain('activeSubs.l2Book = await getBookSubscriptionClient().l2Book');
-		expect(source).toContain('bindMarketSocketHealth(getBookTransport().socket, feedLifecycle);');
+		expect(source).toContain('activeSubs.l2Book = await getPublicBookSubscriptionClient().l2Book');
+		expect(source).toContain('bindMarketSocketHealth(getPublicBookTransport().socket, feedLifecycle);');
 		expect(source).toContain("import { hyperliquidBookEvent } from '$lib/venue/hyperliquid';");
 		expect(source).toContain('pendingBook = canonicalBookEvent(normalizedBook, generation, bookEpoch, data.time);');
 		expect(source).toContain('orderBook.set(pendingBook.payload);');

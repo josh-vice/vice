@@ -225,10 +225,3 @@
 		</div>
 	</div>
 {/if}
-
-<svelte:window on:keydown={(e) => {
-	if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
-		e.preventDefault();
-		cliOpen.update(v => !v);
-	}
-}} />

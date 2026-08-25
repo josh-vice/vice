@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
 import { get } from 'svelte/store';
-import { setWorkspacePanel, setWorkspacePreset, workspacePanels, workspacePreset } from './workspacePreset';
+import { setWorkspacePanel, setWorkspacePreset, workspacePanels, workspacePreset, WORKSPACE_TOPOLOGIES } from './workspacePreset';
 
 beforeEach(() => {
 	globalThis.localStorage = { getItem: () => null, setItem: () => {}, removeItem: () => {} };
@@ -19,5 +19,11 @@ describe('US-012 curated workspace presets', () => {
 		setWorkspacePanel('ticket', false);
 		expect(get(workspacePanels).ticket).toBe(false);
 		expect(get(workspacePreset)).toBe('default');
+	});
+	test('defines distinct minimal, chart, and data topologies', () => {
+		expect(WORKSPACE_TOPOLOGIES.default).toEqual({ watchlist: true, marketData: true, ticket: true, bottom: true, chat: false });
+		expect(WORKSPACE_TOPOLOGIES.chart).not.toEqual(WORKSPACE_TOPOLOGIES.default);
+		expect(WORKSPACE_TOPOLOGIES.data).not.toEqual(WORKSPACE_TOPOLOGIES.default);
+		expect(WORKSPACE_TOPOLOGIES.data.ticket).toBe(false);
 	});
 });

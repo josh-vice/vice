@@ -87,3 +87,36 @@ export async function assertCleanRuntime(evidence, { ignoreConsole = [], allowFa
 		throw new Error(`Unexpected failed requests:\n${unexpectedFailed.join('\n')}`);
 	}
 }
+export async function seedMarketTaxonomyFixture(page) {
+	await page.route('**/info', (route) => route.abort());
+	await page.addInitScript(() => {
+		const perp = {
+			marketKey: 'perp:BTC', apiCoin: 'BTC', assetId: 0, kind: 'corePerp', dex: null,
+			baseToken: 'BTC', quoteToken: 'USD', szDecimals: 5, priceDecimals: 1, maxLeverage: 50,
+			symbol: 'BTC-USD-PERP', name: 'BTC Perpetual', type: 'perp', lastPrice: 70000,
+			change24h: 100, changePercent24h: 0.14, volume24h: 1000000
+		};
+		const hip3 = {
+			...perp, marketKey: 'hip3:xyz:BTC', apiCoin: 'xyz:BTC', assetId: 100001,
+			kind: 'hip3Perp', dex: 'xyz', symbol: 'XYZ:BTC-PERP', name: 'BTC Perp · xyz'
+		};
+		const spot = {
+			...perp, marketKey: 'spot:1', apiCoin: '@1', assetId: 10001, kind: 'spot',
+			baseToken: 'BTC', quoteToken: 'USDC', szDecimals: 5, priceDecimals: 3,
+			symbol: 'BTC-USDC', name: 'BTC / USDC', type: 'spot', maxLeverage: undefined
+		};
+		const outcome = (side, name) => ({
+			marketKey: `outcome:1161:${side}`, apiCoin: `#${11610 + side}`,
+			assetId: 100011610 + side, kind: 'outcome', dex: null, baseToken: name, quoteToken: 'USDC',
+			szDecimals: 0, priceDecimals: 5, symbol: `ETH $4000 · ${name}`, name: 'ETH above $4000',
+			type: 'spot', lastPrice: side === 0 ? 0.12996 : 0.87004, change24h: undefined,
+			changePercent24h: undefined, volume24h: undefined,
+			outcome: { outcomeId: 1161, side, questionName: 'ETH above $4000', questionDescription: 'Will ETH settle above $4,000?', outcomeDescription: name, sideName: name, outcomeContext: { underlying: 'ETH', targetPrice: 4000, expiry: '2026-12-31' }, settled: false },
+			tradingAvailability: 'metadataOnly',
+			tradingUnavailableReason: 'Hyperliquid outcome metadata does not provide lot, tick, or complete execution terms.'
+		});
+		localStorage.setItem('vice.hl.market-catalog.v1', JSON.stringify({
+			network: 'mainnet', savedAt: Date.now(), markets: [perp, hip3, spot, outcome(0, 'Yes'), outcome(1, 'No')]
+		}));
+	});
+}

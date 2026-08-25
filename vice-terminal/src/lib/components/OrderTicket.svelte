@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { selectedMarket, marketRegistry, orderSide, orderType, orderPrice, orderSize, orderLeverage, reduceOnly, postOnly, ioc, activeSubaccount, balances, advancedConfig, orderPresets, applyOrderPreset, saveOrderPreset, deleteOrderPreset, priceInputFocused, chartActiveField, chartDraft, chartRiskPercent, chartCandles, chartTimeframe, designerMode, isConnected, executionStatus, enableTrading, walletAddress, revenueSnapshot, revenueSyncStatus, setOrderSizePercent, fatFingerLimits, setFatFingerLimits } from '$lib/stores';
+	import { cancelEnableTrading } from '$lib/stores';
 	import type { OrderSide, OrderType } from '$lib/types';
 	import { Minus, Plus, Zap, ChevronDown } from 'lucide-svelte';
 	import { placeOrder, startAlgoOrder, fetchOpenOrders } from '$lib/hl/orders';
@@ -11,6 +12,8 @@
 	import { tradingKillSwitchActive, tradingKillSwitchMessage } from '$lib/execution/releaseSafety';
 	import { privacyMode } from '$lib/privacyMode';
 	import { onDestroy } from 'svelte';
+	import { marketCapabilities } from '$lib/marketCapabilities';
+	import PredictionMarketPanel from '$lib/components/PredictionMarketPanel.svelte';
 	import {
 		ENABLEMENT_STEP_DETAIL,
 		ENABLEMENT_STEP_LABEL,
@@ -130,8 +133,8 @@
 			}
 		}, 1000);
 	}
-
 	function dismissEnablement() {
+		cancelEnableTrading();
 		stopEnableRetryTimer();
 		enablePhase = { kind: 'idle' };
 	}
@@ -144,27 +147,34 @@
 	let presetName = '';
 	let presetMessage = '';
 	let amountUnit: 'base' | 'quote' = 'base';
+	$: marketProfile = marketCapabilities($selectedMarket);
+	$: if (marketProfile.amountUnit === 'quote') amountUnit = 'quote';
+	$: if (marketProfile.amountUnit === 'base') amountUnit = 'base';
 
 	// Keep the complete catalog discoverable. Certification is an execution gate,
 	// never a reason to make an existing order type silently disappear.
-	$: availableOrderTypeGroups = orderTypeGroups;
-	$: availableQuickTypes = quickTypes.filter((type) => isAdvancedOrderCertified(type.id));
-	$: uncertifiedAdvancedCount = advancedOrderTypes().filter((type) => !isAdvancedOrderCertified(type)).length;
+	$: availableOrderTypeGroups = orderTypeGroups
+		.map((group) => ({ ...group, types: group.types.filter((type) => marketProfile.allowedOrderTypes.includes(type.id) || (marketProfile.supportsAdvancedOrders && isAdvancedOrderCertified(type.id))) }))
+		.filter((group) => group.types.length > 0);
+	$: availableQuickTypes = quickTypes.filter((type) => marketProfile.allowedOrderTypes.includes(type.id) && isAdvancedOrderCertified(type.id));
+	$: uncertifiedAdvancedCount = marketProfile.supportsAdvancedOrders ? advancedOrderTypes().filter((type) => !isAdvancedOrderCertified(type)).length : 0;
 	$: allTypes = availableOrderTypeGroups.flatMap((g) => g.types);
 	$: currentType = allTypes.find((t) => t.id === $orderType) ?? allTypes[0];
 	$: persistence = persistenceClass($orderType);
 	$: needsPrice = !['market', 'twap', 'adaptive_twap', 'vwap', 'pov', 'break_even', 'maker', 'conditional_ladder', 'chase', 'swarm', 'ping_pong'].includes($orderType);
-	$: needsTrigger = ['stop', 'stop_limit', 'trailing_stop'].includes($orderType);
+	$: needsTrigger = marketProfile.supportsTriggers && ['stop', 'stop_limit'].includes($orderType);
 
-	$: notionalValue = $orderSize * ($selectedMarket?.lastPrice || 0);
+	$: valuationPrice = ['limit', 'stop_limit'].includes($orderType) ? ($orderPrice ?? 0) : ($orderPrice ?? $selectedMarket?.lastPrice ?? 0);
+	$: notionalValue = $orderSize * valuationPrice;
 	$: amountInputValue = amountUnit === 'base' ? $orderSize : notionalValue;
-	$: marginRequired = notionalValue / $orderLeverage;
-	$: availableMargin = $selectedMarket?.kind === 'spot'
-		? ($balances.find((balance) => balance.asset.toUpperCase() === ($selectedMarket?.quoteToken ?? '').toUpperCase())?.available ?? 0)
+	$: quoteAsset = $selectedMarket?.quoteToken ?? 'USD';
+	$: availableMargin = marketProfile.amountUnit === 'quote'
+		? ($balances.find((balance) => balance.asset.toUpperCase() === quoteAsset.toUpperCase())?.available ?? 0)
 		: $activeSubaccount.marginFree;
-	$: venueMaxLeverage = $selectedMarket?.kind === 'spot' ? 1 : ($selectedMarket?.maxLeverage ?? 100);
+	$: marginRequired = marketProfile.usesMargin ? notionalValue / $orderLeverage : 0;
+	$: venueMaxLeverage = marketProfile.maxLeverage;
 	$: if ($orderLeverage > venueMaxLeverage) orderLeverage.set(venueMaxLeverage);
-	$: maxSize = (availableMargin * ($selectedMarket?.kind === 'spot' ? 1 : Math.min($orderLeverage, venueMaxLeverage))) / ($selectedMarket?.lastPrice || 1);
+	$: maxSize = (availableMargin * (marketProfile.leverageEnabled ? Math.min($orderLeverage, venueMaxLeverage) : 1)) / ($selectedMarket?.lastPrice || 1);
 	$: baseAsset = $selectedMarket?.baseToken ?? 'Asset';
 
 	async function requestReferral() {
@@ -189,6 +199,10 @@
 		orderSide.set(side);
 	}
 	function setPostOnly(value: boolean) {
+		if (!marketProfile.supportsPostOnly) {
+			postOnly.set(false);
+			return;
+		}
 		if (value && !['limit', 'scale', 'maker'].includes($orderType)) {
 			postOnly.set(false);
 			return;
@@ -197,10 +211,15 @@
 		if (value) ioc.set(false);
 	}
 	function setIoc(value: boolean) {
+		if (!marketProfile.supportsIoc) {
+			ioc.set(false);
+			return;
+		}
 		ioc.set(value);
 		if (value) postOnly.set(false);
 	}
 	function pickType(id: OrderType) {
+		if (!marketProfile.allowedOrderTypes.includes(id) && !marketProfile.supportsAdvancedOrders) { submitError = `Order type ${id} is not supported for this market`; return; }
 		if (!isAdvancedOrderCertified(id)) {
 			submitError = unavailableOrderTypeMessage(id);
 			return;
@@ -208,9 +227,9 @@
 		orderType.set(id);
 		if (id === 'market') {
 			postOnly.set(false);
-			ioc.set(true);
+			ioc.set(marketProfile.supportsIoc);
 		} else if (id === 'limit') {
-			postOnly.set(true);
+			postOnly.set(marketProfile.supportsPostOnly);
 			ioc.set(false);
 		} else if (!['scale', 'maker'].includes(id)) {
 			postOnly.set(false);
@@ -226,6 +245,7 @@
 		setOrderSizePercent(percent);
 	}
 	function setAmountUnit(unit: 'base' | 'quote') {
+		if (!marketProfile.amountUnits.includes(unit)) return;
 		amountUnit = unit;
 	}
 	function setAmountInput(value: number) {
@@ -259,9 +279,20 @@
 	}
 	async function submitOrder() {
 		submitError = '';
+		if (!$selectedMarket) {
+			submitError = 'Select a market before placing an order';
+			return;
+		}
+		if (!marketProfile.executable) {
+			submitError = marketProfile.readOnlyReason ?? 'This market is read-only';
+			return;
+		}
+		if (['limit', 'stop_limit'].includes($orderType) && (!$orderPrice || !Number.isFinite($orderPrice) || $orderPrice <= 0)) {
+			submitError = `${$orderType === 'stop_limit' ? 'Limit' : 'Order'} price is required`;
+			return;
+		}
 		submitting = true;
-			const algoTypes: OrderType[] = ['twap', 'adaptive_twap', 'vwap', 'pov', 'break_even', 'maker', 'conditional_ladder', 'scale', 'chase', 'oco', 'trailing_stop', 'swarm', 'iceberg', 'ping_pong'];
-
+		const algoTypes: OrderType[] = ['twap', 'adaptive_twap', 'vwap', 'pov', 'break_even', 'maker', 'conditional_ladder', 'scale', 'chase', 'oco', 'trailing_stop', 'swarm', 'iceberg', 'ping_pong'];
 		try {
 			if (algoTypes.includes($orderType)) {
 				const result = await startAlgoOrder({
@@ -412,6 +443,17 @@
 	}
 </script>
 
+{#if !$selectedMarket}
+	<div class="flex h-full items-center justify-center p-4 text-center text-2xs text-terminal-text-muted" data-testid="order-ticket-no-market">
+		Select a market to configure an order.
+	</div>
+{:else if $selectedMarket.kind === 'outcome'}
+	<PredictionMarketPanel />
+{:else if !marketProfile.executable || !currentType}
+	<div class="flex h-full items-center justify-center p-4 text-center text-2xs text-terminal-yellow" data-testid="order-ticket-unsupported">
+		{marketProfile.readOnlyReason ?? 'Order entry is unavailable for this market.'}
+	</div>
+{:else}
 <div class="h-full flex flex-col bg-terminal-bg-panel">
 	<!-- Buy/Sell Tabs -->
 	<div class="grid grid-cols-2 border-b border-terminal-border flex-shrink-0">
@@ -515,8 +557,8 @@
 			<div class="flex items-center justify-between mb-1">
 				<span class="text-3xs text-terminal-text-muted">Amount</span>
 				<div class="flex items-center gap-1">
-					<button class="px-1.5 py-0.5 text-3xs rounded {amountUnit === 'base' ? 'bg-terminal-bg-tertiary text-terminal-text' : 'text-terminal-text-muted hover:text-terminal-text'}" onclick={() => setAmountUnit('base')}>{baseAsset}</button>
-					<button class="px-1.5 py-0.5 text-3xs rounded {amountUnit === 'quote' ? 'bg-terminal-bg-tertiary text-terminal-text' : 'text-terminal-text-muted hover:text-terminal-text'}" onclick={() => setAmountUnit('quote')}>USD</button>
+					{#if marketProfile.amountUnits.includes('base')}<button class="px-1.5 py-0.5 text-3xs rounded {amountUnit === 'base' ? 'bg-terminal-bg-tertiary text-terminal-text' : 'text-terminal-text-muted hover:text-terminal-text'}" onclick={() => setAmountUnit('base')}>{baseAsset}</button>{/if}
+					{#if marketProfile.amountUnits.includes('quote')}<button class="px-1.5 py-0.5 text-3xs rounded {amountUnit === 'quote' ? 'bg-terminal-bg-tertiary text-terminal-text' : 'text-terminal-text-muted hover:text-terminal-text'}" onclick={() => setAmountUnit('quote')}>{quoteAsset}</button>{/if}
 				</div>
 			</div>
 			<div class="flex items-center gap-1">
@@ -596,6 +638,8 @@
 		{/if}
 
 		<!-- ===== Advanced parameter blocks ===== -->
+		<details class="rounded border border-terminal-border/60 bg-terminal-bg-secondary" data-testid="advanced-order-options">
+			<summary class="cursor-pointer px-2 py-1.5 text-3xs uppercase tracking-wide text-terminal-text-muted">Advanced order options</summary>
 		{#if $orderType === 'trailing_stop'}
 			<div class="bg-terminal-bg rounded p-2 space-y-1.5">
 				<span class="text-3xs text-terminal-text-muted uppercase">Trailing Stop</span>
@@ -825,7 +869,8 @@
 			</div>
 		{/if}
 
-		<!-- Leverage Slider -->
+		{#if marketProfile.leverageEnabled}
+<!-- Leverage Slider -->
 		<div class="bg-terminal-bg rounded p-2">
 			<div class="flex items-center justify-between mb-1.5">
 				<span class="text-3xs text-terminal-text-muted">Leverage</span>
@@ -845,38 +890,48 @@
 				<span>1x</span><span>10x</span><span>20x</span><span>50x</span><span>{venueMaxLeverage}x max</span>
 			</div>
 		</div>
+		{/if}
 
 		<!-- Order Options -->
 		<div class="flex items-center gap-3 flex-wrap">
+			{#if marketProfile.supportsReduceOnly}
 			<label class="flex items-center gap-1.5 cursor-pointer">
 				<input type="checkbox" bind:checked={$reduceOnly} class="w-3 h-3 rounded border-terminal-border bg-terminal-bg accent-terminal-green" />
 				<span class="text-3xs text-terminal-text-secondary">Reduce Only</span>
 			</label>
+			{/if}
+			{#if marketProfile.supportsPostOnly}
 			<label class="flex items-center gap-1.5 cursor-pointer">
 				<input type="checkbox" checked={$postOnly} onchange={(event) => setPostOnly(event.currentTarget.checked)} class="w-3 h-3 rounded border-terminal-border bg-terminal-bg accent-terminal-green" />
 				<span class="text-3xs text-terminal-text-secondary">POST</span>
 			</label>
+			{/if}
+			{#if marketProfile.supportsIoc}
 			<label class="flex items-center gap-1.5 cursor-pointer">
 				<input type="checkbox" checked={$ioc} onchange={(event) => setIoc(event.currentTarget.checked)} class="w-3 h-3 rounded border-terminal-border bg-terminal-bg accent-terminal-green" />
 				<span class="text-3xs text-terminal-text-secondary">IOC</span>
 			</label>
+			{/if}
 		</div>
 
 		<!-- Summary -->
 		<div class="space-y-1 text-2xs pt-1 border-t border-terminal-border/50">
 			<div class="flex justify-between">
-				<span class="text-terminal-text-muted">Notional Value</span>
+				<span class="text-terminal-text-muted">{marketProfile.usesMargin ? 'Notional Value' : `Order value (${quoteAsset})`}</span>
 				<span class="font-mono">{$privacyMode ? '••••••' : `$${notionalValue.toFixed(2)}`}</span>
 			</div>
+			{#if marketProfile.usesMargin}
 			<div class="flex justify-between">
 				<span class="text-terminal-text-muted">Required Margin</span>
 				<span class="font-mono">{$privacyMode ? '••••••' : `$${marginRequired.toFixed(2)}`}</span>
 			</div>
+			{/if}
 			<div class="flex justify-between">
-				<span class="text-terminal-text-muted">Available</span>
+				<span class="text-terminal-text-muted">{marketProfile.usesMargin ? 'Available Margin' : `${quoteAsset} Balance`}</span>
 				<span class="font-mono text-terminal-green">{$privacyMode ? '••••••' : `$${availableMargin.toLocaleString()}`}</span>
 			</div>
 		</div>
+
 
 		<div class="mt-2 rounded bg-terminal-bg p-2 space-y-1.5">
 			<span class="block text-3xs uppercase text-terminal-text-muted">Local risk limits</span>
@@ -890,8 +945,8 @@
 			</label>
 			<p class="text-3xs text-terminal-text-muted">Saved on this device. Limits reject before signing.</p>
 		</div>
+		</details>
 	</div>
-
 	<!-- Submit -->
 	<div class="p-2 border-t border-terminal-border flex-shrink-0">
 		<div data-testid="order-persistence-class" class="mb-1.5 rounded border border-terminal-border/60 bg-terminal-bg-secondary px-2 py-1.5 text-3xs">
@@ -997,8 +1052,9 @@
 						: $executionStatus !== 'live'
 							? 'Enable secure trading'
 							: $orderSide === 'buy'
-								? 'Buy / Long'
-								: 'Sell / Short'} {baseAsset}
+								? ($selectedMarket.kind === 'spot' ? 'Buy' : 'Buy / Long')
+								: ($selectedMarket.kind === 'spot' ? 'Sell' : 'Sell / Short')} {baseAsset}
 		</button>
 	</div>
 </div>
+{/if}

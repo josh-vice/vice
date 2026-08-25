@@ -135,23 +135,33 @@
 
 	// ─── The Pit moderation (always active, even without community transport) ─────
 	const policy = new ChatPolicy();
-	// Persisted local mute list (BitMEX /mute semantics, local-only until a real
-	// transport exists).
 	const MUTE_KEY = 'vice.pit-mutes.v1';
 	let muted: string[] = [];
 	function loadMutes(): string[] {
 		if (typeof localStorage === 'undefined') return [];
-		try { return JSON.parse(localStorage.getItem(MUTE_KEY) ?? '[]') as string[]; } catch { return []; }
+		try {
+			const parsed = JSON.parse(localStorage.getItem(MUTE_KEY) ?? '[]');
+			return Array.isArray(parsed) ? parsed.filter((name): name is string => typeof name === 'string').map((name) => name.toLowerCase()) : [];
+		} catch {
+			return [];
+		}
 	}
 	function persistMutes() {
 		if (typeof localStorage === 'undefined') return;
 		try { localStorage.setItem(MUTE_KEY, JSON.stringify(muted)); } catch { /* local preference only */ }
 	}
-	muted = loadMutes();
-
+	function setMuted(name: string, shouldMute: boolean): void {
+		const normalized = name.toLowerCase();
+		muted = shouldMute
+			? muted.includes(normalized) ? muted : [...muted, normalized]
+			: muted.filter((entry) => entry !== normalized);
+		persistMutes();
+	}
 	function isMuted(name: string): boolean {
 		return muted.includes(name.toLowerCase());
 	}
+
+	muted = loadMutes();
 
 	// ─── Mount ───────────────────────────────────────────────────────────────────
 
@@ -316,7 +326,7 @@
 
 		// Slash command (live account data).
 		const displayName = customHandle ? `[${customHandle}]` : 'You';
-		const result = runChatCommand(raw, { displayName, isMuted });
+		const result = runChatCommand(raw, { displayName, isMuted, setMuted });
 		if (result) {
 			if (result.type === 'position') {
 				pushMessage({ type: 'position', lang: activeLanguage(), user: 'You', handle: customHandle || null, text: '', badge: result.badge });
@@ -371,12 +381,16 @@
 		<div class="flex items-center gap-0 ml-2">
 			{#each (['EN','ZH','RU'] as Language[]) as lang}
 				<button
+					role="tab"
+					aria-selected={activeTab === lang}
 					class="px-1.5 py-0.5 text-2xs rounded transition-colors {activeTab === lang ? 'text-terminal-cyan bg-terminal-cyan/10' : 'text-terminal-text-muted hover:text-terminal-text'}"
 					onclick={() => { activeTab = lang; newsShowSettings = false; }}
 				>{lang}</button>
 			{/each}
 			{#if demoFixturesEnabled}
 			<button
+				role="tab"
+				aria-selected={activeTab === 'NEWS'}
 				class="flex items-center gap-0.5 px-1.5 py-0.5 text-2xs rounded transition-colors ml-0.5
 					{activeTab === 'NEWS' ? 'text-terminal-yellow bg-terminal-yellow/10' : 'text-terminal-text-muted hover:text-terminal-text'}"
 				onclick={() => { activeTab = 'NEWS'; newsShowSettings = false; }}

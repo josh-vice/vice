@@ -22,10 +22,10 @@ export function topMarketMovers(
 		))
 		.sort((left, right) => {
 			const change = direction === 'gainers'
-				? right.changePercent24h - left.changePercent24h
-				: left.changePercent24h - right.changePercent24h;
+				? (right.changePercent24h ?? 0) - (left.changePercent24h ?? 0)
+				: (left.changePercent24h ?? 0) - (right.changePercent24h ?? 0);
 			if (change !== 0) return change;
-			const volume = right.volume24h - left.volume24h;
+			const volume = (right.volume24h ?? 0) - (left.volume24h ?? 0);
 			return volume !== 0 ? volume : left.marketKey.localeCompare(right.marketKey);
 		})
 		.slice(0, limit);

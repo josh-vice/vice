@@ -112,6 +112,7 @@ export interface SupportBundle {
 			updatedAt: number;
 		}>;
 	};
+	operatorNote?: string;
 }
 
 /** Read the app's own name from the meta contract. */
@@ -144,7 +145,8 @@ export function buildSupportBundle(
 		screen?: string;
 		viewport?: string;
 		online?: boolean;
-	}
+	},
+	operatorNote?: string
 ): SupportBundle {
 	const health = safeGet(() => ({
 		wallet: get(walletStatus),
@@ -197,6 +199,7 @@ export function buildSupportBundle(
 			testnet: hyperliquidNetwork.isTestnet
 		},
 		environment,
+		...(operatorNote?.trim() ? { operatorNote: operatorNote.trim() } : {}),
 		featureFlags: {
 			marketType: get(marketType),
 			workspacePreset: get(workspacePreset),
@@ -240,13 +243,12 @@ export function trimAndSanitize(bundle: SupportBundle): SupportBundle {
 	// structured shape, which already excludes secrets by construction).
 	const redacted = redactDeep(bundle) as SupportBundle;
 
-	// Cap string lengths on the fields that can carry user/venue text.
+	if (redacted.operatorNote) redacted.operatorNote = capStringLength(redacted.operatorNote, 488);
 	if (redacted.environment.userAgent) redacted.environment.userAgent = capStringLength(redacted.environment.userAgent);
 	for (const err of redacted.appErrors) {
 		err.message = capStringLength(err.message);
 		if (err.source) err.source = capStringLength(err.source);
 	}
-
 	// Enforce the serialized byte budget by trimming the lowest-value collectors.
 	let json = JSON.stringify(redacted);
 	if (json.length <= MAX_BUNDLE_BYTES) return redacted;

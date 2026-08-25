@@ -10,6 +10,7 @@ type StorageLike = Pick<Storage, 'getItem' | 'setItem'>;
 
 type CandleCacheEntry = {
 	network: string;
+	marketKey: string;
 	apiCoin: string;
 	interval: string;
 	savedAt: number;
@@ -64,6 +65,7 @@ function readCache(storage: StorageLike): CandleCache {
 
 export function loadCachedCandleHistory(
 	network: string,
+	marketKey: string,
 	apiCoin: string,
 	interval: string,
 	storage: StorageLike | null = browserStorage(),
@@ -73,6 +75,7 @@ export function loadCachedCandleHistory(
 	const entry = readCache(storage).entries.find(
 		(candidate) =>
 			candidate.network === network &&
+			candidate.marketKey === marketKey &&
 			candidate.apiCoin === apiCoin &&
 			candidate.interval === interval
 	);
@@ -88,6 +91,7 @@ export function loadCachedCandleHistory(
 
 export function saveCachedCandleHistory(
 	network: string,
+	marketKey: string,
 	apiCoin: string,
 	interval: string,
 	candles: ChartCandle[],
@@ -101,11 +105,13 @@ export function saveCachedCandleHistory(
 	const entries = cache.entries.filter(
 		(entry) =>
 			entry.network !== network ||
+			entry.marketKey !== marketKey ||
 			entry.apiCoin !== apiCoin ||
 			entry.interval !== interval
 	);
 	entries.unshift({
 		network,
+		marketKey,
 		apiCoin,
 		interval,
 		savedAt: now,

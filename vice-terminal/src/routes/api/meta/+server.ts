@@ -1,6 +1,6 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { hyperliquidNetwork } from '$lib/hl/network';
+import { hyperliquidPublicNetwork, hyperliquidTradingNetwork } from '$lib/hl/network';
 
 /**
  * Diagnostics-safe build/version metadata.
@@ -15,6 +15,9 @@ export const GET: RequestHandler = async () =>
 	json({
 		name: 'Vice Terminal',
 		version: '1.0.0',
-		testnet: hyperliquidNetwork.isTestnet,
-		network: hyperliquidNetwork.network
+		testnet: hyperliquidTradingNetwork.isTestnet,
+		network: hyperliquidTradingNetwork.network,
+		publicNetwork: hyperliquidPublicNetwork.network,
+		publicTestnet: hyperliquidPublicNetwork.isTestnet,
+		tradingNetwork: hyperliquidTradingNetwork.network
 	});

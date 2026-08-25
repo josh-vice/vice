@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { marketRegistry, marketDataStatus, marketCatalogStatus, searchQuery, selectedMarket, selectMarket, type HealthStatus } from '$lib/stores';
+	import { marketRegistry, marketType, marketDataStatus, marketCatalogStatus, searchQuery, selectedMarket, selectMarket, type HealthStatus } from '$lib/stores';
 	import { clearPriceAlertNotice, createPriceAlert, priceAlertNotice, priceAlerts, removePriceAlert, type PriceAlertDirection } from '$lib/priceAlerts';
 	import { formatPrice, formatVolume } from '$lib/format';
 	import type { MarketDescriptor } from '$lib/types';
@@ -70,11 +70,18 @@
 	}
 
 	function statusMessage(status: HealthStatus): string {
-		if (status === 'connecting') return 'Loading Hyperliquid markets…';
-		if (status === 'degraded') return 'Some Hyperliquid market sections are unavailable; retrying…';
-		if (status === 'error') return 'Hyperliquid market data unavailable';
-		if (status === 'stale') return 'Market data is stale';
-		return 'Market feed is offline';
+		if (query) return 'No markets match this search.';
+		if (cachedVisibleMarkets.length === 0) {
+			if (status === 'connecting') return 'Catalog is loading this product class…';
+			if (status === 'error') return 'Market catalog failed to load.';
+			if (status === 'stale') return 'No markets in this product class; cached catalog is stale.';
+			return 'No markets in this product class.';
+		}
+		if (status === 'connecting') return 'Loading market catalog…';
+		if (status === 'degraded') return 'Partial market catalog; retrying missing sections…';
+		if (status === 'error') return 'Market catalog unavailable.';
+		if (status === 'stale') return 'Showing stale cached catalog.';
+		return 'No markets available.';
 	}
 
 	$: query = $searchQuery.trim().toLowerCase();
@@ -90,21 +97,31 @@
 	let cachedRegistry: MarketDescriptor[] | null = null;
 	let cachedVisibleMarkets: MarketDescriptor[] = [];
 	let cachedTotalVolume = 0;
+	let cachedHasVolume = false;
 	let groupedRows: VirtualRow[] = [];
 
 	$: {
-		const key = `${query}:${[...favorites].sort().join(',')}:${[...collapsed].sort().join(',')}`;
+		const key = `${$marketType}:${query}:${$marketRegistry.map((market) => market.marketKey).join(',')}:${[...favorites].sort().join(',')}:${[...collapsed].sort().join(',')}`;
 		if ($marketRegistry !== cachedRegistry || key !== groupingKey) {
 			cachedRegistry = $marketRegistry;
 			groupingKey = key;
-			cachedVisibleMarkets = $marketRegistry.filter((market) => marketMatchesWatchlistQuery(market, query));
-			cachedTotalVolume = cachedVisibleMarkets.reduce((sum, market) => sum + market.volume24h, 0);
+			scrollTop = 0;
+			cachedVisibleMarkets = $marketRegistry.filter((market) => {
+				const matchesType = $marketType === 'spot'
+					? market.kind === 'spot'
+					: $marketType === 'prediction'
+						? market.kind === 'outcome'
+						: market.kind === 'corePerp' || market.kind === 'hip3Perp';
+				return matchesType && marketMatchesWatchlistQuery(market, query);
+			});
+			cachedHasVolume = cachedVisibleMarkets.some((market) => market.volume24h !== undefined);
+			cachedTotalVolume = cachedVisibleMarkets.reduce((sum, market) => sum + (market.volume24h ?? 0), 0);
 			const marketGroups = buildMarketWatchlistGroups(cachedVisibleMarkets, favorites);
 			groupedRows = marketGroups.flatMap<VirtualRow>((group) => [
 				{ kind: 'header', key: `header:${group.id}`, group },
 				...(collapsed.has(group.id)
 					? []
-					: group.markets.map((market) => ({ kind: 'market' as const, key: market.marketKey, market })))
+					: group.markets.map((market) => ({ kind: 'market' as const, key: `${group.id}:${market.marketKey}`, market })))
 			]);
 		}
 	}
@@ -132,7 +149,8 @@
 	<div class="p-2 border-b border-terminal-border">
 		<div class="flex items-center gap-1.5 px-2 py-1 bg-terminal-bg rounded border border-terminal-border focus-within:border-terminal-cyan/50">
 			<Search class="w-3 h-3 text-terminal-text-muted" />
-			<input type="text" placeholder="Search market, class, category, or DEX" bind:value={$searchQuery} class="flex-1 bg-transparent text-2xs outline-none min-w-0" />
+			<label for="market-search" class="sr-only">Search markets</label>
+			<input id="market-search" type="text" placeholder="Search market, class, category, or DEX" bind:value={$searchQuery} class="flex-1 bg-transparent text-2xs outline-none min-w-0" />
 		</div>
 		<div class="mt-1.5 flex gap-1">
 			<select aria-label="Price alert direction" bind:value={alertDirection} class="w-[72px] bg-terminal-bg rounded border border-terminal-border px-1 text-3xs">
@@ -162,22 +180,22 @@
 			<div style="height:{topSpacer}px"></div>
 			{#each virtualRows as row (row.key)}
 				{#if row.kind === 'header'}
-					<button style="height:{ROW_HEIGHT}px" class="w-full px-2 flex items-center gap-1 bg-terminal-bg-secondary border-b border-terminal-border text-3xs uppercase tracking-wide text-terminal-text-secondary" onclick={() => toggleGroup(row.group.id)}>
+					<button aria-expanded={!collapsed.has(row.group.id)} style="height:{ROW_HEIGHT}px" class="w-full px-2 flex items-center gap-1 bg-terminal-bg-secondary border-b border-terminal-border text-3xs uppercase tracking-wide text-terminal-text-secondary" onclick={() => toggleGroup(row.group.id)}>
 						{#if collapsed.has(row.group.id)}<ChevronRight class="w-3 h-3" />{:else}<ChevronDown class="w-3 h-3" />{/if}
 						<span>{row.group.label}</span><span class="ml-auto tabular-nums text-terminal-text-muted">{row.group.markets.length}</span>
 					</button>
 				{:else}
-					<div role="button" tabindex="0" style="height:{ROW_HEIGHT}px" class="w-full grid grid-cols-[1fr_70px_55px] px-2 items-center text-left hover:bg-terminal-bg-hover {$selectedMarket?.marketKey === row.market.marketKey ? 'bg-terminal-bg-tertiary' : ''}" onclick={() => selectMarket(row.market)} onkeydown={(event) => selectFromKeyboard(event, row.market)}>
+					{@const priceAvailable = Number.isFinite(row.market.lastPrice) && (row.market.lastPrice !== 0 || row.market.kind === 'outcome')}
+					<div role="button" tabindex="0" aria-pressed={$selectedMarket?.marketKey === row.market.marketKey} style="height:{ROW_HEIGHT}px" class="w-full grid grid-cols-[1fr_70px_55px] px-2 items-center text-left hover:bg-terminal-bg-hover {$selectedMarket?.marketKey === row.market.marketKey ? 'bg-terminal-bg-tertiary' : ''}" onclick={() => selectMarket(row.market)} onkeydown={(event) => selectFromKeyboard(event, row.market)}>
 						<div class="flex items-center gap-1 min-w-0">
-							<button aria-label={`Toggle ${row.market.symbol} favorite`} class="p-0.5" onclick={(event) => toggleFavorite(event, row.market)}>
+							<button aria-label={`Toggle ${row.market.symbol} favorite`} class="p-0.5" onclick={(event) => toggleFavorite(event, row.market)} onkeydown={(event) => event.stopPropagation()}>
 								<Star class="w-2.5 h-2.5 {favorites.has(row.market.marketKey) ? 'fill-terminal-yellow text-terminal-yellow' : 'text-terminal-text-muted/50'}" />
 							</button>
 							<span class="text-2xs font-medium truncate">{row.market.symbol.replace('-USD-PERP', '').replace('-PERP', '')}</span>
 							{#if row.market.venueCategory}<span class="text-3xs text-terminal-text-muted">{row.market.venueCategory}</span>{/if}
-							{#if row.market.kind === 'outcome'}<span class="text-3xs text-terminal-yellow">META</span>{/if}
 						</div>
-						<div class="text-right tabular-nums text-2xs {row.market.changePercent24h >= 0 ? 'text-terminal-green' : 'text-terminal-red'}">{formatPrice(row.market.lastPrice, row.market.lastPrice < 1 ? 4 : 2)}</div>
-						<div class="text-right tabular-nums text-2xs {row.market.changePercent24h >= 0 ? 'text-terminal-green' : 'text-terminal-red'}">{row.market.changePercent24h >= 0 ? '+' : ''}{row.market.changePercent24h.toFixed(2)}%</div>
+						<div class="text-right tabular-nums text-2xs {priceAvailable ? 'text-terminal-text' : 'text-terminal-text-muted'}">{priceAvailable ? formatPrice(row.market.lastPrice, row.market.priceDecimals) : '—'}</div>
+						<div class="text-right tabular-nums text-2xs {row.market.changePercent24h === undefined ? 'text-terminal-text-muted' : row.market.changePercent24h >= 0 ? 'text-terminal-green' : 'text-terminal-red'}">{row.market.changePercent24h === undefined ? '—' : `${row.market.changePercent24h >= 0 ? '+' : ''}${row.market.changePercent24h.toFixed(2)}%`}</div>
 					</div>
 				{/if}
 			{/each}
@@ -185,7 +203,7 @@
 		{/if}
 	</div>
 	<div class="p-2 border-t border-terminal-border text-3xs flex justify-between text-terminal-text-muted">
-		<span>{cachedVisibleMarkets.length} markets</span><span class="tabular-nums">{formatVolume(cachedTotalVolume)} 24h</span>
+		<span>{cachedVisibleMarkets.length} markets</span><span class="tabular-nums">{cachedHasVolume ? formatVolume(cachedTotalVolume) : '—'} 24h</span>
 	</div>
 	{#if $priceAlerts.length > 0}
 		<div class="max-h-16 overflow-y-auto border-t border-terminal-border px-2 py-1 text-3xs text-terminal-text-muted">

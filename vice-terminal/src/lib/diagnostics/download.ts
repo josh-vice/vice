@@ -20,7 +20,7 @@ export function supportBundleFilename(): string {
  * show a preview/confirm it was assembled. `browserInfo` is gathered from the
  * real browser when available. No network requests are made.
  */
-export function downloadSupportBundle(meta?: BuildMeta): SupportBundle {
+export function downloadSupportBundle(meta?: BuildMeta, operatorNote?: string): SupportBundle {
 	const browserInfo =
 		typeof navigator !== 'undefined'
 			? {
@@ -36,7 +36,7 @@ export function downloadSupportBundle(meta?: BuildMeta): SupportBundle {
 				}
 			: undefined;
 
-	const bundle = buildSupportBundle(meta, browserInfo);
+	const bundle = buildSupportBundle(meta, browserInfo, operatorNote);
 	if (typeof document === 'undefined' || typeof URL === 'undefined' || typeof Blob === 'undefined') {
 		return bundle;
 	}

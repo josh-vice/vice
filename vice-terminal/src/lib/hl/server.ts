@@ -1,15 +1,16 @@
 import { HttpTransport, InfoClient } from '@nktkas/hyperliquid';
 import type { Order as ViceOrder, Position as VicePosition } from '$lib/types';
 import { normalizeTwapHistory } from '$lib/hl/twaps';
-import { hyperliquidNetwork } from '$lib/hl/network';
+import { hyperliquidPublicNetwork, hyperliquidTradingNetwork } from '$lib/hl/network';
 import { boundedReadMap } from './boundedReads';
 
-let infoClient: InfoClient | null = null;
+let publicInfoClient: InfoClient | null = null;
+let tradingInfoClient: InfoClient | null = null;
 export const READ_TIMEOUT_MS = 10_000;
 export const READ_RETRY_DELAY_MS = 100;
 const PERP_DEX_CACHE_MS = 5 * 60_000;
 const EVIDENCE_CORE_ONLY =
-	hyperliquidNetwork.isTestnet && (process.env as Record<string, string | undefined>).VICE_HL_EVIDENCE_CORE_ONLY === 'true';
+	hyperliquidTradingNetwork.isTestnet && (process.env as Record<string, string | undefined>).VICE_HL_EVIDENCE_CORE_ONLY === 'true';
 let perpDexNamesCache: { names: string[]; expiresAt: number } | null = null;
 let perpDexNamesPromise: Promise<string[]> | null = null;
 
@@ -43,13 +44,22 @@ export async function withReadRetry<T>(label: string, operation: () => Promise<T
 	throw lastError instanceof Error ? lastError : new Error(`${label} failed`);
 }
 
-function getReadOnlyInfo(): InfoClient {
-	if (!infoClient) {
-		infoClient = new InfoClient({
-			transport: new HttpTransport({ isTestnet: hyperliquidNetwork.isTestnet })
+function getPublicReadOnlyInfo(): InfoClient {
+	if (!publicInfoClient) {
+		publicInfoClient = new InfoClient({
+			transport: new HttpTransport({ isTestnet: hyperliquidPublicNetwork.isTestnet })
 		});
 	}
-	return infoClient;
+	return publicInfoClient;
+}
+
+function getTradingReadOnlyInfo(): InfoClient {
+	if (!tradingInfoClient) {
+		tradingInfoClient = new InfoClient({
+			transport: new HttpTransport({ isTestnet: hyperliquidTradingNetwork.isTestnet })
+		});
+	}
+	return tradingInfoClient;
 }
 
 export type HlOrderStatus = 'open' | 'partial' | 'filled' | 'missing';
@@ -77,7 +87,7 @@ type PerpAccountSlice = {
  * account snapshot.
  */
 async function fetchPerpAccountSlices(address: string): Promise<PerpAccountSlice[]> {
-	const client = getReadOnlyInfo();
+	const client = getTradingReadOnlyInfo();
 	const user = address as `0x${string}`;
 	const names = EVIDENCE_CORE_ONLY ? [''] : await fetchPerpDexNames();
 	return boundedReadMap(
@@ -95,7 +105,7 @@ async function fetchPerpAccountSlices(address: string): Promise<PerpAccountSlice
 }
 
 async function fetchPerpDexNames(): Promise<string[]> {
-	const client = getReadOnlyInfo();
+	const client = getTradingReadOnlyInfo();
 	const now = Date.now();
 	if (!perpDexNamesCache || perpDexNamesCache.expiresAt <= now) {
 		perpDexNamesPromise ??= client.perpDexs()
@@ -110,7 +120,7 @@ async function fetchPerpDexNames(): Promise<string[]> {
 }
 
 async function fetchPerpOpenOrders(address: string) {
-	const client = getReadOnlyInfo();
+	const client = getTradingReadOnlyInfo();
 	const user = address as `0x${string}`;
 	const names = await fetchPerpDexNames();
 	return (await boundedReadMap(
@@ -173,7 +183,7 @@ export async function fetchHlBook(coin: string): Promise<{ coin: string; bestBid
 		// Match the browser feed's bounded-depth request. This avoids asking the
 		// Info API for an unnecessarily large book during startup and makes the
 		// smoke/proxy read use the same venue shape as the live surface.
-		const book = await getReadOnlyInfo().l2Book({ coin, nSigFigs: 5 });
+		const book = await getPublicReadOnlyInfo().l2Book({ coin, nSigFigs: 5 });
 			const bids = book?.levels?.[0] ?? [];
 			const asks = book?.levels?.[1] ?? [];
 		const bestBid = bids[0] ? Number(bids[0].px) : 0;
@@ -184,7 +194,7 @@ export async function fetchHlBook(coin: string): Promise<{ coin: string; bestBid
 
 export async function fetchHlOrderStatus(address: string, coin: string, orderId: string): Promise<HlOrderFillStatus> {
 	return withReadTimeout('Hyperliquid order status', async () => {
-		const client = getReadOnlyInfo();
+		const client = getTradingReadOnlyInfo();
 		const user = address as `0x${string}`;
 
 		const hlCoin = coin;
@@ -249,7 +259,7 @@ export async function fetchHlPositions(address: string): Promise<VicePosition[]>
 }
 
 export async function fetchHlAccountSnapshotUnbounded(address: string) {
-	const client = getReadOnlyInfo();
+	const client = getTradingReadOnlyInfo();
 	const user = address as `0x${string}`;
 	const [perpSlices, spotState, userFills, twapHistory, referralResult, feesResult] = await Promise.all([
 		fetchPerpAccountSlices(address),

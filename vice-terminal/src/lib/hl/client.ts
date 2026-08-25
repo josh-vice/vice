@@ -1,57 +1,84 @@
 import { WebSocketTransport, SubscriptionClient, HttpTransport, InfoClient } from '@nktkas/hyperliquid';
-import { hyperliquidNetwork } from './network';
+import { hyperliquidPublicNetwork, hyperliquidTradingNetwork } from './network';
 
-let transport: WebSocketTransport | null = null;
-let subClient: SubscriptionClient | null = null;
+let publicTransport: WebSocketTransport | null = null;
+let publicSubClient: SubscriptionClient | null = null;
 // Hyperliquid L2 frames do not carry the requested nSigFigs. Keeping books on
 // their own socket prevents a same-coin grouping request from being confused
 // with context/trade subscriptions and is a prerequisite for any worker move.
-let bookTransport: WebSocketTransport | null = null;
-let bookSubClient: SubscriptionClient | null = null;
-let infoClient: InfoClient | null = null;
+let publicBookTransport: WebSocketTransport | null = null;
+let publicBookSubClient: SubscriptionClient | null = null;
+let publicInfoClient: InfoClient | null = null;
+let tradingTransport: WebSocketTransport | null = null;
+let tradingSubClient: SubscriptionClient | null = null;
+let tradingInfoClient: InfoClient | null = null;
 
-export function getTransport(): WebSocketTransport {
-	if (!transport) {
-		transport = new WebSocketTransport({ isTestnet: hyperliquidNetwork.isTestnet });
+export function getPublicTransport(): WebSocketTransport {
+	if (!publicTransport) {
+		publicTransport = new WebSocketTransport({ isTestnet: hyperliquidPublicNetwork.isTestnet });
 	}
-	return transport;
+	return publicTransport;
 }
 
-export function getSubscriptionClient(): SubscriptionClient {
-	if (!subClient) {
-		subClient = new SubscriptionClient({ transport: getTransport() });
+export function getPublicSubscriptionClient(): SubscriptionClient {
+	if (!publicSubClient) {
+		publicSubClient = new SubscriptionClient({ transport: getPublicTransport() });
 	}
-	return subClient;
+	return publicSubClient;
 }
 
-/** A dedicated public transport for the selected L2 book subscription. */
-export function getBookTransport(): WebSocketTransport {
-	if (!bookTransport) {
-		bookTransport = new WebSocketTransport({ isTestnet: hyperliquidNetwork.isTestnet });
+export function getPublicBookTransport(): WebSocketTransport {
+	if (!publicBookTransport) {
+		publicBookTransport = new WebSocketTransport({ isTestnet: hyperliquidPublicNetwork.isTestnet });
 	}
-	return bookTransport;
+	return publicBookTransport;
 }
 
-export function getBookSubscriptionClient(): SubscriptionClient {
-	if (!bookSubClient) {
-		bookSubClient = new SubscriptionClient({ transport: getBookTransport() });
+export function getPublicBookSubscriptionClient(): SubscriptionClient {
+	if (!publicBookSubClient) {
+		publicBookSubClient = new SubscriptionClient({ transport: getPublicBookTransport() });
 	}
-	return bookSubClient;
+	return publicBookSubClient;
 }
 
-export function getInfoClient(): InfoClient {
-	if (!infoClient) {
-		infoClient = new InfoClient({ transport: new HttpTransport({ isTestnet: hyperliquidNetwork.isTestnet }) });
+export function getPublicInfoClient(): InfoClient {
+	if (!publicInfoClient) {
+		publicInfoClient = new InfoClient({ transport: new HttpTransport({ isTestnet: hyperliquidPublicNetwork.isTestnet }) });
 	}
-	return infoClient;
+	return publicInfoClient;
+}
+
+export function getTradingTransport(): WebSocketTransport {
+	if (!tradingTransport) {
+		tradingTransport = new WebSocketTransport({ isTestnet: hyperliquidTradingNetwork.isTestnet });
+	}
+	return tradingTransport;
+}
+
+export function getTradingSubscriptionClient(): SubscriptionClient {
+	if (!tradingSubClient) {
+		tradingSubClient = new SubscriptionClient({ transport: getTradingTransport() });
+	}
+	return tradingSubClient;
+}
+
+export function getTradingInfoClient(): InfoClient {
+	if (!tradingInfoClient) {
+		tradingInfoClient = new InfoClient({ transport: new HttpTransport({ isTestnet: hyperliquidTradingNetwork.isTestnet }) });
+	}
+	return tradingInfoClient;
 }
 
 export async function closeHlClients(): Promise<void> {
-	const transports = [transport, bookTransport].filter((candidate): candidate is WebSocketTransport => candidate !== null);
+	const transports = [publicTransport, publicBookTransport, tradingTransport]
+		.filter((candidate): candidate is WebSocketTransport => candidate !== null);
 	await Promise.allSettled(transports.map((candidate) => candidate.close?.()));
-	transport = null;
-	subClient = null;
-	bookTransport = null;
-	bookSubClient = null;
-	infoClient = null;
+	publicTransport = null;
+	publicSubClient = null;
+	publicBookTransport = null;
+	publicBookSubClient = null;
+	publicInfoClient = null;
+	tradingTransport = null;
+	tradingSubClient = null;
+	tradingInfoClient = null;
 }

@@ -1,8 +1,6 @@
 import { get } from 'svelte/store';
 import {
 	orderPrice,
-	orderSide,
-	orderSize,
 	designerMode,
 	clickPlacementMode,
 	priceInputFocused,
@@ -11,10 +9,8 @@ import {
 	chartDraft,
 	advancedConfig,
 	postOnly,
-	orderBook,
-	selectedMarket
+	orderBook
 } from '$lib/stores';
-import { placeOrder } from '$lib/hl/orders';
 import { chartPriceUpdate } from './fields';
 
 export function handleChartClick(price: number): void {
@@ -38,22 +34,6 @@ export function handleChartClick(price: number): void {
 	// Default: autofill price input
 }
 
-export async function submitChartOrder(price: number): Promise<void> {
-	const size = get(orderSize);
-	if (size <= 0) return;
-
-	await placeOrder({
-		marketKey: get(selectedMarket)?.marketKey,
-		side: get(orderSide),
-		type: 'limit',
-		price,
-		size,
-		reduceOnly: false,
-		postOnly: get(postOnly)
-	});
-
-	chartPreviewPrice.set(null);
-}
 
 export function warnCrossSpread(side: 'buy' | 'sell', price: number): string | null {
 	const book = get(orderBook);
