@@ -97,6 +97,8 @@ export const deadmanStatus: Writable<DeadmanStatus> = writable('idle');
 
 let boundProvider: any = null;
 let activeWalletProvider: DiscoveredWallet['provider'] | null = null;
+let walletConnectGeneration = 0;
+let walletConnectInFlight = false;
 let accountsChangedHandler: ((accounts: string[]) => void) | null = null;
 let providerDisconnectHandler: (() => void) | null = null;
 let chainChangedHandler: (() => void) | null = null;
@@ -508,10 +510,11 @@ export function selectOptionContract(contract: OptionContract) {
 	orderPrice.set(contract.ask);
 }
 
-async function activateWallet(address: string): Promise<void> {
+async function activateWallet(address: string, generation = walletConnectGeneration): Promise<boolean> {
 	// Invalidate the previous account before touching the new provider address.
 	// This prevents stale private state from being displayed during wallet
 	// switching or reconnect.
+	if (generation !== walletConnectGeneration) return false;
 	isConnected.set(false);
 	openOrders.set([]);
 	positions.set([]);
@@ -527,17 +530,24 @@ async function activateWallet(address: string): Promise<void> {
 		walletAddress.set(address);
 		loadAccountOrderPresets(address);
 		loadAccountFatFingerLimits(address);
-		const { startAccountSubscriptions } = await import('./hl/account');
+		const { startAccountSubscriptions, stopAccountSubscriptions } = await import('./hl/account');
 		await startAccountSubscriptions(address);
+		if (generation !== walletConnectGeneration) {
+			await stopAccountSubscriptions();
+			return false;
+		}
 		isConnected.set(true);
 		walletStatus.set('live');
+		return true;
 	} catch (error) {
-		isConnected.set(false);
-		walletAddress.set(null);
-		orderPresets.set([]);
-		fatFingerLimits.set(emptyFatFingerLimits());
-		walletStatus.set('error');
-		accountSyncStatus.set('error');
+		if (generation === walletConnectGeneration) {
+			isConnected.set(false);
+			walletAddress.set(null);
+			orderPresets.set([]);
+			fatFingerLimits.set(emptyFatFingerLimits());
+			walletStatus.set('error');
+			accountSyncStatus.set('error');
+		}
 		throw error;
 	}
 }
@@ -579,23 +589,32 @@ function bindWalletProvider(provider: any): void {
 }
 
 async function connectProvider(wallet: DiscoveredWallet): Promise<void> {
-	activeWalletProvider = wallet.provider;
+	if (walletConnectInFlight) return;
+	walletConnectInFlight = true;
+	const generation = ++walletConnectGeneration;
 	walletSelectionOpen.set(false);
 	walletCandidates.set([]);
 	walletError.set('');
 	walletStatus.set('connecting');
 	try {
 		const accounts = await requestWalletAccounts(wallet.provider);
+		if (generation !== walletConnectGeneration) return;
 		if (!accounts[0]) throw new Error(`${wallet.name} did not return an account`);
-		await activateWallet(accounts[0]);
+		if (!(await activateWallet(accounts[0], generation))) return;
+		if (generation !== walletConnectGeneration) return;
+		activeWalletProvider = wallet.provider;
 		bindWalletProvider(wallet.provider);
 	} catch (error) {
+		if (generation !== walletConnectGeneration) return;
 		walletStatus.set('error');
 		walletError.set(error instanceof Error ? error.message : `${wallet.name} connection failed`);
+	} finally {
+		walletConnectInFlight = false;
 	}
-}
 
+	}
 export async function connectWallet(): Promise<void> {
+	if (walletConnectInFlight) return;
 	walletError.set('');
 	walletStatus.set('connecting');
 	try {
@@ -619,10 +638,12 @@ export async function connectWallet(): Promise<void> {
 }
 
 export function selectWalletProvider(wallet: DiscoveredWallet): void {
+	if (walletConnectInFlight) return;
 	void connectProvider(wallet);
 }
 
 export function cancelWalletSelection(): void {
+	walletConnectGeneration += 1;
 	walletSelectionOpen.set(false);
 	walletCandidates.set([]);
 	walletStatus.set('idle');
