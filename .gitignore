@@ -67,4 +67,5 @@ sweep_report.md
 # failure, sanitized by scripts/e2e-gate.mjs) — never commit
 /scripts/e2e/.artifacts/
 /scripts/e2e/perf-evidence/
+/release/
 /vice-terminal/e2e/.e2e-artifacts/
