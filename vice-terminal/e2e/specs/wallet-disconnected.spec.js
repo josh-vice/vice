@@ -28,6 +28,12 @@ test('wallet-disconnected: no account balance, no address, ticket preconditions'
 
 	await assertCleanRuntime(evidence);
 });
+test('connect reports an actionable error when no injected EVM wallet is available', async ({ page, evidence }) => {
+	await page.goto('/trade', { waitUntil: 'domcontentloaded', timeout: 60_000 });
+	await page.getByRole('button', { name: 'Connect', exact: true }).click();
+	await expect(page.getByText('No EVM wallet found', { exact: false })).toBeVisible({ timeout: 10_000 });
+	await assertCleanRuntime(evidence);
+});
 
 test('secure-trading preconditions render without triggering a signature (MOCK provider scenario)', async ({ page, evidence }) => {
 	// MOCK: inject a clearly-fake wallet provider that never resolves. This

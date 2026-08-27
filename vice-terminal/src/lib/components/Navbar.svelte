@@ -4,17 +4,22 @@
 		isConnected,
 		walletAddress,
 		walletStatus,
-		selectedMarket,
+		walletError,
+		walletCandidates,
+		walletSelectionOpen,
+		selectWalletProvider,
+		cancelWalletSelection,
 		marketDataStatus,
 		marketCatalogStatus,
 		accountSyncStatus,
 		activeAssetSyncStatus,
 		revenueSyncStatus,
+		selectedMarket,
 		cliOpen,
-		marketType,
 		connectWallet,
 		disconnectWallet,
 		toggleCLI,
+		marketType,
 		setMarketType,
 		type HealthStatus
 	} from '$lib/stores';
@@ -47,6 +52,41 @@
 		requestWorkspaceLayoutReset();
 		panelMenuOpen = false;
 		workspaceMessage = `${$workspacePreset[0].toUpperCase()}${$workspacePreset.slice(1)} layout reset.`;
+	}
+	function walletDialogFocus(node: HTMLDivElement): { destroy: () => void } {
+		const previous = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+		const focusable = () => Array.from(node.querySelectorAll<HTMLElement>('button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'));
+		const onKeyDown = (event: KeyboardEvent) => {
+			if (event.key === 'Escape') {
+				event.preventDefault();
+				cancelWalletSelection();
+				return;
+			}
+			if (event.key !== 'Tab') return;
+			const elements = focusable();
+			if (elements.length === 0) {
+				event.preventDefault();
+				node.focus();
+				return;
+			}
+			const first = elements[0];
+			const last = elements.at(-1);
+			if (event.shiftKey && document.activeElement === first) {
+				event.preventDefault();
+				last?.focus();
+			} else if (!event.shiftKey && document.activeElement === last) {
+				event.preventDefault();
+				first?.focus();
+			}
+		};
+		node.addEventListener('keydown', onKeyDown);
+		queueMicrotask(() => focusable()[0]?.focus() ?? node.focus());
+		return {
+			destroy() {
+				node.removeEventListener('keydown', onKeyDown);
+				previous?.focus();
+			}
+		};
 	}
 	onMount(() => installDiagnostics());
 
@@ -266,6 +306,30 @@
 		{/if}
 		</div>
 		</nav>
+	{#if $walletSelectionOpen}
+		<div class="fixed inset-0 z-50 flex items-center justify-center px-4">
+			<button class="absolute inset-0 bg-black/60" aria-label="Close wallet picker" onclick={cancelWalletSelection}></button>
+			<div use:walletDialogFocus class="relative w-full max-w-sm rounded border border-terminal-border bg-terminal-bg-panel p-3 shadow-2xl" role="dialog" tabindex="-1" aria-modal="true" aria-labelledby="wallet-picker-title">
+				<div class="mb-2 flex items-center justify-between">
+					<h2 id="wallet-picker-title" class="text-sm font-semibold text-terminal-text">Choose EVM wallet</h2>
+					<button class="rounded px-1.5 py-0.5 text-xs text-terminal-text-muted hover:text-terminal-text" onclick={cancelWalletSelection} aria-label="Close wallet picker">×</button>
+				</div>
+				<p class="mb-3 text-3xs text-terminal-text-muted">MetaMask, Rabby, Coinbase Wallet, Brave Wallet, and other EIP-6963 wallets are supported.</p>
+				<div class="space-y-1.5">
+					{#each $walletCandidates as wallet}
+						<button class="flex w-full items-center justify-between rounded border border-terminal-border px-2.5 py-2 text-left text-xs text-terminal-text hover:border-terminal-cyan hover:bg-terminal-cyan/5" onclick={() => selectWalletProvider(wallet)}>
+							<span>{wallet.name}</span>
+							<span class="text-3xs text-terminal-text-muted">Connect</span>
+						</button>
+					{/each}
+				</div>
+				<button class="mt-3 w-full rounded border border-terminal-border px-2 py-1.5 text-3xs text-terminal-text-muted hover:text-terminal-text" onclick={cancelWalletSelection}>Cancel</button>
+			</div>
+		</div>
+	{/if}
+	{#if $walletError}
+		<div class="fixed bottom-3 left-1/2 z-50 -translate-x-1/2 rounded border border-terminal-red/50 bg-terminal-bg-panel px-3 py-2 text-3xs text-terminal-red" role="alert">{$walletError}</div>
+	{/if}
 	{#if reportIssueOpen}
 		<ReportIssue onClose={() => (reportIssueOpen = false)} />
 	{/if}

@@ -12,6 +12,7 @@ import {
 	noopEnablementReporter,
 	classifyEnablementError
 } from './execution/enablement';
+import { discoverWalletProviders, requestWalletAccounts, type DiscoveredWallet } from './walletProviders';
 
 export type { HealthStatus } from './productionTruth';
 
@@ -76,6 +77,9 @@ export const activeSubaccount: Writable<Subaccount> = writable(emptySubaccount);
 export const isConnected: Writable<boolean> = writable(false);
 export const walletAddress: Writable<string | null> = writable(null);
 export const walletStatus: Writable<HealthStatus> = writable('idle');
+export const walletError: Writable<string> = writable('');
+export const walletCandidates: Writable<DiscoveredWallet[]> = writable([]);
+export const walletSelectionOpen: Writable<boolean> = writable(false);
 export const marketDataStatus: Writable<HealthStatus> = writable('idle');
 // Completed-candle automation must not treat the chart's trade-derived
 // fallback as an authoritative candle stream. Keep that health independent.
@@ -92,6 +96,7 @@ export type DeadmanStatus = 'idle' | 'arming' | 'armed' | 'clearing' | 'uncertai
 export const deadmanStatus: Writable<DeadmanStatus> = writable('idle');
 
 let boundProvider: any = null;
+let activeWalletProvider: DiscoveredWallet['provider'] | null = null;
 let accountsChangedHandler: ((accounts: string[]) => void) | null = null;
 let providerDisconnectHandler: (() => void) | null = null;
 let chainChangedHandler: (() => void) | null = null;
@@ -573,25 +578,53 @@ function bindWalletProvider(provider: any): void {
 	provider.on('chainChanged', chainChangedHandler);
 }
 
-export async function connectWallet(): Promise<void> {
+async function connectProvider(wallet: DiscoveredWallet): Promise<void> {
+	activeWalletProvider = wallet.provider;
+	walletSelectionOpen.set(false);
+	walletCandidates.set([]);
+	walletError.set('');
 	walletStatus.set('connecting');
+	try {
+		const accounts = await requestWalletAccounts(wallet.provider);
+		if (!accounts[0]) throw new Error(`${wallet.name} did not return an account`);
+		await activateWallet(accounts[0]);
+		bindWalletProvider(wallet.provider);
+	} catch (error) {
+		walletStatus.set('error');
+		walletError.set(error instanceof Error ? error.message : `${wallet.name} connection failed`);
+	}
+}
 
-	if (typeof window !== 'undefined' && (window as any).ethereum) {
-		try {
-			const accounts: string[] = await (window as any).ethereum.request({
-				method: 'eth_requestAccounts'
-			});
-			if (accounts[0]) {
-				await activateWallet(accounts[0]);
-				bindWalletProvider((window as any).ethereum);
-				return;
-			}
-		} catch {
+export async function connectWallet(): Promise<void> {
+	walletError.set('');
+	walletStatus.set('connecting');
+	try {
+		const wallets = await discoverWalletProviders();
+		if (wallets.length === 0) {
+			walletStatus.set('error');
+			walletError.set('No EVM wallet found. Install MetaMask, Rabby, Coinbase Wallet, Brave Wallet, or another EIP-6963 wallet.');
+			return;
+		}
+		if (wallets.length > 1) {
+			walletCandidates.set(wallets);
+			walletSelectionOpen.set(true);
 			walletStatus.set('idle');
 			return;
 		}
+		await connectProvider(wallets[0]);
+	} catch (error) {
+		walletStatus.set('error');
+		walletError.set(error instanceof Error ? error.message : 'Wallet discovery failed');
 	}
+}
 
+export function selectWalletProvider(wallet: DiscoveredWallet): void {
+	void connectProvider(wallet);
+}
+
+export function cancelWalletSelection(): void {
+	walletSelectionOpen.set(false);
+	walletCandidates.set([]);
 	walletStatus.set('idle');
 }
 
@@ -615,7 +648,7 @@ export async function enableTrading(
 	const { assertTradingAllowed, assertFreshExecutionState } = await import('./execution/releaseSafety');
 	assertTradingAllowed();
 	const address = get(walletAddress);
-	const provider = typeof window !== 'undefined' ? (window as any).ethereum : null;
+	const provider = activeWalletProvider ?? (typeof window !== 'undefined' ? (window as any).ethereum : null);
 	if (!address || !provider) {
 		const notConnected = classifyEnablementError(
 			new Error('Connect a browser wallet before enabling trading')
@@ -715,6 +748,7 @@ export function disconnectWallet() {
 	void import('./execution/breakEven').then(({ stopAllBreakEvenTimers }) => stopAllBreakEvenTimers());
 	void import('./execution/conditionalLadder').then(({ stopAllConditionalLadderTimers }) => stopAllConditionalLadderTimers());
 	isConnected.set(false);
+	activeWalletProvider = null;
 	walletAddress.set(null);
 	orderPresets.set([]);
 	walletStatus.set('idle');
