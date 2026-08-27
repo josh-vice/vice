@@ -45,8 +45,8 @@
  */
 
 import { createHash } from 'node:crypto';
-import { statSync, readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { readdirSync, statSync, readFileSync } from 'node:fs';
+import { resolve, relative, join } from 'node:path';
 import { spawnSync } from 'node:child_process';
 
 export const MANIFEST_SCHEMA_VERSION = 1;
@@ -65,12 +65,30 @@ export function sha256Buffer(buffer) {
 }
 
 export function sha256File(path) {
-	const data = readFileSync(resolve(path));
-	return sha256Buffer(data);
+	const fullPath = resolve(path);
+	if (statSync(fullPath).isDirectory()) {
+		const hash = createHash('sha256');
+		const walk = (directory) => {
+			for (const name of readdirSync(directory).sort()) {
+				const child = join(directory, name);
+				if (statSync(child).isDirectory()) walk(child);
+				else {
+					hash.update(relative(fullPath, child));
+					hash.update('\u0000');
+					hash.update(readFileSync(child));
+				}
+			}
+		};
+		walk(fullPath);
+		return hash.digest('hex');
+	}
+	return sha256Buffer(readFileSync(fullPath));
 }
 
 export function fileSize(path) {
-	return statSync(resolve(path)).size;
+	const fullPath = resolve(path);
+	if (!statSync(fullPath).isDirectory()) return statSync(fullPath).size;
+	return readdirSync(fullPath).reduce((total, name) => total + fileSize(join(fullPath, name)), 0);
 }
 
 // ---------------------------------------------------------------------------
