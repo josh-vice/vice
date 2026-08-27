@@ -1,0 +1,38 @@
+@layer components {
+	.dither-token,
+	.dither-stale,
+	.dither-disabled,
+	.dither-halftone {
+		pointer-events: none;
+		position: absolute;
+		inset: 0;
+		transform: translateZ(0);
+		background-image: radial-gradient(circle at center, currentColor 0 0.65px, transparent 0.75px);
+		background-size: 4px 4px;
+		content: '';
+	}
+
+	.dither-token {
+		color: rgb(255 255 255 / 0.08);
+		opacity: 0.18;
+		mix-blend-mode: screen;
+	}
+
+	.dither-stale {
+		color: rgb(245 180 70 / 0.35);
+		opacity: 0.3;
+		mix-blend-mode: screen;
+	}
+
+	.dither-disabled {
+		color: rgb(148 163 184 / 0.35);
+		opacity: 0.22;
+		mix-blend-mode: luminosity;
+	}
+
+	.dither-halftone {
+		color: rgb(79 214 247 / 0.2);
+		opacity: 0.24;
+		mix-blend-mode: screen;
+	}
+}

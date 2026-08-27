@@ -11,7 +11,13 @@ describe('market-class disclosure', () => {
 	});
 
 	test('shows an exact official perp category without calling it a tokenization claim', () => {
-		expect(describeMarketClass({ ...base, marketKey: 'hip3:xyz:NVDA', apiCoin: 'xyz:NVDA', kind: 'hip3Perp', dex: 'xyz', venueCategory: 'stocks' })).toEqual({ label: 'HIP-3 · xyz · stocks', detail: 'Venue category: stocks', metadataOnly: false });
+		expect(describeMarketClass({ ...base, marketKey: 'hip3:xyz:NVDA', apiCoin: 'xyz:NVDA', kind: 'hip3Perp', dex: 'xyz', venueCategory: 'stocks' })).toEqual({ label: 'HIP-3 · xyz · stocks', detail: 'Venue category: stocks; RWA classification unavailable', metadataOnly: false });
+	});
+
+	test('discloses that HIP-3 category data does not prove RWA status', () => {
+		const display = describeMarketClass({ ...base, marketKey: 'hip3:xyz:NVDA', apiCoin: 'xyz:NVDA', kind: 'hip3Perp', dex: 'xyz', venueCategory: 'stocks' });
+		expect(display?.label).toBe('HIP-3 · xyz · stocks');
+		expect(display?.detail).toContain('RWA classification unavailable');
 	});
 
 	test('keeps prediction-market context metadata-only and venue-supplied', () => {

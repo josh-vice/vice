@@ -8,7 +8,7 @@ type Endpoint = {
 	start?: () => void;
 };
 type EndpointState = { network: Network; tradeCoin?: string; candle?: { coin: string; interval: string } };
-type SocketState = { socket: WebSocket; epoch: number; tradeCoins: Set<string>; candleKeys: Set<string> };
+type SocketState = { socket: WebSocket; epoch: number; sequence: number; tradeCoins: Set<string>; candleKeys: Set<string> };
 type RawTrade = { coin?: unknown; tid?: unknown; px?: unknown; sz?: unknown; side?: unknown; time?: unknown };
 type RawCandle = { t?: unknown; s?: unknown; i?: unknown; o?: unknown; c?: unknown; h?: unknown; l?: unknown; v?: unknown };
 
@@ -127,7 +127,7 @@ function ensureSocket(network: Network): void {
 	const epoch = ++nextEpoch;
 	publish(network, { type: 'status', network, epoch, status: 'connecting' });
 	const socket = new WebSocket(hyperliquidWsUrl(network));
-	sockets.set(network, { socket, epoch, tradeCoins: new Set(), candleKeys: new Set() });
+	sockets.set(network, { socket, epoch, sequence: 0, tradeCoins: new Set(), candleKeys: new Set() });
 	socket.addEventListener('open', () => {
 		if (sockets.get(network)?.epoch !== epoch) return;
 		socket.send(JSON.stringify({ method: 'subscribe', subscription: { type: 'allMids' } }));
@@ -136,18 +136,22 @@ function ensureSocket(network: Network): void {
 		publish(network, { type: 'status', network, epoch, status: 'open' });
 	});
 	socket.addEventListener('message', (event) => {
-		if (sockets.get(network)?.epoch !== epoch || typeof event.data !== 'string') return;
+		const socketState = sockets.get(network);
+		if (!socketState || socketState.epoch !== epoch || typeof event.data !== 'string') return;
 		try {
 			const frame = JSON.parse(event.data) as { channel?: string; data?: unknown };
+			const receivedAtMs = Date.now();
+			const receivedAtMonoMs = performance.now();
+			const sequence = ++socketState.sequence;
 			if (frame.channel === 'allMids' && frame.data && typeof frame.data === 'object' && 'mids' in frame.data) {
 				const mids = (frame.data as { mids?: unknown }).mids;
-				if (mids && typeof mids === 'object') publish(network, { type: 'allMids', network, epoch, receivedAt: performance.now(), mids: mids as Record<string, string> });
+				if (mids && typeof mids === 'object') publish(network, { type: 'allMids', network, epoch, sequence, receivedAtMs, receivedAtMonoMs, mids: mids as Record<string, string> });
 			} else if (frame.channel === 'trades') {
 				const normalized = normalizeTrades(frame.data);
-				if (normalized) publish(network, { type: 'trades', network, epoch, receivedAt: performance.now(), ...normalized });
+				if (normalized) publish(network, { type: 'trades', network, epoch, sequence, receivedAtMs, receivedAtMonoMs, ...normalized });
 			} else if (frame.channel === 'candle') {
 				const normalized = normalizeCandle(frame.data);
-				if (normalized) publish(network, { type: 'candle', network, epoch, receivedAt: performance.now(), ...normalized });
+				if (normalized) publish(network, { type: 'candle', network, epoch, sequence, receivedAtMs, receivedAtMonoMs, ...normalized });
 			}
 		} catch {
 			// Malformed public frames never become data-plane state.

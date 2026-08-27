@@ -1,10 +1,15 @@
-export interface FeedFrameReadySample {
+export interface FeedKey {
+	feed: string;
+	sequence: number;
+}
+
+export interface FeedFrameReadySample extends FeedKey {
 	receivedAt: number;
 	frameReadyAt: number;
 	latencyMs: number;
 }
 
-export interface FeedStoreSample {
+export interface FeedStoreSample extends FeedKey {
 	receivedAt: number;
 	storedAt: number;
 	latencyMs: number;
@@ -29,8 +34,8 @@ export interface RuntimeHealthSnapshot {
 const MAX_SAMPLES = 1024;
 const samples: FeedFrameReadySample[] = [];
 const storeSamples: FeedStoreSample[] = [];
-const pendingStoreReceives: number[] = [];
-const pendingPaintReceives: number[] = [];
+const pendingStoreReceives = new Map<string, { key: FeedKey; receivedAt: number }>();
+const pendingPaintReceives = new Map<string, { key: FeedKey; receivedAt: number }>();
 let frameReadyScheduled = false;
 let lastFrameReadyAt: number | undefined;
 let runtimeObserverStop: (() => void) | undefined;
@@ -48,8 +53,17 @@ const runtimeHealth: Omit<RuntimeHealthSnapshot, 'usedJsHeapBytes'> = {
 	maxFrameReadyQueueDepth: 0
 };
 
-function recordFrameReady(receivedAt: number, frameReadyAt: number): void {
-	samples.push({ receivedAt, frameReadyAt, latencyMs: frameReadyAt - receivedAt });
+function feedKey(feed: string, sequence: number): FeedKey | null {
+	if (!feed || !Number.isSafeInteger(sequence) || sequence < 0) return null;
+	return { feed, sequence };
+}
+
+function feedKeyId(key: FeedKey): string {
+	return `${key.feed}\u0000${key.sequence}`;
+}
+
+function recordFrameReady(key: FeedKey, receivedAt: number, frameReadyAt: number): void {
+	samples.push({ ...key, receivedAt, frameReadyAt, latencyMs: frameReadyAt - receivedAt });
 	if (samples.length > MAX_SAMPLES) samples.shift();
 }
 
@@ -63,23 +77,35 @@ function scheduleFrameReady(): void {
 	});
 }
 
-export function markFeedReceive(receivedAt = performance.now()): void {
-	if (!Number.isFinite(receivedAt)) return;
-	pendingStoreReceives.push(receivedAt);
-	if (pendingStoreReceives.length > MAX_SAMPLES) pendingStoreReceives.shift();
-	runtimeHealth.maxStoreQueueDepth = Math.max(runtimeHealth.maxStoreQueueDepth, pendingStoreReceives.length);
+export function markFeedReceive(feed: string, sequence: number, receivedAt = performance.now()): void {
+	const key = feedKey(feed, sequence);
+	if (!key || !Number.isFinite(receivedAt)) return;
+	const id = feedKeyId(key);
+	pendingStoreReceives.set(id, { key, receivedAt });
+	while (pendingStoreReceives.size > MAX_SAMPLES) pendingStoreReceives.delete(pendingStoreReceives.keys().next().value!);
+	runtimeHealth.maxStoreQueueDepth = Math.max(runtimeHealth.maxStoreQueueDepth, pendingStoreReceives.size);
 }
 
-/** Mark the point at which a market event has committed to its Svelte store. */
-export function markStoreCommit(): void {
-	const receivedAt = pendingStoreReceives.shift();
-	if (receivedAt === undefined) return;
+export function dropFeedReceive(feed: string, sequence: number): void {
+	const key = feedKey(feed, sequence);
+	if (!key) return;
+	const id = feedKeyId(key);
+	pendingStoreReceives.delete(id);
+	pendingPaintReceives.delete(id);
+}
+/** Mark the point at which a specific market event committed to its Svelte store. */
+export function markStoreCommit(feed: string, sequence: number): void {
+	const key = feedKey(feed, sequence);
+	if (!key) return;
+	const pending = pendingStoreReceives.get(feedKeyId(key));
+	if (!pending) return;
+	pendingStoreReceives.delete(feedKeyId(key));
 	const storedAt = performance.now();
-	storeSamples.push({ receivedAt, storedAt, latencyMs: storedAt - receivedAt });
+	storeSamples.push({ ...key, receivedAt: pending.receivedAt, storedAt, latencyMs: storedAt - pending.receivedAt });
 	if (storeSamples.length > MAX_SAMPLES) storeSamples.shift();
-	pendingPaintReceives.push(receivedAt);
-	if (pendingPaintReceives.length > MAX_SAMPLES) pendingPaintReceives.shift();
-	runtimeHealth.maxFrameReadyQueueDepth = Math.max(runtimeHealth.maxFrameReadyQueueDepth, pendingPaintReceives.length);
+	pendingPaintReceives.set(feedKeyId(key), { key, receivedAt: pending.receivedAt });
+	while (pendingPaintReceives.size > MAX_SAMPLES) pendingPaintReceives.delete(pendingPaintReceives.keys().next().value!);
+	runtimeHealth.maxFrameReadyQueueDepth = Math.max(runtimeHealth.maxFrameReadyQueueDepth, pendingPaintReceives.size);
 	scheduleFrameReady();
 }
 
@@ -89,7 +115,7 @@ export function markStoreCommit(): void {
  * paint-timing source.
  */
 export function markUiFrameReady(frameReadyAt = performance.now()): void {
-	if (pendingPaintReceives.length === 0) return;
+	if (pendingPaintReceives.size === 0) return;
 	if (!Number.isFinite(frameReadyAt)) return;
 	if (lastFrameReadyAt !== undefined) {
 		const interval = frameReadyAt - lastFrameReadyAt;
@@ -99,9 +125,9 @@ export function markUiFrameReady(frameReadyAt = performance.now()): void {
 		}
 	}
 	lastFrameReadyAt = frameReadyAt;
-	while (pendingPaintReceives.length > 0) {
-		const receivedAt = pendingPaintReceives.shift();
-		if (receivedAt !== undefined) recordFrameReady(receivedAt, frameReadyAt);
+	for (const [id, pending] of pendingPaintReceives) {
+		recordFrameReady(pending.key, pending.receivedAt, frameReadyAt);
+		pendingPaintReceives.delete(id);
 	}
 }
 
@@ -129,6 +155,13 @@ export function feedStoreLatencySamples(): number[] {
 /** Return copies for the browser-local release evidence exporter. */
 export function feedFrameReadyLatencySamples(): number[] {
 	return samples.map((sample) => sample.latencyMs);
+}
+export function causalFeedLatencySamples(): Array<{ feed: string; sequence: number; receiptToStoreMs: number; feedToFrameReadyMs: number }> {
+	const frameByKey = new Map(samples.map((sample) => [feedKeyId(sample), sample]));
+	return storeSamples.flatMap((sample) => {
+		const frame = frameByKey.get(feedKeyId(sample));
+		return frame ? [{ feed: sample.feed, sequence: sample.sequence, receiptToStoreMs: sample.latencyMs, feedToFrameReadyMs: frame.latencyMs }] : [];
+	});
 }
 
 /** Count an actual reconnect attempt without retaining venue, account, or market data. */
@@ -191,8 +224,8 @@ export function runtimeHealthSnapshot(): RuntimeHealthSnapshot {
 export function resetLatencyForTest(): void {
 	samples.length = 0;
 	storeSamples.length = 0;
-	pendingStoreReceives.length = 0;
-	pendingPaintReceives.length = 0;
+	pendingStoreReceives.clear();
+	pendingPaintReceives.clear();
 	frameReadyScheduled = false;
 	lastFrameReadyAt = undefined;
 	for (const key of Object.keys(runtimeHealth) as Array<keyof typeof runtimeHealth>) runtimeHealth[key] = 0;

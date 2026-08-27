@@ -35,6 +35,7 @@
 	import { unavailableFeedMessage } from '$lib/productionTruth';
 	import { formatSize } from '$lib/format';
 	import { marketCapabilities } from '$lib/marketCapabilities';
+	import { chartDatasetKey, chartIdentity, marketMatches } from '$lib/chart/chartModel';
 
 	/** Research surfaces can reuse the live chart without exposing private overlays or chart trading. */
 	export let readOnly = false;
@@ -72,9 +73,8 @@
 	let hoveringChart = false;
 	$: privateStateLive = chartActionsEnabled && $isConnected && $accountSyncStatus === 'live' && !$privacyMode;
 	let interactionMarketKey = '';
-
 	$: {
-		const identity = $selectedMarket ? `${$selectedMarket.kind}:${$selectedMarket.marketKey}:${$selectedMarket.apiCoin}` : '';
+		const identity = chartIdentity($selectedMarket);
 		if (interactionMarketKey && identity !== interactionMarketKey) {
 			designerMode.set(false);
 			clickPlacementMode.set(false);
@@ -85,11 +85,6 @@
 			interactionError = '';
 		}
 		interactionMarketKey = identity;
-	}
-
-	function marketMatches(apiCoin?: string, marketKey?: string): boolean {
-		if (!$selectedMarket) return false;
-		return apiCoin === $selectedMarket.apiCoin || marketKey === $selectedMarket.marketKey;
 	}
 
 	function priceAtEvent(e: MouseEvent): number | null {
@@ -160,7 +155,8 @@
 					if (!result.ok) {
 						interactionError = result.error ?? 'Modify rejected';
 					} else {
-						await fetchOpenOrders();
+						const refreshed = await fetchOpenOrders();
+						if (!refreshed) interactionError = 'Modify accepted but account reconciliation is unresolved';
 					}
 					openOrders.update((orders) =>
 					orders.map((candidate) =>
@@ -190,7 +186,8 @@
 		const result = await cancelOrder(orderId, market);
 		if (result.ok) {
 			openOrders.update((orders) => orders.filter((order) => order.id !== orderId));
-			await fetchOpenOrders();
+			const refreshed = await fetchOpenOrders();
+			if (!refreshed) interactionError = 'Cancel accepted but account reconciliation is unresolved';
 		}
 		else {
 			interactionError = result.error ?? 'Cancel rejected';
@@ -245,8 +242,8 @@
 		});
 		if (!result.ok) interactionError = result.error ?? 'Order rejected';
 		else {
-			interactionError = '';
-			await fetchOpenOrders();
+			const refreshed = await fetchOpenOrders();
+			interactionError = refreshed ? '' : 'Order accepted but account reconciliation is unresolved';
 		}
 	}
 
@@ -257,13 +254,13 @@
 			return;
 		}
 		const next = new Map<string, number>();
-		for (const order of $openOrders.filter((candidate) => marketMatches(candidate.apiCoin, candidate.marketKey))) {
+		for (const order of $openOrders.filter((candidate) => marketMatches($selectedMarket, candidate.apiCoin, candidate.marketKey))) {
 			const price = draggingOrderId === order.id ? draggingPrice : order.triggerPrice || order.price;
 			if (!price) continue;
 			const coordinate = candlestickSeries.priceToCoordinate(price);
 			if (coordinate != null) next.set(`order:${order.id}`, coordinate);
 		}
-		for (const position of $positions.filter((candidate) => marketMatches(candidate.apiCoin, candidate.marketKey))) {
+		for (const position of $positions.filter((candidate) => marketMatches($selectedMarket, candidate.apiCoin, candidate.marketKey))) {
 			const coordinate = candlestickSeries.priceToCoordinate(position.entryPrice);
 			if (coordinate != null) next.set(`position:${position.id}`, coordinate);
 			if (position.liquidationPrice) {
@@ -291,7 +288,7 @@
 		if (!candlestickSeries) return;
 		for (const line of supplementalLines.values()) candlestickSeries.removePriceLine(line);
 		const next = new Map<string, IPriceLine>();
-		for (const position of (privateStateLive ? $positions : []).filter((candidate) => marketMatches(candidate.apiCoin, candidate.marketKey))) {
+		for (const position of (privateStateLive ? $positions : []).filter((candidate) => marketMatches($selectedMarket, candidate.apiCoin, candidate.marketKey))) {
 			next.set(
 				`position:${position.id}`,
 				candlestickSeries.createPriceLine({
@@ -529,7 +526,7 @@
 		};
 		handleResize();
 
-		appliedDatasetKey = `${$selectedMarket?.kind ?? ''}:${$selectedMarket?.marketKey ?? $selectedMarket?.apiCoin ?? ''}:${$chartTimeframe}`;
+		appliedDatasetKey = chartDatasetKey($selectedMarket, $chartTimeframe);
 		if ($chartCandles.length > 0 || $liveCandle) applyCandles($chartCandles, true);
 
 		chart.subscribeClick((param) => {
@@ -577,7 +574,7 @@
 
 	// Clear stale candles immediately when market or timeframe changes.
 	$: if (candlestickSeries && volumeSeries) {
-		const datasetKey = `${$selectedMarket?.kind ?? ''}:${$selectedMarket?.marketKey ?? $selectedMarket?.apiCoin ?? ''}:${$chartTimeframe}`;
+		const datasetKey = chartDatasetKey($selectedMarket, $chartTimeframe);
 		if (datasetKey !== appliedDatasetKey) {
 			appliedDatasetKey = datasetKey;
 			clearChartSeries();
@@ -590,7 +587,7 @@
 	// tick), so this block only needs to decide whether a full setData reset
 	// is required; it never re-paints the last bar directly.
 	$: if ($chartCandles.length && candlestickSeries && volumeSeries) {
-		const datasetKey = `${$selectedMarket?.kind ?? ''}:${$selectedMarket?.marketKey ?? $selectedMarket?.apiCoin ?? ''}:${$chartTimeframe}`;
+		const datasetKey = chartDatasetKey($selectedMarket, $chartTimeframe);
 		const first = $chartCandles[0];
 		const last = $chartCandles[$chartCandles.length - 1];
 		const requiresReset =
@@ -628,7 +625,7 @@
 	$: if (candlestickSeries && $openOrders) {
 		orderLines = syncOrderPriceLines(
 			candlestickSeries,
-			(privateStateLive ? $openOrders : []).filter((order) => marketMatches(order.apiCoin, order.marketKey)),
+			(privateStateLive ? $openOrders : []).filter((order) => marketMatches($selectedMarket, order.apiCoin, order.marketKey)),
 			orderLines
 		);
 		scheduleOverlayCoordinates();
@@ -778,7 +775,7 @@
 			</div>
 		{/if}
 		{#if privateStateLive}
-		{#each $openOrders.filter((order) => marketMatches(order.apiCoin, order.marketKey)) as order (order.id)}
+		{#each $openOrders.filter((order) => marketMatches($selectedMarket, order.apiCoin, order.marketKey)) as order (order.id)}
 			{@const y = overlayCoordinates.get(`order:${order.id}`)}
 			{#if y !== undefined}
 				<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
@@ -800,7 +797,7 @@
 				</div>
 			{/if}
 		{/each}
-		{#each $positions.filter((position) => marketMatches(position.apiCoin, position.marketKey)) as position (position.id)}
+		{#each $positions.filter((position) => marketMatches($selectedMarket, position.apiCoin, position.marketKey)) as position (position.id)}
 			{@const y = overlayCoordinates.get(`position:${position.id}`)}
 			{@const liquidationY = overlayCoordinates.get(`liquidation:${position.id}`)}
 			{#if y !== undefined}

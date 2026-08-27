@@ -1,6 +1,7 @@
 import { writable, derived, get, type Writable, type Readable } from 'svelte/store';
 import type { MarketDescriptor, OrderBook, Position, Order, Fill, Balance, OptionChain, Trade, Subaccount, CLICommand, MarketType, OrderSide, OrderType, OptionContract, ChartCandle, ChartInteractionMode, ChartDraft, ChartActiveField, RevenueSnapshot, OrderPreset, AdvancedOrderConfig } from './types';
 import { marketMatchesWatchlistQuery } from './marketWatchlist';
+import { firstMarketForType } from './marketSelectionModel';
 import { emptyFatFingerLimits, type FatFingerLimits } from './execution/fatFinger';
 import { onTimeframeChanged, startHlFeeds, stopHlFeeds, stopHlFeedsForDexSwitch } from './hl';
 import { fixturesEnabled, type HealthStatus } from './productionTruth';
@@ -488,12 +489,7 @@ export function setMarketType(type: MarketType) {
 	marketType.set(type);
 	const query = get(searchQuery);
 	const registry = get(marketRegistry);
-	const next =
-		type === 'spot'
-			? registry.find((market) => market.kind === 'spot' && marketMatchesWatchlistQuery(market, query))
-			: type === 'prediction'
-				? registry.find((market) => market.kind === 'outcome' && marketMatchesWatchlistQuery(market, query))
-				: registry.find((market) => (market.kind === 'corePerp' || market.kind === 'hip3Perp') && marketMatchesWatchlistQuery(market, query));
+	const next = firstMarketForType(registry, type, query);
 	if (next) {
 		selectMarket(next);
 		return;
@@ -609,7 +605,7 @@ export function cancelEnableTrading(): void {
 }
 
 export async function enableTrading(
-	options: { approveBuilder?: boolean } = {},
+	options: { approveBuilder?: boolean; takeover?: boolean } = {},
 	onPhase?: EnablementReporter
 ): Promise<void> {
 	const report = onPhase ?? noopEnablementReporter;
@@ -632,6 +628,10 @@ export async function enableTrading(
 	// market feed is stale. Mutations enforce the same invariant, but rejecting
 	// here prevents a misleading "trading live" session during recovery.
 	assertFreshExecutionState(get(isConnected), get(accountSyncStatus), get(marketDataStatus));
+	if (options.takeover) {
+		const { refreshAccountSnapshot } = await import('./hl/account');
+		if (!(await refreshAccountSnapshot(address))) throw new Error('Fresh account reconciliation is required before taking over secure trading');
+	}
 	executionStatus.set('connecting');
 	try {
 		const { localExecution } = await import('./execution/localExecution');

@@ -22,6 +22,6 @@ describe('US-002 revenue consent surface', () => {
 		const stores = await Bun.file(new URL('../stores.ts', import.meta.url)).text();
 		expect(ticketSource).toContain('builderOptIn');
 		expect(ticketSource).toContain('approveBuilder: builderOptIn');
-		expect(stores).toContain('options: { approveBuilder?: boolean } = {}');
+		expect(stores).toContain('options: { approveBuilder?: boolean; takeover?: boolean } = {}');
 	});
 });

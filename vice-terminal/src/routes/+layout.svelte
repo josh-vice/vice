@@ -8,9 +8,10 @@
 	import PwaBanner from '$lib/components/PwaBanner.svelte';
 	import { loadPrivacyMode } from '$lib/privacyMode';
 	let { children } = $props();
+	loadPrivacyMode();
 	let isTerminalWorkspace = $derived(page.url.pathname === '/trade');
 	setContext(SUITE_CONTEXT, suiteContext);
-	let privacyHydrated = $state(false);
+	let privacyHydrated = $state(true);
 
 	onMount(() => {
 		loadPrivacyMode();

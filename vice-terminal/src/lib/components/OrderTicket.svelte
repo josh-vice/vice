@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { selectedMarket, marketRegistry, orderSide, orderType, orderPrice, orderSize, orderLeverage, reduceOnly, postOnly, ioc, activeSubaccount, balances, advancedConfig, orderPresets, applyOrderPreset, saveOrderPreset, deleteOrderPreset, priceInputFocused, chartActiveField, chartDraft, chartRiskPercent, chartCandles, chartTimeframe, designerMode, isConnected, executionStatus, enableTrading, walletAddress, revenueSnapshot, revenueSyncStatus, setOrderSizePercent, fatFingerLimits, setFatFingerLimits } from '$lib/stores';
 	import { cancelEnableTrading } from '$lib/stores';
+	import { ORDER_TYPE_GROUPS, QUICK_ORDER_TYPES, SIZE_PRESETS, persistenceClass } from '$lib/orderTicketModel';
 	import type { OrderSide, OrderType } from '$lib/types';
 	import { Minus, Plus, Zap, ChevronDown } from 'lucide-svelte';
 	import { placeOrder, startAlgoOrder, fetchOpenOrders } from '$lib/hl/orders';
@@ -26,67 +27,6 @@
 		type EnablementPhase
 	} from '$lib/execution/enablement';
 
-	// Full Insilico-style order type catalog, grouped
-	const orderTypeGroups: { group: string; types: { id: OrderType; label: string; desc: string }[] }[] = [
-		{
-			group: 'Basic',
-			types: [
-				{ id: 'limit', label: 'Limit', desc: 'Resting order at a set price' },
-				{ id: 'market', label: 'Market', desc: 'Fill immediately at best price' }
-			]
-		},
-		{
-			group: 'Conditional',
-			types: [
-				{ id: 'stop', label: 'Stop Market', desc: 'Market order on trigger' },
-				{ id: 'stop_limit', label: 'Stop Limit', desc: 'Limit order on trigger' },
-				{ id: 'bracket', label: 'Bracket (TP/SL)', desc: 'Entry with take-profit & stop-loss' }
-			]
-		},
-		{
-			group: 'Advanced',
-				types: [
-					{ id: 'twap', label: 'Native TWAP', desc: 'Venue-managed slices over 5–1440 minutes' },
-					{ id: 'adaptive_twap', label: 'Adaptive TWAP', desc: 'Local liquidity-aware slices with persisted reconciliation' },
-					{ id: 'vwap', label: 'VWAP', desc: 'Local volume-weighted slices from live public trade flow' },
-					{ id: 'pov', label: 'POV', desc: 'Participate at a capped fraction of observed public volume' },
-					{ id: 'break_even', label: 'Break-even Stop', desc: 'Move protection to entry after a favorable move' },
-					{ id: 'maker', label: 'Maker Route', desc: 'Post a non-crossing order at the live top of book' },
-					{ id: 'conditional_ladder', label: 'Conditional Ladder', desc: 'Arm a scale ladder after a trigger price is reached' },
-					{ id: 'scale', label: 'Scale / Ladder', desc: 'Atomic limit orders across a price range' },
-				{ id: 'chase', label: 'Chase', desc: 'Reprice a post-only child toward the live book' },
-				{ id: 'oco', label: 'OCO', desc: 'Take-profit and stop-loss children with sibling cancellation' },
-				{ id: 'trailing_stop', label: 'Trailing Stop', desc: 'Move a trigger only as the favorable extreme improves' },
-				{ id: 'iceberg', label: 'Iceberg', desc: 'Sequential display-size child orders' },
-				{ id: 'swarm', label: 'Swarm', desc: 'Distributed post-only child ladder around a center price' },
-				{ id: 'ping_pong', label: 'Ping-Pong', desc: 'Alternating post-only legs after authoritative fills' }
-			]
-		}
-	];
-
-	const sizePresets = [10, 25, 50, 75, 100];
-	const quickTypes: { id: OrderType; label: string }[] = [
-		{ id: 'limit', label: 'Limit' },
-		{ id: 'market', label: 'Market' },
-		{ id: 'stop', label: 'Stop' },
-		{ id: 'bracket', label: 'TP/SL' }
-	];
-	const venueNativeOrderTypes = new Set<OrderType>(['limit', 'market', 'stop', 'stop_limit', 'bracket', 'twap']);
-
-	function persistenceClass(type: OrderType): { label: string; detail: string; local: boolean } {
-		if (venueNativeOrderTypes.has(type)) {
-			return {
-				label: 'Venue-native',
-				detail: 'The venue manages this order after it is accepted. It can survive this browser closing.',
-				local: false
-			};
-		}
-		return {
-			label: 'Device-local',
-			detail: 'Vice persists and reconciles this job on this device. It does not run on Vice servers; reopening this device reconciles before resuming.',
-			local: true
-		};
-	}
 
 	let typeMenuOpen = false;
 	let submitError = '';
@@ -100,6 +40,7 @@
 	let enableRetryAvailable = true;
 	let enableCountdown = 0;
 	let enableRetryTimer: ReturnType<typeof setInterval> | null = null;
+	let takeoverRequested = false;
 
 	const ENABLEMENT_ERROR_LABEL: Record<EnablementErrorKind, string> = {
 		rejected: 'Approval rejected',
@@ -140,6 +81,12 @@
 	}
 
 	function retryEnableSecureTrading() {
+		takeoverRequested = false;
+		void enableSecureTrading();
+	}
+
+	function takeOverExpiredLease() {
+		takeoverRequested = true;
 		void enableSecureTrading();
 	}
 
@@ -153,10 +100,10 @@
 
 	// Keep the complete catalog discoverable. Certification is an execution gate,
 	// never a reason to make an existing order type silently disappear.
-	$: availableOrderTypeGroups = orderTypeGroups
+	$: availableOrderTypeGroups = ORDER_TYPE_GROUPS
 		.map((group) => ({ ...group, types: group.types.filter((type) => marketProfile.allowedOrderTypes.includes(type.id) || (marketProfile.supportsAdvancedOrders && isAdvancedOrderCertified(type.id))) }))
 		.filter((group) => group.types.length > 0);
-	$: availableQuickTypes = quickTypes.filter((type) => marketProfile.allowedOrderTypes.includes(type.id) && isAdvancedOrderCertified(type.id));
+	$: availableQuickTypes = QUICK_ORDER_TYPES.filter((type) => marketProfile.allowedOrderTypes.includes(type.id) && isAdvancedOrderCertified(type.id));
 	$: uncertifiedAdvancedCount = marketProfile.supportsAdvancedOrders ? advancedOrderTypes().filter((type) => !isAdvancedOrderCertified(type)).length : 0;
 	$: allTypes = availableOrderTypeGroups.flatMap((g) => g.types);
 	$: currentType = allTypes.find((t) => t.id === $orderType) ?? allTypes[0];
@@ -331,7 +278,8 @@
 				if (!result.ok) {
 					submitError = result.error ?? 'Order failed';
 				} else {
-					await fetchOpenOrders();
+					const refreshed = await fetchOpenOrders();
+					if (!refreshed) submitError = 'Order accepted but account reconciliation is unresolved';
 					if (result.autoTakeProfit && !result.autoTakeProfit.ok) submitError = `Entry submitted, but auto take-profit failed: ${result.autoTakeProfit.error ?? 'unknown error'}`;
 				}
 			}
@@ -352,7 +300,7 @@
 		stopEnableRetryTimer();
 		try {
 			await enableTrading(
-				{ approveBuilder: builderOptIn },
+				{ approveBuilder: builderOptIn, takeover: takeoverRequested },
 				(phase) => {
 					enablePhase = phase;
 					if (phase.kind === 'error' && phase.error.kind === 'rate-limited') {
@@ -585,7 +533,7 @@
 				</button>
 			</div>
 			<div class="flex gap-0.5 mt-1">
-				{#each sizePresets as preset}
+				{#each SIZE_PRESETS as preset}
 					<button
 						class="flex-1 py-1 text-3xs rounded bg-terminal-bg hover:bg-terminal-bg-hover transition-colors text-terminal-text-muted"
 						onclick={() => setSizePercent(preset)}
@@ -997,6 +945,14 @@
 								onclick={retryEnableSecureTrading}
 							>
 								{enableRetryAvailable ? 'Retry' : `Retry in ${enableCountdown}s`}
+							</button>
+						{/if}
+						{#if enablePhase.error.message.includes('explicit takeover')}
+							<button
+								class="rounded border border-terminal-yellow/60 px-1.5 py-0.5 text-terminal-yellow hover:bg-terminal-yellow/10"
+								onclick={takeOverExpiredLease}
+							>
+								Take over after expiry
 							</button>
 						{/if}
 						<button class="rounded border border-terminal-border px-1.5 py-0.5 hover:bg-terminal-bg" onclick={dismissEnablement}>Dismiss</button>

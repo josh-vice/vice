@@ -11,7 +11,7 @@ describe('US-003 chart interaction safety', () => {
 		expect(source).toContain('crossSpreadWarning = warning ??');
 		expect(source).toContain("order.pending ? 'PENDING' : order.status.toUpperCase()");
 		expect(source).toContain('liquidation:${position.id}');
-		expect(source).toContain("$selectedMarket?.marketKey ?? $selectedMarket?.apiCoin");
+		expect(source).toContain('marketMatches($selectedMarket');
 		expect(source).toContain('scheduleOverlayCoordinates();');
 		expect(source).toContain('transition-[top] duration-150');
 		expect(source).toContain("$accountSyncStatus === 'live'");

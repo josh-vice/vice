@@ -60,15 +60,15 @@ describe('exact feed identity boundary', () => {
 
 	test('live mids hydrate a zero bootstrap price without overwriting focused ticket input', async () => {
 		const source = await Bun.file(new URL('./subscriptions.ts', import.meta.url)).text();
-		expect(source).toContain('const previousPrice = selected.lastPrice;');
+		expect(source).toContain('const previousSelectedPrice = selected?.lastPrice;');
 		expect(source).toContain('!get(priceInputFocused)');
-		expect(source).toContain('currentOrderPrice === null || currentOrderPrice === 0 || currentOrderPrice === previousPrice');
+		expect(source).toContain('currentOrderPrice === null || currentOrderPrice === 0 || currentOrderPrice === previousSelectedPrice');
 		expect(source).toContain('orderPrice.set(price);');
 	});
 
 	test('live status requires the selected market book, trades, and mids feeds', async () => {
 		const source = await Bun.file(new URL('./subscriptions.ts', import.meta.url)).text();
-		expect(source).toContain("const REQUIRED_MARKET_FEEDS = ['mids', 'book', 'trades'] as const;");
+		expect(source).toContain("from './feedHealth'");
 		expect(source).toContain('selectedMarketFeedsAreHealthy');
 		expect(source).toContain("markMarketFeedAlive('book')");
 		expect(source).toContain("markMarketFeedAlive('trades')");
@@ -84,9 +84,17 @@ describe('exact feed identity boundary', () => {
 		expect(source).toContain('startHyperliquidPublicPlane(hyperliquidPublicNetwork.network');
 		expect(source).toContain('Object.entries(event.mids)');
 		expect(source).toContain('const lastAllMidByApiCoin = new Map<string, number>();');
-		expect(source).toContain('lastAllMidByApiCoin.set(apiCoin, Date.now());');
+		expect(source).toContain('lastAllMidByApiCoin.set(apiCoin, event.receivedAtMs);');
 		expect(source).toContain('export function exactAllMidIsLive(apiCoin: string');
 		expect(source).not.toContain('for (const market of markets) {\n\t\t\t\t\tconst mid = data.mids[market.apiCoin]');
+	});
+	test('bounds broad catalog quote fanout while keeping selected updates immediate', async () => {
+		const source = await Bun.file(new URL('./subscriptions.ts', import.meta.url)).text();
+		expect(source).toContain('const ALL_MIDS_CATALOG_CADENCE_MS = 100;');
+		expect(source).toContain('const pendingCatalogQuotes = new Map<string, number>();');
+		expect(source).toContain('catalogQueueDepthMax = Math.max(catalogQueueDepthMax, pendingCatalogQuotes.size);');
+		const allMidsBranch = source.slice(source.indexOf('const selectedMid = selected?.apiCoin'));
+		expect(allMidsBranch.slice(0, allMidsBranch.indexOf('activeSubs.allDexsAssetCtxs'))).not.toContain('marketRegistry.set(markets);');
 	});
 
 	test('selected-market trade frames come from the shared worker and retain exact coin identity', async () => {
@@ -171,8 +179,8 @@ describe('exact feed identity boundary', () => {
 		expect(source).toContain('pendingBookEpoch === bookSubscriptionEpoch');
 		expect(source).toContain('const normalizedBook = normalizeL2Book(data);');
 		expect(source).toContain('if (!normalizedBook) {');
-		expect(source).toContain('pendingBook = canonicalBookEvent(normalizedBook, generation, bookEpoch, data.time);');
-  expect(source).toContain('scheduleBookCommit(generation, bookEpoch);');
+		expect(source).toContain('pendingBook = canonicalBookEvent(normalizedBook, generation, bookEpoch, data.time, sequence);');
+		expect(source).toContain('scheduleBookCommit(generation, bookEpoch);');
 		// The live handler defers to the coalescing scheduler rather than
 		// committing straight to the store on every raw WS frame.
 		expect(source).not.toContain('orderBook.set(normalizeL2Book(data));');
@@ -186,9 +194,9 @@ describe('exact feed identity boundary', () => {
 		expect(source).toContain('activeSubs.l2Book = await getPublicBookSubscriptionClient().l2Book');
 		expect(source).toContain('bindMarketSocketHealth(getPublicBookTransport().socket, feedLifecycle);');
 		expect(source).toContain("import { hyperliquidBookEvent } from '$lib/venue/hyperliquid';");
-		expect(source).toContain('pendingBook = canonicalBookEvent(normalizedBook, generation, bookEpoch, data.time);');
+		expect(source).toContain('pendingBook = canonicalBookEvent(normalizedBook, generation, bookEpoch, data.time, sequence);');
 		expect(source).toContain('orderBook.set(pendingBook.payload);');
-		expect(source).toContain('bookEventOrdinal = 0;');
+		expect(source).toContain('const sequence = ++bookEventOrdinal;');
 	});
 
 	test('HTTP book baselines use the same canonical identity and cannot overwrite a live frame', async () => {
@@ -196,7 +204,7 @@ describe('exact feed identity boundary', () => {
 		expect(source).toContain('async function loadMarketSnapshots(coin: string, generation: number, bookEpoch: number): Promise<boolean> {');
 		expect(source).toContain('generation === marketGeneration && bookEpoch === bookSubscriptionEpoch && liveBookFrameEpoch !== bookEpoch');
 		expect(source).toContain('orderBook.set(canonicalBookEvent(normalizedBook, generation, bookEpoch, book.value.time).payload);');
-		expect(source.match(/pendingBook = canonicalBookEvent\(normalizedBook, generation, bookEpoch, data\.time\);/g)).toHaveLength(2);
+		expect(source.match(/pendingBook = canonicalBookEvent\(normalizedBook, generation, bookEpoch, data\.time, sequence\);/g)).toHaveLength(2);
 		expect(source.match(/liveBookFrameEpoch = bookEpoch;/g)).toHaveLength(2);
 	});
 });

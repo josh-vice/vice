@@ -10,7 +10,7 @@ describe('US-003 order sizing hotkeys', () => {
 		expect(ticket).toContain('setOrderSizePercent(percent)');
 		expect(stores).toContain('market.lastPrice');
 		expect(stores).toContain('account.marginFree');
-		expect(stores).toContain("market.kind === 'spot'");
+		expect(stores).toContain("market?.kind === 'spot'");
 		expect(stores).toContain('market.quoteToken');
 		expect(ticket).toContain("marketCapabilities($selectedMarket)");
 		expect(ticket).toContain('marketProfile.amountUnits');

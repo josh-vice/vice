@@ -7,7 +7,8 @@ const valid = {
 	network: 'testnet',
 	capturedAt: '2026-07-13T12:00:00.000Z',
 	runtimeHealth: { longTaskCount: 0, longTaskMaxMs: 0, longAnimationFrameCount: 0, longAnimationFrameMaxMs: 0, eventDelayCount: 0, eventDelayMaxMs: 0, inferredDroppedFrameCount: 0, maxFrameIntervalMs: 0, reconnectCount: 0, maxStoreQueueDepth: 1, maxFrameReadyQueueDepth: 1 },
-	samples: [{ receiptToStoreMs: 1, feedToFrameReadyMs: 8, actionToSignedDispatchMs: 4, localProcessingMs: 0.8 }]
+	samples: [{ feed: 'trade', sequence: 1, receiptToStoreMs: 1, feedToFrameReadyMs: 8 }],
+	dispatchSamples: [{ actionToSignedDispatchMs: 4, localProcessingMs: 0.8 }],
 };
 
 describe('measured latency evidence boundary', () => {
@@ -21,7 +22,7 @@ describe('measured latency evidence boundary', () => {
 			delete copy[field];
 			expect(() => parseLatencyEvidence(copy)).toThrow();
 		}
-		expect(() => parseLatencyEvidence({ ...valid, schemaVersion: 1, samples: [{ receiptToStoreMs: 1, feedToPaintMs: 8, actionToSignedDispatchMs: 4, localProcessingMs: 0.8 }] })).toThrow('schemaVersion must be 2');
+		expect(() => parseLatencyEvidence({ ...valid, schemaVersion: 1, samples: [{ feed: 'trade', sequence: 1, receiptToStoreMs: 1, feedToPaintMs: 8, actionToSignedDispatchMs: 4, localProcessingMs: 0.8 }] })).toThrow('schemaVersion must be 2');
 		expect(() => parseLatencyEvidence({ ...valid, runtimeHealth: { ...valid.runtimeHealth, reconnectCount: -1 } })).toThrow('runtimeHealth.reconnectCount');
 	});
 

@@ -112,7 +112,8 @@
 			}
 			quickCloseMenu = '';
 			positionActionMessage = `${mode === 'market' ? 'Market' : 'Limit-at-quote'} close submitted; awaiting authoritative position reconciliation.`;
-			await Promise.all([fetchOpenOrders(), fetchPositions()]);
+			const [ordersRefreshed, positionsRefreshed] = await Promise.all([fetchOpenOrders(), fetchPositions()]);
+			if (!ordersRefreshed || !positionsRefreshed) positionActionError = 'Close accepted but account reconciliation is unresolved';
 		} finally {
 			positionActionBusy = '';
 		}
@@ -203,7 +204,11 @@
 				positionActionError = `Reverse close leg was rejected: ${close.error ?? 'unknown error'}`;
 				return;
 			}
-			await fetchPositions();
+			const refreshed = await fetchPositions();
+			if (!refreshed) {
+				positionActionError = 'Reverse close accepted but account reconciliation is unresolved';
+				return;
+			}
 			const closeState = reverseCloseReconciliation(get(positions), planned.plan);
 			if (closeState === 'ambiguous') {
 				positionActionError = 'Reverse paused: account identity is incomplete after the close leg; reconcile before retrying';
@@ -221,7 +226,8 @@
 			reverseConfirm = '';
 			quickCloseMenu = '';
 			positionActionMessage = 'Reverse open submitted after a flat snapshot; awaiting authoritative reconciliation.';
-			await Promise.all([fetchOpenOrders(), fetchPositions()]);
+			const [ordersRefreshed, positionsRefreshed] = await Promise.all([fetchOpenOrders(), fetchPositions()]);
+			if (!ordersRefreshed || !positionsRefreshed) positionActionError = 'Reverse open accepted but account reconciliation is unresolved';
 		} finally {
 			positionActionBusy = '';
 		}
@@ -301,7 +307,11 @@
 					outcomes.push({ market: target.market.symbol, positionId: target.positionId, ok: false, error: close.error ?? 'close was rejected' });
 					continue;
 				}
-				await fetchPositions();
+				const refreshed = await fetchPositions();
+				if (!refreshed) {
+					outcomes.push({ market: target.market.symbol, positionId: target.positionId, ok: false, error: 'close accepted but account reconciliation is unresolved' });
+					continue;
+				}
 				const state = reverseCloseReconciliation(get(positions), target);
 				if (state === 'flat') outcomes.push({ market: target.market.symbol, positionId: target.positionId, ok: true });
 				else outcomes.push({ market: target.market.symbol, positionId: target.positionId, ok: false, error: state === 'ambiguous' ? 'close needs reconciliation: returned position identity is incomplete' : 'close acknowledged but position remains open in the refreshed account snapshot' });

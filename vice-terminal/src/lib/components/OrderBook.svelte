@@ -11,6 +11,7 @@
 	import { get } from 'svelte/store';
 	import { topOfBookImbalance } from '$lib/bookAnalytics';
 	import { marketCapabilities } from '$lib/marketCapabilities';
+	import { marketMatches } from '$lib/chart/chartModel';
 
 	$: baseAsset = $selectedMarket?.baseToken ?? 'Asset';
 	$: quoteAsset = $selectedMarket?.quoteToken ?? 'USD';
@@ -68,15 +69,12 @@
 		if (!suppressLadderScroll) followLastPrice = false;
 	}
 
-	function orderMatchesSelectedMarket(apiCoin?: string, marketKey?: string): boolean {
-		return !!$selectedMarket && (apiCoin === $selectedMarket.apiCoin || marketKey === $selectedMarket.marketKey);
-	}
 
 	function ordersAtPrice(price: number) {
 		const decimals = $selectedMarket?.priceDecimals ?? 2;
 		const normalizedPrice = price.toFixed(decimals);
 		return canCancelKnownOrders
-			? $openOrders.filter((order) => orderMatchesSelectedMarket(order.apiCoin, order.marketKey) && (order.triggerPrice ?? order.price)?.toFixed(decimals) === normalizedPrice)
+			? $openOrders.filter((order) => marketMatches($selectedMarket, order.apiCoin, order.marketKey) && (order.triggerPrice ?? order.price)?.toFixed(decimals) === normalizedPrice)
 			: [];
 	}
 
@@ -84,7 +82,7 @@
 		const decimals = $selectedMarket?.priceDecimals ?? 2;
 		const normalizedPrice = price.toFixed(decimals);
 		return privateStateLive
-			? $positions.filter((position) => orderMatchesSelectedMarket(position.apiCoin, position.marketKey) && position.entryPrice.toFixed(decimals) === normalizedPrice)
+			? $positions.filter((position) => marketMatches($selectedMarket, position.apiCoin, position.marketKey) && position.entryPrice.toFixed(decimals) === normalizedPrice)
 			: [];
 	}
 
@@ -115,7 +113,7 @@
 		try {
 			const result = await placeOrder({ marketKey: $selectedMarket.marketKey, side, type: stop ? 'stop' : 'limit', price, triggerPrice: stop ? price : undefined, size: $orderSize, reduceOnly: false, postOnly: stop ? false : $postOnly });
 			if (!result.ok) placementError = result.error ?? 'DOM order was rejected';
-			else await fetchOpenOrders();
+			else if (!(await fetchOpenOrders())) placementError = 'Order accepted but account reconciliation is unresolved';
 		} finally {
 			placingPrice = null;
 		}
@@ -162,7 +160,7 @@
 			placementError = 'Enable secure trading before cancelling known DOM orders';
 			return;
 		}
-		const orders = $openOrders.filter((order) => order.side === side && orderMatchesSelectedMarket(order.apiCoin, order.marketKey));
+		const orders = $openOrders.filter((order) => order.side === side && marketMatches($selectedMarket, order.apiCoin, order.marketKey));
 		if (orders.length === 0) {
 			placementError = `No ${side} DOM orders are open for this market`;
 			return;
@@ -245,7 +243,7 @@
 			placementError = 'Account state is stale; DOM flatten is paused until reconciliation completes';
 			return;
 		}
-		const position = $positions.find((candidate) => orderMatchesSelectedMarket(candidate.apiCoin, candidate.marketKey));
+		const position = $positions.find((candidate) => marketMatches($selectedMarket, candidate.apiCoin, candidate.marketKey));
 		if (!position) {
 			placementError = 'DOM flatten is unavailable';
 			return;
@@ -280,7 +278,7 @@
 			placementError = 'Account state is stale; DOM reverse is paused until reconciliation completes';
 			return;
 		}
-		const position = $positions.find((candidate) => orderMatchesSelectedMarket(candidate.apiCoin, candidate.marketKey));
+		const position = $positions.find((candidate) => marketMatches($selectedMarket, candidate.apiCoin, candidate.marketKey));
 		if (!position) {
 			placementError = 'DOM reverse is unavailable';
 			return;
@@ -373,7 +371,7 @@
 			</div>
 
 			<div bind:this={ladderCenter} class="h-7 px-2 border-y border-terminal-border flex items-center justify-between text-2xs tabular-nums flex-shrink-0">
-				<span class="{$selectedMarket && $selectedMarket.changePercent24h >= 0 ? 'text-terminal-green' : 'text-terminal-red'}">
+				<span class="{$selectedMarket?.changePercent24h === undefined ? 'text-terminal-text-muted' : $selectedMarket.changePercent24h >= 0 ? 'text-terminal-green' : 'text-terminal-red'}">
 					{$selectedMarket ? formatPrice($selectedMarket.lastPrice) : '—'}
 				</span>
 				<span class="text-terminal-text-muted">Spread {$orderBook.spread > 0 ? formatPrice($orderBook.spread) : '—'}</span>

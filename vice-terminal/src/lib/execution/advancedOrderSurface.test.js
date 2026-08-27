@@ -4,7 +4,8 @@ import { advancedOrderTypes, isAdvancedOrderCertified } from './capabilities';
 describe('US-004 advanced order surface', () => {
 	test('lists every state-machine capability and locks uncertified types instead of hiding them', async () => {
 		const source = await Bun.file(new URL('../components/OrderTicket.svelte', import.meta.url)).text();
-		for (const type of advancedOrderTypes()) expect(source).toContain(`id: '${type}'`);
+		const model = await Bun.file(new URL('../orderTicketModel.ts', import.meta.url)).text();
+		for (const type of advancedOrderTypes()) expect(model).toContain(`id: '${type}'`);
 		expect(advancedOrderTypes().every((type) => !isAdvancedOrderCertified(type, undefined))).toBe(true);
 		expect(advancedOrderTypes().every((type) => isAdvancedOrderCertified(type, 'true', 'true'))).toBe(true);
 		expect(source).toContain('marketProfile.supportsAdvancedOrders && isAdvancedOrderCertified(type.id)');

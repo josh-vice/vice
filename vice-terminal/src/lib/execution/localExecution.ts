@@ -18,6 +18,9 @@ import { builderForOrderType, revenueAttributionReady, shouldRetryWithoutBuilder
 import { deterministicCloid, reservePersistedSequence, sequenceStorageKey } from './commandIdentity';
 import { withOneTransportRetry } from './retryPolicy';
 import { parseVenueError } from './venueErrors';
+import { venueError, venueIds } from './venueResponse';
+import { marketMatches } from '$lib/chart/chartModel';
+import { executionOwnerLease, executionOwnerScope } from './executionOwner';
 import { assertTradingAllowed } from './releaseSafety';
 import { assertFreshExecutionState } from './releaseSafety';
 import { executionExpiresAfter } from './expiry';
@@ -44,20 +47,6 @@ type VenueOrder = {
 	c?: `0x${string}`;
 };
 
-function venueIds(response: Awaited<ReturnType<ExchangeClient['order']>>): string[] {
-	return response.response.data.statuses.flatMap((status) => {
-		if (typeof status === 'string' || 'error' in status) return [];
-		if ('resting' in status) return [String(status.resting.oid)];
-		return [String(status.filled.oid)];
-	});
-}
-
-function venueError(response: Awaited<ReturnType<ExchangeClient['order']>>): string | undefined {
-	for (const status of response.response.data.statuses) {
-		if (typeof status !== 'string' && 'error' in status) return parseVenueError(status.error).message;
-	}
-	return undefined;
-}
 
 class LocalExecutionClient {
 	private exchange: ExchangeClient | null = null;
@@ -71,37 +60,43 @@ class LocalExecutionClient {
 	async initialize(
 		provider: EIP1193Provider,
 		mainAddress: string,
-		options: { approveBuilder?: boolean } = {},
+		options: { approveBuilder?: boolean; takeover?: boolean } = {},
 		onPhase?: EnablementReporter
 	): Promise<void> {
 		const report = onPhase ?? noopEnablementReporter;
 		assertTradingAllowed();
-		report({
-			kind: 'step',
-			step: 'connecting',
-			detail: ENABLEMENT_STEP_DETAIL['connecting']
-		});
-		const session = await unlockOrCreateAgent(provider, mainAddress, options, report);
-		report({
-			kind: 'step',
-			step: 'synchronizing-account',
-			detail: ENABLEMENT_STEP_DETAIL['synchronizing-account']
-		});
-		this.provider = provider;
-		this.builder = session.builder;
-		this.mainAddress = session.mainAddress;
-		this.sequence = typeof localStorage === 'undefined' ? 0 : Number(localStorage.getItem(sequenceStorageKey(hyperliquidNetwork.network, this.mainAddress)) ?? 0);
-		const transport = new HttpTransport({ isTestnet: hyperliquidNetwork.isTestnet });
-		this.exchange = new ExchangeClient({
-			transport,
-			wallet: session.agent,
-			defaultExpiresAfter: () => executionExpiresAfter()
-		});
-		this.info = new InfoClient({ transport });
-		await this.reconcilePersistedCommands();
-		report({ kind: 'enabled', detail: ENABLEMENT_ENABLED_DETAIL });
+		const ownership = await executionOwnerLease.acquire(executionOwnerScope(hyperliquidNetwork.network, mainAddress), { takeover: options.takeover });
+		if (!ownership.ok) throw new Error(ownership.reason);
+		try {
+			report({
+				kind: 'step',
+				step: 'connecting',
+				detail: ENABLEMENT_STEP_DETAIL['connecting']
+			});
+			const session = await unlockOrCreateAgent(provider, mainAddress, options, report);
+			report({
+				kind: 'step',
+				step: 'synchronizing-account',
+				detail: ENABLEMENT_STEP_DETAIL['synchronizing-account']
+			});
+			this.provider = provider;
+			this.builder = session.builder;
+			this.mainAddress = session.mainAddress;
+			this.sequence = typeof localStorage === 'undefined' ? 0 : Number(localStorage.getItem(sequenceStorageKey(hyperliquidNetwork.network, this.mainAddress)) ?? 0);
+			const transport = new HttpTransport({ isTestnet: hyperliquidNetwork.isTestnet });
+			this.exchange = new ExchangeClient({
+				transport,
+				wallet: session.agent,
+				defaultExpiresAfter: () => executionExpiresAfter()
+			});
+			this.info = new InfoClient({ transport });
+			await this.reconcilePersistedCommands();
+			report({ kind: 'enabled', detail: ENABLEMENT_ENABLED_DETAIL });
+		} catch (error) {
+			await executionOwnerLease.release();
+			throw error;
+		}
 	}
-
 	lock(): void {
 		this.exchange = null;
 		this.info = null;
@@ -109,6 +104,7 @@ class LocalExecutionClient {
 		this.mainAddress = null;
 		this.builder = undefined;
 		this.actionStartedUs.clear();
+		void executionOwnerLease.release();
 		deadmanStatus.set('idle');
 	}
 
@@ -134,7 +130,7 @@ class LocalExecutionClient {
 		const size = formatVenueSize(intent.size, market);
 		const price = formatVenuePrice(intent.limitPrice, market);
 		const possiblySamePosition = get(positions).find((position) => position.apiCoin === market.apiCoin || position.marketKey === market.marketKey);
-		if (possiblySamePosition && (possiblySamePosition.apiCoin !== market.apiCoin || possiblySamePosition.marketKey !== market.marketKey)) {
+		if (possiblySamePosition && !marketMatches(market, possiblySamePosition.apiCoin, possiblySamePosition.marketKey)) {
 			throw new Error('Position identity is incomplete; reconcile account state before applying local risk limits');
 		}
 		const currentPosition = possiblySamePosition;
@@ -597,9 +593,9 @@ class LocalExecutionClient {
 			return null;
 		}
 	}
-
 	private requireExchange(): ExchangeClient {
-		if (!this.exchange) throw new Error('Enable secure trading before submitting orders');
+		if (!this.exchange || !this.mainAddress) throw new Error('Enable secure trading before submitting orders');
+		executionOwnerLease.assertOwner(executionOwnerScope(hyperliquidNetwork.network, this.mainAddress));
 		return this.exchange;
 	}
 
@@ -719,7 +715,7 @@ class LocalExecutionClient {
 	private ack(commandId: string, sequence: number, receiveUs: number, sendUs: number, accepted: boolean, venueOrderIds: string[], error?: string, uncertain = false, reconciled = false): ExecutionAck {
 		const actionStartedUs = this.actionStartedUs.get(commandId) ?? receiveUs;
 		this.actionStartedUs.delete(commandId);
-		recordDispatchLatency(actionStartedUs, receiveUs, sendUs);
+		recordDispatchLatency(actionStartedUs, receiveUs, sendUs, commandId);
 		const ack = {
 			commandId,
 			sessionId: 'local-agent',

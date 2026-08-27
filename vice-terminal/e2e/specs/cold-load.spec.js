@@ -15,7 +15,7 @@ test('cold load hydrates the terminal shell and Dockview workspace', async ({ pa
 	const consoleErrors = [];
 	page.on('console', (m) => { if (m.type() === 'error') consoleErrors.push(m.text()); });
 
-	await page.goto('http://127.0.0.1:4173/trade', { waitUntil: 'domcontentloaded', timeout: 60_000 });
+	await page.goto('/trade', { waitUntil: 'domcontentloaded', timeout: 60_000 });
 
 	// SSR shell present before/after hydration.
 	await expect(page.getByTestId('terminal-shell')).toBeAttached();
@@ -32,7 +32,7 @@ test('cold load hydrates the terminal shell and Dockview workspace', async ({ pa
 });
 
 test('chart canvas and candle bookkeeping are present after hydration', async ({ page, evidence }) => {
-	await page.goto('http://127.0.0.1:4173/trade', { waitUntil: 'domcontentloaded', timeout: 60_000 });
+	await page.goto('/trade', { waitUntil: 'domcontentloaded', timeout: 60_000 });
 
 	const chart = page.getByTestId('trading-chart').first();
 	await expect(chart).toBeAttached({ timeout: 20_000 });
@@ -56,7 +56,7 @@ test('chart canvas and candle bookkeeping are present after hydration', async ({
 });
 
 test('market catalog and account status chips render honest local state', async ({ page, evidence }) => {
-	await page.goto('http://127.0.0.1:4173/trade', { waitUntil: 'domcontentloaded', timeout: 60_000 });
+	await page.goto('/trade', { waitUntil: 'domcontentloaded', timeout: 60_000 });
 
 	// Not connected: the account chip must render the honest placeholder (—),
 	// not fabricated balance, and the wallet must show no address.
@@ -70,7 +70,7 @@ test('market catalog and account status chips render honest local state', async 
 });
 test('taxonomy fixture selects perps, spot, and read-only prediction outcomes', async ({ page, evidence }) => {
 	await seedMarketTaxonomyFixture(page);
-	await page.goto('http://127.0.0.1:4173/trade', { waitUntil: 'domcontentloaded', timeout: 60_000 });
+	await page.goto('/trade', { waitUntil: 'domcontentloaded', timeout: 60_000 });
 	await expect(page.getByRole('button', { name: 'Prediction', exact: true })).toBeAttached();
 	await page.getByRole('button', { name: 'Perps', exact: true }).click();
 	await expect(page.getByRole('button', { name: /CORE PERPS/i })).toBeAttached();
@@ -82,6 +82,7 @@ test('taxonomy fixture selects perps, spot, and read-only prediction outcomes', 
 	await page.getByRole('button', { name: /Toggle ETH \$4000 · Yes favorite ETH \$4000 · Yes/ }).click();
 	await expect(page.getByTestId('workspace-host').getByTestId('prediction-market-panel')).toBeVisible({ timeout: 20_000 });
 	await expect(page.getByTestId('workspace-host').getByTestId('prediction-probability')).toContainText('12.996');
+	await expect(page.getByTestId('market-disclosure')).toContainText('Venue: Hyperliquid');
 	await expect(page.getByTestId('workspace-host').getByTestId('prediction-read-only-reason')).toContainText('lot, tick');
 	await expect(page.getByText('Leverage', { exact: true })).not.toBeVisible();
 	await expect(page.getByText('Connect to trade', { exact: false })).not.toBeVisible();

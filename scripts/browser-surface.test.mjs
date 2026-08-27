@@ -4,6 +4,7 @@ describe('SSR browser-surface smoke boundary', () => {
 	test('checks only server-rendered shell hooks', async () => {
 		const script = await Bun.file(new URL('./browser-surface.mjs', import.meta.url)).text();
 		const page = await Bun.file(new URL('../vice-terminal/src/lib/components/TerminalWorkspace.svelte', import.meta.url)).text();
+		const layout = await Bun.file(new URL('../vice-terminal/src/routes/+layout.ts', import.meta.url)).text();
 		for (const hook of ['terminal-shell', 'workspace-host', 'market-data-health']) expect(script).toContain(`data-testid=\"${hook}\"`);
 		for (const hydratedOnlyHook of ['trading-chart', 'order-book', 'recent-trades', 'data-candle-count']) expect(script).not.toContain(hydratedOnlyHook);
 		expect(script).toContain('BloFin public review policy');
@@ -22,6 +23,7 @@ describe('SSR browser-surface smoke boundary', () => {
 		expect(script).toContain('/review/blofin');
 		expect(script).toContain('https://openapi.blofin.com');
 		expect(script).toContain('https://demo-trading-openapi.blofin.com');
+		expect(layout).not.toContain('export const ssr = false');
 		expect(page).toContain('data-testid="terminal-shell"');
 	});
 });

@@ -44,13 +44,33 @@ export function parseLatencyEvidence(value) {
 	if (!Array.isArray(value.samples)) {
 		throw new Error('latency evidence samples must be an array');
 	}
+	for (const [index, sample] of value.samples.entries()) {
+		if (!sample || typeof sample !== 'object' || typeof sample.feed !== 'string' || !sample.feed ||
+			!Number.isSafeInteger(sample.sequence) || sample.sequence < 0) {
+			throw new Error(`latency evidence samples[${index}] must carry a bounded feed/sequence key`);
+		}
+		for (const field of ['receiptToStoreMs', 'feedToFrameReadyMs']) {
+			if (!Number.isFinite(sample[field]) || sample[field] < 0) {
+				throw new Error(`latency evidence samples[${index}].${field} must be a non-negative number`);
+			}
+		}
+	}
+	if (!Array.isArray(value.dispatchSamples)) {
+		throw new Error('latency evidence dispatchSamples must be an array');
+	}
+	for (const [index, sample] of value.dispatchSamples.entries()) {
+		if (!sample || typeof sample !== 'object' ||
+			!Number.isFinite(sample.actionToSignedDispatchMs) || sample.actionToSignedDispatchMs < 0 ||
+			!Number.isFinite(sample.localProcessingMs) || sample.localProcessingMs < 0) {
+			throw new Error(`latency evidence dispatchSamples[${index}] must contain measured non-negative timings`);
+		}
+	}
 	return value;
 }
 
 export async function readLatencyEvidence(path) {
 	if (!path) throw new Error('VICE_LATENCY_EVIDENCE is required for mainnet');
 	const file = Bun.file(path);
-	if (!(await file.exists())) throw new Error(`latency evidence file does not exist: ${path}`);
 	let parsed;
 	try {
 		parsed = JSON.parse(await file.text());
@@ -62,7 +82,7 @@ export async function readLatencyEvidence(path) {
 
 export async function runLatencyGate(path) {
 	const evidence = await readLatencyEvidence(path);
-	const result = evaluateLatencyGates(evidence.samples);
+	const result = evaluateLatencyGates(evidence.samples, evidence.dispatchSamples);
 	return { ...result, schemaVersion: evidence.schemaVersion, network: evidence.network, capturedAt: evidence.capturedAt };
 }
 

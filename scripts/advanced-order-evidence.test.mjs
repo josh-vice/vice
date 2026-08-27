@@ -1,12 +1,13 @@
 import { describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
-import { findNestedFailures, recomputeSummary, validateAdvancedOrderEvidence } from './advanced-order-evidence.mjs';
+import { assertEnabledAdvancedTypes, findNestedFailures, recomputeSummary, validateAdvancedOrderEvidence } from './advanced-order-evidence.mjs';
 
 const ROOT = new URL('..', import.meta.url).pathname;
 
 const cleanManifest = () => ({
 	schemaVersion: 1,
 	network: 'testnet',
+	releaseBuild: 'vice-beta-test-build',
 	transport: 'hermes-sidecar /api/algo + /api/execute',
 	pilot: { allowlisted: true, lowNotional: true, deadmanDisabled: 'venue entitlement' },
 	executionModes: { market: ['twap'], limit: ['twap'] },
@@ -113,6 +114,10 @@ describe('advanced-order evidence integrity', () => {
 		expect(recomputed.failed).toEqual(['nested-fail', 'explicit-fail']);
 		expect(recomputed.passedCount).toBe(1);
 		expect(recomputed.failedCount).toBe(2);
+	});
+	test('enabled per-type flags require a phase in the same release build', () => {
+		const manifest = cleanManifest();
+		expect(() => assertEnabledAdvancedTypes(manifest, { VITE_HL_CERTIFIED_ADVANCED_ORDERS: 'true', VITE_HL_CERTIFIED_TWAP: 'true', VITE_HL_CERTIFIED_SCALE: 'true' })).toThrow(/enabled scale/);
 	});
 });
 

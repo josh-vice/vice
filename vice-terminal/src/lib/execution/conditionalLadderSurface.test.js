@@ -6,6 +6,7 @@ describe('conditional ladder release surface', () => {
 		const execution = await Bun.file(new URL('./conditionalLadder.ts', import.meta.url)).text();
 		const orders = await Bun.file(new URL('../hl/orders.ts', import.meta.url)).text();
 		const ticket = await Bun.file(new URL('../components/OrderTicket.svelte', import.meta.url)).text();
+		const model = await Bun.file(new URL('../orderTicketModel.ts', import.meta.url)).text();
 		expect(capability).toContain("'conditional_ladder'");
 		expect(capability).toContain('VITE_HL_CERTIFIED_CONDITIONAL_LADDER');
 		expect(execution).toContain("type: 'conditional_ladder'");
@@ -16,7 +17,7 @@ describe('conditional ladder release surface', () => {
 		expect(execution).toContain('pendingScaleCommandId');
 		expect(execution).toContain('recoverPendingScaleDispatch');
 		expect(orders).toContain("params.type === 'conditional_ladder'");
-		expect(ticket).toContain("id: 'conditional_ladder'");
+		expect(model).toContain("id: 'conditional_ladder'");
 		expect(ticket).toContain('conditionalTriggerKind');
 		expect(ticket).toContain('conditionalTriggerSource');
 		expect(ticket).toContain('conditionalTriggerInterval');

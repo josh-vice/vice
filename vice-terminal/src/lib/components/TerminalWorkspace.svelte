@@ -119,7 +119,8 @@
 		{@const activeChange = $selectedMarket.changePercent24h}
 		{@const statsHealth = $marketContextStatus}
 		{@const statsLabel = healthLabel(statsHealth)}
-		<div class="hidden h-10 bg-terminal-bg-secondary border-b border-terminal-border items-center px-3 gap-4 text-xs overflow-hidden scrollbar-none">
+		{@const priceRule = $selectedMarket.instrument?.pricePrecision.kind === 'fixedIncrement' ? `Fixed tick ${$selectedMarket.instrument.pricePrecision.increment}` : $selectedMarket.instrument?.pricePrecision.kind === 'significantFigures' ? `${$selectedMarket.instrument.pricePrecision.maxSignificantFigures} significant figures` : 'Unavailable'}
+		<div class="flex min-h-10 bg-terminal-bg-secondary border-b border-terminal-border items-center px-3 gap-4 text-xs overflow-hidden scrollbar-none">
 			<!-- Symbol + Price -->
 			<div class="flex items-center gap-3 flex-shrink-0">
 				<div class="flex items-center gap-2">
@@ -186,6 +187,22 @@
 				{/if}
 			</div>
 			{/if}
+			<div data-testid="market-disclosure" class="flex items-center gap-3 border-l border-terminal-border pl-3 text-3xs text-terminal-text-muted whitespace-nowrap">
+				<span>Venue: Hyperliquid</span>
+				<span>API coin: <b class="font-mono text-terminal-text">{$selectedMarket.apiCoin || 'Unavailable'}</b></span>
+				<span>Market key: <b class="font-mono text-terminal-text">{$selectedMarket.marketKey || 'Unavailable'}</b></span>
+				<span>Base/quote: <b class="font-mono text-terminal-text">{$selectedMarket.baseToken || 'Unavailable'} / {$selectedMarket.quoteToken || 'Unavailable'}</b></span>
+				<span>Size precision: <b class="font-mono text-terminal-text">{$selectedMarket.szDecimals}</b></span>
+				<span>Price rule: <b class="font-mono text-terminal-text">{priceRule}</b></span>
+				<span>Margin/leverage: <b class="font-mono text-terminal-text">{marketProfile.usesMargin ? `Applicable · ${marketProfile.maxLeverage}x max` : 'Not applicable'}</b></span>
+				<span>DEX: <b class="font-mono text-terminal-text">{$selectedMarket.dex ?? 'Unavailable'}</b></span>
+				<span>Category: <b class="font-mono text-terminal-text">{$selectedMarket.venueCategory ?? 'Unavailable'}</b></span>
+				{#if $selectedMarket.kind === 'outcome'}
+					<span>Oracle: <b class="font-mono text-terminal-text">Unavailable</b></span>
+					<span>Issuer: <b class="font-mono text-terminal-text">Unavailable</b></span>
+					<span>Execution terms: <b class="font-mono text-terminal-text">Unavailable</b></span>
+				{/if}
+			</div>
 			</div>
 	{/if}
 
@@ -205,6 +222,15 @@
 		<!-- TAB: Trade — chart fills screen, mini book below, sticky CTA bar -->
 		<div class="flex-1 min-h-0 flex flex-col {mobileTab === 'trade' ? '' : 'hidden'}">
 			<!-- Instrument header (FTX style: back arrow + symbol + price) -->
+					<div data-testid="mobile-market-disclosure" class="flex gap-2 overflow-x-auto whitespace-nowrap text-3xs text-terminal-text-muted">
+						<span>Venue: Hyperliquid</span>
+						<span>API: <b class="font-mono text-terminal-text">{$selectedMarket?.apiCoin ?? 'Unavailable'}</b></span>
+						<span>Base/quote: <b class="font-mono text-terminal-text">{$selectedMarket?.baseToken ?? 'Unavailable'} / {$selectedMarket?.quoteToken ?? 'Unavailable'}</b></span>
+						<span>Size precision: <b class="font-mono text-terminal-text">{$selectedMarket?.szDecimals ?? 'Unavailable'}</b></span>
+						<span>Margin/leverage: <b class="font-mono text-terminal-text">{marketProfile.usesMargin ? `Applicable · ${marketProfile.maxLeverage}x` : 'Not applicable'}</b></span>
+						<span>DEX/category: <b class="font-mono text-terminal-text">{$selectedMarket?.dex ?? 'Unavailable'} / {$selectedMarket?.venueCategory ?? 'Unavailable'}</b></span>
+						{#if $selectedMarket?.kind === 'outcome'}<span>Oracle/issuer/execution: <b class="font-mono text-terminal-text">Unavailable</b></span>{/if}
+					</div>
 			<div class="h-11 bg-terminal-bg-secondary border-b border-terminal-border flex items-center px-3 gap-3 flex-shrink-0">
 				<div class="flex-1 min-w-0">
 					<div class="flex items-baseline gap-2">

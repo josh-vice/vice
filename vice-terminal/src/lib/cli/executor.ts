@@ -54,9 +54,13 @@ async function ensureAccount(): Promise<string | null> {
 	return addr;
 }
 
-async function refreshCliAccountSnapshot(address: string): Promise<void> {
+async function refreshCliAccountSnapshot(address: string): Promise<boolean> {
 	const { refreshAccountSnapshot } = await import('$lib/hl/account');
-	await refreshAccountSnapshot(address);
+	try {
+		return await refreshAccountSnapshot(address);
+	} catch {
+		return false;
+	}
 }
 
 async function handleBuySell(input: string, side: 'buy' | 'sell'): Promise<CLICommand> {
@@ -91,7 +95,8 @@ async function handleBuySell(input: string, side: 'buy' | 'sell'): Promise<CLICo
 			price: marketDescriptor.lastPrice
 		});
 		if (!result.ok) return cmd(input, result.error ?? 'Order failed', 'error');
-		await fetchOpenOrders();
+		const refreshed = await fetchOpenOrders();
+		if (!refreshed) return cmd(input, 'Order accepted but account reconciliation is unresolved', 'error');
 		return cmd(input, `Market ${side} ${size} ${coin} submitted`, 'success');
 	}
 
@@ -101,7 +106,8 @@ async function handleBuySell(input: string, side: 'buy' | 'sell'): Promise<CLICo
 
 	const result = await placeOrder({ marketKey: symbol, side, type: 'limit', size, price });
 	if (!result.ok) return cmd(input, result.error ?? 'Order failed', 'error');
-	await fetchOpenOrders();
+	const refreshed = await fetchOpenOrders();
+	if (!refreshed) return cmd(input, 'Order accepted but account reconciliation is unresolved', 'error');
 	return cmd(input, `Limit ${side} ${size} ${coin} @ ${price}`, 'success');
 }
 
@@ -396,40 +402,34 @@ async function handleAlgo(
 }
 
 async function handleCancel(input: string): Promise<CLICommand> {
-	if (!input.match(/^cancel(\s+all)?$/i)) {
-		return cmd(input, 'Usage: cancel all', 'error');
-	}
-
-	const orders = get(openOrders);
+	if (!input.match(/^cancel(\s+all)?$/i)) return cmd(input, 'Usage: cancel all', 'error');
+	let orders = get(openOrders);
 	if (orders.length === 0) {
-		await fetchOpenOrders();
+		const refreshed = await fetchOpenOrders();
+		if (!refreshed) return cmd(input, 'Account reconciliation is unresolved; cancel is paused', 'error');
+		orders = get(openOrders);
 	}
-	const toCancel = get(openOrders);
-	if (toCancel.length === 0) return cmd(input, 'No open orders', 'info');
-
+	if (orders.length === 0) return cmd(input, 'No open orders', 'info');
 	let cancelled = 0;
-	for (const order of toCancel) {
+	for (const order of orders) {
 		const result = await cancelOrder(order.id, order.apiCoin ?? order.marketKey ?? '');
 		if (result.ok) cancelled++;
 	}
-	await fetchOpenOrders();
-	return cmd(input, `Cancelled ${cancelled}/${toCancel.length} orders`, cancelled > 0 ? 'success' : 'error');
+	const refreshed = await fetchOpenOrders();
+	if (!refreshed) return cmd(input, 'Cancel accepted but account reconciliation is unresolved', 'error');
+	return cmd(input, `Cancelled ${cancelled}/${orders.length} orders`, cancelled > 0 ? 'success' : 'error');
 }
 
 async function handlePositions(input: string): Promise<CLICommand> {
 	const addr = await ensureAccount();
 	if (addr) {
-		await fetchPositions();
-		try {
-			await refreshCliAccountSnapshot(addr);
-		} catch {
-			/* ignore */
-		}
+		const refreshed = await fetchPositions();
+		if (!refreshed) return cmd(input, 'Account reconciliation is unresolved; positions are unavailable', 'error');
+		const cliRefreshed = await refreshCliAccountSnapshot(addr);
+		if (!cliRefreshed) return cmd(input, 'Account reconciliation is unresolved; positions are unavailable', 'error');
 	}
-
 	const pos = get(positions);
 	if (pos.length === 0) return cmd(input, 'No open positions', 'info');
-
 	const lines = pos.map(
 		(p) =>
 			`${p.market}: ${p.side === 'long' ? '+' : '-'}${p.size} @ ${p.entryPrice.toFixed(2)} (uPnL ${p.unrealizedPnl >= 0 ? '+' : ''}${p.unrealizedPnl.toFixed(2)})`

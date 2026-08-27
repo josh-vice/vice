@@ -66,4 +66,5 @@ sweep_report.md
 # Hydrated E2E runtime artifacts (trace/video/screenshot/console evidence on
 # failure, sanitized by scripts/e2e-gate.mjs) — never commit
 /scripts/e2e/.artifacts/
+/scripts/e2e/perf-evidence/
 /vice-terminal/e2e/.e2e-artifacts/

@@ -16,7 +16,7 @@ import { test, assertCleanRuntime, seedMarketTaxonomyFixture } from './_fixtures
 test.use({ viewport: { width: 390, height: 844 } });
 
 test('mobile layout hydrates with Markets/Trade tabs and the shared order path', async ({ page, evidence }) => {
-	await page.goto('http://127.0.0.1:4173/trade', { waitUntil: 'domcontentloaded', timeout: 60_000 });
+	await page.goto('/trade', { waitUntil: 'domcontentloaded', timeout: 60_000 });
 	await expect(page.getByTestId('terminal-shell')).toBeAttached({ timeout: 20_000 });
 
 	// Mobile bottom tab bar (Markets / Trade) — desktop workspace is hidden.
@@ -40,7 +40,7 @@ test('mobile layout hydrates with Markets/Trade tabs and the shared order path',
 });
 
 test('mobile order sheet opens through the shared OrderTicket path (no submit)', async ({ page, evidence }) => {
-	await page.goto('http://127.0.0.1:4173/trade', { waitUntil: 'domcontentloaded', timeout: 60_000 });
+	await page.goto('/trade', { waitUntil: 'domcontentloaded', timeout: 60_000 });
 	await expect(page.getByTestId('terminal-shell')).toBeAttached({ timeout: 20_000 });
 
 	// Tap the mobile Buy bar to open the order sheet.
@@ -59,12 +59,13 @@ test('mobile order sheet opens through the shared OrderTicket path (no submit)',
 });
 test('mobile taxonomy keeps prediction outcomes read-only without a buy/sell CTA', async ({ page, evidence }) => {
 	await seedMarketTaxonomyFixture(page);
-	await page.goto('http://127.0.0.1:4173/trade', { waitUntil: 'domcontentloaded', timeout: 60_000 });
+	await page.goto('/trade', { waitUntil: 'domcontentloaded', timeout: 60_000 });
 	await page.getByRole('button', { name: 'Prediction', exact: true }).click();
 	await page.getByRole('button', { name: 'Markets', exact: true }).click();
 	await page.getByRole('button', { name: /Toggle ETH \$4000 · Yes favorite ETH \$4000 · Yes/ }).click();
 	await page.getByRole('button', { name: 'Trade', exact: true }).click();
 	await expect(page.getByTestId('mobile-prediction-panel')).toBeVisible({ timeout: 20_000 });
+	await expect(page.getByTestId('mobile-market-disclosure')).toContainText('Venue: Hyperliquid');
 	await expect(page.getByTestId('mobile-prediction-panel').getByTestId('prediction-read-only-reason')).toContainText('lot, tick');
 	await expect(page.getByRole('button', { name: 'Buy', exact: true })).not.toBeVisible();
 	await expect(page.getByRole('button', { name: 'Sell', exact: true })).not.toBeVisible();

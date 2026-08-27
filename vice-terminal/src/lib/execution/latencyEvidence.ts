@@ -1,5 +1,5 @@
 import { dispatchLatencySamples } from './telemetry';
-import { feedFrameReadyLatencySamples, feedStoreLatencySamples, runtimeHealthSnapshot, type RuntimeHealthSnapshot } from '$lib/native/performance';
+import { causalFeedLatencySamples, runtimeHealthSnapshot, type RuntimeHealthSnapshot } from '$lib/native/performance';
 
 export type LatencyEvidenceNetwork = 'testnet' | 'mainnet';
 
@@ -11,11 +11,14 @@ export type ClientLatencyEvidence = {
 	/** Privacy-safe aggregate health captured by this browser session. */
 	runtimeHealth: RuntimeHealthSnapshot;
 	samples: Array<{
+		feed: string;
+		sequence: number;
 		receiptToStoreMs: number;
 		feedToFrameReadyMs: number;
-		actionToSignedDispatchMs: number;
-		localProcessingMs: number;
+		actionToSignedDispatchMs?: number;
+		localProcessingMs?: number;
 	}>;
+	dispatchSamples: Array<{ actionToSignedDispatchMs: number; localProcessingMs: number }>;
 };
 
 /**
@@ -27,22 +30,21 @@ export function buildLatencyEvidence(
 	network: LatencyEvidenceNetwork,
 	capturedAt = new Date().toISOString()
 ): ClientLatencyEvidence {
-	const store = feedStoreLatencySamples();
-	const frameReady = feedFrameReadyLatencySamples();
-	const dispatch = dispatchLatencySamples();
-	const count = Math.min(store.length, frameReady.length, dispatch.length);
+	const feed = causalFeedLatencySamples();
+	const dispatchSamples = dispatchLatencySamples();
 	return {
 		schemaVersion: 2,
 		source: 'client-telemetry',
 		network,
 		capturedAt,
 		runtimeHealth: runtimeHealthSnapshot(),
-		samples: Array.from({ length: count }, (_, index) => ({
-			receiptToStoreMs: store[index],
-			feedToFrameReadyMs: frameReady[index],
-			actionToSignedDispatchMs: dispatch[index].actionToSignedDispatchMs,
-			localProcessingMs: dispatch[index].localProcessingMs
-		}))
+		samples: feed.map((sample) => ({
+			feed: sample.feed,
+			sequence: sample.sequence,
+			receiptToStoreMs: sample.receiptToStoreMs,
+			feedToFrameReadyMs: sample.feedToFrameReadyMs
+		})),
+		dispatchSamples
 	};
 }
 

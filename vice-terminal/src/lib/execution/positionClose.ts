@@ -1,4 +1,5 @@
 import type { MarketDescriptor, OrderBook, Position } from '$lib/types';
+import { marketMatches } from '$lib/chart/chartModel';
 
 export type PositionCloseMode = 'market' | 'quote';
 
@@ -21,9 +22,9 @@ export function buildPositionCloseIntent(
 	mode: PositionCloseMode
 ): { intent?: PositionCloseIntent; error?: string } {
 	if (!position?.apiCoin || !position.marketKey) return { error: 'Position identity is incomplete; reconcile account state before closing' };
-	const market = registry.find((candidate) => candidate.apiCoin === position.apiCoin && candidate.marketKey === position.marketKey);
+	const market = registry.find((candidate) => marketMatches(candidate, position.apiCoin, position.marketKey));
 	if (!market) return { error: 'Position market is unavailable; reconcile account state before closing' };
-	if (!selected || selected.apiCoin !== market.apiCoin || selected.marketKey !== market.marketKey) {
+	if (!selected || !marketMatches(market, selected.apiCoin, selected.marketKey)) {
 		return { error: 'Select this position market so its live feed is authoritative before closing' };
 	}
 	if (!Number.isFinite(position.size) || position.size <= 0) return { error: 'Position size is invalid; reconcile account state before closing' };

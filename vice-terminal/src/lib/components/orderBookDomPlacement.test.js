@@ -24,7 +24,7 @@ test('US-009 armed DOM placement uses the shared exact-identity limit boundary',
 	expect(source).toContain('return canCancelKnownOrders');
 	expect(source).toContain('if (!canCancelKnownOrders)');
 	expect(source).toContain("async function cancelLadderSide(side: 'buy' | 'sell')");
-	expect(source).toContain('order.side === side && orderMatchesSelectedMarket(order.apiCoin, order.marketKey)');
+	expect(source).toContain('order.side === side && marketMatches($selectedMarket, order.apiCoin, order.marketKey)');
 	expect(source).toContain('if (await cancelLadderOrder(order.id, order.apiCoin ?? order.marketKey)) cancelled += 1');
 	expect(source).toContain("Cancel was accepted but authoritative order reconciliation is unavailable");
 	expect(source).toContain("cancelLadderSide('buy')");

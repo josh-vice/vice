@@ -4,13 +4,13 @@ describe('break-even release surface', () => {
 	test('break-even is independently certified and wired through ticket, CLI, and execution', async () => {
 		const capability = await Bun.file(new URL('./capabilities.ts', import.meta.url)).text();
 		const orders = await Bun.file(new URL('../hl/orders.ts', import.meta.url)).text();
-		const ticket = await Bun.file(new URL('../components/OrderTicket.svelte', import.meta.url)).text();
 		const cli = await Bun.file(new URL('../cli/executor.ts', import.meta.url)).text();
+		const model = await Bun.file(new URL('../orderTicketModel.ts', import.meta.url)).text();
 		expect(capability).toContain("'break_even'");
 		expect(capability).toContain('VITE_HL_CERTIFIED_BREAK_EVEN');
 		expect(orders).toContain("params.type === 'break_even'");
 		expect(orders).toContain("import('$lib/execution/breakEven')");
-		expect(ticket).toContain("id: 'break_even'");
+		expect(model).toContain("id: 'break_even'");
 		expect(cli).toContain("lower.startsWith('breakeven ')");
 	});
 

@@ -40,6 +40,7 @@
     "test:gate3:evidence": "bun scripts/validate-gate3-four-phase-evidence.mjs",
     "test:audit": "bun test scripts/dependency-audit.test.mjs && bun scripts/dependency-audit.mjs",
     "capture:funded:testnet": "bun scripts/capture-funded-testnet-evidence.mjs --phase=place && bun scripts/capture-funded-testnet-evidence.mjs --phase=partial && bun scripts/capture-funded-testnet-evidence.mjs --phase=trigger && bun scripts/capture-funded-testnet-evidence.mjs --phase=revoke && bun scripts/capture-funded-testnet-evidence.mjs --phase=final",
+    "capture:latency": "node scripts/capture-client-latency.mjs --runs=12 --build",
     "test:preflight-policy": "bun test scripts/preflight-policy.test.mjs",
     "test:gateway-policy": "bun test scripts/gateway-policy.test.mjs",
     "test:stories": "bun test scripts/user-story-catalog.test.mjs && bun scripts/user-story-catalog.mjs",

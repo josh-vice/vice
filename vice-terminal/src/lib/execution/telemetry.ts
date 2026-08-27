@@ -16,10 +16,11 @@ export type ExecutionMetrics = {
 
 const MAX_SAMPLES = 500;
 const samples: Array<{ latencyMs: number; accepted: boolean; uncertain: boolean; reconciled: boolean }> = [];
-const dispatchSamples: Array<{ actionToSendMs: number; localProcessingMs: number }> = [];
+const dispatchSamples: Array<{ commandId: string; actionToSendMs: number; localProcessingMs: number }> = [];
 
-export function recordDispatchLatency(actionStartedUs: number, receiveUs: number, sendUs: number): void {
+export function recordDispatchLatency(actionStartedUs: number, receiveUs: number, sendUs: number, commandId = ''): void {
 	dispatchSamples.push({
+		commandId,
 		actionToSendMs: Math.max(0, (sendUs - actionStartedUs) / 1000),
 		localProcessingMs: Math.max(0, (sendUs - receiveUs) / 1000)
 	});

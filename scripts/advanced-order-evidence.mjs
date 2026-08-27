@@ -98,6 +98,12 @@ export function validateAdvancedOrderEvidence(value) {
 	if (value.network !== 'testnet') {
 		envelopeErrors.push(`network must be 'testnet', got ${value.network}`);
 	}
+	if (typeof value.releaseBuild !== 'string' || value.releaseBuild.trim() === '') {
+		envelopeErrors.push('releaseBuild must be a non-empty release/build identifier');
+	}
+	if (process.env.VICE_RELEASE_BUILD && value.releaseBuild !== process.env.VICE_RELEASE_BUILD) {
+		envelopeErrors.push(`releaseBuild must match VICE_RELEASE_BUILD=${process.env.VICE_RELEASE_BUILD}`);
+	}
 	if (typeof value.transport !== 'string' || value.transport.length === 0) {
 		envelopeErrors.push('transport must be a non-empty string');
 	}
@@ -155,8 +161,20 @@ export function validateAdvancedOrderEvidence(value) {
 			`advanced-order evidence: summary is dishonest — recomputed ${recomputed.passedCount}/${recomputed.failedCount} but manifest claims ${summary.passedCount}/${summary.failedCount}; mismatch on ${summaryMismatch.join(', ')}`
 		);
 	}
-
+	assertEnabledAdvancedTypes(value);
 	return { ...value, summary: recomputed };
+}
+
+export function assertEnabledAdvancedTypes(value, env = process.env) {
+	if (env.VITE_HL_CERTIFIED_ADVANCED_ORDERS !== 'true') return;
+	const phaseNames = new Set(value.phases.map((phase) => phase?.phase));
+	const types = ['bracket', 'twap', 'adaptive_twap', 'vwap', 'pov', 'break_even', 'maker', 'conditional_ladder', 'scale', 'chase', 'swarm', 'iceberg', 'oco', 'ping_pong', 'trailing_stop'];
+	for (const type of types) {
+		const flag = `VITE_HL_CERTIFIED_${type.toUpperCase()}`;
+		if (env[flag] === 'true' && !phaseNames.has(type)) {
+			throw new Error(`advanced evidence: enabled ${type} has no validated phase in this release/build`);
+		}
+	}
 }
 
 /** Read a manifest from disk (Bun.file) and validate it; returns the validated manifest. */

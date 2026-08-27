@@ -20,7 +20,11 @@ export function describeMarketClass(market: MarketDescriptor | null | undefined)
 	}
 	if (market.kind === 'spot') return { label: 'Spot', detail: 'Venue spot market', metadataOnly: false };
 	const category = market.venueCategory ? ` · ${market.venueCategory}` : '';
-	const detail = market.venueCategory ? `Venue category: ${market.venueCategory}` : undefined;
-	if (market.kind === 'hip3Perp') return { label: `${market.dex ? `HIP-3 · ${market.dex}` : 'HIP-3 perpetual'}${category}`, detail: detail ?? 'Venue HIP-3 perpetual market', metadataOnly: false };
-	return { label: `Core perpetual${category}`, detail: detail ?? 'Venue core perpetual market', metadataOnly: false };
+	if (market.kind === 'hip3Perp') {
+		const detail = market.venueCategory
+			? `Venue category: ${market.venueCategory}; RWA classification unavailable`
+			: 'Venue HIP-3 perpetual market; RWA classification unavailable';
+		return { label: `${market.dex ? `HIP-3 · ${market.dex}` : 'HIP-3 perpetual'}${category}`, detail, metadataOnly: false };
+	}
+	return { label: `Core perpetual${category}`, detail: market.venueCategory ? `Venue category: ${market.venueCategory}` : 'Venue core perpetual market', metadataOnly: false };
 }

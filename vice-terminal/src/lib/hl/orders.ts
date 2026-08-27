@@ -1,7 +1,7 @@
 import { get } from 'svelte/store';
-import { selectedMarket, marketRegistry, openOrders, positions, walletAddress, orderBook, twapJobs } from '$lib/stores';
+import { selectedMarket, marketRegistry, openOrders, walletAddress, orderBook } from '$lib/stores';
 import type { MarketDescriptor, OrderSide, OrderType } from '$lib/types';
-import { hydrateMarketIdentity } from './accountIdentity';
+import { refreshAccountSnapshot } from './account';
 import { isAdvancedOrderCertified, unavailableOrderTypeMessage } from '$lib/execution/capabilities';
 import { marketCapabilities } from '$lib/marketCapabilities';
 import { validateAutoTakeProfit, type AutoTakeProfitConfig } from '$lib/execution/autoTakeProfit';
@@ -143,34 +143,31 @@ function resolveMarketIdentity(identity: string): MarketDescriptor | undefined {
 export async function fetchOpenOrders(): Promise<boolean> {
 	const addr = get(walletAddress);
 	if (!addr) return false;
-
-	const res = await fetch(`/api/hl/orders?address=${encodeURIComponent(addr)}`);
-	if (!res.ok) return false;
-	const data = await res.json();
-	if (!Array.isArray(data.orders)) return false;
-	openOrders.set(data.orders.map(hydrateMarketIdentity));
-	return true;
+	try {
+		return await refreshAccountSnapshot(addr);
+	} catch {
+		return false;
+	}
 }
 
 export async function fetchPositions(): Promise<boolean> {
 	const addr = get(walletAddress);
 	if (!addr) return false;
-
-	const res = await fetch(`/api/hl/positions?address=${encodeURIComponent(addr)}`);
-	if (!res.ok) return false;
-	const data = await res.json();
-	if (!Array.isArray(data.positions)) return false;
-	positions.set(data.positions.map(hydrateMarketIdentity));
-	return true;
+	try {
+		return await refreshAccountSnapshot(addr);
+	} catch {
+		return false;
+	}
 }
 
-export async function fetchTwapJobs(): Promise<void> {
+export async function fetchTwapJobs(): Promise<boolean> {
 	const addr = get(walletAddress);
-	if (!addr) return;
-	const res = await fetch(`/api/hl/account?address=${encodeURIComponent(addr)}`);
-	if (!res.ok) return;
-	const data = await res.json();
-	twapJobs.set(data.twaps ?? []);
+	if (!addr) return false;
+	try {
+		return await refreshAccountSnapshot(addr);
+	} catch {
+		return false;
+	}
 }
 
 export async function cancelTwap(twapId: number, marketIdentity: string): Promise<{ ok: boolean; error?: string }> {
@@ -179,7 +176,8 @@ export async function cancelTwap(twapId: number, marketIdentity: string): Promis
 		if (!market) return { ok: false, error: 'TWAP market identity is unavailable' };
 		const { localExecution } = await import('$lib/execution/localExecution');
 		const ack = await localExecution.cancelTwap(market, twapId);
-		await fetchTwapJobs();
+		const refreshed = await fetchTwapJobs();
+		if (ack.accepted && !refreshed) return { ok: false, error: 'TWAP cancel accepted but account reconciliation is unresolved' };
 		return ack.accepted ? { ok: true } : { ok: false, error: ack.error };
 	} catch (error) {
 		return { ok: false, error: error instanceof Error ? error.message : 'TWAP cancel failed' };
@@ -273,7 +271,8 @@ export async function startAlgoOrder(params: PlaceOrderParams): Promise<{ ok: bo
 				minutes: Number(params.algo?.config.twapDuration ?? 30),
 				randomize: Boolean(params.algo?.config.twapRandomize ?? true)
 			});
-			await fetchTwapJobs();
+			const refreshed = await fetchTwapJobs();
+			if (ack.accepted && !refreshed) return { ok: false, error: 'TWAP accepted but account reconciliation is unresolved' };
 			return ack.accepted ? { ok: true, jobId: ack.venueOrderIds[0] } : { ok: false, error: ack.error };
 		}
 		if (params.type === 'adaptive_twap' || params.type === 'vwap') {

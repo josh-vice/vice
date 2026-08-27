@@ -4,13 +4,13 @@ describe('POV release surface', () => {
 	test('POV is independently certified and wired through the execution path', async () => {
 		const capability = await Bun.file(new URL('./capabilities.ts', import.meta.url)).text();
 		const orders = await Bun.file(new URL('../hl/orders.ts', import.meta.url)).text();
-		const ticket = await Bun.file(new URL('../components/OrderTicket.svelte', import.meta.url)).text();
 		const cli = await Bun.file(new URL('../cli/executor.ts', import.meta.url)).text();
+		const model = await Bun.file(new URL('../orderTicketModel.ts', import.meta.url)).text();
 		expect(capability).toContain("'pov'");
 		expect(capability).toContain('VITE_HL_CERTIFIED_POV');
 		expect(orders).toContain("params.type === 'pov'");
 		expect(orders).toContain("import('$lib/execution/pov')");
-		expect(ticket).toContain("id: 'pov'");
+		expect(model).toContain("id: 'pov'");
 		expect(cli).toContain("lower.startsWith('pov ')");
 	});
 

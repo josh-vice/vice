@@ -29,16 +29,16 @@ let reconnectInFlight: Promise<void> | null = null;
 let transportHealthBound = false;
 let accountGeneration = 0;
 
-const snapshotCoordinator = createSnapshotCoordinator(async () => {
+const snapshotCoordinator = createSnapshotCoordinator(async (): Promise<boolean> => {
 	const address = currentAddress;
-	if (!address) return;
+	if (!address) return false;
 	const generation = accountGeneration;
 	accountSyncStatus.set('connecting');
 	try {
 		const response = await fetch(`/api/hl/account?address=${encodeURIComponent(address)}`);
 		if (!response.ok) throw new Error('Account snapshot failed');
 		const snapshot = await response.json();
-		if (address !== currentAddress || generation !== accountGeneration) return;
+		if (address !== currentAddress || generation !== accountGeneration) return false;
 		openOrders.set((snapshot.orders ?? []).map(hydrateMarketIdentity));
 		positions.set((snapshot.positions ?? []).map(hydrateMarketIdentity));
 		fills.set((snapshot.fills ?? []).map(hydrateMarketIdentity));
@@ -48,6 +48,7 @@ const snapshotCoordinator = createSnapshotCoordinator(async () => {
 		revenueSyncStatus.set(snapshot.revenue?.status === 'live' ? 'live' : 'stale');
 		activeSubaccount.update((account) => ({ ...account, ...(snapshot.account ?? {}) }));
 		accountSyncStatus.set('live');
+		return true;
 	} catch (error) {
 		if (address === currentAddress && generation === accountGeneration) {
 			accountSyncStatus.set('error');
@@ -96,8 +97,8 @@ function scheduleSnapshot(address: string): void {
 	}, 75);
 }
 
-export async function refreshAccountSnapshot(address = currentAddress): Promise<void> {
-	if (!address || address !== currentAddress) return;
+export async function refreshAccountSnapshot(address = currentAddress): Promise<boolean> {
+	if (!address || address !== currentAddress) return false;
 	return snapshotCoordinator.request();
 }
 
