@@ -1,21 +1,13 @@
 /**
- * Report Issue flow + support-bundle privacy + The Pit local-only boundary.
+ * Report Issue flow + support-bundle privacy.
  *
  * Covers:
  *   1. The Report Issue modal opens from the navbar and renders the privacy
  *      contract.
  *   2. Downloading the support bundle produces a real, parseable JSON file
- *      whose schema is deterministic and whose content is privacy-safe: no
- *      wallet address, no key/signature/token-shaped strings, no order
- *      payload. The download is verified by decoding the saved file, not by
- *      trusting the UI's success text.
- *   3. The Pit is a local beta command console: the panel is clearly labelled,
- *      and a non-command plain message is refused instead of being delivered
- *      as a community/peer message.
+ *      whose schema is deterministic and whose content is privacy-safe.
  *
  * Non-mutating: nothing is uploaded, nothing is signed, no order is placed.
- * The support bundle is assembled locally and downloaded to the test's temp
- * dir; the app never makes a telemetry request.
  */
 import { expect } from '@playwright/test';
 import { test, assertCleanRuntime } from './_fixtures.js';
@@ -97,45 +89,6 @@ test('support bundle downloads as a deterministic-schema, privacy-safe JSON file
 	// No order payload envelope (coin+isBuy+sz+px).
 	expect(serialized).not.toMatch(/"isBuy"/);
 	expect(serialized).not.toMatch(/"reduceOnly"/);
-
-	await assertCleanRuntime(evidence);
-});
-
-test('The Pit is a local command console and refuses plain peer messages', async ({ page, evidence }) => {
-	await page.goto('/trade', { waitUntil: 'domcontentloaded', timeout: 60_000 });
-	await expect(page.getByTestId('workspace-host')).toBeAttached({ timeout: 20_000 });
-	await page.getByTestId('workspace-customize-toggle').click();
-	await page.getByTestId('workspace-widgets-toggle').click();
-	const widgetsMenu = page.locator('[role="menu"]');
-	await widgetsMenu.locator('label').filter({ hasText: 'The Pit' }).locator('input').check();
-	await expect(page.getByRole('tab', { name: 'The Pit', exact: true })).toBeAttached({ timeout: 20_000 });
-	await page.getByRole('tab', { name: 'The Pit', exact: true }).click();
-
-	// The Pit panel is present and labelled local + beta command console.
-	const host = page.getByTestId('workspace-host');
-	const pit = host.getByText('The Pit', { exact: true }).first();
-	await expect(pit).toBeAttached({ timeout: 20_000 });
-	await expect(host.getByText('local · beta', { exact: true }).first()).toBeAttached();
-
-	// Type a plain, non-command message and run it. Because The Pit is a LOCAL
-	// command console, this must be refused — it must NOT appear as a chat
-	// message that could masquerade as community delivery.
-	const input = host.getByPlaceholder('/ for commands (local console)…').first();
-	await expect(input).toBeAttached({ timeout: 20_000 });
-	await input.fill('gm everyone is this market going up');
-	await input.press('Enter');
-
-	// The refusal is surfaced honestly as a moderation hint.
-	await expect(
-		host.getByText('commands start with "/"', { exact: false }).first()
-	).toBeAttached({ timeout: 10_000 });
-
-	// A slash command is accepted and renders live account data (no wallet →
-	// honest "No open positions" system message). The system row renders as
-	// "— No open positions. —" so match with exact: false.
-	await input.fill('/position');
-	await input.press('Enter');
-	await expect(host.getByText('No open positions.', { exact: false }).first()).toBeAttached({ timeout: 10_000 });
 
 	await assertCleanRuntime(evidence);
 });

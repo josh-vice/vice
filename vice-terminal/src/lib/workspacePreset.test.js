@@ -21,7 +21,7 @@ describe('US-012 curated workspace presets', () => {
 		expect(get(workspacePreset)).toBe('default');
 	});
 	test('defines distinct minimal, chart, and data topologies', () => {
-		expect(WORKSPACE_TOPOLOGIES.default).toEqual({ watchlist: true, marketData: true, ticket: true, bottom: true, chat: false });
+		expect(WORKSPACE_TOPOLOGIES.default).toEqual({ watchlist: true, marketData: true, ticket: true, bottom: true });
 		expect(WORKSPACE_TOPOLOGIES.chart).not.toEqual(WORKSPACE_TOPOLOGIES.default);
 		expect(WORKSPACE_TOPOLOGIES.data).not.toEqual(WORKSPACE_TOPOLOGIES.default);
 		expect(WORKSPACE_TOPOLOGIES.data.ticket).toBe(false);

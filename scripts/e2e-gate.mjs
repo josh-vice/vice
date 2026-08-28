@@ -5,11 +5,9 @@
  * Orchestrates: production build (vite build) → `vite preview` on an isolated
  * port → Playwright non-mutating suite → teardown → artifact summary.
  *
- * Distinction from `scripts/browser-surface.mjs` (the SSR smoke): that script
- * fetches server-rendered HTML and asserts the static shell only. This runner
- * boots a real Chromium against the production build and exercises the
- * hydrated app (Dockview mount, Chart/Book/Tape/Ticket, layout lock, CLI,
- * offline PWA shell, mobile). Both gates are intentional and separate.
+ * The suite boots a real Chromium against the production build and exercises
+ * the hydrated core app (Dockview, Chart/Book/Tape/Ticket, layout lock, CLI,
+ * diagnostics, and mobile).
  *
  * Env:
  *   E2E_PORT            preview port (default 4173; avoid 8080 = Docker)

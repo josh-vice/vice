@@ -7,13 +7,11 @@
 	import { formatFundingCountdown } from '$lib/marketStats';
 	import { healthLabel } from '$lib/productionTruth';
 	import { onMount } from 'svelte';
-	import { get } from 'svelte/store';
 	import Navbar from '$lib/components/Navbar.svelte';
 	import MarketWatchlist from '$lib/components/MarketWatchlist.svelte';
 	import Chart from '$lib/components/Chart.svelte';
 	import OrderBook from '$lib/components/OrderBook.svelte';
 	import OrderTicket from '$lib/components/OrderTicket.svelte';
-	import PredictionMarketPanel from '$lib/components/PredictionMarketPanel.svelte';
 	import BottomPanel from '$lib/components/BottomPanel.svelte';
 	import RecentTrades from '$lib/components/RecentTrades.svelte';
 	import WorkspaceHost from '$lib/components/WorkspaceHost.svelte';
@@ -23,7 +21,6 @@
 	import { describeMarketClass } from '$lib/marketClass';
 	import { marketCapabilities } from '$lib/marketCapabilities';
 	import { BarChart3, LineChart, Wallet } from 'lucide-svelte';
-	import { parseTradeHandoff, resolveTradeHandoffState } from '$lib/suite/handoff';
 
 	type MobileTab = 'markets' | 'trade' | 'account';
 
@@ -36,14 +33,12 @@
 	}
 	function marketKindLabel(kind: string): string {
 		if (kind === 'spot') return 'Spot market';
-		if (kind === 'outcome') return 'Prediction outcome';
 		if (kind === 'hip3Perp') return 'HIP-3 perpetual';
 		return 'Perpetual market';
 	}
 
 	function marketKindGlyph(kind: string): string {
 		if (kind === 'spot') return 'S';
-		if (kind === 'outcome') return '?';
 		if (kind === 'hip3Perp') return 'H';
 		return 'P';
 	}
@@ -55,7 +50,6 @@
 	// Bottom sheet for order entry
 	let orderSheetOpen = false;
 	let statsNow = Date.now();
-	let handoffMessage = '';
 	$: marketClass = describeMarketClass($selectedMarket);
 	$: marketProfile = marketCapabilities($selectedMarket);
 	$: statsChange = $selectedMarket?.changePercent24h;
@@ -71,37 +65,10 @@
 		const stopAlerts = startPriceAlertMonitoring();
 		const stopSounds = startSoundNotifications();
 		const timer = setInterval(() => { statsNow = Date.now(); }, 1_000);
-		const rawHandoff = new URLSearchParams(window.location.search).get('handoff');
-		const handoff = parseTradeHandoff(rawHandoff);
-		let stopHandoff: (() => void) | undefined;
-		if (rawHandoff && !handoff) handoffMessage = 'Trade context was rejected because it was incomplete or invalid.';
-		if (handoff) {
-			const apply = () => {
-				if (handoffMessage) return;
-				const result = resolveTradeHandoffState(get(marketRegistry), handoff, get(marketCatalogStatus));
-				if (result.state === 'pending') return;
-				if (result.state === 'resolved') {
-					selectMarket(result.market);
-					setChartTimeframe(handoff.timeframe);
-					handoffMessage = `Trade context loaded: ${result.market.symbol}.`;
-				} else {
-					handoffMessage = 'Trade context is unavailable in the current catalog. No alternate market was selected.';
-				}
-				stopHandoff?.();
-			};
-			apply();
-			if (!handoffMessage) {
-				const stopRegistry = marketRegistry.subscribe(apply);
-				const stopCatalog = marketCatalogStatus.subscribe(apply);
-				stopHandoff = () => { stopRegistry(); stopCatalog(); };
-				if (handoffMessage) stopHandoff();
-			}
-		}
 		return () => {
 			stopAlerts();
 			stopSounds();
 			clearInterval(timer);
-			stopHandoff?.();
 		};
 	});
 </script>
@@ -109,7 +76,6 @@
 <div data-testid="terminal-shell" class="h-screen flex flex-col overflow-hidden bg-terminal-bg">
 	<!-- Navbar - 44px -->
 	<Navbar />
-	{#if handoffMessage}<div data-testid="trade-handoff-status" class="border-b border-terminal-border bg-terminal-bg-secondary px-3 py-1 text-2xs text-terminal-cyan">{handoffMessage}</div>{/if}
 
 	{#if $selectedMarket}
 		{@const activeFunding = $selectedMarket.fundingRate}
@@ -130,7 +96,7 @@
 				</div>
 				<div class="flex items-center gap-1.5">
 					<span class="font-mono text-base font-medium {activeChange === undefined ? 'text-terminal-text-muted' : activeChange >= 0 ? 'text-terminal-green' : 'text-terminal-red'}">
-					{($marketDataStatus === 'live' || $selectedMarket.kind === 'outcome') && Number.isFinite($selectedMarket.lastPrice) && ($selectedMarket.lastPrice !== 0 || $selectedMarket.kind === 'outcome') ? formatPrice($selectedMarket.lastPrice, $selectedMarket.priceDecimals) : '—'}
+					{($marketDataStatus === 'live') && Number.isFinite($selectedMarket.lastPrice) ? formatPrice($selectedMarket.lastPrice, $selectedMarket.priceDecimals) : '—'}
 					</span>
 					<span class="px-1.5 py-0.5 rounded text-2xs font-medium {activeChange === undefined ? 'bg-terminal-bg-tertiary text-terminal-text-muted' : activeChange >= 0 ? 'bg-terminal-green-bg text-terminal-green' : 'bg-terminal-red-bg text-terminal-red'}">
 						{activeChange === undefined ? '—' : `${activeChange >= 0 ? '+' : ''}${activeChange.toFixed(2)}%`}
@@ -197,11 +163,6 @@
 				<span>Margin/leverage: <b class="font-mono text-terminal-text">{marketProfile.usesMargin ? `Applicable · ${marketProfile.maxLeverage}x max` : 'Not applicable'}</b></span>
 				<span>DEX: <b class="font-mono text-terminal-text">{$selectedMarket.dex ?? 'Unavailable'}</b></span>
 				<span>Category: <b class="font-mono text-terminal-text">{$selectedMarket.venueCategory ?? 'Unavailable'}</b></span>
-				{#if $selectedMarket.kind === 'outcome'}
-					<span>Oracle: <b class="font-mono text-terminal-text">Unavailable</b></span>
-					<span>Issuer: <b class="font-mono text-terminal-text">Unavailable</b></span>
-					<span>Execution terms: <b class="font-mono text-terminal-text">Unavailable</b></span>
-				{/if}
 			</div>
 			</div>
 	{/if}
@@ -229,15 +190,14 @@
 						<span>Size precision: <b class="font-mono text-terminal-text">{$selectedMarket?.szDecimals ?? 'Unavailable'}</b></span>
 						<span>Margin/leverage: <b class="font-mono text-terminal-text">{marketProfile.usesMargin ? `Applicable · ${marketProfile.maxLeverage}x` : 'Not applicable'}</b></span>
 						<span>DEX/category: <b class="font-mono text-terminal-text">{$selectedMarket?.dex ?? 'Unavailable'} / {$selectedMarket?.venueCategory ?? 'Unavailable'}</b></span>
-						{#if $selectedMarket?.kind === 'outcome'}<span>Oracle/issuer/execution: <b class="font-mono text-terminal-text">Unavailable</b></span>{/if}
-					</div>
+						</div>
 			<div class="h-11 bg-terminal-bg-secondary border-b border-terminal-border flex items-center px-3 gap-3 flex-shrink-0">
 				<div class="flex-1 min-w-0">
 					<div class="flex items-baseline gap-2">
 						<span class="font-semibold text-sm leading-none">{$selectedMarket?.symbol ?? '—'}</span>
 						{#if marketClass}<span data-testid="mobile-market-class-badge" title={marketClass.detail} class="rounded px-1 py-0.5 text-3xs {marketClass.metadataOnly ? 'bg-terminal-yellow/10 text-terminal-yellow' : 'bg-terminal-cyan/10 text-terminal-cyan'}">{marketClass.label}</span>{/if}
 						<span class="font-mono text-sm font-bold {($selectedMarket?.changePercent24h ?? 0) >= 0 && $selectedMarket?.changePercent24h !== undefined ? 'text-terminal-green' : $selectedMarket?.changePercent24h === undefined ? 'text-terminal-text-muted' : 'text-terminal-red'} leading-none">
-							{#if $selectedMarket && ($marketDataStatus === 'live' || $selectedMarket.kind === 'outcome') && Number.isFinite($selectedMarket.lastPrice) && ($selectedMarket.lastPrice !== 0 || $selectedMarket.kind === 'outcome')}{formatPrice($selectedMarket.lastPrice, $selectedMarket.priceDecimals)}{:else}—{/if}
+							{#if $selectedMarket && $marketDataStatus === 'live' && Number.isFinite($selectedMarket.lastPrice)}{formatPrice($selectedMarket.lastPrice, $selectedMarket.priceDecimals)}{:else}—{/if}
 						</span>
 						<span class="text-2xs {($selectedMarket?.changePercent24h ?? 0) >= 0 && $selectedMarket?.changePercent24h !== undefined ? 'text-terminal-green' : $selectedMarket?.changePercent24h === undefined ? 'text-terminal-text-muted' : 'text-terminal-red'}">
 							{#if $selectedMarket?.changePercent24h === undefined}—{:else}{($selectedMarket.changePercent24h >= 0 ? '+' : '')}{$selectedMarket.changePercent24h.toFixed(2)}%{/if}
@@ -265,11 +225,6 @@
 
 			<!-- Chart — takes remaining flex space minus the bottom sections -->
 			<div class="flex-1 min-h-0">
-			{#if $selectedMarket?.kind === 'outcome'}
-				<div data-testid="mobile-prediction-panel" class="max-h-64 flex-shrink-0 overflow-hidden border-t border-terminal-border">
-					<PredictionMarketPanel />
-				</div>
-			{/if}
 				<Chart />
 			</div>
 

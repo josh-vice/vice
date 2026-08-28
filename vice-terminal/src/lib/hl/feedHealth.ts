@@ -33,8 +33,7 @@ export function acceptFeedState<T, Identity>(previous: FeedState<T, Identity> | 
 	return true;
 }
 
-export function contextIsHealthy(kind: 'perp' | 'spot' | 'outcome', lastPerpContextAt: number, lastSpotContextAt: number, now = Date.now()): boolean {
-	if (kind === 'outcome') return true;
+export function contextIsHealthy(kind: 'perp' | 'spot', lastPerpContextAt: number, lastSpotContextAt: number, now = Date.now()): boolean {
 	const receivedAt = kind === 'spot' ? lastSpotContextAt : lastPerpContextAt;
 	return receivedAt > 0 && now - receivedAt <= CONTEXT_STALE_THRESHOLD_MS;
 }

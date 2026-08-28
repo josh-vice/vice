@@ -30,10 +30,8 @@ import {
 	algoServiceStatus,
 	candleDataStatus,
 	marketContextStatus,
-	revenueSyncStatus,
 	deadmanStatus,
 	marketType,
-	demoFixturesEnabled
 } from '$lib/stores';
 import { workspacePreset, workspaceLocked } from '$lib/workspacePreset';
 import { tradingKillSwitchActive } from '$lib/execution/releaseSafety';
@@ -82,7 +80,6 @@ export interface SupportBundle {
 		marketType: string;
 		workspacePreset: string;
 		workspaceLocked: boolean;
-		demoFixturesEnabled: boolean;
 		privacyMode: boolean;
 		tradingKillSwitchActive: boolean;
 	};
@@ -158,7 +155,6 @@ export function buildSupportBundle(
 		algoService: get(algoServiceStatus),
 		candleData: get(candleDataStatus),
 		marketContext: get(marketContextStatus),
-		revenueSync: get(revenueSyncStatus),
 		deadman: get(deadmanStatus)
 	})) ?? {};
 
@@ -204,7 +200,6 @@ export function buildSupportBundle(
 			marketType: get(marketType),
 			workspacePreset: get(workspacePreset),
 			workspaceLocked: get(workspaceLocked),
-			demoFixturesEnabled,
 			privacyMode: safeGet(() => get(privacyMode)) ?? false,
 			tradingKillSwitchActive: safeGet(() => tradingKillSwitchActive()) ?? false
 		},

@@ -9,6 +9,6 @@ export {
 	getTradingTransport,
 	closeHlClients
 } from './client';
-export { startHlFeeds, stopHlFeeds, onMarketSelected, onTimeframeChanged, subscribeMarket, stopHlFeedsForDexSwitch } from './subscriptions';
+export { startHlFeeds, stopHlFeeds, onMarketSelected, onTimeframeChanged, subscribeMarket } from './subscriptions';
 export { toHlInterval } from './symbols';
 export * from './normalize';

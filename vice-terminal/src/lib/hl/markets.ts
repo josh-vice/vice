@@ -1,7 +1,6 @@
 import { HttpTransport } from '@nktkas/hyperliquid';
 import {
 	metaAndAssetCtxs,
-	outcomeMeta,
 	perpCategories,
 	perpDexs,
 	spotMetaAndAssetCtxs
@@ -12,8 +11,7 @@ import {
 	marketCatalogStatus,
 	perpMarketsList,
 	selectedMarket,
-	spotMarketsList,
-	outcomeMarketsList
+	spotMarketsList
 } from '$lib/stores';
 import type { MarketDescriptor } from '$lib/types';
 import { assertInstrumentId, type InstrumentId } from '$lib/venue/identity';
@@ -51,7 +49,7 @@ export function readCachedMarketCatalog(): MarketDescriptor[] {
 				typeof market.marketKey === 'string' &&
 				typeof market.apiCoin === 'string' &&
 				typeof market.assetId === 'number' &&
-				(market.kind === 'corePerp' || market.kind === 'hip3Perp' || market.kind === 'spot' || market.kind === 'outcome')
+				(market.kind === 'corePerp' || market.kind === 'hip3Perp' || market.kind === 'spot')
 			)
 		) return [];
 		return parsed.markets.map(withHyperliquidInstrument);
@@ -135,7 +133,7 @@ export function hyperliquidInstrumentId(market: Pick<MarketDescriptor, 'apiCoin'
 	if (!Number.isInteger(market.priceDecimals) || market.priceDecimals < 0 || market.priceDecimals > 18) {
 		throw new Error('Hyperliquid identity has invalid price decimals');
 	}
-	const product = market.kind === 'outcome' ? 'outcome' : market.type === 'spot' ? 'spot' : 'linearPerp';
+	const product = market.type === 'spot' ? 'spot' : 'linearPerp';
 	return assertInstrumentId({
 		instrumentKey: `hyperliquid:${product}:${market.apiCoin}`,
 		venue: 'hyperliquid',
@@ -150,7 +148,6 @@ export function hyperliquidInstrumentId(market: Pick<MarketDescriptor, 'apiCoin'
 	});
 }
 
-/** Public outcome rows have canonical data identity but remain metadata-only for execution. */
 export function withHyperliquidInstrument(market: MarketDescriptor): MarketDescriptor {
 	return { ...market, instrument: hyperliquidInstrumentId(market) };
 }
@@ -166,92 +163,6 @@ export function deriveSpotAssetId(index: number): number {
 	return 10_000 + index;
 }
 
-/** Hyperliquid reserves 100,000,000 + (10 * outcome + side) for binary outcomes. */
-export function deriveOutcomeAssetId(outcome: number, side: number): number {
-	if (!Number.isInteger(outcome) || outcome < 0 || (side !== 0 && side !== 1)) {
-		throw new Error('Hyperliquid outcome identity requires a non-negative outcome and binary side');
-	}
-	return 100_000_000 + 10 * outcome + side;
-}
-
-type OutcomeMetadata = Awaited<ReturnType<typeof outcomeMeta>>;
-
-function parseOutcomeDescription(value: unknown): { rawDescription?: string; outcomeContext?: NonNullable<MarketDescriptor['outcome']>['outcomeContext'] } {
-	if (typeof value !== 'string') return {};
-	const rawDescription = value;
-	const outcomeContext: NonNullable<MarketDescriptor['outcome']>['outcomeContext'] = {};
-	try {
-		const parsed = JSON.parse(value) as Record<string, unknown>;
-		for (const key of ['underlying', 'expiry', 'period'] as const) if (typeof parsed[key] === 'string' && parsed[key].trim() === parsed[key] && parsed[key].length > 0) outcomeContext[key] = parsed[key];
-		if (typeof parsed.targetPrice === 'number' && Number.isFinite(parsed.targetPrice)) outcomeContext.targetPrice = parsed.targetPrice;
-	} catch {
-		for (const key of ['underlying', 'expiry', 'period'] as const) {
-			const match = value.match(new RegExp('(?:^|[\\n;,])\\s*' + key + '\\s*[:=]\\s*([^;,\\n]+)', 'i'));
-			if (match?.[1]) outcomeContext[key] = match[1].trim();
-		}
-		const target = value.match(/(?:^|[\\n;,])\\s*targetPrice\\s*[:=]\\s*(-?(?:\\d+\\.?\\d*|\\.\\d+))/i);
-		if (target) outcomeContext.targetPrice = Number(target[1]);
-	}
-	return { rawDescription, ...(Object.keys(outcomeContext).length ? { outcomeContext } : {}) };
-}
-
-/**
- * Preserve every venue-provided outcome identity and question label. outcomeMeta
- * does not include tick, lot, or complete execution terms, so these rows are
- * deliberately metadata-only until the venue publishes those constraints.
- */
-export function descriptorsFromOutcomeMeta(metadata: OutcomeMetadata): MarketDescriptor[] {
-	const questionsByOutcome = new Map<number, OutcomeMetadata['questions'][number]>();
-	for (const question of metadata.questions) {
-		for (const outcome of question.namedOutcomes) questionsByOutcome.set(outcome, question);
-	}
-	return metadata.outcomes.flatMap((outcome) => {
-		const question = questionsByOutcome.get(outcome.outcome);
-		return outcome.sideSpecs.slice(0, 2).map((sideSpec, side) => {
-			const parsedDescription = parseOutcomeDescription((outcome as { description?: unknown }).description);
-			const encoding = 10 * outcome.outcome + side;
-			return {
-				marketKey: `outcome:${outcome.outcome}:${side}`,
-				apiCoin: `#${encoding}`,
-				assetId: deriveOutcomeAssetId(outcome.outcome, side),
-				kind: 'outcome' as const,
-				dex: null,
-				baseToken: sideSpec.name,
-				quoteToken: 'USDC',
-				szDecimals: 0,
-				priceDecimals: 5,
-				symbol: `${outcome.name} · ${sideSpec.name}`,
-				name: question?.name ?? outcome.name,
-				type: 'spot' as const,
-				lastPrice: 0,
-				change24h: undefined,
-				changePercent24h: undefined,
-				volume24h: undefined,
-				outcome: {
-					outcomeId: outcome.outcome,
-					side,
-					questionName: question?.name,
-					questionDescription: question?.description,
-					outcomeDescription: outcome.description,
-						sideName: sideSpec.name,
-						rawDescription: parsedDescription.rawDescription,
-						outcomeContext: parsedDescription.outcomeContext,
-						settled: question?.settledNamedOutcomes.includes(outcome.outcome) ?? false
-				},
-				tradingAvailability: 'metadataOnly' as const,
-				tradingUnavailableReason: 'Hyperliquid outcome metadata does not provide lot, tick, or complete execution terms.'
-			};
-		});
-	});
-}
-
-/**
- * A real, stable core identity used only to keep the public feed usable while
- * the authoritative metadata catalog is rate-limited. It deliberately has
- * no synthetic price, volume, funding, or change values; those are filled by
- * the live allMids/book/candle feeds. The catalog remains degraded until the
- * full metadata refresh succeeds.
- */
 export function createCoreBtcBootstrapMarket(): MarketDescriptor {
 	return withHyperliquidInstrument({
 		marketKey: 'perp:BTC',
@@ -433,18 +344,8 @@ async function fetchMarketRegistry(onPartial?: (markets: MarketDescriptor[]) => 
 	const baseline = [...markets].sort((a, b) => (b.volume24h ?? 0) - (a.volume24h ?? 0) || a.symbol.localeCompare(b.symbol));
 	onPartial?.(baseline);
 
-	// Outcome identity is venue-authoritative. Keep it separate from the perp
-	// fan-out: these rows remain discoverable even when a builder DEX is slow.
-	try {
-		markets.push(...descriptorsFromOutcomeMeta(await withInfoBackoff(() => outcomeMeta({ transport }))));
-	} catch (error) {
-		hip3Failure = true;
-		console.warn('[hl] outcome metadata unavailable; retrying on the next refresh:', error);
-	}
-
-	// Core and spot are the useful minimum for a responsive terminal. HIP-3 is
-	// deliberately loaded after that baseline so one rate-limited DEX cannot
-	// take the whole market surface offline.
+	// Load HIP-3 metadata after the core and spot baseline so one slow DEX
+	// cannot take the whole market surface offline.
 	const namedDexs = await withInfoBackoff(() => perpDexs({ transport })).catch((error) => {
 		hip3Failure = true;
 		console.warn('[hl] HIP-3 DEX index unavailable; retrying on the next refresh:', error);
@@ -502,7 +403,6 @@ export async function refreshMarketRegistry(): Promise<MarketDescriptor[]> {
 			marketRegistry.set(cached);
 			perpMarketsList.set(cached.filter((market) => market.kind === 'corePerp' || market.kind === 'hip3Perp'));
 			spotMarketsList.set(cached.filter((market) => market.kind === 'spot'));
-			outcomeMarketsList.set(cached.filter((market) => market.kind === 'outcome'));
 			marketCatalogStatus.set('stale');
 			const current = get(selectedMarket);
 			const replacement = current
@@ -518,7 +418,6 @@ export async function refreshMarketRegistry(): Promise<MarketDescriptor[]> {
 		marketRegistry.set(markets);
 		perpMarketsList.set(markets.filter((market) => market.kind === 'corePerp' || market.kind === 'hip3Perp'));
 		spotMarketsList.set(markets.filter((market) => market.kind === 'spot'));
-		outcomeMarketsList.set(markets.filter((market) => market.kind === 'outcome'));
 		while (baselineWaiters.length > 0) baselineWaiters.shift()?.(markets);
 		const current = get(selectedMarket);
 		const replacement = current

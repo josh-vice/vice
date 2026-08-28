@@ -1,10 +1,10 @@
 import { writable, derived, get, type Writable, type Readable } from 'svelte/store';
-import type { MarketDescriptor, OrderBook, Position, Order, Fill, Balance, OptionChain, Trade, Subaccount, CLICommand, MarketType, OrderSide, OrderType, OptionContract, ChartCandle, ChartInteractionMode, ChartDraft, ChartActiveField, RevenueSnapshot, OrderPreset, AdvancedOrderConfig } from './types';
+import type { MarketDescriptor, OrderBook, Position, Order, Fill, Balance, Trade, Subaccount, CLICommand, MarketType, OrderSide, OrderType, ChartCandle, ChartInteractionMode, ChartDraft, ChartActiveField, OrderPreset, AdvancedOrderConfig } from './types';
 import { marketMatchesWatchlistQuery } from './marketWatchlist';
 import { firstMarketForType } from './marketSelectionModel';
 import { emptyFatFingerLimits, type FatFingerLimits } from './execution/fatFinger';
-import { onTimeframeChanged, startHlFeeds, stopHlFeeds, stopHlFeedsForDexSwitch } from './hl';
-import { fixturesEnabled, type HealthStatus } from './productionTruth';
+import { onTimeframeChanged, startHlFeeds, stopHlFeeds } from './hl';
+import { type HealthStatus } from './productionTruth';
 import { hyperliquidNetwork } from './hl/network';
 import { marketCapabilities } from './marketCapabilities';
 import {
@@ -16,22 +16,11 @@ import { discoverWalletProviders, requestWalletAccounts, type DiscoveredWallet }
 
 export type { HealthStatus } from './productionTruth';
 
-// DEX selection
-export type Dex = 'hyperliquid' | 'lighter' | 'nado' | 'derive';
-export const selectedDex: Writable<Dex> = writable('hyperliquid');
-
-export const dexMeta: Record<Dex, { label: string; abbr: string; color: string }> = {
-	hyperliquid: { label: 'Hyperliquid', abbr: 'HL', color: '#f97316' },
-	lighter:     { label: 'Lighter',     abbr: 'LT', color: '#ffffff' },
-	nado:        { label: 'Nado',        abbr: 'ND', color: '#ffffff' },
-	derive:      { label: 'Derive',      abbr: 'DV', color: '#4fffcc' }
-};
 
 // Live market list (populated from Hyperliquid)
 export const marketRegistry: Writable<MarketDescriptor[]> = writable([]);
 export const perpMarketsList: Writable<MarketDescriptor[]> = writable([]);
 export const spotMarketsList: Writable<MarketDescriptor[]> = writable([]);
-export const outcomeMarketsList: Writable<MarketDescriptor[]> = writable([]);
 
 // Chart state. chartCandles holds only completed/committed history bars;
 // the current in-progress bar lives in liveCandle so every trade/candle tick
@@ -52,15 +41,10 @@ export const clickPlacementSide: Writable<'auto' | 'buy' | 'sell'> = writable('a
 export const chartRiskPercent: Writable<number> = writable(1);
 export const marketType: Writable<MarketType> = writable('perp');
 export const selectedMarket: Writable<MarketDescriptor | null> = writable(null);
-export const selectedOption: Writable<OptionContract | null> = writable(null);
 export const cliOpen: Writable<boolean> = writable(false);
 export const cliHistory: Writable<CLICommand[]> = writable([]);
 
 // Subaccount
-export const demoFixturesEnabled = fixturesEnabled(
-	import.meta.env.DEV,
-	import.meta.env.VITE_ENABLE_DEMO_FIXTURES
-);
 const emptySubaccount: Subaccount = {
 	id: 'primary',
 	name: 'Primary',
@@ -115,15 +99,7 @@ export const fills: Writable<Fill[]> = writable([]);
 export const twapJobs: Writable<import('$lib/types').TwapJob[]> = writable([]);
 export const localAlgoJobs: Writable<import('$lib/execution/algoJobs').LocalAlgoJob[]> = writable([]);
 export const balances: Writable<Balance[]> = writable([]);
-export const revenueSnapshot: Writable<RevenueSnapshot | null> = writable(null);
-export const revenueSyncStatus: Writable<HealthStatus> = writable('idle');
 
-// Options are unsupported in production until they have an authoritative venue feed.
-const emptyOptionChain: OptionChain = { underlying: '', spotPrice: 0, expiries: [], strikes: [], contracts: [] };
-export const optionChain: Writable<OptionChain> = writable(emptyOptionChain);
-export const selectedExpiry: Writable<string> = writable('');
-export const optionViewMode: Writable<'calls' | 'puts' | 'all'> = writable('all');
-export const strikeRangeFilter: Writable<[number, number]> = writable([0, 0]);
 
 // Order entry state
 export const orderSide: Writable<OrderSide> = writable('buy');
@@ -309,101 +285,16 @@ export const bottomPanelHeight: Writable<number> = writable(250);
 export const searchQuery: Writable<string> = writable('');
 export const hotkeysEnabled: Writable<boolean> = writable(true);
 
-// Options are not a production surface yet; fixtures remain development-only.
-export const portfolioGreeks = writable({ delta: 0, gamma: 0, theta: 0, vega: 0, netDelta: 0, netGamma: 0, netTheta: 0, netVega: 0 });
-
-async function loadDevelopmentFixtures(): Promise<void> {
-	if (!demoFixturesEnabled) return;
-	const fixtures = await import('./data');
-	const demoBase = fixtures.perpMarkets[0];
-	const demoMarket: MarketDescriptor = {
-		marketKey: 'perp:BTC',
-		apiCoin: 'BTC',
-		assetId: 0,
-		kind: 'corePerp',
-		dex: null,
-		baseToken: 'BTC',
-		quoteToken: 'USD',
-		szDecimals: 5,
-		priceDecimals: 1,
-		maxLeverage: 50,
-		symbol: demoBase.symbol,
-		name: demoBase.name,
-		type: 'perp',
-		lastPrice: demoBase.lastPrice,
-		change24h: demoBase.change24h,
-		changePercent24h: demoBase.changePercent24h,
-		volume24h: demoBase.volume24h,
-		openInterest: demoBase.openInterest,
-		fundingRate: demoBase.fundingRate,
-		markPrice: demoBase.markPrice,
-		indexPrice: demoBase.indexPrice
-	};
-	const fixtureSubaccounts = fixtures.mockSubaccounts;
-	marketRegistry.set([demoMarket]);
-	perpMarketsList.set([demoMarket]);
-	selectedMarket.set(demoMarket);
-	orderPrice.set(demoMarket.lastPrice);
-	chartCandles.set(fixtures.btcChartData);
-	subaccounts.set(fixtureSubaccounts);
-	activeSubaccount.set(fixtureSubaccounts[0] ?? emptySubaccount);
-	const basePrice = demoMarket.lastPrice;
-	orderBook.set(fixtures.generateOrderBook(basePrice));
-	recentTrades.set(fixtures.generateRecentTrades(basePrice));
-	positions.set(fixtures.mockPositions);
-	openOrders.set(fixtures.mockOrders);
-	fills.set(fixtures.mockFills);
-	balances.set(fixtures.mockBalances);
-	optionChain.set(fixtures.btcOptionChain);
-	selectedExpiry.set(fixtures.btcOptionChain.expiries[0] ?? '');
-	strikeRangeFilter.set([
-		fixtures.btcOptionChain.strikes[0] ?? 0,
-		fixtures.btcOptionChain.strikes.at(-1) ?? 0
-	]);
-	portfolioGreeks.set(fixtures.mockPortfolioGreeks);
-	isConnected.set(true);
-	walletAddress.set('0x000000000000000000000000000000000000dE0');
-	walletStatus.set('live');
-	marketDataStatus.set('live');
-	marketContextStatus.set('live');
-	marketCatalogStatus.set('live');
-	accountSyncStatus.set('live');
-	activeAssetSyncStatus.set('live');
-	executionStatus.set('live');
-}
-
-if (demoFixturesEnabled) void loadDevelopmentFixtures();
 
 // Derived stores
 export const filteredMarkets: Readable<MarketDescriptor[]> = derived(
-	[marketType, searchQuery, perpMarketsList, spotMarketsList, outcomeMarketsList],
-	([$marketType, $searchQuery, $perpMarketsList, $spotMarketsList, $outcomeMarketsList]) => {
-		const markets =
-			$marketType === 'spot'
-				? $spotMarketsList
-				: $marketType === 'prediction'
-					? $outcomeMarketsList
-					: $perpMarketsList;
+	[marketType, searchQuery, perpMarketsList, spotMarketsList],
+	([$marketType, $searchQuery, $perpMarketsList, $spotMarketsList]) => {
+		const markets = $marketType === 'spot' ? $spotMarketsList : $perpMarketsList;
 		return markets.filter((market) => marketMatchesWatchlistQuery(market, $searchQuery));
 	}
 );
 
-export const filteredOptionContracts: Readable<OptionContract[]> = derived(
-	[optionChain, selectedExpiry, optionViewMode, strikeRangeFilter],
-	([$optionChain, $selectedExpiry, $optionViewMode, $strikeRangeFilter]) => {
-		let contracts = $optionChain.contracts.filter(c => c.expiry === $selectedExpiry);
-
-		if ($optionViewMode !== 'all') {
-			contracts = contracts.filter(c => c.optionType === ($optionViewMode === 'calls' ? 'call' : 'put'));
-		}
-
-		contracts = contracts.filter(c =>
-			c.strike >= $strikeRangeFilter[0] && c.strike <= $strikeRangeFilter[1]
-		);
-
-		return contracts.sort((a, b) => a.strike - b.strike);
-	}
-);
 
 export const totalUnrealizedPnl: Readable<number> = derived(
 	positions,
@@ -505,10 +396,6 @@ export function setMarketType(type: MarketType) {
 	resetMarketBoundState(null);
 }
 
-export function selectOptionContract(contract: OptionContract) {
-	selectedOption.set(contract);
-	orderPrice.set(contract.ask);
-}
 
 async function activateWallet(address: string, generation = walletConnectGeneration): Promise<boolean> {
 	// Invalidate the previous account before touching the new provider address.
@@ -521,8 +408,6 @@ async function activateWallet(address: string, generation = walletConnectGenerat
 	fills.set([]);
 	twapJobs.set([]);
 	balances.set([]);
-	revenueSnapshot.set(null);
-	revenueSyncStatus.set('idle');
 	activeSubaccount.set({ ...emptySubaccount });
 	walletStatus.set('connecting');
 	accountSyncStatus.set('connecting');
@@ -681,7 +566,7 @@ export function cancelEnableTrading(): void {
 }
 
 export async function enableTrading(
-	options: { approveBuilder?: boolean; takeover?: boolean } = {},
+	options: { takeover?: boolean } = {},
 	onPhase?: EnablementReporter
 ): Promise<void> {
 	const report = onPhase ?? noopEnablementReporter;
@@ -804,21 +689,10 @@ export function setSubaccount(sub: Subaccount) {
 	activeSubaccount.set(sub);
 }
 
-export function onDexChanged(dex: Dex): void {
-	if (dex === 'hyperliquid') {
-		const market = get(selectedMarket);
-		startHlFeeds(market?.apiCoin);
-	} else {
-		stopHlFeedsForDexSwitch();
-		void stopLocalExecutionFamilies();
-		marketDataStatus.set('idle');
-	}
-}
 let feedsStarted = false;
 
 export function startPriceUpdates() {
 	if (feedsStarted) return;
-	if (demoFixturesEnabled) return;
 	feedsStarted = true;
 	startHlFeeds().catch((e) => console.error('[hl] feed start failed:', e));
 }

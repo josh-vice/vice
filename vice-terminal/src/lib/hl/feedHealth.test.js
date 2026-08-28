@@ -15,9 +15,9 @@ describe('feed health predicates', () => {
 		expect(feedsAreHealthy('BTC', { ...live, book: now - FEED_STALE_THRESHOLD_MS.book - 1 }, now)).toBe(false);
 	});
 
-	test('treats outcome context as always healthy and validates all-mids freshness', () => {
+	test('validates perp, spot, and all-mids freshness', () => {
 		const now = 100_000;
-		expect(contextIsHealthy('outcome', 0, 0, now)).toBe(true);
+		expect(contextIsHealthy('perp', now - 1, now - 1, now)).toBe(true);
 		expect(contextIsHealthy('spot', now - 1, now - 1, now)).toBe(true);
 		expect(allMidsAreFresh(now - 1, now)).toBe(true);
 		expect(allMidsAreFresh(now - ALL_MIDS_STALE_THRESHOLD_MS - 1, now)).toBe(false);

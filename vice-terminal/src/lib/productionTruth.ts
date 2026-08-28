@@ -1,8 +1,5 @@
 export type HealthStatus = 'idle' | 'connecting' | 'live' | 'stale' | 'degraded' | 'error';
 
-export function fixturesEnabled(dev: boolean, flag: string | undefined): boolean {
-	return dev && flag === 'true';
-}
 
 export function canPresentAccountState(connected: boolean, status: HealthStatus): boolean {
 	return connected && status === 'live';

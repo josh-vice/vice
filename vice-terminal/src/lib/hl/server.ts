@@ -261,13 +261,11 @@ export async function fetchHlPositions(address: string): Promise<VicePosition[]>
 export async function fetchHlAccountSnapshotUnbounded(address: string) {
 	const client = getTradingReadOnlyInfo();
 	const user = address as `0x${string}`;
-	const [perpSlices, spotState, userFills, twapHistory, referralResult, feesResult] = await Promise.all([
+	const [perpSlices, spotState, userFills, twapHistory] = await Promise.all([
 		fetchPerpAccountSlices(address),
 		client.spotClearinghouseState({ user }),
 		client.userFills({ user }),
-		client.twapHistory({ user }),
-		client.referral({ user }).then((value) => ({ status: 'fulfilled' as const, value })).catch((reason) => ({ status: 'rejected' as const, reason })),
-		client.userFees({ user }).then((value) => ({ status: 'fulfilled' as const, value })).catch((reason) => ({ status: 'rejected' as const, reason }))
+		client.twapHistory({ user })
 	]);
 	const orders = mapPerpOrders(perpSlices);
 	const positions = mapPerpPositions(perpSlices);
@@ -305,36 +303,12 @@ export async function fetchHlAccountSnapshotUnbounded(address: string) {
 		fee: parseFloat(fill.fee ?? '0'),
 		timestamp: fill.time
 	}));
-	const revenue = referralResult.status === 'fulfilled' && feesResult.status === 'fulfilled'
-		? {
-			status: 'live' as const,
-			referral: {
-				assigned: referralResult.value.referredBy !== null,
-				code: referralResult.value.referredBy?.code,
-				cumVolume: parseFloat(referralResult.value.cumVlm),
-				unclaimedRewards: parseFloat(referralResult.value.unclaimedRewards),
-				claimedRewards: parseFloat(referralResult.value.claimedRewards),
-				builderRewards: parseFloat(referralResult.value.builderRewards)
-			},
-			fees: {
-				activeReferralDiscount: parseFloat(feesResult.value.activeReferralDiscount),
-				userCrossRate: parseFloat(feesResult.value.userCrossRate),
-				userAddRate: parseFloat(feesResult.value.userAddRate)
-			}
-		}
-		: {
-			status: 'degraded' as const,
-			referral: { assigned: false, cumVolume: 0, unclaimedRewards: 0, claimedRewards: 0, builderRewards: 0 },
-			fees: { activeReferralDiscount: 0, userCrossRate: 0, userAddRate: 0 },
-			error: 'Hyperliquid revenue attribution is temporarily unavailable; no local estimate is shown.'
-		};
 	return {
 		orders,
 		positions,
 		balances,
 		fills,
 		twaps: normalizeTwapHistory(twapHistory),
-		revenue,
 		account: {
 			equity: accountValue,
 			marginUsed,

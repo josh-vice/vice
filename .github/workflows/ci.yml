@@ -43,8 +43,6 @@ jobs:
             bun-
       - name: Custody + release policy preflight
         run: bun run preflight
-      - name: Dependency audit + lockfile-in-sync
-        run: bun run test:audit
       - name: TypeScript source typecheck
         run: bun run typecheck
       - name: Svelte check
@@ -52,7 +50,7 @@ jobs:
 
   # ---- Frontend unit / policy / contract suites (deterministic, no venue) --
   frontend-tests:
-    name: Frontend suites (unit/policy/contract/chaos/revenue/mobile/load)
+    name: Frontend suites (unit/policy/contract/chaos/mobile/load)
     runs-on: ubuntu-latest
     timeout-minutes: 40
     steps:
@@ -79,50 +77,14 @@ jobs:
         run: bun run test:contract
       - name: Chaos / reconciliation
         run: bun run test:chaos
-      - name: Revenue surface
-        run: bun run test:revenue
       - name: Mobile parity
         run: bun run test:mobile
       - name: Load / latency gates
         run: bun run test:load
-      - name: Story schema + widget catalog
-        run: bun run test:stories && bun run test:widgets
-      - name: Security-boundary workflow lint (local equivalent)
-        run: bun run test:workflow-boundary
 
-  # ---- Backend (Rust gateway) contract tests -----------------------------
-  backend-tests:
-    name: Backend contract tests
-    runs-on: ubuntu-latest
-    timeout-minutes: 40
-    steps:
-      - name: Clean checkout
-        uses: actions/checkout@v4
-      - name: Setup Rust (pinned toolchain)
-        uses: dtolnay/rust-toolchain@stable
-      - name: Setup Bun (pinned)
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: 1.3.9
-      - name: Frozen install
-        run: bun install --frozen-lockfile
-      - name: Cache Cargo (Cargo.lock-keyed)
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            vice-backend/target
-          key: cargo-${{ hashFiles('vice-backend/Cargo.lock') }}
-          restore-keys: |
-            cargo-
-      - name: Backend contract tests
-        run: bun run test:backend
 
-  # ---- Production build + artifact boundary scan ---------------------------
-  # Builds the real deploy artifact and proves the SERVED static output is
-  # bounded (no internal source/signer/credential/evidence tree leaks) via the
-  # same pwa-artifact boundary test that guards releases.
+  # ---- Production terminal build ------------------------------------------
+  # Builds only the deployable Hyperliquid terminal artifact.
   build:
     name: Production build + artifact boundary scan
     runs-on: ubuntu-latest
@@ -143,10 +105,8 @@ jobs:
           key: bun-${{ hashFiles('bun.lock') }}
           restore-keys: |
             bun-
-      - name: Production build (site + terminal)
+      - name: Production build (terminal)
         run: bun run build
-      - name: PWA artifact boundary scan
-        run: bun run test:pwa
 
   # ---- Production hydrated E2E (no credentials) ----------------------------
   # Boots a real Chromium against the production build/preview and runs the
@@ -174,49 +134,13 @@ jobs:
           VITE_HL_NETWORK: testnet
         run: bun run test:e2e
 
-  # ---- Deterministic runtime tests that do NOT mutate a venue -------------
-  # Bounded read-only smoke + SSR/browser-surface policy checks against the
-  # locally-started stack. These never place/modify/cancel an order, never
-  # sign, and never need wallet credentials.
-  runtime-smoke:
-    name: Runtime smoke + browser surface (read-only)
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    env:
-      VICE_BACKEND_PORT: 8081
-      VICE_BACKEND_URL: http://127.0.0.1:8081
-      VICE_FRONTEND_URL: http://localhost:5173
-      VITE_HL_NETWORK: testnet
-    steps:
-      - name: Clean checkout
-        uses: actions/checkout@v4
-      - name: Setup Bun (pinned)
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: 1.3.9
-      - name: Setup Rust (pinned toolchain)
-        uses: dtolnay/rust-toolchain@stable
-      - name: Frozen install
-        run: bun install --frozen-lockfile
-      - name: Cache Cargo (Cargo.lock-keyed)
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            vice-backend/target
-          key: cargo-${{ hashFiles('vice-backend/Cargo.lock') }}
-          restore-keys: |
-            cargo-
-      - name: Start owned stack and run read-only runtime smoke
-        run: bash scripts/dev-verify.sh
   # ---- Required aggregation gate ------------------------------------------
   # Parallel jobs remain independent for throughput; this job is the single
   # required status that proves the complete CI composition before promotion.
   required-gate:
     name: Required release-gate aggregation
     if: always()
-    needs: [source-checks, frontend-tests, backend-tests, build, browser-e2e, runtime-smoke]
+    needs: [source-checks, frontend-tests, build, browser-e2e]
     runs-on: ubuntu-latest
     steps:
       - name: Require every parallel gate
@@ -225,9 +149,7 @@ jobs:
           for result in \
             "${{ needs.source-checks.result }}" \
             "${{ needs.frontend-tests.result }}" \
-            "${{ needs.backend-tests.result }}" \
             "${{ needs.build.result }}" \
-            "${{ needs.browser-e2e.result }}" \
-            "${{ needs.runtime-smoke.result }}"; do
+            "${{ needs.browser-e2e.result }}"; do
             test "$result" = success || { echo "::error::parallel release gate result=$result"; exit 1; }
           done

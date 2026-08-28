@@ -1,16 +1,13 @@
 <script lang="ts">
 	import '../app.css';
 	import { page } from '$app/state';
-	import { onMount, setContext } from 'svelte';
+	import { onMount } from 'svelte';
 	import { startPriceUpdates, stopPriceUpdates, hotkeysEnabled, orderSide, cliOpen, clickPlacementMode, setOrderSizePercent, setChartTimeframe } from '$lib/stores';
 	import { actionForHotkey, hotkeyFromEvent, isTypingTarget, loadHotkeys } from '$lib/hotkeys';
-	import { SUITE_CONTEXT, suiteContext } from '$lib/suite/context';
-	import PwaBanner from '$lib/components/PwaBanner.svelte';
 	import { loadPrivacyMode } from '$lib/privacyMode';
 	let { children } = $props();
 	loadPrivacyMode();
 	let isTerminalWorkspace = $derived(page.url.pathname === '/trade');
-	setContext(SUITE_CONTEXT, suiteContext);
 	let privacyHydrated = $state(true);
 
 	onMount(() => {
@@ -82,4 +79,3 @@
 			{@render children()}
 		{/if}
 	</div>
-	<PwaBanner />

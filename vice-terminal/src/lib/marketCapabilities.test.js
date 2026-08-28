@@ -24,12 +24,4 @@ describe('marketCapabilities', () => {
 		expect(profile.supportsPositionLifecycle).toBe(false);
 		expect(profile.allowedOrderTypes).toEqual(['limit', 'market']);
 	});
-	test('outcomes are public-data-only with a stable reason', () => {
-		const profile = marketCapabilities({ ...base, kind: 'outcome', apiCoin: '#11610', type: 'spot', tradingAvailability: 'metadataOnly' });
-		expect(profile.executable).toBe(false);
-		expect(profile.allowedOrderTypes).toEqual([]);
-		expect(profile.amountUnit).toBe('shares');
-		expect(profile.supportsAdvancedOrders).toBe(false);
-		expect(profile.readOnlyReason).toContain('lot, tick');
-	});
 });

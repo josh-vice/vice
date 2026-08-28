@@ -47,11 +47,4 @@ describe('Hyperliquid canonical public-book events', () => {
 		expect(assertHyperliquidMarketInstrument(market)).toBe(market);
 		expect(() => assertHyperliquidMarketInstrument({ ...market, apiCoin: 'ETH' })).toThrow('does not match');
 	});
-	test('accepts canonical public outcome books but rejects outcome execution', () => {
-		const market = { ...createCoreBtcBootstrapMarket(), kind: 'outcome', apiCoin: '#120', szDecimals: 0, priceDecimals: 5, tradingAvailability: 'metadataOnly', tradingUnavailableReason: 'read only', instrument: undefined };
-		market.instrument = hyperliquidInstrumentId(market);
-		const event = hyperliquidBookEvent(market, book, 4, 1, 1, 1, 1700000000000);
-		expect(event.instrumentKey).toBe('hyperliquid:outcome:#120');
-		expect(() => assertHyperliquidMarketInstrument(market)).toThrow('read only');
-	});
 });

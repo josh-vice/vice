@@ -14,7 +14,6 @@ import { formatVenuePrice, formatVenueSize } from './venueFormat';
 import { buildScaleLevels } from './scaleMath';
 import { hyperliquidNetwork } from '$lib/hl/network';
 import { recordDispatchLatency, recordExecutionAck } from './telemetry';
-import { builderForOrderType, revenueAttributionReady, shouldRetryWithoutBuilder } from './revenueConfig';
 import { deterministicCloid, reservePersistedSequence, sequenceStorageKey } from './commandIdentity';
 import { withOneTransportRetry } from './retryPolicy';
 import { parseVenueError } from './venueErrors';
@@ -24,8 +23,8 @@ import { executionOwnerLease, executionOwnerScope } from './executionOwner';
 import { assertTradingAllowed, assertFreshExecutionState } from './releaseSafety';
 import { assertExecutionEntitled, getExecutionEntitlement, reserveAggregateCapacity, type ExecutionRisk } from './releasePolicy';
 import { executionExpiresAfter } from './expiry';
-import { accountSyncStatus, deadmanStatus, fatFingerLimits, isConnected, marketDataStatus, openOrders, positions, revenueSnapshot, revenueSyncStatus } from '$lib/stores';
 import { validateFatFinger } from './fatFinger';
+import { accountSyncStatus, deadmanStatus, fatFingerLimits, isConnected, marketDataStatus, openOrders, positions } from '$lib/stores';
 import { reconcileCloids } from './reconcileCloid';
 import { assertNoUnresolvedExecutionCommands, beginExecutionCommand, finishExecutionCommand, unresolvedExecutionCommands } from './commandJournal';
 import { monotonicNowUs } from './clock';
@@ -53,14 +52,13 @@ class LocalExecutionClient {
 	private info: InfoClient | null = null;
 	private provider: EIP1193Provider | null = null;
 	private mainAddress: `0x${string}` | null = null;
-	private builder: { b: `0x${string}`; f: number } | undefined;
 	private sequence = 0;
 	private actionStartedUs = new Map<string, number>();
 
 	async initialize(
 		provider: EIP1193Provider,
 		mainAddress: string,
-		options: { approveBuilder?: boolean; takeover?: boolean } = {},
+		options: { takeover?: boolean } = {},
 		onPhase?: EnablementReporter
 	): Promise<void> {
 		const report = onPhase ?? noopEnablementReporter;
@@ -73,14 +71,13 @@ class LocalExecutionClient {
 				step: 'connecting',
 				detail: ENABLEMENT_STEP_DETAIL['connecting']
 			});
-			const session = await unlockOrCreateAgent(provider, mainAddress, options, report);
+			const session = await unlockOrCreateAgent(provider, mainAddress, report);
 			report({
 				kind: 'step',
 				step: 'synchronizing-account',
 				detail: ENABLEMENT_STEP_DETAIL['synchronizing-account']
 			});
 			this.provider = provider;
-			this.builder = session.builder;
 			this.mainAddress = session.mainAddress;
 			this.sequence = typeof localStorage === 'undefined' ? 0 : Number(localStorage.getItem(sequenceStorageKey(hyperliquidNetwork.network, this.mainAddress)) ?? 0);
 			const transport = new HttpTransport({ isTestnet: hyperliquidNetwork.isTestnet });
@@ -102,7 +99,6 @@ class LocalExecutionClient {
 		this.info = null;
 		this.provider = null;
 		this.mainAddress = null;
-		this.builder = undefined;
 		this.actionStartedUs.clear();
 		void executionOwnerLease.release();
 		deadmanStatus.set('idle');
@@ -112,10 +108,6 @@ class LocalExecutionClient {
 		return this.exchange !== null;
 	}
 
-	private builderFor(orderType: string): { b: `0x${string}`; f: number } | undefined {
-		if (!revenueAttributionReady(get(revenueSyncStatus), get(revenueSnapshot))) return undefined;
-		return builderForOrderType(this.builder, orderType);
-	}
 	private async assertRuntimePolicy(market: MarketDescriptor, actionId: string, orderFamily: string, notionalUsd: number, risk: ExecutionRisk): Promise<void> {
 		if (hyperliquidNetwork.network !== 'mainnet') return;
 		if (!this.mainAddress || !market.instrument || !Number.isFinite(notionalUsd) || notionalUsd < 0) throw new Error('Mainnet execution requires complete identity and finite notional');
@@ -204,28 +196,18 @@ class LocalExecutionClient {
 		const sendUs = monotonicNowUs();
 		const expiresAfter = executionExpiresAfter();
 		const cloids = orders.map((order) => order.c!).filter(Boolean);
-		const builder = this.builderFor(intent.orderType ?? 'limit');
 		beginExecutionCommand({ commandId, network: hyperliquidNetwork.network, account: this.mainAddress!, sequence, kind: 'place', cloids, venueOrderIds: [] });
 		try {
-			let response = await withOneTransportRetry(() => exchange.order({
+			const response = await withOneTransportRetry(() => exchange.order({
 				orders,
 				// Venue-managed positionTpsl keeps exit size proportional to the
 				// authoritative position through partial fills, reconnects, and
 				// position changes. normalTpsl is fixed-size and can over-close a
 				// partially filled entry.
-				grouping: intent.orderType === 'bracket' ? 'positionTpsl' : 'na',
-				builder
+				grouping: intent.orderType === 'bracket' ? 'positionTpsl' : 'na'
 			}, { expiresAfter }));
-			let error = venueError(response);
-			let orderIds = venueIds(response);
-			if (shouldRetryWithoutBuilder(Boolean(builder), error ? parseVenueError(error).code : undefined, orderIds)) {
-				response = await withOneTransportRetry(() => exchange.order({
-					orders,
-					grouping: intent.orderType === 'bracket' ? 'positionTpsl' : 'na'
-				}, { expiresAfter }));
-				error = venueError(response);
-				orderIds = venueIds(response);
-			}
+			const error = venueError(response);
+			const orderIds = venueIds(response);
 				const outcome = classifyVenueResponse(error, orderIds, orders.length);
 				finishExecutionCommand(this.mainAddress!, commandId, { status: outcome.status, venueOrderIds: orderIds, error: outcome.error });
 				return this.ack(commandId, sequence, receiveUs, sendUs, outcome.accepted, orderIds, outcome.error, outcome.uncertain);
@@ -441,17 +423,11 @@ class LocalExecutionClient {
 		const sendUs = nowUs();
 		const expiresAfter = executionExpiresAfter();
 		const cloids = orders.map((order) => order.c!).filter(Boolean);
-		const builder = this.builderFor('scale');
 		beginExecutionCommand({ commandId, network: hyperliquidNetwork.network, account: this.mainAddress!, sequence, kind: 'scale', cloids, venueOrderIds: [] });
 		try {
-			let response = await withOneTransportRetry(() => exchange.order({ orders, grouping: 'na', builder }, { expiresAfter }));
-			let error = venueError(response);
-			let orderIds = venueIds(response);
-			if (shouldRetryWithoutBuilder(Boolean(builder), error ? parseVenueError(error).code : undefined, orderIds)) {
-				response = await withOneTransportRetry(() => exchange.order({ orders, grouping: 'na' }, { expiresAfter }));
-				error = venueError(response);
-				orderIds = venueIds(response);
-			}
+			const response = await withOneTransportRetry(() => exchange.order({ orders, grouping: 'na' }, { expiresAfter }));
+			const error = venueError(response);
+			const orderIds = venueIds(response);
 				const outcome = classifyVenueResponse(error, orderIds, orders.length);
 				finishExecutionCommand(this.mainAddress!, commandId, { status: outcome.status, venueOrderIds: orderIds, error: outcome.error });
 				return this.ack(commandId, sequence, receiveUs, sendUs, outcome.accepted, orderIds, outcome.error, outcome.uncertain);
@@ -742,10 +718,8 @@ class LocalExecutionClient {
 			completedUs: nowUs()
 		};
 		recordExecutionAck(ack);
-		// Reconcile account, fills, referral, fee, and reward state after every
-		// mutation acknowledgement without extending the signing/venue latency
-		// measured by this command. WebSocket updates remain the fast path; this
-		// snapshot is the authoritative convergence path for attribution.
+		// Reconcile the account snapshot after every acknowledgement without
+		// extending the signing or venue-acknowledgement path.
 		void import('$lib/hl/account')
 				.then(({ refreshAccountSnapshot }) => refreshAccountSnapshot())
 				.catch(() => undefined);

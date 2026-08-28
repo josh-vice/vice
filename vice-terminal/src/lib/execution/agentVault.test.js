@@ -18,9 +18,4 @@ describe('US-002 local signer custody boundary', () => {
 		await expect(assertProviderAccount(switched, '0xabcd')).rejects.toThrow('account changed');
 	});
 
-	test('keeps builder approval behind an explicit unlock option', async () => {
-		const source = await Bun.file(new URL('./agentVault.ts', import.meta.url)).text();
-		expect(source).toContain('options: { approveBuilder?: boolean } = {}');
-		expect(source).toContain('const builder = options.approveBuilder ? configuredBuilder() : null;');
-	});
 });

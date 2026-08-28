@@ -10,10 +10,6 @@ describe('US-007 market watchlist class search', () => {
 		expect(marketMatchesWatchlistQuery({ ...base, venueCategory: 'stocks' }, 'commodities')).toBe(false);
 	});
 
-	test('matches prediction as a class without inventing an outcome symbol', () => {
-		const outcome = { ...base, marketKey: 'outcome:1:0', apiCoin: '#10', kind: 'outcome', dex: null, type: 'spot', symbol: 'Election · Yes', outcome: { outcomeId: 1, side: 0 } };
-		expect(marketMatchesWatchlistQuery(outcome, 'prediction')).toBe(true);
-	});
 	test('matches the exact canonical market key', () => {
 		expect(marketMatchesWatchlistQuery(base, 'hip3:xyz:nvda')).toBe(true);
 	});

@@ -14,9 +14,7 @@ export function marketMatchesWatchlistQuery(market: MarketDescriptor, rawQuery: 
 		? ['core', 'perp', 'perpetual']
 		: market.kind === 'hip3Perp'
 			? ['hip-3', 'hip3', 'builder', 'perp', 'perpetual']
-			: market.kind === 'outcome'
-				? ['prediction', 'outcome', 'metadata']
-				: ['spot'];
+			: ['spot'];
 	return [
 		market.marketKey,
 		market.symbol,
@@ -27,8 +25,6 @@ export function marketMatchesWatchlistQuery(market: MarketDescriptor, rawQuery: 
 		market.dex ?? '',
 		market.kind,
 		market.venueCategory ?? '',
-		market.outcome?.questionName ?? '',
-		market.outcome?.questionDescription ?? '',
 		...classTerms
 	].some((value) => value.toLowerCase().includes(query));
 }
@@ -65,13 +61,11 @@ export function buildMarketWatchlistGroups(
 	const favoriteMarkets = markets.filter((market) => favorites.has(market.marketKey));
 	const coreMarkets = markets.filter((market) => market.kind === 'corePerp');
 	const hip3Markets = markets.filter((market) => market.kind === 'hip3Perp');
-	const outcomeMarkets = markets.filter((market) => market.kind === 'outcome');
 	const spotMarkets = markets.filter((market) => market.kind === 'spot');
 	return [
 		...(favoriteMarkets.length ? [{ id: 'favorites', label: 'Favorites', markets: favoriteMarkets }] : []),
 		...categoryGroups(coreMarkets, 'core', () => 'Core Perps', () => 'core'),
 		...categoryGroups(hip3Markets, 'hip3', (dex) => `HIP-3 · ${dex}`, (market) => market.dex ?? 'HIP-3'),
-		...(outcomeMarkets.length ? [{ id: 'outcomes', label: 'Prediction outcomes · metadata only', markets: outcomeMarkets }] : []),
 		...(spotMarkets.length ? [{ id: 'spot', label: 'Spot', markets: spotMarkets }] : [])
 	];
 }

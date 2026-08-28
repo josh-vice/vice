@@ -31,6 +31,16 @@ function run(cmd) {
 const HARD = {
 	preflight: 'bun run preflight',
 	frontend: 'bun run test:frontend',
+	catalog: 'bun run test:catalog',
+	contract: 'bun run test:contract',
+	chaos: 'bun run test:chaos',
+	mobile: 'bun run test:mobile',
+	load: 'bun run test:load',
+	bundle: 'bun run test:bundle',
+	streams: 'bun run test:streams',
+	mainnetGuardrails: 'bun run test:mainnet-guardrails',
+	'e2e-static': 'bun run test:e2e:static',
+	'release-approval': 'bun run test:release-approval',
 	'release-manifest': 'bun run test:release-manifest'
 };
 

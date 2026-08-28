@@ -11,15 +11,6 @@
 			]
 		},
 		{
-			"source": "/(service-worker|sw|manifest.webmanifest|manifest.json|icon-192|icon-512|icon-maskable-512|apple-touch-icon).*",
-			"headers": [
-				{
-					"key": "Cache-Control",
-					"value": "no-cache, no-store, must-revalidate"
-				}
-			]
-		},
-		{
 			"source": "/(.*)",
 			"headers": [
 				{

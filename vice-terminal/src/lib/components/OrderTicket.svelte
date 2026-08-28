@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { selectedMarket, marketRegistry, orderSide, orderType, orderPrice, orderSize, orderLeverage, reduceOnly, postOnly, ioc, activeSubaccount, balances, advancedConfig, orderPresets, applyOrderPreset, saveOrderPreset, deleteOrderPreset, priceInputFocused, chartActiveField, chartDraft, chartRiskPercent, chartCandles, chartTimeframe, designerMode, isConnected, executionStatus, enableTrading, walletAddress, revenueSnapshot, revenueSyncStatus, setOrderSizePercent, fatFingerLimits, setFatFingerLimits } from '$lib/stores';
+	import { selectedMarket, marketRegistry, orderSide, orderType, orderPrice, orderSize, orderLeverage, reduceOnly, postOnly, ioc, activeSubaccount, balances, advancedConfig, orderPresets, applyOrderPreset, saveOrderPreset, deleteOrderPreset, priceInputFocused, chartActiveField, chartDraft, chartRiskPercent, chartCandles, chartTimeframe, designerMode, isConnected, executionStatus, enableTrading, setOrderSizePercent, fatFingerLimits, setFatFingerLimits } from '$lib/stores';
 	import { cancelEnableTrading } from '$lib/stores';
 	import { ORDER_TYPE_GROUPS, QUICK_ORDER_TYPES, SIZE_PRESETS, persistenceClass } from '$lib/orderTicketModel';
 	import type { OrderSide, OrderType } from '$lib/types';
@@ -7,14 +7,11 @@
 	import { placeOrder, startAlgoOrder, fetchOpenOrders } from '$lib/hl/orders';
 	import { riskBasedSize } from '$lib/chart/tradingMath';
 	import { volatilityBasedSize, volatilitySizingCertified } from '$lib/chart/volatilitySizing';
-	import { builderRevenueEnabled, configuredBuilder, configuredReferralCode, referralConfigured, revenueDisclosure, orderTypeRevenueDisclosure } from '$lib/execution/revenueConfig';
-	import { requestConfiguredReferral } from '$lib/execution/agentVault';
 	import { advancedOrderTypes, isAdvancedOrderCertified, unavailableOrderTypeMessage } from '$lib/execution/capabilities';
 	import { tradingKillSwitchActive, tradingKillSwitchMessage } from '$lib/execution/releaseSafety';
 	import { privacyMode } from '$lib/privacyMode';
 	import { onDestroy } from 'svelte';
 	import { marketCapabilities } from '$lib/marketCapabilities';
-	import PredictionMarketPanel from '$lib/components/PredictionMarketPanel.svelte';
 	import {
 		ENABLEMENT_STEP_DETAIL,
 		ENABLEMENT_STEP_LABEL,
@@ -31,10 +28,6 @@
 	let typeMenuOpen = false;
 	let submitError = '';
 	let submitting = false;
-	let referralMessage = '';
-	let referralConfirmOpen = false;
-	let referralBusy = false;
-	let builderOptIn = false;
 	// Secure-trading enablement lifecycle (explicit state machine, not a spinner).
 	let enablePhase: EnablementPhase = { kind: 'idle' };
 	let enableRetryAvailable = true;
@@ -124,23 +117,6 @@
 	$: maxSize = (availableMargin * (marketProfile.leverageEnabled ? Math.min($orderLeverage, venueMaxLeverage) : 1)) / ($selectedMarket?.lastPrice || 1);
 	$: baseAsset = $selectedMarket?.baseToken ?? 'Asset';
 
-	async function requestReferral() {
-		referralMessage = '';
-		referralConfirmOpen = false;
-		referralBusy = true;
-		const provider = typeof window !== 'undefined' ? (window as any).ethereum : null;
-		if (!provider || !$walletAddress) {
-			referralMessage = 'Connect the wallet before requesting the optional referral.';
-			referralBusy = false;
-			return;
-		}
-		try {
-			const result = await requestConfiguredReferral(provider, $walletAddress);
-			referralMessage = result.message;
-		} finally {
-			referralBusy = false;
-		}
-	}
 
 	function setSide(side: OrderSide) {
 		orderSide.set(side);
@@ -300,7 +276,7 @@
 		stopEnableRetryTimer();
 		try {
 			await enableTrading(
-				{ approveBuilder: builderOptIn, takeover: takeoverRequested },
+				{ takeover: takeoverRequested },
 				(phase) => {
 					enablePhase = phase;
 					if (phase.kind === 'error' && phase.error.kind === 'rate-limited') {
@@ -395,8 +371,6 @@
 	<div class="flex h-full items-center justify-center p-4 text-center text-2xs text-terminal-text-muted" data-testid="order-ticket-no-market">
 		Select a market to configure an order.
 	</div>
-{:else if $selectedMarket.kind === 'outcome'}
-	<PredictionMarketPanel />
 {:else if !marketProfile.executable || !currentType}
 	<div class="flex h-full items-center justify-center p-4 text-center text-2xs text-terminal-yellow" data-testid="order-ticket-unsupported">
 		{marketProfile.readOnlyReason ?? 'Order entry is unavailable for this market.'}
@@ -910,14 +884,7 @@
 		{#if $isConnected && $executionStatus !== 'live'}
 			<p class="text-3xs text-terminal-text-muted mb-1.5">
 				Enable an encrypted, device-local Hyperliquid agent. The key never reaches Vice servers.
-				{#if orderTypeRevenueDisclosure($orderType)} {orderTypeRevenueDisclosure($orderType)}{:else if revenueDisclosure()} {revenueDisclosure()}{/if}
 			</p>
-			{#if builderRevenueEnabled() && configuredBuilder() && enablePhase.kind !== 'step'}
-				<label class="mb-1.5 flex items-start gap-1.5 rounded border border-terminal-border/60 bg-terminal-bg-secondary px-2 py-1.5 text-3xs text-terminal-text-muted">
-					<input data-action-id="ui.src.lib.components.orderticket.input.hf7922f360e" type="checkbox" bind:checked={builderOptIn} class="mt-0.5 accent-terminal-cyan" />
-					<span>I approve the optional 0.1 bp Vice builder fee for eligible orders. This requests a one-time wallet approval; leaving it unchecked still enables local trading without builder attribution.</span>
-				</label>
-			{/if}
 			{#if enablePhase.kind === 'step'}
 				<div
 					data-testid="enablement-progress"
@@ -962,35 +929,6 @@
 					</div>
 				</div>
 			{/if}
-		{/if}
-		{#if $isConnected && $executionStatus === 'live' && $orderType === 'twap' && orderTypeRevenueDisclosure($orderType)}
-			<p class="text-3xs text-terminal-yellow mb-1.5">{orderTypeRevenueDisclosure($orderType)}</p>
-		{/if}
-		{#if $isConnected && $executionStatus === 'live' && referralConfigured()}
-			<div class="mb-1.5 rounded border border-terminal-border/60 bg-terminal-bg-secondary px-2 py-1.5 text-3xs text-terminal-text-muted">
-				<span>Optional referral: it can only be set if this account has no existing Hyperliquid referrer.</span>
-				{#if $revenueSyncStatus === 'live' && $revenueSnapshot}
-					<div class="mt-1">Referral: {$revenueSnapshot.referral.assigned ? ($revenueSnapshot.referral.code ?? 'assigned') : 'unassigned'} · Builder rewards: {$revenueSnapshot.referral.builderRewards.toFixed(4)} USDC</div>
-				{:else if $revenueSyncStatus === 'stale'}
-					<div class="mt-1 text-terminal-yellow">Revenue attribution is temporarily unavailable; no estimate is shown.</div>
-				{/if}
-				{#if !referralConfirmOpen}
-					<button data-action-id="ui.src.lib.components.orderticket.button.hbee1dad2e0" class="ml-1 text-terminal-cyan hover:underline" onclick={() => (referralConfirmOpen = true)}>Review optional referral</button>
-				{:else}
-					<div class="mt-1.5 rounded border border-terminal-yellow/40 bg-terminal-yellow/5 p-1.5 text-terminal-text">
-						<div>Vice will request referral code <span class="font-mono text-terminal-cyan">{configuredReferralCode() ?? 'configured code'}</span> for this wallet.</div>
-						<div class="mt-1 text-terminal-text-muted">Hyperliquid decides eligibility. Existing referrers are never overwritten. A wallet confirmation is required, and the result is verified afterward.</div>
-						<div class="mt-1.5 flex gap-1.5">
-							<button data-action-id="ui.src.lib.components.orderticket.button.h38ae150fb8" class="rounded border border-terminal-cyan/60 px-1.5 py-0.5 text-terminal-cyan hover:bg-terminal-cyan/10 disabled:opacity-50" disabled={referralBusy} onclick={requestReferral}>{referralBusy ? 'Waiting…' : 'Confirm and request'}</button>
-							<button data-action-id="ui.src.lib.components.orderticket.button.ha8e19a422a" class="rounded border border-terminal-border px-1.5 py-0.5 hover:bg-terminal-bg" disabled={referralBusy} onclick={() => (referralConfirmOpen = false)}>Cancel</button>
-						</div>
-					</div>
-				{/if}
-				{#if referralMessage}<div class="mt-1 text-terminal-text-muted">{referralMessage}</div>{/if}
-			</div>
-		{/if}
-		{#if submitError}
-			<p class="text-2xs text-terminal-red mb-1.5">{submitError}</p>
 		{/if}
 		<button data-action-id="ui.src.lib.components.orderticket.button.heb1fe67786" data-testid="order-submit"
 			class="w-full py-2.5 rounded font-medium text-sm transition-all active:scale-[0.98]

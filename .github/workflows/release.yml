@@ -40,9 +40,6 @@ concurrency:
   group: release-${{ github.ref }}
   cancel-in-progress: false
 
-env:
-  VICE_BACKEND_PORT: 8081
-
 jobs:
   build-release:
     name: Build immutable release artifact + manifest
@@ -74,7 +71,7 @@ jobs:
         # across SHAs — it is produced fresh and bound to this commit.
         run: |
           set -euo pipefail
-          bun run build:terminal
+          bun run build
           echo "Artifact dir: vice-terminal/.vercel/output"
           find vice-terminal/.vercel/output -type f | wc -l
 

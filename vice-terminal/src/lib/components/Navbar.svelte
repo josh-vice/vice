@@ -13,7 +13,6 @@
 		marketCatalogStatus,
 		accountSyncStatus,
 		activeAssetSyncStatus,
-		revenueSyncStatus,
 		selectedMarket,
 		cliOpen,
 		connectWallet,
@@ -28,26 +27,16 @@
 	import { requestWorkspaceLayoutReset, setWorkspaceLocked, setWorkspacePanel, setWorkspacePreset, workspaceLocked, workspacePanels, workspacePreset, type WorkspacePanel, type WorkspacePreset } from '$lib/workspacePreset';
 	import { DEFAULT_HOTKEYS, hotkeyFromEvent, loadHotkeys, setHotkeyBinding, type HotkeyAction, type HotkeyBindings } from '$lib/hotkeys';
 	import { canPresentAccountState, healthLabel } from '$lib/productionTruth';
-	import { Terminal, Wallet, LogOut, Download, Volume2, VolumeX, Eye, EyeOff, Lock, Unlock, LifeBuoy } from 'lucide-svelte';
+	import { Terminal, Wallet, LogOut, Volume2, VolumeX, Eye, EyeOff, Lock, Unlock, LifeBuoy } from 'lucide-svelte';
 	import { hyperliquidPublicNetwork, hyperliquidTradingNetwork } from '$lib/hl/network';
 	import { tradingKillSwitchActive, startReleasePolicyMonitor } from '$lib/execution/releaseSafety';
-	import { downloadLatencyEvidence } from '$lib/execution/latencyEvidence';
 	import ReportIssue from './ReportIssue.svelte';
 	import { onMount } from 'svelte';
 	import { installDiagnostics } from '$lib/diagnostics/wire';
 
 	let reportIssueOpen = $state(false);
-	let latencyMessage = $state('');
 	let workspaceMessage = $state('');
 
-	function downloadLatency(): void {
-		try {
-			const evidence = downloadLatencyEvidence(hyperliquidPublicNetwork.network);
-			latencyMessage = `Latency evidence downloaded (${evidence.samples.length} observed samples).`;
-		} catch (error) {
-			latencyMessage = error instanceof Error ? `Latency download failed: ${error.message}` : 'Latency download failed.';
-		}
-	}
 	async function logoutBeta(): Promise<void> {
 		await fetch('/api/beta/logout', { method: 'POST', headers: { 'content-type': 'application/json' } }).catch(() => undefined);
 		disconnectWallet();
@@ -119,7 +108,7 @@
 	let bindings = $state<HotkeyBindings>(DEFAULT_HOTKEYS);
 	const panels: Array<{ id: WorkspacePanel; label: string }> = [
 		{ id: 'watchlist', label: 'Watchlist' }, { id: 'marketData', label: 'Book & tape' },
-		{ id: 'ticket', label: 'Order ticket' }, { id: 'bottom', label: 'Account panel' }, { id: 'chat', label: 'The Pit' }
+		{ id: 'ticket', label: 'Order ticket' }, { id: 'bottom', label: 'Account panel' }
 	];
 	const hotkeyLabels: Array<{ id: HotkeyAction; label: string }> = [
 		{ id: 'buy', label: 'Buy side' }, { id: 'sell', label: 'Sell side' }, { id: 'size10', label: 'Size 10%' }, { id: 'size20', label: 'Size 20%' }, { id: 'size30', label: 'Size 30%' }, { id: 'size40', label: 'Size 40%' }, { id: 'size50', label: 'Size 50%' }, { id: 'size60', label: 'Size 60%' }, { id: 'size70', label: 'Size 70%' }, { id: 'size80', label: 'Size 80%' }, { id: 'size90', label: 'Size 90%' }, { id: 'time1m', label: 'Chart 1m' }, { id: 'time5m', label: 'Chart 5m' }, { id: 'time15m', label: 'Chart 15m' }, { id: 'time1h', label: 'Chart 1h' }, { id: 'time4h', label: 'Chart 4h' }, { id: 'time1d', label: 'Chart 1D' }, { id: 'armClick', label: 'Arm chart click placement' }, { id: 'cli', label: 'Toggle CLI' }, { id: 'focusChart', label: 'Focus chart' }, { id: 'focusBook', label: 'Focus book & tape' }, { id: 'focusTicket', label: 'Focus order ticket' }, { id: 'focusBottom', label: 'Focus account panel' }
@@ -153,11 +142,6 @@
 				class="px-2.5 py-1.5 text-xs font-medium rounded transition-colors {$marketType === 'spot' ? 'bg-terminal-bg-tertiary text-terminal-cyan' : 'text-terminal-text-secondary hover:text-terminal-text'}"
 				onclick={() => setMarketType('spot')}
 			>Spot</button>
-			<button data-action-id="ui.src.lib.components.navbar.button.h4091c0a56b" data-testid="prediction-filter"
-				aria-pressed={$marketType === 'prediction'}
-				class="px-2.5 py-1.5 text-xs font-medium rounded transition-colors {$marketType === 'prediction' ? 'bg-terminal-bg-tertiary text-terminal-yellow' : 'text-terminal-text-secondary hover:text-terminal-text'}"
-				onclick={() => setMarketType('prediction')}
-			>Prediction</button>
 		</div>
 	</div>
 
@@ -249,12 +233,6 @@
 			onclick={toggleCLI}
 			title="Toggle CLI (⌘K)"
 		><Terminal class="w-4 h-4" /></button>
-		<button data-action-id="ui.src.lib.components.navbar.button.hafe3bd1871"
-			class="hidden lg:flex p-1.5 rounded text-terminal-text-secondary hover:text-terminal-text hover:bg-terminal-bg-hover"
-			onclick={downloadLatency}
-			title="Download measured client latency evidence"
-			aria-label="Download measured client latency evidence"
-		><Download class="w-4 h-4" /></button>
 		<button data-action-id="ui.src.lib.components.navbar.button.hcda7934898"
 			class="hidden lg:flex p-1.5 rounded text-terminal-text-secondary hover:text-terminal-text hover:bg-terminal-bg-hover"
 			onclick={() => (reportIssueOpen = true)}
@@ -281,13 +259,6 @@
 					<span class="w-1.5 h-1.5 rounded-full {healthColor($activeAssetSyncStatus)}"></span>
 					<span>ASSET {healthLabel($activeAssetSyncStatus)}</span>
 				</div>
-			{/if}
-			<div class="flex items-center gap-1" title="Authoritative Hyperliquid referral and builder reward state">
-				<span class="w-1.5 h-1.5 rounded-full {healthColor($revenueSyncStatus)}"></span>
-				<span>REVENUE {healthLabel($revenueSyncStatus)}</span>
-			</div>
-			{#if latencyMessage}
-				<div data-testid="latency-status" class="sr-only" role="status" aria-live="polite">{latencyMessage}</div>
 			{/if}
 			{#if workspaceMessage}
 				<div data-testid="workspace-reset-status" class="sr-only" role="status" aria-live="polite">{workspaceMessage}</div>

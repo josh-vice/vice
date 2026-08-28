@@ -24,7 +24,6 @@ import {
 	algoServiceStatus,
 	candleDataStatus,
 	marketContextStatus,
-	revenueSyncStatus,
 	deadmanStatus
 } from '$lib/stores';
 import type { Readable } from 'svelte/store';
@@ -48,7 +47,6 @@ const HEALTH_STORES: Array<[string, HealthStore]> = [
 	['algoService', algoServiceStatus],
 	['candleData', candleDataStatus],
 	['marketContext', marketContextStatus],
-	['revenueSync', revenueSyncStatus],
 	['deadman', deadmanStatus as unknown as HealthStore]
 ];
 

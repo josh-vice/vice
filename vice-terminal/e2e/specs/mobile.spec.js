@@ -57,17 +57,14 @@ test('mobile order sheet opens through the shared OrderTicket path (no submit)',
 	// No order is placed.
 	await assertCleanRuntime(evidence);
 });
-test('mobile taxonomy keeps prediction outcomes read-only without a buy/sell CTA', async ({ page, evidence }) => {
+test('mobile taxonomy exposes only perps and spot markets', async ({ page, evidence }) => {
 	await seedMarketTaxonomyFixture(page);
 	await page.goto('/trade', { waitUntil: 'domcontentloaded', timeout: 60_000 });
-	await page.getByRole('button', { name: 'Prediction', exact: true }).click();
 	await page.getByRole('button', { name: 'Markets', exact: true }).click();
-	await page.getByRole('button', { name: /Toggle ETH \$4000 · Yes favorite ETH \$4000 · Yes/ }).click();
-	await page.getByRole('button', { name: 'Trade', exact: true }).click();
-	await expect(page.getByTestId('mobile-prediction-panel')).toBeVisible({ timeout: 20_000 });
-	await expect(page.getByTestId('mobile-market-disclosure')).toContainText('Venue: Hyperliquid');
-	await expect(page.getByTestId('mobile-prediction-panel').getByTestId('prediction-read-only-reason')).toContainText('lot, tick');
-	await expect(page.getByRole('button', { name: 'Buy', exact: true })).not.toBeVisible();
-	await expect(page.getByRole('button', { name: 'Sell', exact: true })).not.toBeVisible();
+	await expect(page.getByRole('button', { name: 'Prediction', exact: true })).toHaveCount(0);
+	await page.getByRole('button', { name: 'Perps', exact: true }).click();
+	await expect(page.getByRole('button', { name: /CORE PERPS/i })).toBeAttached();
+	await page.getByRole('button', { name: 'Spot', exact: true }).click();
+	await expect(page.getByRole('button', { name: 'Spot', exact: true })).toBeAttached();
 	await assertCleanRuntime(evidence);
 });

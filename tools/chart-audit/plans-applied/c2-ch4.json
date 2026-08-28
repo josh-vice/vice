@@ -1,9 +1,0 @@
-{
-  "course": 2,
-  "chapterId": 4,
-  "title": "Price Action Formations",
-  "module": "Price Action Concepts",
-  "edits": [],
-  "alreadyGood": ["introChart", "lessonChart", "quiz.chart"],
-  "notes": "REJECTED the auditor's sole proposed gap (lessonChart 'Resistance Zone' markArea 98-103). It is both an invention and a contradiction: (1) the chapter text never teaches a resistance level for this chart — the quoted bullet ('Three Inside Up ... bullish reversal; highest hit rate as both LTE trigger AND entry') describes a BULLISH reversal, not a reaction at resistance. (2) The 3IU sequence (idx 12,13,14 = prices ~91->96->103) does not reverse down at 98-103; it continues straight up to 114 (leg8 to:114, idx 15-17). Labeling 98-103 as 'Resistance Zone' would falsely imply price stalls there when it blasts through. The auditor even rated it 'low' confidence. The intro bullet 'Combine formations with key S/R levels' is already illustrated by the teal Support Zone (81-87) that the Morning Star bottoms into; per RESTRAINT, no extra level is warranted. All three slots are pedagogically complete: introChart draws both Support (80-85) and Resistance (98-103) zones plus all engulfing events; lessonChart labels both 3-candle formations as events anchored at support; quiz.chart correctly withholds the outcome pre-cut (cutIndex:10, only Support context shown) and routes Candle 1/2 + 'Three Inside Up!' + 'Confirmed Bounce' to revealMarkPoints. dataIndex authoring in all defs matches the leg math (0-based over summed bars). No fixes needed."
-}

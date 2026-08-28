@@ -41,7 +41,7 @@ describe('enablement reporter threading (reload/recovery and duplicate preventio
 	test('threads the phase reporter from the ticket through stores into the certified boundary', async () => {
 		expect(storesSource).toContain('onPhase?: EnablementReporter');
 		expect(storesSource).toContain('localExecution.initialize(provider, address, options, report)');
-		expect(localExecutionSource).toContain('unlockOrCreateAgent(provider, mainAddress, options, report)');
+		expect(localExecutionSource).toContain('unlockOrCreateAgent(provider, mainAddress, report)');
 		expect(vaultSource).toContain('onPhase?: EnablementReporter');
 	});
 

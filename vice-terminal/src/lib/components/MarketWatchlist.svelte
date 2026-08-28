@@ -109,9 +109,7 @@
 			cachedVisibleMarkets = $marketRegistry.filter((market) => {
 				const matchesType = $marketType === 'spot'
 					? market.kind === 'spot'
-					: $marketType === 'prediction'
-						? market.kind === 'outcome'
-						: market.kind === 'corePerp' || market.kind === 'hip3Perp';
+					: market.kind === 'corePerp' || market.kind === 'hip3Perp';
 				return matchesType && marketMatchesWatchlistQuery(market, query);
 			});
 			cachedHasVolume = cachedVisibleMarkets.some((market) => market.volume24h !== undefined);
@@ -185,7 +183,7 @@
 						<span>{row.group.label}</span><span class="ml-auto tabular-nums text-terminal-text-muted">{row.group.markets.length}</span>
 					</button>
 				{:else}
-					{@const priceAvailable = Number.isFinite(row.market.lastPrice) && (row.market.lastPrice !== 0 || row.market.kind === 'outcome')}
+					{@const priceAvailable = Number.isFinite(row.market.lastPrice)}
 					<div data-action-id="ui.src.lib.components.marketwatchlist.div.h4c5094dd00" role="button" tabindex="0" aria-pressed={$selectedMarket?.marketKey === row.market.marketKey} style="height:{ROW_HEIGHT}px" class="w-full grid grid-cols-[1fr_70px_55px] px-2 items-center text-left hover:bg-terminal-bg-hover {$selectedMarket?.marketKey === row.market.marketKey ? 'bg-terminal-bg-tertiary' : ''}" onclick={() => selectMarket(row.market)} onkeydown={(event) => selectFromKeyboard(event, row.market)}>
 						<div class="flex items-center gap-1 min-w-0">
 							<button data-action-id="ui.src.lib.components.marketwatchlist.button.h1a77aaacde" aria-label={`Toggle ${row.market.symbol} favorite`} class="p-0.5" onclick={(event) => toggleFavorite(event, row.market)} onkeydown={(event) => event.stopPropagation()}>

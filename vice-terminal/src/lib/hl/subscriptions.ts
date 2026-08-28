@@ -12,7 +12,6 @@ import {
 	marketRegistry,
 	perpMarketsList,
 	spotMarketsList,
-	outcomeMarketsList,
 	chartCandles,
 	liveCandle,
 	chartTimeframe,
@@ -92,7 +91,7 @@ function flushCatalogQuotes(): void {
 		const market = marketByApiCoin.get(apiCoin);
 		if (!market) continue;
 		market.lastPrice = price;
-		if (market.kind !== 'outcome') market.markPrice = price;
+		market.markPrice = price;
 	}
 	pendingCatalogQuotes.clear();
 	catalogUpdateCount += 1;
@@ -109,7 +108,7 @@ let lastSpotContextAt = 0;
 function selectedMarketContextIsHealthy(now = Date.now()): boolean {
 	const selected = get(selectedMarket);
 	if (!selected) return false;
-	const kind = selected.kind === 'spot' ? 'spot' : selected.kind === 'outcome' ? 'outcome' : 'perp';
+	const kind = selected.kind === 'spot' ? 'spot' : 'perp';
 	return contextIsHealthy(kind, lastPerpContextAt, lastSpotContextAt, now);
 }
 
@@ -327,29 +326,6 @@ function canonicalBookEvent(book: OrderBook, generation: number, subscriptionEpo
 	return hyperliquidBookEvent(market, book, get(bookSigFigs), generation, subscriptionEpoch, eventSequence, Date.now(), eventTimeMs);
 }
 
-function refreshOutcomeStats(coin: string): void {
-	const market = get(marketRegistry).find((candidate) => candidate.apiCoin === coin);
-	if (!market || market.kind !== 'outcome') return;
-	const candles = [...get(chartCandles), ...(get(liveCandle) ? [get(liveCandle)!] : [])].sort((left, right) => left.time - right.time);
-	if (candles.length === 0) return;
-	const cutoff = candles[candles.length - 1].time - 24 * 60 * 60;
-	const dayCandles = candles.filter((candle) => candle.time >= cutoff);
-	if (dayCandles.length === 0) return;
-	const firstClose = dayCandles[0].close;
-	const lastClose = dayCandles[dayCandles.length - 1].close;
-	const change = lastClose - firstClose;
-	const volume = dayCandles.reduce((sum, candle) => sum + (candle.volume ?? 0), 0);
-	marketRegistry.update((markets) => markets.map((candidate) =>
-		candidate.marketKey === market.marketKey
-			? { ...candidate, change24h: change, changePercent24h: firstClose > 0 ? (change / firstClose) * 100 : undefined, volume24h: volume }
-			: candidate
-	));
-	selectedMarket.update((selected) =>
-		selected?.marketKey === market.marketKey
-			? { ...selected, change24h: change, changePercent24h: firstClose > 0 ? (change / firstClose) * 100 : undefined, volume24h: volume }
-			: selected
-	);
-}
 
 /**
  * chartCandles holds only committed (closed) bars; the in-progress bar lives
@@ -366,12 +342,10 @@ function upsertCandle(candle: ReturnType<typeof normalizeCandle>, generation: nu
 	if (!previous || candle.time > previous.time) {
 		if (previous) chartCandles.update((existing) => [...existing, previous]);
 		liveCandle.set(candle);
-		refreshOutcomeStats(currentCoin);
 		return;
 	}
 	if (candle.time === previous.time) {
 		liveCandle.set(candle);
-		refreshOutcomeStats(currentCoin);
 		return;
 	}
 	// Out-of-order/backfill correction against already-committed history.
@@ -382,7 +356,6 @@ function upsertCandle(candle: ReturnType<typeof normalizeCandle>, generation: nu
 		updated[index] = candle;
 		return updated;
 	});
-	refreshOutcomeStats(currentCoin);
 }
 
 /**
@@ -405,7 +378,6 @@ function upsertTradeCandle(trade: { price: number; size: number; timestamp: numb
 	}
 	const next = merged[merged.length - 1];
 	if (next !== previous) liveCandle.set(next);
-	refreshOutcomeStats(currentCoin);
 }
 
 async function loadCandleHistory(coin: string, interval: string, generation: number): Promise<void> {
@@ -446,9 +418,7 @@ async function loadCandleHistory(coin: string, interval: string, generation: num
 		const liveDuringFlight = inProgress ? [...get(chartCandles), inProgress] : get(chartCandles);
 		const merged = mergeCandleSnapshot(candles, liveDuringFlight);
 		if (merged.length === 0) return;
-		chartCandles.set(merged.slice(0, -1));
 		liveCandle.set(merged[merged.length - 1]);
-		refreshOutcomeStats(coin);
 		saveCachedCandleHistory(hyperliquidPublicNetwork.network, marketKey, coin, interval, merged);
 	} catch (e) {
 		console.warn('[hl] candle snapshot failed:', e);
@@ -754,7 +724,7 @@ export async function subscribeAllMids(): Promise<void> {
 				const market = marketByApiCoin.get(apiCoin);
 				if (!market) continue;
 				market.lastPrice = price;
-				if (market.kind !== 'outcome') market.markPrice = price;
+				market.markPrice = price;
 				lastAllMidByApiCoin.set(apiCoin, event.receivedAtMs);
 				if (selected?.apiCoin !== apiCoin) pendingCatalogQuotes.set(apiCoin, price);
 			}
@@ -764,15 +734,7 @@ export async function subscribeAllMids(): Promise<void> {
 
 			if (selected && selectedUpdate) {
 				const price = selectedPrice;
-				selectedMarket.update((market) =>
-					market
-						? {
-								...market,
-								lastPrice: price,
-								...(market.kind === 'outcome' ? {} : { markPrice: price })
-							}
-						: market
-				);
+				selectedMarket.update((market) => market ? { ...market, lastPrice: price, markPrice: price } : market);
 				// Bootstrap identities intentionally start at zero. Keep the
 				// ticket actionable as soon as the live mid arrives, while never
 				// overwriting a price the trader has focused or edited.
@@ -797,7 +759,7 @@ export async function subscribeAllMids(): Promise<void> {
 		});
 		activeSubs.allDexsAssetCtxs.failureSignal.addEventListener('abort', () => {
 			marketContextStatus.set('stale');
-			if (get(selectedMarket)?.kind !== 'outcome') scheduleMarketRecovery();
+			scheduleMarketRecovery();
 		}, { once: true });
 
 		activeSubs.spotAssetCtxs = await client.spotAssetCtxs((data) => {
@@ -811,7 +773,7 @@ export async function subscribeAllMids(): Promise<void> {
 		});
 		activeSubs.spotAssetCtxs.failureSignal.addEventListener('abort', () => {
 			marketContextStatus.set('stale');
-			if (get(selectedMarket)?.kind !== 'outcome') scheduleMarketRecovery();
+			scheduleMarketRecovery();
 		}, { once: true });
 		midsSubActive = true;
 	} catch (e) {
@@ -843,7 +805,6 @@ export async function startHlFeeds(initialCoin?: string): Promise<void> {
 			marketRegistry.set(markets);
 			perpMarketsList.set(markets.filter((market) => market.kind === 'corePerp' || market.kind === 'hip3Perp'));
 			spotMarketsList.set(markets.filter((market) => market.kind === 'spot'));
-			outcomeMarketsList.set(markets.filter((market) => market.kind === 'outcome'));
 			if (!get(selectedMarket) && markets[0]) selectedMarket.set(markets[0]);
 		}
 		const selected = get(selectedMarket);
@@ -873,9 +834,6 @@ export async function startHlFeeds(initialCoin?: string): Promise<void> {
 	}
 }
 
-export async function stopHlFeedsForDexSwitch(): Promise<void> {
-	await stopHlFeeds();
-}
 
 export async function stopHlFeeds(): Promise<void> {
 	feedLifecycle += 1;

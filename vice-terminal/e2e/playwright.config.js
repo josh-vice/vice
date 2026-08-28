@@ -1,12 +1,8 @@
 /**
  * Playwright config for the production hydrated E2E suite.
  *
- * DISTINCTION FROM THE SSR TEST: `scripts/browser-surface.mjs` is the static
- * SSR smoke — it fetches server-rendered HTML and asserts the stable shell
- * (terminal-shell, workspace-host, market-data-health). This suite is the
- * HYDRAIED counterpart: a real Chromium browser runs the built app, mounts
- * Dockview, hydrates Chart/Book/Tape/Ticket, and asserts interaction. Keep
- * the two separate — the SSR test stays fetch-only and never runs a browser.
+ * A real Chromium browser runs the built terminal, mounts Dockview, hydrates
+ * Chart/Book/Tape/Ticket, and asserts the core interaction surface.
  *
  * Non-mutating by design: these specs never sign, never place/modify/cancel
  * an order, never touch a wallet or credentials. Venue reads are public

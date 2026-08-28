@@ -43,20 +43,4 @@ describe('complete market live context updates', () => {
 			expect(updated[0]).toBe(spot);
 			expect(updated[0]).toMatchObject({ apiCoin: '@1', lastPrice: 99, volume24h: 7 });
 	});
-		test('does not apply perp contexts to outcome asset ids', () => {
-			const outcome = {
-				...perp('outcome:12:1', null, 'Election · No', 100_000_121),
-				apiCoin: '#121',
-				kind: 'outcome',
-				type: 'spot',
-				lastPrice: 0,
-				markPrice: undefined,
-				indexPrice: undefined,
-				change24h: undefined,
-				changePercent24h: undefined,
-				volume24h: undefined
-			};
-			const updated = applyAllDexPerpContexts([outcome], [['', Array.from({ length: 122 }, (_, index) => index === 121 ? { midPx: '0.8', markPx: '0.8', prevDayPx: '0.5', dayNtlVlm: '99' } : {})]]);
-			expect(updated[0]).toMatchObject({ apiCoin: '#121', lastPrice: 0, volume24h: undefined, change24h: undefined });
-		});
 });

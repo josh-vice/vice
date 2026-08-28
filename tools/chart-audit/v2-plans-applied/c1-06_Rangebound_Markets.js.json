@@ -1,8 +1,0 @@
-{
-  "course": "1",
-  "file": "06_Rangebound_Markets.js",
-  "lessonId": "course1/06_rangebound_markets",
-  "edits": [],
-  "alreadyGood": ["the-range", "breakout", "breakdown"],
-  "notes": "All three CHART beats are genuinely complete; CONCEPT beats (intro, players, recap) draw nothing and are skipped. the-range (range_bound): level on high + low and zone below high / above low cover every locatable say reference (range high resistance, range low support, sellers/supply, buyers/demand) — both high(L) and low(L) are valid level anchors for zone+level. breakout (consolidation_breakout dir=up): level rangeHigh(L)/rangeLow(L) + marker on breakout(pt) — anchor 'breakout' is the only point anchor the move exposes and the marker correctly attaches there ('breaks out above the range'). breakdown (consolidation_breakout dir=down): there is NO 'breakdown' anchor on this move; the auditor correctly used at:'breakout' (the sole point anchor) for the marker 'buyers exhausted — breakdown' — valid and non-throwing. No missed gaps and no noAnchorGaps. Agree with the auditor on all beats."
-}

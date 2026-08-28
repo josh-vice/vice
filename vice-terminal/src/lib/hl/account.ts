@@ -9,8 +9,6 @@ import {
 	fills,
 	openOrders,
 	positions,
-	revenueSnapshot,
-	revenueSyncStatus,
 	twapJobs,
 	activeAssetSyncStatus,
 	selectedMarket
@@ -44,15 +42,12 @@ const snapshotCoordinator = createSnapshotCoordinator(async (): Promise<boolean>
 		fills.set((snapshot.fills ?? []).map(hydrateMarketIdentity));
 		twapJobs.set(snapshot.twaps ?? []);
 		balances.set(snapshot.balances ?? []);
-		revenueSnapshot.set(snapshot.revenue ?? null);
-		revenueSyncStatus.set(snapshot.revenue?.status === 'live' ? 'live' : 'stale');
 		activeSubaccount.update((account) => ({ ...account, ...(snapshot.account ?? {}) }));
 		accountSyncStatus.set('live');
 		return true;
 	} catch (error) {
 		if (address === currentAddress && generation === accountGeneration) {
 			accountSyncStatus.set('error');
-			revenueSyncStatus.set('error');
 		}
 		throw error;
 	}
@@ -65,7 +60,6 @@ function bindTransportHealth(): void {
 	socket.addEventListener('close', () => {
 		if (!currentAddress) return;
 		accountSyncStatus.set('stale');
-		revenueSyncStatus.set('stale');
 		scheduleSubscriptionRecovery(currentAddress);
 	});
 	socket.addEventListener('open', () => {
@@ -163,7 +157,7 @@ export async function startAccountSubscriptions(address: string): Promise<void> 
 /** Keep the selected market's account/asset stream aligned with the chart. */
 export async function setActiveAccountAsset(market?: Pick<MarketDescriptor, 'apiCoin' | 'kind'>): Promise<void> {
 	const generation = ++activeAssetGeneration;
-	const isNonPerp = market?.kind === 'spot' || market?.kind === 'outcome';
+	const isNonPerp = market?.kind === 'spot';
 	activeAssetSyncStatus.set(isNonPerp ? 'idle' : market ? 'connecting' : 'idle');
 	try {
 		await activeAssetSubscription?.unsubscribe();
@@ -240,8 +234,6 @@ export async function stopAccountSubscriptions(): Promise<void> {
 	fills.set([]);
 	twapJobs.set([]);
 	balances.set([]);
-	revenueSnapshot.set(null);
-	revenueSyncStatus.set('idle');
 	activeSubaccount.update((account) => ({ ...account, equity: 0, marginUsed: 0, marginFree: 0 }));
 	accountSyncStatus.set('idle');
 }

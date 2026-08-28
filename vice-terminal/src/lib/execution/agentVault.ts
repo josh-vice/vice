@@ -2,7 +2,6 @@ import { ExchangeClient, HttpTransport, InfoClient } from '@nktkas/hyperliquid';
 import type { AbstractWallet } from '@nktkas/hyperliquid/signing';
 import { createWalletClient, custom, isAddress, type Address, type EIP1193Provider, type Hex } from 'viem';
 import { generatePrivateKey, privateKeyToAccount, type PrivateKeyAccount } from 'viem/accounts';
-import { BUILDER_APPROVAL_RATE, builderFeeIsApproved, configuredBuilder } from './revenueConfig';
 import { hyperliquidNetwork } from '$lib/hl/network';
 import {
 	ENABLEMENT_STEP_DETAIL,
@@ -21,14 +20,11 @@ interface AgentRecord {
 	ciphertext: string;
 	iv: string;
 	salt: string;
-	builderApproved: boolean;
-	referralAttempted: boolean;
 }
 
 export interface AgentSession {
 	mainAddress: Address;
 	agent: PrivateKeyAccount;
-	builder?: { b: Address; f: number };
 }
 
 function isTestnet(): boolean {
@@ -138,9 +134,6 @@ function ownerExchange(provider: EIP1193Provider, mainAddress: Address): Exchang
 	});
 }
 
-function ownerInfo(): InfoClient {
-	return new InfoClient({ transport: new HttpTransport({ isTestnet: isTestnet() }) });
-}
 
 export function assertConnectedAccount(accounts: string[], expected: string): void {
 	if (!accounts.some((account) => account.toLowerCase() === expected.toLowerCase())) {
@@ -167,7 +160,6 @@ export async function assertProviderAccount(
 export async function unlockOrCreateAgent(
 	provider: EIP1193Provider,
 	address: string,
-	options: { approveBuilder?: boolean } = {},
 	onPhase?: EnablementReporter
 ): Promise<AgentSession> {
 	const report = onPhase ?? noopEnablementReporter;
@@ -204,75 +196,12 @@ export async function unlockOrCreateAgent(
 			version: VERSION,
 			mainAddress,
 			agentAddress: agent.address,
-			...encrypted,
-			builderApproved: false,
-			referralAttempted: false
+			...encrypted
 		};
 
 		await assertProviderAccount(provider, mainAddress);
 		await ownerExchange(provider, mainAddress).approveAgent({ agentAddress: agent.address, agentName: AGENT_NAME });
-		// Persist only after venue approval, and before optional revenue actions, so
-		// a revenue approval failure never creates a second orphaned agent.
 		writeRecord(record);
 	}
-
-	// Builder approval is a separate user choice from unlocking the local agent.
-	// A user can trade with the agent while declining all Vice monetization.
-	const builder = options.approveBuilder ? configuredBuilder() : null;
-	const info = ownerInfo();
-	if (builder) {
-		try {
-			let approved = builderFeeIsApproved(await info.maxBuilderFee({ user: mainAddress, builder }));
-			if (!approved) {
-				await assertProviderAccount(provider, mainAddress);
-				await ownerExchange(provider, mainAddress).approveBuilderFee({ builder, maxFeeRate: BUILDER_APPROVAL_RATE });
-				approved = builderFeeIsApproved(await info.maxBuilderFee({ user: mainAddress, builder }));
-			}
-			record.builderApproved = approved;
-		} catch {
-			// Declining or failing optional builder approval must never block trading.
-			record.builderApproved = false;
-		}
-		writeRecord(record);
-	}
-	return {
-		mainAddress,
-		agent,
-		builder: builder && record.builderApproved ? { b: builder, f: 1 } : undefined
-	};
-}
-
-export type ReferralResult =
-	| { status: 'not-configured' | 'not-unlocked' | 'already-assigned' | 'assigned'; message: string }
-	| { status: 'failed'; message: string };
-
-/** Explicit, non-blocking referral action. It never runs during wallet unlock. */
-export async function requestConfiguredReferral(provider: EIP1193Provider, address: string): Promise<ReferralResult> {
-	const referralCode = import.meta.env.VITE_HL_REFERRAL_CODE?.trim();
-	if (!referralCode) return { status: 'not-configured', message: 'No referral is configured.' };
-	if (!isAddress(address)) return { status: 'failed', message: 'Connected wallet returned an invalid address.' };
-	const mainAddress = address as Address;
-	const record = readRecord(mainAddress);
-	if (!record) return { status: 'not-unlocked', message: 'Enable secure trading before setting the optional referral.' };
-	try {
-		const info = ownerInfo();
-		const before = await info.referral({ user: mainAddress });
-		if (before.referredBy !== null) {
-			record.referralAttempted = true;
-			writeRecord(record);
-			return { status: 'already-assigned', message: 'This Hyperliquid account already has a referrer; Vice did not change it.' };
-		}
-		await assertProviderAccount(provider, mainAddress);
-		await ownerExchange(provider, mainAddress).setReferrer({ code: referralCode });
-		// A provider can switch accounts while a wallet prompt is open. Do not
-		// report success for the original account if that happened.
-		await assertProviderAccount(provider, mainAddress);
-		const after = await info.referral({ user: mainAddress });
-		if (after.referredBy?.code !== referralCode) throw new Error('Referral assignment was not verified by Hyperliquid');
-		record.referralAttempted = true;
-		writeRecord(record);
-		return { status: 'assigned', message: 'Optional Vice referral assigned and verified.' };
-	} catch (error) {
-		return { status: 'failed', message: error instanceof Error ? error.message : 'Referral assignment was not completed.' };
-	}
+	return { mainAddress, agent };
 }

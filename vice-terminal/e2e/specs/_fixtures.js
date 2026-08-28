@@ -105,18 +105,8 @@ export async function seedMarketTaxonomyFixture(page) {
 			baseToken: 'BTC', quoteToken: 'USDC', szDecimals: 5, priceDecimals: 3,
 			symbol: 'BTC-USDC', name: 'BTC / USDC', type: 'spot', maxLeverage: undefined
 		};
-		const outcome = (side, name) => ({
-			marketKey: `outcome:1161:${side}`, apiCoin: `#${11610 + side}`,
-			assetId: 100011610 + side, kind: 'outcome', dex: null, baseToken: name, quoteToken: 'USDC',
-			szDecimals: 0, priceDecimals: 5, symbol: `ETH $4000 · ${name}`, name: 'ETH above $4000',
-			type: 'spot', lastPrice: side === 0 ? 0.12996 : 0.87004, change24h: undefined,
-			changePercent24h: undefined, volume24h: undefined,
-			outcome: { outcomeId: 1161, side, questionName: 'ETH above $4000', questionDescription: 'Will ETH settle above $4,000?', outcomeDescription: name, sideName: name, outcomeContext: { underlying: 'ETH', targetPrice: 4000, expiry: '2026-12-31' }, settled: false },
-			tradingAvailability: 'metadataOnly',
-			tradingUnavailableReason: 'Hyperliquid outcome metadata does not provide lot, tick, or complete execution terms.'
-		});
 		localStorage.setItem('vice.hl.market-catalog.v1', JSON.stringify({
-			network: 'mainnet', savedAt: Date.now(), markets: [perp, hip3, spot, outcome(0, 'Yes'), outcome(1, 'No')]
+			network: 'mainnet', savedAt: Date.now(), markets: [perp, hip3, spot]
 		}));
 	});
 }

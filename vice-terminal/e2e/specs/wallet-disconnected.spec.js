@@ -70,13 +70,3 @@ test('secure-trading preconditions render without triggering a signature (MOCK p
 		ignoreConsole: []
 	});
 });
-test('wallet-disconnected prediction outcome never exposes signer preconditions', async ({ page, evidence }) => {
-	await seedMarketTaxonomyFixture(page);
-	await page.goto('/trade', { waitUntil: 'domcontentloaded', timeout: 60_000 });
-	await page.getByRole('button', { name: 'Prediction', exact: true }).click();
-	await page.getByRole('button', { name: /Toggle ETH \$4000 · Yes favorite ETH \$4000 · Yes/ }).click();
-	await expect(page.getByTestId('workspace-host').getByTestId('prediction-market-panel')).toBeVisible({ timeout: 20_000 });
-	await expect(page.getByTestId('workspace-host').getByTestId('prediction-read-only-reason')).toContainText('lot, tick');
-	await expect(page.getByText('Connect to trade', { exact: false })).not.toBeVisible();
-	await assertCleanRuntime(evidence);
-});

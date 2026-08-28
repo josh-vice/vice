@@ -6,8 +6,6 @@ import {
 	applyPerpCategories,
 	indexNamedPerpDexes,
 	createCoreBtcBootstrapMarket
-	, descriptorsFromOutcomeMeta
-	, deriveOutcomeAssetId
 	, hyperliquidInstrumentId
 	, canonicalSpotAssets
 	, canonicalSpotSizeDecimals
@@ -47,33 +45,6 @@ describe('Hyperliquid market identity', () => {
 		expect(categorized.map((market) => market.venueCategory)).toEqual(['crypto', 'stocks']);
 	});
 
-	test('preserves official binary outcome identities without inventing execution terms', () => {
-		expect(deriveOutcomeAssetId(12, 1)).toBe(100_000_121);
-		expect(() => deriveOutcomeAssetId(12, 2)).toThrow();
-		const markets = descriptorsFromOutcomeMeta({
-			outcomes: [{ outcome: 12, name: 'Election', description: 'Result', sideSpecs: [{ name: 'Yes' }, { name: 'No' }] }],
-			questions: [{ question: 3, name: 'Election result', description: 'Who wins?', fallbackOutcome: 12, namedOutcomes: [12], settledNamedOutcomes: [] }]
-		});
-		expect(markets.map((market) => market.apiCoin)).toEqual(['#120', '#121']);
-		expect(markets[0]).toMatchObject({ kind: 'outcome', tradingAvailability: 'metadataOnly', outcome: { questionName: 'Election result', side: 0 } });
-	});
-	test('keeps outcome stats unavailable until authoritative public data arrives', () => {
-		const [market] = descriptorsFromOutcomeMeta({
-			outcomes: [{ outcome: 12, name: 'Election', description: '{"underlying":"ETH","expiry":"2026-12-31","targetPrice":4000}', sideSpecs: [{ name: 'Yes' }, { name: 'No' }] }],
-			questions: [{ question: 3, name: 'Election result', description: 'Who wins?', fallbackOutcome: 12, namedOutcomes: [12], settledNamedOutcomes: [] }]
-		});
-		expect(market).toMatchObject({
-			lastPrice: 0,
-			priceDecimals: 5,
-			volume24h: undefined,
-			change24h: undefined,
-			changePercent24h: undefined,
-			outcome: {
-				rawDescription: '{"underlying":"ETH","expiry":"2026-12-31","targetPrice":4000}',
-				outcomeContext: { underlying: 'ETH', expiry: '2026-12-31', targetPrice: 4000 }
-			}
-		});
-	});
 
 	test('uses venue precision rules', () => {
 		expect(derivePriceDecimals(5, false)).toBe(1);
@@ -84,7 +55,6 @@ describe('Hyperliquid market identity', () => {
 			pricePrecision: { kind: 'significantFigures', maxSignificantFigures: 5, maxDecimals: 1, integerPricesAllowed: true },
 			sizeIncrement: '0.00001'
 		}));
-		expect(hyperliquidInstrumentId({ ...createCoreBtcBootstrapMarket(), kind: 'outcome', apiCoin: '#120', priceDecimals: 5, szDecimals: 0 })).toEqual(expect.objectContaining({ instrumentKey: 'hyperliquid:outcome:#120', product: 'outcome', sizeIncrement: '1' }));
 	});
 
 	test('preserves sparse official perp DEX indexes', () => {
@@ -145,6 +115,6 @@ describe('Hyperliquid market identity', () => {
 		expect(source).toContain("marketCatalogStatus.set(hasWarmCatalog ? 'stale' : 'connecting');");
 		expect(source).toContain('writeCachedMarketCatalog(markets);');
 		expect(source).toContain('typeof market.marketKey === \'string\'');
-		expect(source).toContain("market.kind === 'corePerp' || market.kind === 'hip3Perp' || market.kind === 'spot' || market.kind === 'outcome'");
+		expect(source).toContain("market.kind === 'corePerp' || market.kind === 'hip3Perp' || market.kind === 'spot'");
 	});
 });

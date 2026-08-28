@@ -45,7 +45,6 @@ describe('E2E suite structure (static gate — no browser)', () => {
 			'workspace-layout.spec.js',
 			'panels-status.spec.js',
 			'wallet-disconnected.spec.js',
-			'feed-pwa.spec.js',
 			'mobile.spec.js',
 			'quality.spec.js',
 			'diagnostics.spec.js'
@@ -122,16 +121,4 @@ describe('E2E suite structure (static gate — no browser)', () => {
 		expect(runner).toContain('E2E_ONLY');
 	});
 
-	test('hydrated E2E is distinct from the SSR browser-surface test', async () => {
-		const ssr = await read(resolve(ROOT, 'scripts/browser-surface.mjs'));
-		// SSR test is fetch-only: it must NOT import or drive Playwright.
-		expect(ssr).not.toContain('playwright');
-		expect(ssr).not.toContain('chromium');
-		// The SSR test asserts only server-rendered shell hooks.
-		expect(ssr).toContain('data-testid="terminal-shell"');
-		expect(ssr).not.toContain('trading-chart');
-		// The hydrated suite asserts the client-mounted surfaces instead.
-		const cold = await read(`${E2E}/specs/cold-load.spec.js`);
-		expect(cold).toContain('trading-chart');
-	});
 });

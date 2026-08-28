@@ -7,17 +7,13 @@
 	import MarketDataWorkspacePanel from './MarketDataWorkspacePanel.svelte';
 	import OrderTicket from './OrderTicket.svelte';
 	import BottomPanel from './BottomPanel.svelte';
-	import MarketSnapshotPanel from './MarketSnapshotPanel.svelte';
-	import PitChat from './PitChat.svelte';
 	import { get } from 'svelte/store';
 	import { loadWorkspaceLayout, removeWorkspaceLayout, saveWorkspaceLayout } from '$lib/workspaceLayout';
 	import { workspaceLocked, workspacePanels, workspacePreset, WORKSPACE_TOPOLOGIES } from '$lib/workspacePreset';
-	import { chartTimeframe, selectedMarket } from '$lib/stores';
 	import { startRuntimeHealthTelemetry } from '$lib/native/performance';
-	import { loadWorkspaceLinkContexts, setWorkspaceLinkContext, WORKSPACE_LINK_GROUPS } from '$lib/workspaceLinks';
 	import 'dockview/dist/styles/dockview.css';
 
-	type PanelName = 'watchlist' | 'chart' | 'market-data' | 'ticket' | 'activity' | 'chat' | 'market-snapshot';
+	type PanelName = 'watchlist' | 'chart' | 'market-data' | 'ticket' | 'activity';
 	let host: HTMLDivElement;
 
 	const componentFor: Record<PanelName, any> = {
@@ -25,9 +21,7 @@
 		chart: Chart,
 		'market-data': MarketDataWorkspacePanel,
 		ticket: OrderTicket,
-		activity: BottomPanel,
-		chat: PitChat,
-		'market-snapshot': MarketSnapshotPanel
+		activity: BottomPanel
 	};
 
 	onMount(() => {
@@ -41,7 +35,6 @@
 		let api: DockviewApi | undefined;
 		let subscriptionsReady = false;
 		const stopRuntimeHealthTelemetry = startRuntimeHealthTelemetry();
-		loadWorkspaceLinkContexts();
 
 		const persist = () => {
 			if (disposed || !api || $workspaceLocked) return;
@@ -65,9 +58,6 @@
 				: undefined;
 			const watchlist = $workspacePanels.watchlist && WORKSPACE_TOPOLOGIES[$workspacePreset].watchlist
 				? api.addPanel({ id: 'watchlist', component: 'watchlist', title: 'Markets', position: { referencePanel: chart, direction: 'left' }, initialWidth: 280, minimumWidth: 200 })
-				: undefined;
-			const chat = $workspacePanels.chat && !$workspaceLocked
-				? api.addPanel({ id: 'chat', component: 'chat', title: 'The Pit', position: { referencePanel: watchlist ?? chart, direction: 'below' }, initialHeight: 220, minimumHeight: 140 })
 				: undefined;
 			const ticket = $workspacePanels.ticket && WORKSPACE_TOPOLOGIES[$workspacePreset].ticket
 				? api.addPanel({ id: 'ticket', component: 'ticket', title: 'Order ticket', position: { referencePanel: chart, direction: 'right' }, initialWidth: 320, minimumWidth: 280 })
@@ -96,7 +86,6 @@
 			const topology = WORKSPACE_TOPOLOGIES[$workspacePreset];
 			const desired = {
 				watchlist: topology.watchlist && $workspacePanels.watchlist,
-				chat: !$workspaceLocked && $workspacePanels.chat,
 				marketData: topology.marketData && $workspacePanels.marketData,
 				ticket: topology.ticket && $workspacePanels.ticket,
 				activity: topology.bottom && $workspacePanels.bottom
@@ -132,9 +121,6 @@
 					title: 'Order ticket',
 					position: { referencePanel: marketData ?? chart, direction: 'right' }
 				});
-			}
-			if (desired.chat && !api.getPanel('chat')) {
-				api.addPanel({ id: 'chat', component: 'chat', title: 'The Pit', position: { referencePanel: watchlist ?? chart, direction: 'below' } });
 			}
 			if (desired.activity && !api.getPanel('activity')) {
 				api.addPanel({ id: 'activity', component: 'activity', title: 'Account activity', position: { referencePanel: chart, direction: 'below' } });
@@ -191,47 +177,12 @@
 							label: 'Float panel',
 							action: () => dockApi.addFloatingGroup(panel)
 						},
-					{
-						label: 'Pop out panel',
-						action: () => void dockApi.addPopoutGroup(panel, { popoutUrl: '/popout.html' })
-					},
-					{
-						label: 'Open current market snapshot',
-						disabled: !$selectedMarket,
-						action: () => {
-							const market = $selectedMarket;
-							if (!market) return;
-							dockApi.addPanel({
-								id: `market-snapshot:${market.marketKey}:${crypto.randomUUID()}`,
-								component: 'market-snapshot',
-								title: `${market.symbol} snapshot`,
-								params: { marketKey: market.marketKey },
-								position: { referencePanel: panel, direction: 'right' },
-								initialWidth: 260,
-								inactive: true
-							});
+						{
+							label: 'Pop out panel',
+							action: () => void dockApi.addPopoutGroup(panel, { popoutUrl: '/popout.html' })
 						}
-					},
-					...WORKSPACE_LINK_GROUPS.map((linkGroup) => ({
-						label: `Open and set ${linkGroup} public link`,
-						disabled: !$selectedMarket,
-						action: () => {
-							const market = $selectedMarket;
-							if (!market) return;
-							setWorkspaceLinkContext(linkGroup, { marketKey: market.marketKey, timeframe: $chartTimeframe });
-							dockApi.addPanel({
-								id: `market-snapshot:${linkGroup}:${market.marketKey}:${crypto.randomUUID()}`,
-								component: 'market-snapshot',
-								title: `${market.symbol} · ${linkGroup}`,
-								params: { marketKey: market.marketKey, linkGroup, timeframe: $chartTimeframe },
-								position: { referencePanel: panel, direction: 'right' },
-								initialWidth: 260,
-								inactive: true
-							});
-						}
-					}))
 					];
-					},
+				},
 				createComponent: (options: { name: string }) => {
 					const component = componentFor[options.name as PanelName];
 					if (!component) throw new Error(`Unknown Vice workspace panel: ${options.name}`);

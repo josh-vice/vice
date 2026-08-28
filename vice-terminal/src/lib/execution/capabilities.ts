@@ -39,7 +39,8 @@ const CERTIFICATION_ENV_KEYS: Partial<Record<OrderType, string>> = {
 /**
  * Advanced order types are a release capability, not a UI preference. The
  * global flag is a release kill-switch; every advanced family must also have
- * its own funded-testnet certification flag before it can appear or execute.
+ * its own funded-testnet certification flag. Mainnet beta builds keep every
+ * advanced family disabled until a release-specific evidence binding exists.
  */
 export function isAdvancedOrderCertified(
 	type: OrderType,
@@ -47,6 +48,8 @@ export function isAdvancedOrderCertified(
 	typeFlag = certificationFlag(type)
 ): boolean {
 	if (!ADVANCED_ORDER_TYPES.has(type)) return true;
+	const network = import.meta.env.VITE_HL_TRADING_NETWORK ?? (import.meta.env.VITE_HL_NETWORK === 'mainnet' ? 'mainnet' : 'testnet');
+	if (network === 'mainnet') return false;
 	return flag === 'true' && typeFlag === 'true';
 }
 

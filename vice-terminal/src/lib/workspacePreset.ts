@@ -1,20 +1,18 @@
 import { get, writable, type Writable } from 'svelte/store';
 
 export type WorkspacePreset = 'default' | 'chart' | 'data';
-export type WorkspacePanel = 'watchlist' | 'marketData' | 'ticket' | 'bottom' | 'chat';
+export type WorkspacePanel = 'watchlist' | 'marketData' | 'ticket' | 'bottom';
 export type WorkspacePanels = Record<WorkspacePanel, boolean>;
 export const WORKSPACE_TOPOLOGIES: Record<WorkspacePreset, Readonly<Record<WorkspacePanel, boolean>>> = {
-	default: { watchlist: true, marketData: true, ticket: true, bottom: true, chat: false },
-	chart: { watchlist: false, marketData: false, ticket: false, bottom: false, chat: false },
-	data: { watchlist: true, marketData: true, ticket: false, bottom: true, chat: false }
+	default: { watchlist: true, marketData: true, ticket: true, bottom: true },
+	chart: { watchlist: false, marketData: false, ticket: false, bottom: false },
+	data: { watchlist: true, marketData: true, ticket: false, bottom: true }
 };
 export const WORKSPACE_ACTION_IDS = {
 	preset: 'workspace.preset',
 	lock: 'workspace.lock',
 	reset: 'workspace.reset',
-	panel: 'workspace.panel',
-	link: 'workspace.link',
-	contextAction: 'workspace.context-action'
+	panel: 'workspace.panel'
 } as const;
 
 const STORAGE_KEY = 'vice.workspace-preset.v1';
@@ -42,8 +40,7 @@ export function loadWorkspacePreset(): WorkspacePreset {
 				watchlist: typeof panelValue.watchlist === 'boolean' ? panelValue.watchlist : true,
 				marketData: typeof panelValue.marketData === 'boolean' ? panelValue.marketData : true,
 				ticket: typeof panelValue.ticket === 'boolean' ? panelValue.ticket : true,
-				bottom: typeof panelValue.bottom === 'boolean' ? panelValue.bottom : true,
-				chat: typeof panelValue.chat === 'boolean' ? panelValue.chat : true
+				bottom: typeof panelValue.bottom === 'boolean' ? panelValue.bottom : true
 			});
 		}
 		// Locked by default; only a deliberate user toggle (or existing stored

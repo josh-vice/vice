@@ -38,7 +38,7 @@ export interface MarketDescriptor {
 	marketKey: string;
 	apiCoin: string;
 	assetId: number;
-	kind: 'corePerp' | 'hip3Perp' | 'spot' | 'outcome';
+	kind: 'corePerp' | 'hip3Perp' | 'spot';
 	dex: string | null;
 	/** Venue-provided token names for labels; never derive routing from symbol text. */
 	baseToken: string;
@@ -60,11 +60,6 @@ export interface MarketDescriptor {
 	indexPrice?: number;
 	/** Exact public category from Hyperliquid's perpCategories response. */
 	venueCategory?: string;
-	/** Venue-supplied prediction-market context; absent fields remain absent. */
-	outcome?: { outcomeId: number; side: number; questionName?: string; questionDescription?: string; outcomeDescription?: string; sideName?: string; rawDescription?: string; settled?: boolean; outcomeContext?: { underlying?: string; expiry?: string; targetPrice?: number; period?: string } };
-	/** A catalog item may be discoverable before the venue supplies enough terms to trade safely. */
-	tradingAvailability?: 'available' | 'metadataOnly';
-	tradingUnavailableReason?: string;
 	/** Canonical routing identity when complete venue execution terms exist. */
 	instrument?: InstrumentId;
 }
@@ -174,68 +169,6 @@ export interface Balance {
 	equity: number;
 }
 
-export interface RevenueSnapshot {
-	status: 'live' | 'degraded';
-	referral: {
-		assigned: boolean;
-		code?: string;
-		cumVolume: number;
-		unclaimedRewards: number;
-		claimedRewards: number;
-		builderRewards: number;
-	};
-	fees: {
-		activeReferralDiscount: number;
-		userCrossRate: number;
-		userAddRate: number;
-	};
-	error?: string;
-}
-
-export interface OptionContract {
-	symbol: string;
-	underlying: string;
-	strike: number;
-	expiry: string;
-	expiryTimestamp: number;
-	optionType: 'call' | 'put';
-	bid: number;
-	ask: number;
-	last: number;
-	iv: number;
-	volume: number;
-	openInterest: number;
-	delta: number;
-	gamma: number;
-	theta: number;
-	vega: number;
-	rho?: number;
-	isITM: boolean;
-	isATM: boolean;
-}
-
-export interface OptionChain {
-	underlying: string;
-	spotPrice: number;
-	expiries: string[];
-	strikes: number[];
-	contracts: OptionContract[];
-}
-
-export interface Greeks {
-	delta: number;
-	gamma: number;
-	theta: number;
-	vega: number;
-	rho?: number;
-}
-
-export interface PortfolioGreeks extends Greeks {
-	netDelta: number;
-	netGamma: number;
-	netTheta: number;
-	netVega: number;
-}
 
 export interface Subaccount {
 	id: string;
@@ -268,7 +201,7 @@ export type OrderType =
 	| 'bracket'
 	| 'oco'
 	| 'ping_pong';
-export type MarketType = 'perp' | 'spot' | 'prediction';
+export type MarketType = 'perp' | 'spot';
 
 export type ChartActiveField =
 	| 'entry'

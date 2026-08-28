@@ -1,8 +1,0 @@
-{
-  "course": "4",
-  "file": "14_PAL.js",
-  "lessonId": "course4/14_pal",
-  "edits": [],
-  "alreadyGood": ["chart"],
-  "notes": "Single CHART beat 'chart' (move color_tool, scheme pal, stage all). The say teaches three locatable things: candle colouring by trend, a resistance level up top, and a support level below. The candle colouring is drawn by the color_tool move itself (no anchor needed). The resistance and support are both already labelled by the two existing show items — level at resLevel ('PAL level — resistance') and level at supLevel ('PAL level — support'). Both anchors (resLevel, supLevel) are valid (L) anchors for color_tool, kinds match (level needs an L anchor), labels match the say wording ('a clear resistance up top and support below'), sides are sane. The unused point anchors top/bottom are not referenced as separate teaching points by the say, so adding markers there would be over-annotation. No gaps, no fixes, no noAnchorGaps. Other beats (intro, use, recap) are CONCEPT-only and cannot draw. Auditor's alreadyComplete verdict confirmed."
-}

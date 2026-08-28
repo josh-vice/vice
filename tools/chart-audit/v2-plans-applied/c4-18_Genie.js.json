@@ -1,8 +1,0 @@
-{
-  "course": "4",
-  "file": "18_Genie.js",
-  "lessonId": "course4/18_genie",
-  "edits": [],
-  "alreadyGood": [ "chart" ],
-  "notes": "Only one auditable beat: 'chart' (move color_tool, scheme genie, stage all). color_tool exposes top(pt), bottom(pt), resLevel(L), supLevel(L). The two existing markers — at 'top' ('red hues — possible local top', dot/above) and at 'bottom' ('green hues — possible local bottom', dot/below) — are anchor-valid (markers on point anchors), label/place-correct, and directly teach the say's two locatable references: 'As price climbs into a local top, the candles take on red hues' and 'As price bottoms out, the hues shift to teal, suggesting a local bottom forming'. No redundancy, nothing missed. 'resistance' is mentioned only in the CONCEPT beat 'use' (no chart), so no resLevel anchor is warranted here. Beats intro/use/recap are CONCEPT (text-only, no chart) — skipped. Auditor's alreadyComplete verdict confirmed."
-}

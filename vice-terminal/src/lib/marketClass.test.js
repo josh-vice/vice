@@ -20,8 +20,4 @@ describe('market-class disclosure', () => {
 		expect(display?.detail).toContain('RWA classification unavailable');
 	});
 
-	test('keeps prediction-market context metadata-only and venue-supplied', () => {
-		const display = describeMarketClass({ ...base, marketKey: 'outcome:1:0', apiCoin: '#10', kind: 'outcome', type: 'spot', outcome: { outcomeId: 1, side: 0, questionName: 'Election result', questionDescription: 'Who wins?', settled: false }, tradingAvailability: 'metadataOnly', tradingUnavailableReason: 'missing terms' });
-		expect(display).toEqual({ label: 'Prediction · metadata only', detail: 'Election result — Who wins?', metadataOnly: true });
-	});
 });

@@ -3,8 +3,7 @@
  *
  * Boots a real Chromium against the PRODUCTION build (vite preview) and
  * asserts the app fully hydrates: the SSR shell is present, Dockview mounts,
- * and the chart canvas + market-data panels come up client-side. This is the
- * hydrated counterpart to the fetch-only SSR smoke in scripts/browser-surface.mjs.
+ * and the chart canvas + market-data panels come up client-side.
  *
  * Non-mutating: read-only navigation. No signer, no wallet, no order path.
  */
@@ -68,23 +67,13 @@ test('market catalog and account status chips render honest local state', async 
 
 	await assertCleanRuntime(evidence);
 });
-test('taxonomy fixture selects perps, spot, and read-only prediction outcomes', async ({ page, evidence }) => {
+test('taxonomy fixture selects core perps, HIP-3 perps, and spot', async ({ page, evidence }) => {
 	await seedMarketTaxonomyFixture(page);
 	await page.goto('/trade', { waitUntil: 'domcontentloaded', timeout: 60_000 });
-	await expect(page.getByRole('button', { name: 'Prediction', exact: true })).toBeAttached();
 	await page.getByRole('button', { name: 'Perps', exact: true }).click();
 	await expect(page.getByRole('button', { name: /CORE PERPS/i })).toBeAttached();
 	await expect(page.getByRole('button', { name: /HIP-3/i })).toBeAttached();
 	await page.getByRole('button', { name: 'Spot', exact: true }).click();
 	await expect(page.getByRole('button', { name: 'Spot', exact: true })).toBeAttached();
-	await page.getByRole('button', { name: 'Prediction', exact: true }).click();
-	await expect(page.getByRole('button', { name: /PREDICTION OUTCOMES/i })).toBeAttached({ timeout: 20_000 });
-	await page.getByRole('button', { name: /Toggle ETH \$4000 · Yes favorite ETH \$4000 · Yes/ }).click();
-	await expect(page.getByTestId('workspace-host').getByTestId('prediction-market-panel')).toBeVisible({ timeout: 20_000 });
-	await expect(page.getByTestId('workspace-host').getByTestId('prediction-probability')).toContainText('12.996');
-	await expect(page.getByTestId('market-disclosure')).toContainText('Venue: Hyperliquid');
-	await expect(page.getByTestId('workspace-host').getByTestId('prediction-read-only-reason')).toContainText('lot, tick');
-	await expect(page.getByText('Leverage', { exact: true })).not.toBeVisible();
-	await expect(page.getByText('Connect to trade', { exact: false })).not.toBeVisible();
 	await assertCleanRuntime(evidence);
 });

@@ -680,7 +680,7 @@
 			<div class="flex items-center gap-2">
 				<span class="text-lg font-semibold whitespace-nowrap">{$selectedMarket?.symbol || 'Select market'}</span>
 				{#if $selectedMarket}
-					<span data-testid="chart-market-kind" class="text-xs px-2 py-0.5 rounded {marketProfile.executable ? 'bg-terminal-cyan/15 text-terminal-cyan' : 'bg-terminal-yellow/15 text-terminal-yellow'}">{marketProfile.executable ? ($selectedMarket.kind === 'spot' ? 'Spot' : 'Perpetual') : 'Prediction · read only'}</span>
+					<span data-testid="chart-market-kind" class="text-xs px-2 py-0.5 rounded bg-terminal-cyan/15 text-terminal-cyan">{$selectedMarket.kind === 'spot' ? 'Spot' : 'Perpetual'}</span>
 				{/if}
 			</div>
 			{#if $selectedMarket}
@@ -688,7 +688,7 @@
 				{@const isPositive = ($selectedMarket.changePercent24h ?? 0) >= 0}
 				<div class="flex items-center gap-3 text-sm">
 					<span class="tabular-nums text-lg {hasChange && isPositive ? 'text-terminal-green' : hasChange ? 'text-terminal-red' : 'text-terminal-text-muted'}">
-						{Number.isFinite($selectedMarket.lastPrice) && ($selectedMarket.lastPrice !== 0 || $selectedMarket.kind === 'outcome') ? `$${$selectedMarket.lastPrice.toLocaleString('en-US', { minimumFractionDigits: $selectedMarket.priceDecimals })}` : '—'}
+						{Number.isFinite($selectedMarket.lastPrice) ? `$${$selectedMarket.lastPrice.toLocaleString('en-US', { minimumFractionDigits: $selectedMarket.priceDecimals })}` : '—'}
 					</span>
 					<span class="tabular-nums text-sm {hasChange && isPositive ? 'text-terminal-green' : hasChange ? 'text-terminal-red' : 'text-terminal-text-muted'}">
 						{hasChange ? `${isPositive ? '+' : ''}${$selectedMarket.changePercent24h!.toFixed(2)}%` : '—'}

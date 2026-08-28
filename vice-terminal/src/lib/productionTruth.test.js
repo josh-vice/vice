@@ -2,17 +2,11 @@
 import { describe, expect, test } from 'bun:test';
 import {
 	canPresentAccountState,
-	fixturesEnabled,
 	healthLabel,
 	unavailableFeedMessage
 } from './productionTruth';
 
 describe('US-001 production truth', () => {
-	test('never enables fixtures in a production build', () => {
-		expect(fixturesEnabled(false, 'true')).toBe(false);
-		expect(fixturesEnabled(true, undefined)).toBe(false);
-		expect(fixturesEnabled(true, 'true')).toBe(true);
-	});
 
 	test('only presents account state after wallet and account synchronization are live', () => {
 		expect(canPresentAccountState(false, 'live')).toBe(false);
@@ -33,7 +27,4 @@ describe('US-001 production truth', () => {
 		expect(source).toContain("marketCatalogStatus.set('idle')");
 	});
 
-	test('does not enable unsupported option fixtures in production', () => {
-		expect(fixturesEnabled(false, 'true')).toBe(false);
-	});
 });

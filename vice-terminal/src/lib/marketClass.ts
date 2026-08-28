@@ -9,15 +9,6 @@ export type MarketClassPresentation = {
 /** Presents only class facts carried by the selected market descriptor. */
 export function describeMarketClass(market: MarketDescriptor | null | undefined): MarketClassPresentation | null {
 	if (!market) return null;
-	if (market.kind === 'outcome') {
-		const outcome = market.outcome;
-		const context = [outcome?.questionName, outcome?.questionDescription].filter(Boolean).join(' — ');
-		return {
-			label: outcome?.settled ? 'Prediction · settled' : 'Prediction · metadata only',
-			detail: context || market.tradingUnavailableReason || 'Venue-provided prediction metadata',
-			metadataOnly: true
-		};
-	}
 	if (market.kind === 'spot') return { label: 'Spot', detail: 'Venue spot market', metadataOnly: false };
 	const category = market.venueCategory ? ` · ${market.venueCategory}` : '';
 	if (market.kind === 'hip3Perp') {

@@ -55,19 +55,6 @@ test('Report Issue downloads bounded redacted operator note separately from scre
 	await expect(page.getByTestId('report-issue-bundle-summary')).toContainText('Saved');
 	await assertCleanRuntime(evidence);
 });
-test('latency evidence downloads on the public network and reports completion', async ({ page, evidence }) => {
-	await page.goto('/trade', { waitUntil: 'domcontentloaded', timeout: 60_000 });
-	const downloadPromise = page.waitForEvent('download');
-	await page.getByLabel('Download measured client latency evidence').click();
-	const download = await downloadPromise;
-	const path = await download.path();
-	expect(path).not.toBeNull();
-	const text = await (await import('node:fs/promises')).readFile(path, 'utf8');
-	const evidenceFile = JSON.parse(text);
-	expect(evidenceFile.network).toBe('mainnet');
-	await expect(page.getByTestId('latency-status')).toContainText('Latency evidence downloaded');
-	await assertCleanRuntime(evidence);
-});
 test('Cmd/Ctrl+K toggles one CLI instance per keypress', async ({ page, evidence }) => {
 	await page.goto('/trade', { waitUntil: 'domcontentloaded', timeout: 60_000 });
 	await expect(page.getByText('noosphere-cli', { exact: true })).toHaveCount(0);
@@ -93,7 +80,7 @@ test('stored privacy mode hides private values before terminal content renders',
 	await expect(page.getByTestId('privacy-hydration-pending')).toHaveCount(0);
 	await assertCleanRuntime(evidence);
 });
-test('Minimal widget menu explains locked mode and Pro changes preserve focus', async ({ page, evidence }) => {
+test('Core panel menu explains locked mode and preserves focus', async ({ page, evidence }) => {
 	await page.goto('/trade', { waitUntil: 'domcontentloaded', timeout: 60_000 });
 	const widgets = page.getByTestId('workspace-widgets-toggle');
 	await expect(widgets).toBeVisible();

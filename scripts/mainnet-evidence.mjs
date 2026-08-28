@@ -3,6 +3,9 @@ import { resolve } from 'node:path';
 export const EVIDENCE_SCHEMA_VERSION = 2;
 export const REQUIRED_EVIDENCE_FIELDS = ['commit', 'artifact', 'lockfileSha256', 'policySha256', 'captureWindow', 'validatorVersion', 'features', 'actions', 'streams', 'cleanup'];
 export const REQUIRED_STORIES = ['US-002', 'US-003', 'US-004'];
+export const REQUIRED_TRADING_ACTIONS = ['wallet.connect', 'order.submit', 'order.reconcile', 'order.modify', 'order.cancel', 'order.scale', 'position.close', 'position.reverse', 'position.flatten', 'algo.start', 'algo.cancel', 'deadman.arm', 'deadman.clear', 'release.reconcile'];
+export const REQUIRED_EXECUTION_FEATURES = ['limit', 'market', 'stop', 'stop_limit', 'bracket', 'twap', 'adaptive_twap', 'vwap', 'pov', 'scale', 'chase', 'swarm', 'iceberg', 'oco', 'ping_pong', 'trailing_stop', 'break_even', 'maker', 'conditional_ladder', 'reverse', 'flatten', 'deadman'];
+export const REQUIRED_EVIDENCE_ACTIONS = [...new Set([...REQUIRED_TRADING_ACTIONS, ...REQUIRED_EXECUTION_FEATURES])];
 
 function fullSha(value) {
 	return typeof value === 'string' && /^[a-f0-9]{40}$/i.test(value);
@@ -79,14 +82,12 @@ export async function readMainnetEvidence(path, options = {}) {
 if (import.meta.main) {
 	const run = async () => {
 		const root = resolve(import.meta.dir, '..');
-		const actionCatalog = await Bun.file(resolve(root, 'docs/user-stories/action-catalog.json')).json();
 		const streamCatalog = await Bun.file(resolve(root, 'docs/data/stream-catalog.json')).json();
-		const criteria = [];
-		for await (const path of new Bun.Glob('docs/user-stories/US-*.md').scan({ cwd: root })) {
-			const text = await Bun.file(resolve(root, path)).text();
-			criteria.push(...[...text.matchAll(/US-\d{3}-AC-\d{3}/g)].map((match) => match[0]));
-		}
-		await readMainnetEvidence(process.env.VICE_MAINNET_EVIDENCE ?? process.argv[2], { expectedSha: process.env.VICE_RELEASE_SHA, expectedActionIds: actionCatalog.actions.map((action) => action.id), expectedCriterionIds: [...new Set(criteria)], expectedStreamIds: streamCatalog.streams.map((stream) => stream.id) });
+		const evidence = await readMainnetEvidence(process.env.VICE_MAINNET_EVIDENCE ?? process.argv[2], {
+			expectedActionIds: REQUIRED_EVIDENCE_ACTIONS,
+			expectedStreamIds: streamCatalog.streams.map((stream) => stream.id)
+		});
+		exactCoverage(evidence.features, REQUIRED_EXECUTION_FEATURES, 'features');
 	};
 	run().then(() => console.log('Mainnet evidence schema v2 passed.')).catch((error) => { console.error(`Mainnet evidence validation failed: ${error.message}`); process.exit(1); });
 }

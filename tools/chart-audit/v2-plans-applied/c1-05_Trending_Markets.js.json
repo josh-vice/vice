@@ -1,8 +1,0 @@
-{
-  "course": "1",
-  "file": "05_Trending_Markets.js",
-  "lessonId": "course1/05_trending_markets",
-  "edits": [],
-  "alreadyGood": ["uptrend", "uptrend-flip", "downtrend"],
-  "notes": "Verified all three CHART beats against ground-truth anchors. uptrend beat: markers on high1/hl1/hh1/hl2/hh2 are all valid point anchors for move 'uptrend' (start, high1, hl1, hh1, hl2, hh2, flipLevel) and the say teaches each (\"higher highs and higher lows... staircase climbing\") — complete. uptrend-flip beat (same chart, accumulates): adds level on flipLevel (L), justified by \"The old high, once resistance, has flipped to support and become the next higher low\" — correct kind/anchor/label, no gap. downtrend beat (fresh chart): markers on low1/lh1/ll1/lh2/ll2 all valid point anchors for 'downtrend', say teaches \"lower highs and lower lows... staircase descending\" — complete. CONCEPT beats (intro, with-the-trend, recap) draw no chart and are correctly skipped. No gaps, no noAnchorGaps, no fixes. Concur with auditor: nothing to add or change."
-}

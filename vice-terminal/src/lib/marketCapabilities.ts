@@ -1,7 +1,6 @@
-import type { MarketDescriptor } from './types';
-import type { OrderType } from './types';
+import type { MarketDescriptor, OrderType } from './types';
 
-export type MarketAmountUnit = 'base' | 'quote' | 'shares';
+export type MarketAmountUnit = 'base' | 'quote';
 
 export interface MarketMeaningfulStats {
 	fundingRate: boolean;
@@ -33,8 +32,6 @@ export interface MarketCapabilityProfile {
 	meaningfulStats: MarketMeaningfulStats;
 }
 
-const READ_ONLY_OUTCOME_REASON = 'Hyperliquid outcome metadata does not provide lot, tick, or complete execution terms.';
-
 const perpStats: MarketMeaningfulStats = Object.freeze({
 	fundingRate: true, markPrice: true, indexPrice: true, openInterest: true,
 	liquidationPrice: true, volume24h: true, change24h: true, probability: false, settlement: false
@@ -42,10 +39,6 @@ const perpStats: MarketMeaningfulStats = Object.freeze({
 const spotStats: MarketMeaningfulStats = Object.freeze({
 	fundingRate: false, markPrice: false, indexPrice: false, openInterest: false,
 	liquidationPrice: false, volume24h: true, change24h: true, probability: false, settlement: false
-});
-const outcomeStats: MarketMeaningfulStats = Object.freeze({
-	fundingRate: false, markPrice: false, indexPrice: false, openInterest: false,
-	liquidationPrice: false, volume24h: true, change24h: true, probability: true, settlement: true
 });
 
 const perpProfile: MarketCapabilityProfile = Object.freeze({
@@ -56,7 +49,7 @@ const perpProfile: MarketCapabilityProfile = Object.freeze({
 });
 
 export function marketCapabilities(market: MarketDescriptor | null | undefined): MarketCapabilityProfile {
-	if (!market || (market.kind !== 'corePerp' && market.kind !== 'hip3Perp' && market.kind !== 'spot' && market.kind !== 'outcome')) {
+	if (!market || (market.kind !== 'corePerp' && market.kind !== 'hip3Perp' && market.kind !== 'spot')) {
 		return Object.freeze({
 			executable: false, readOnlyReason: 'Select a market before placing an order.', allowedOrderTypes: [],
 			leverageEnabled: false, maxLeverage: 1, amountUnit: 'base', amountUnits: [], usesMargin: false,
@@ -64,23 +57,11 @@ export function marketCapabilities(market: MarketDescriptor | null | undefined):
 			supportsPositionLifecycle: false, supportsAdvancedOrders: false, meaningfulStats: spotStats
 		});
 	}
-	if (market.kind === 'corePerp' || market.kind === 'hip3Perp') {
-		return { ...perpProfile, maxLeverage: Math.max(1, market.maxLeverage ?? 1) };
-	}
-	if (market.kind === 'spot') {
-		return Object.freeze({
-			executable: market.tradingAvailability !== 'metadataOnly', readOnlyReason: market.tradingAvailability === 'metadataOnly' ? (market.tradingUnavailableReason ?? 'This market is read-only.') : null,
-			allowedOrderTypes: ['limit', 'market'] as const, leverageEnabled: false, maxLeverage: 1, amountUnit: 'quote', amountUnits: ['base', 'quote'] as const, usesMargin: false,
-			supportsReduceOnly: false, supportsPostOnly: true, supportsIoc: true, supportsTriggers: false,
-			supportsPositionLifecycle: false, supportsAdvancedOrders: false, meaningfulStats: spotStats
-		});
-	}
+	if (market.kind === 'corePerp' || market.kind === 'hip3Perp') return { ...perpProfile, maxLeverage: Math.max(1, market.maxLeverage ?? 1) };
 	return Object.freeze({
-		executable: false, readOnlyReason: market.tradingUnavailableReason ?? READ_ONLY_OUTCOME_REASON, allowedOrderTypes: [],
-		leverageEnabled: false, maxLeverage: 1, amountUnit: 'shares', amountUnits: ['shares'] as const, usesMargin: false,
-		supportsReduceOnly: false, supportsPostOnly: false, supportsIoc: false, supportsTriggers: false,
-		supportsPositionLifecycle: false, supportsAdvancedOrders: false, meaningfulStats: outcomeStats
+		executable: true, readOnlyReason: null, allowedOrderTypes: ['limit', 'market'] as const,
+		leverageEnabled: false, maxLeverage: 1, amountUnit: 'quote', amountUnits: ['base', 'quote'] as const, usesMargin: false,
+		supportsReduceOnly: false, supportsPostOnly: true, supportsIoc: true, supportsTriggers: false,
+		supportsPositionLifecycle: false, supportsAdvancedOrders: false, meaningfulStats: spotStats
 	});
 }
-
-export { READ_ONLY_OUTCOME_REASON };
