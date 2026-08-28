@@ -83,6 +83,8 @@ async function captureRun(browser, runNumber) {
 async function main() {
 	if (!Number.isSafeInteger(RUNS) || RUNS < 1) throw new Error('--runs must be a positive integer');
 	if (NETWORK !== 'mainnet' && NETWORK !== 'testnet') throw new Error(`Unsupported capture network: ${NETWORK}`);
+	const releaseSha = process.env.VICE_RELEASE_SHA?.trim() ?? '';
+	if (NETWORK === 'mainnet' && !/^[a-f0-9]{40}$/i.test(releaseSha)) throw new Error('VICE_RELEASE_SHA must be a full commit SHA for mainnet latency capture');
 	if (process.argv.includes('--build')) {
 		const result = spawnSync('bun', ['--bun', 'vite', 'build'], { cwd: TERMINAL, stdio: 'inherit', env: { ...process.env } });
 		if (result.status !== 0) throw new Error('Production build failed');
@@ -103,6 +105,9 @@ async function main() {
 			schemaVersion: 2,
 			source: 'client-telemetry',
 			network: NETWORK,
+			commit: releaseSha || null,
+			releaseBuild: releaseSha || null,
+			policySha256: process.env.VICE_E2E_POLICY_SHA256 ?? null,
 			capturedAt: new Date().toISOString(),
 			runtimeHealth: aggregateHealth(evidenceRuns.map((evidence) => evidence.runtimeHealth)),
 			samples: evidenceRuns.flatMap((evidence) => evidence.samples),

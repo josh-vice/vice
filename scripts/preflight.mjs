@@ -33,14 +33,14 @@ for await (const relative of glob.scan({ cwd: resolve(root, 'vice-backend') })) 
 }
 
 if (violations.length) throw new Error(`Server-signing secret references are forbidden:\n${violations.join('\n')}`);
-const network = (process.env.VITE_HL_NETWORK ?? 'testnet').toLowerCase();
+const network = (process.env.VITE_HL_TRADING_NETWORK ?? (process.env.VITE_HL_NETWORK === 'mainnet' ? 'mainnet' : 'testnet')).toLowerCase();
 const gatewayHost = (process.env.VICE_GATEWAY_BIND ?? `${process.env.VICE_BACKEND_HOST ?? '127.0.0.1'}:8080`).replace(/^\[/, '').split(']')[0].split(':')[0];
 validateGatewayExposure({
 	host: gatewayHost,
 	allowPublic: process.env.VICE_ALLOW_PUBLIC_GATEWAY === 'true',
 	origin: process.env.VICE_GATEWAY_ORIGIN ?? ''
 });
-if (!['testnet', 'mainnet'].includes(network)) throw new Error(`Invalid VITE_HL_NETWORK=${network}`);
+if (!['testnet', 'mainnet'].includes(network)) throw new Error(`Invalid VITE_HL_TRADING_NETWORK=${network}`);
 if (network === 'mainnet' && process.env.VITE_HL_MAINNET_ACK !== 'I_ACCEPT_REAL_MAINNET_TRADING') {
 	throw new Error('Mainnet release is locked: missing VITE_HL_MAINNET_ACK=I_ACCEPT_REAL_MAINNET_TRADING');
 }
@@ -49,14 +49,20 @@ if (network === 'mainnet' && builderRevenueEnabled && !/^0x[0-9a-fA-F]{40}$/.tes
 	throw new Error('Mainnet release requires a valid VITE_HL_BUILDER_ADDRESS');
 }
 if (network === 'mainnet') {
-	await readMainnetEvidence(process.env.VICE_FUNDED_TESTNET_EVIDENCE);
+	if (process.env.VICE_BETA_REQUIRED?.trim().toLowerCase() !== 'true') throw new Error('Mainnet release requires VICE_BETA_REQUIRED=true');
+	for (const key of ['UPSTASH_REDIS_REST_URL', 'UPSTASH_REDIS_REST_TOKEN', 'VICE_BETA_SESSION_SECRET']) if (!process.env[key]?.trim()) throw new Error(`Mainnet release requires ${key}`);
+	const evidence = await readMainnetEvidence(process.env.VICE_MAINNET_EVIDENCE);
+	const releaseBuild = process.env.VICE_MAINNET_RELEASE_BUILD?.trim() ?? '';
+	if (!/^[a-f0-9]{40}$/i.test(releaseBuild)) throw new Error('Mainnet release requires VICE_MAINNET_RELEASE_BUILD as a full commit SHA');
+	if (evidence.commit.toLowerCase() !== releaseBuild.toLowerCase() || evidence.artifact.commit.toLowerCase() !== releaseBuild.toLowerCase()) throw new Error('Mainnet evidence does not match VICE_MAINNET_RELEASE_BUILD');
+	let releaseManifest;
+	try { releaseManifest = JSON.parse(await Bun.file(resolve(root, process.env.VICE_RELEASE_MANIFEST ?? 'release/vice-manifest.json')).text()); } catch { throw new Error('Mainnet release manifest is required and must be valid JSON'); }
+	if (evidence.artifact.sha256 !== releaseManifest.artifact?.sha256 || evidence.lockfileSha256 !== releaseManifest.lockfile?.sha256 || evidence.policySha256 !== releaseManifest.policy?.sha256) throw new Error('Mainnet evidence digests do not match the release manifest');
 	if (!process.env.VICE_MAINNET_ALLOWLIST?.trim()) throw new Error('Mainnet release requires VICE_MAINNET_ALLOWLIST');
 	const latency = await runLatencyGate(process.env.VICE_LATENCY_EVIDENCE);
-	if (latency.network !== 'testnet') throw new Error('Mainnet release requires latency evidence captured on testnet');
+	if (latency.network !== 'mainnet') throw new Error('Mainnet release requires latency evidence captured on mainnet');
+	if (latency.commit?.toLowerCase() !== releaseBuild.toLowerCase() || latency.releaseBuild?.toLowerCase() !== releaseBuild.toLowerCase()) throw new Error('Mainnet latency evidence does not match VICE_MAINNET_RELEASE_BUILD');
 	if (!latency.pass) throw new Error(`Mainnet release latency gate failed: ${latency.failures.join('; ')}`);
-	// PLAN_3 external gates: deny-by-default until the release authority records
-	// Gate 0 funded certification, allowlist, cap, observation window, named
-	// operator, and the separate final go/no-go for the same release/build.
 	await assertMainnetPromotable(runtimeFromEnv(process.env));
 }
 const cspConfig = await Bun.file(resolve(root, 'vice-terminal/svelte.config.js')).text();

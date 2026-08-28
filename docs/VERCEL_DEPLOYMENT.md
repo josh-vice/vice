@@ -42,12 +42,18 @@ deployment-time secrets/configuration and are intentionally absent here.
 
 | Name | Purpose | Applies to |
 | --- | --- | --- |
-| `VITE_HL_NETWORK` | Network selection for the Hyperliquid client | Production + preview |
-| `VITE_HL_TESTNET` | Legacy testnet flag (deprecated alias) | Production + preview |
-| `VITE_HL_MAINNET_ACK` | Explicit mainnet acknowledgment (fail-closed promotion) | Production only |
-| `VICE_FUNDED_TESTNET_EVIDENCE` | Path to funded testnet evidence manifest (release gate) | Production only |
-| `VICE_LATENCY_EVIDENCE` | Path to client latency telemetry (release gate) | Production only |
-| `VICE_MAINNET_ALLOWLIST` | Allowlisted pilot addresses for mainnet | Production only |
+| `VITE_HL_TRADING_NETWORK` | Authoritative Hyperliquid trading network selector | Production + preview |
+| `VITE_HL_NETWORK` | Legacy alias, accepted only when unambiguous | Production + preview |
+| `VITE_HL_MAINNET_ACK` | Exact mainnet acknowledgment (fail-closed promotion) | Production only |
+| `VICE_BETA_REQUIRED` | Durable beta gate switch | Production + preview |
+| `VICE_BETA_SESSION_SECRET` | Server-only HMAC secret | Production + preview |
+| `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN` | Durable beta sessions, revocation, and throttling | Production + preview |
+| `VICE_RELEASE_POLICY_JSON` | Server-only wallet/action/venue caps and halt policy | Production only |
+| `VICE_MAINNET_EVIDENCE` | Exact-build funded mainnet evidence manifest | Production only |
+| `VICE_LATENCY_EVIDENCE` | Mainnet client latency telemetry | Production only |
+| `VICE_MAINNET_ALLOWLIST` | Approved mainnet wallet addresses | Production only |
+| `VICE_MAINNET_RELEASE_BUILD` | Full release build identity | Production only |
+| `VICE_BETA_SUPPORT_OWNER` / `VICE_INCIDENT_OWNER` / `VICE_RELEASE_OWNER` | Named operational owners | Production only |
 | `VITE_HL_ENABLE_BUILDER_REVENUE` | Enable optional builder/referral revenue | Production only |
 | `VITE_HL_BUILDER_ADDRESS` | Builder fee recipient (only if revenue enabled) | Production only |
 
@@ -57,26 +63,17 @@ add `owner.json`, `taker.json`, or any private key as an env var or file.
 
 ## Deployment flow (human-gated)
 
-1. Check out `viceterminal`, run the gate suite from repo root: `bun run check`
-   then `bun run test:release`. The release gate includes the PWA artifact and
-   production header tests (`test:pwa`).
-2. Build the terminal artifact and run the PWA artifact boundary test:
-   `cd vice-terminal && bun run build && bun test scripts/pwa-artifact.test.mjs`
-   — confirms the served artifact contains the PWA shell and excludes internal
-   trees/signer scripts.
-3. Push `viceterminal`. Vercel builds the **production** branch.
-4. In the dashboard, deploy the production branch to the configured project
-   (or rely on the GitHub integration). Preview deployments behave identically
-   for routing/CSP/headers; the network env (`VITE_HL_NETWORK`) governs
-   testnet vs mainnet.
-5. Smoke the deployed URL:
-   - `GET /api/meta` returns `{name, version, testnet, network}` (diagnostics-safe).
-   - The page registers `/service-worker.js`; a second deploy surfaces the
-     "UPDATE AVAILABLE" banner and reload applies it.
-   - Go offline — the cached app shell loads and an OFFLINE banner appears;
-     `/api/*` trading endpoints fail closed (no fabricated state).
-   - Inspect headers on `/` (no-cache + security headers) and on a hashed
-     `/_app/*.js` asset (immutable, long max-age).
+1. Check out the exact release SHA and run `bun run test:release`. The aggregate
+   writes `release/test-summary.json`; every hard check affects its exit status.
+2. Build once, create `release/vice-manifest.json`, and verify it with
+   `bun scripts/release-manifest.mjs --verify ... --expected-sha=<full-sha>`.
+3. Publish that immutable artifact through the release workflow. Vercel builds
+   must not rebuild from a different source revision.
+4. Download and verify the artifact, deploy it behind the durable beta gate,
+   then run `VICE_DEPLOYMENT_URL=<url> VICE_RELEASE_SHA=<full-sha> bun run test:deployed`.
+5. Smoke `/api/meta`, `/service-worker.js`, `/trade`, every live mainnet stream,
+   policy freshness, access throttling/revocation, and remote-halt propagation.
+6. Keep invitation creation disabled until `bun run beta:readiness -- --deployment=<url> --expected-sha=<full-sha>` passes.
 
 ## PWA update lifecycle (how a new build reaches users)
 

@@ -41,11 +41,14 @@ for (const [name, cmd] of Object.entries(HARD)) {
 	suite[name] = pass ? 'pass' : 'fail';
 	if (!pass) hardPass = false;
 }
-suite.typecheck = run('bun run typecheck') ? 'pass' : 'fail';
-suite['svelte-check'] = run('bun run test:svelte') ? 'pass' : 'fail';
+for (const [name, cmd] of [['typecheck', 'bun run typecheck'], ['svelte-check', 'bun run test:svelte']]) {
+	const pass = run(cmd);
+	suite[name] = pass ? 'pass' : 'fail';
+	if (!pass) hardPass = false;
+}
 
 mkdirSync(resolve(root, 'release'), { recursive: true });
-const summary = { schemaVersion: 1, run: 'release-build', suite };
+const summary = { schemaVersion: 2, run: 'release-build', generatedAt: new Date().toISOString(), suite, hardPass };
 writeFileSync(OUT, JSON.stringify(summary, null, 2) + '\n');
 console.log(`test summary written to ${OUT}`);
 console.log(JSON.stringify(suite, null, 2));

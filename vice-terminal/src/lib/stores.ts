@@ -563,6 +563,27 @@ function unbindWalletProvider(): void {
 	chainChangedHandler = null;
 }
 
+async function stopLocalExecutionFamilies(): Promise<void> {
+	// Explicit lazy imports avoid a Vite dynamic-import warning while preserving
+	// the cycle-breaking load boundary between stores and execution modules.
+	const stoppers = await Promise.all([
+		import('./execution/scale').then(({ stopAllScaleTimers }) => stopAllScaleTimers),
+		import('./execution/chase').then(({ stopAllChaseTimers }) => stopAllChaseTimers),
+		import('./execution/oco').then(({ stopAllOcoTimers }) => stopAllOcoTimers),
+		import('./execution/trailing').then(({ stopAllTrailingTimers }) => stopAllTrailingTimers),
+		import('./execution/iceberg').then(({ stopAllIcebergTimers }) => stopAllIcebergTimers),
+		import('./execution/swarm').then(({ stopAllSwarmTimers }) => stopAllSwarmTimers),
+		import('./execution/pingPong').then(({ stopAllPingPongTimers }) => stopAllPingPongTimers),
+		import('./execution/adaptiveTwap').then(({ stopAllAdaptiveTimers }) => stopAllAdaptiveTimers),
+		import('./execution/pov').then(({ stopAllPovTimers }) => stopAllPovTimers),
+		import('./execution/breakEven').then(({ stopAllBreakEvenTimers }) => stopAllBreakEvenTimers),
+		import('./execution/conditionalLadder').then(({ stopAllConditionalLadderTimers }) => stopAllConditionalLadderTimers)
+	]);
+	for (const stop of stoppers) stop();
+	const { setLocalAlgoOwner } = await import('./execution/algoJobs');
+	setLocalAlgoOwner(null);
+}
+
 function bindWalletProvider(provider: any): void {
 	unbindWalletProvider();
 	if (!provider?.on) return;
@@ -574,12 +595,13 @@ function bindWalletProvider(provider: any): void {
 			return;
 		}
 		if (next.toLowerCase() === get(walletAddress)?.toLowerCase()) return;
-		void import('./execution/localExecution').then(({ localExecution }) => localExecution.lock());
+		walletConnectGeneration += 1;
 		executionStatus.set('idle');
-		void activateWallet(next).catch(() => disconnectWallet());
+		void stopLocalExecutionFamilies().then(() => activateWallet(next)).catch(() => disconnectWallet());
 	};
 	providerDisconnectHandler = () => disconnectWallet();
 	chainChangedHandler = () => {
+		void stopLocalExecutionFamilies();
 		void import('./execution/localExecution').then(({ localExecution }) => localExecution.lock());
 		executionStatus.set('idle');
 	};
@@ -754,20 +776,7 @@ export function disconnectWallet() {
 	unbindWalletProvider();
 	void import('./hl/account').then(({ stopAccountSubscriptions }) => stopAccountSubscriptions());
 	void import('./execution/localExecution').then(({ localExecution }) => localExecution.lock());
-	void import('./execution/chase').then(async ({ stopAllChaseTimers }) => {
-		stopAllChaseTimers();
-		const { setLocalAlgoOwner } = await import('./execution/algoJobs');
-		setLocalAlgoOwner(null);
-	});
-	void import('./execution/oco').then(({ stopAllOcoTimers }) => stopAllOcoTimers());
-	void import('./execution/trailing').then(({ stopAllTrailingTimers }) => stopAllTrailingTimers());
-	void import('./execution/iceberg').then(({ stopAllIcebergTimers }) => stopAllIcebergTimers());
-	void import('./execution/swarm').then(({ stopAllSwarmTimers }) => stopAllSwarmTimers());
-	void import('./execution/pingPong').then(({ stopAllPingPongTimers }) => stopAllPingPongTimers());
-	void import('./execution/adaptiveTwap').then(({ stopAllAdaptiveTimers }) => stopAllAdaptiveTimers());
-	void import('./execution/pov').then(({ stopAllPovTimers }) => stopAllPovTimers());
-	void import('./execution/breakEven').then(({ stopAllBreakEvenTimers }) => stopAllBreakEvenTimers());
-	void import('./execution/conditionalLadder').then(({ stopAllConditionalLadderTimers }) => stopAllConditionalLadderTimers());
+	void stopLocalExecutionFamilies();
 	isConnected.set(false);
 	activeWalletProvider = null;
 	walletAddress.set(null);
@@ -801,6 +810,7 @@ export function onDexChanged(dex: Dex): void {
 		startHlFeeds(market?.apiCoin);
 	} else {
 		stopHlFeedsForDexSwitch();
+		void stopLocalExecutionFamilies();
 		marketDataStatus.set('idle');
 	}
 }

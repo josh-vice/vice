@@ -1,6 +1,6 @@
 # US-002: Non-custodial local execution
 
-Story schema v1.
+Story schema v2.
 
 As a trader, I want Vice Terminal to execute through my wallet-approved Hyperliquid agent without giving Vice custody of a private key, so that I retain control while orders remain fast.
 
@@ -68,6 +68,8 @@ As a trader, I want Vice Terminal to execute through my wallet-approved Hyperliq
 - Every cancellation entry point routes with the authoritative account entity identity. CLI `cancel all` uses `apiCoin` or `marketKey`; it never passes the hydrated display label, which is especially important for HIP-3 and spot markets whose display symbols are not venue routing keys.
 - Successful local cancel acknowledgements now return the exact cancelled venue order ID consistently with the durable execution journal, so callers and reconciliation telemetry cannot disagree about which order was accepted.
 
+- Action IDs: story.us-002
+
 ## Operational contract
 
 - Persona: Wallet-connected trader placing or managing Hyperliquid orders from a browser device.
@@ -81,8 +83,8 @@ As a trader, I want Vice Terminal to execute through my wallet-approved Hyperliq
 - Latency expectations: Local processing p99 <2 ms and action-to-signed-dispatch p99 <10 ms on the reference desktop; venue acknowledgement is measured separately.
 - Telemetry: Record command IDs, sequence/cloid, dispatch/ack/reconciliation latency, uncertainty, rejection category, and builder attribution state without private keys.
 - Linked tests: `agentVault.test.js`, `commandIdentity.test.js`, `commandJournal.test.js`, `identityBoundary.test.js`, `revenueConfig.test.js`, Rust contracts, smoke, and funded-testnet E2E.
-- Funded-testnet evidence: First approval, unlock, place, partial fill, modify, cancel, rejection, reconnect, restart, and account-switch replay with venue order IDs is required before mainnet.
-- Given a matching unlocked account and live market, when a signed command loses its acknowledgement, then the same cloid is reconciled before another mutation is permitted.
+- Funded-mainnet evidence: First approval, unlock, place, partial fill, modify, cancel, rejection, reconnect, restart, and account-switch replay with venue order IDs is required before mainnet.
+- US-002-AC-001: Given a matching unlocked account and live market, when a signed command loses its acknowledgement, then the same cloid is reconciled before another mutation is permitted.
 - Latest revenue-consent slice: referral assignment now requires a two-step review and confirmation in the order ticket. The preview exposes the configured public referral code, explains that existing referrers are never overwritten, requires the wallet confirmation, and states that the result is verified afterward. The first click cannot invoke `setReferrer`; `revenueSurface.test.js` guards the UI boundary. Builder/referral assignment remains optional and never blocks trading.
 - Latest builder-consent slice: local-agent unlock and optional builder-fee approval are now separate choices. Secure trading can initialize with `approveBuilder: false` and no builder mutation; only the explicit builder opt-in checkbox passes `approveBuilder: true` and requests the one-time wallet approval. Trading remains available when the user declines. Focused custody/revenue coverage passes with 14 tests and 42 assertions.
 - Latest builder-boundary slice: the final builder payload is now validated immediately before execution, requiring a valid configured address and `f=1` (0.1 bp); approval requests use the same centralized `0.001%` cap, and higher fee factors fail closed. Focused custody/revenue coverage passes with 14 tests and 45 assertions; full release validation passes with 174 frontend tests and 30,631 assertions. Funded builder attribution remains pending external wallet evidence.

@@ -1,6 +1,6 @@
 # US-010: One-action position and risk ergonomics
 
-Story schema v1. Status: In progress.
+Story schema v2. Status: In progress.
 
 As a position trader, I want one-action position controls — reverse, flatten, quick-close menus, cancel/close-all, fat-finger limits, and auto take-profits — so that managing risk is faster than Insilico while staying journaled and reconciled.
 
@@ -12,7 +12,9 @@ As a position trader, I want one-action position controls — reverse, flatten, 
 - Fat-finger protection: a locally configured maximum order notional and maximum position notional per market; violating commands are rejected before signing with an explicit local error.
 - Auto-TP: an opt-in control that lays configurable reduce-only scale take-profits on each new position entry, implemented on the certified Scale path and visible as a persisted job.
 - Risk-based sizing (risk % or fixed currency to stop distance) joins the certified volatility sizing control as a first-class ticket mode.
-- Given a long position and a confirmed reverse action, when the close leg fills but the open leg is rejected, then the UI reports flat-with-error state authoritatively and never silently retries the open leg.
+- US-010-AC-001: Given a long position and a confirmed reverse action, when the close leg fills but the open leg is rejected, then the UI reports flat-with-error state authoritatively and never silently retries the open leg.
+
+- Action IDs: story.us-010
 
 ## Operational contract
 
@@ -27,11 +29,11 @@ As a position trader, I want one-action position controls — reverse, flatten, 
 - Latency expectations: Single-action dispatch within the shared p99 <10 ms signing budget; composite fan-out bounded and serialized per the shared tick guard.
 - Telemetry: Record control type, child counts, per-leg outcomes, pause reasons, and fat-finger rejections without sizes or account contents.
 - Linked tests: reverse/flatten leg-ordering tests, nuke fan-out reconciliation tests, fat-finger boundary tests, auto-TP job tests on the Scale path, risk-sizing math tests.
-- Funded-testnet evidence: Funded reverse (including partial-leg failure), close-all across ≥3 markets, auto-TP entry lifecycle, and fat-finger rejection evidence before exposure.
+- Funded-mainnet evidence: Funded reverse (including partial-leg failure), close-all across ≥3 markets, auto-TP entry lifecycle, and fat-finger rejection evidence before exposure.
 
 ## Evidence log
 
-- Fat-finger limit slice: the ticket now stores a per-account, per-network maximum order notional and per-exact-market maximum position notional in browser-local storage. The shared local execution boundary formats the actual venue price and size first, calculates quote values with fixed-point integers, and rejects a breach before command sequencing or signing. It also refuses to apply a position cap to partial market identity. This protects ticket, chart-click, quick-close, and local algorithm children that use the shared client. Automated coverage: `src/lib/execution/fatFinger.test.js`; live wallet, funded testnet, telemetry, and the remaining controls are still required.
+- Fat-finger limit slice: the ticket now stores a per-account, per-network maximum order notional and per-exact-market maximum position notional in browser-local storage. The shared local execution boundary formats the actual venue price and size first, calculates quote values with fixed-point integers, and rejects a breach before command sequencing or signing. It also refuses to apply a position cap to partial market identity. This protects ticket, chart-click, quick-close, and local algorithm children that use the shared client. Automated coverage: `src/lib/execution/fatFinger.test.js`; live wallet, funded mainnet, telemetry, and the remaining controls are still required.
 - Quick-close menu slice: each live position row offers reduce-only market close, limit-at-quote, five-minute native TWAP close, and a user-defined reduce-only Scale close. Both direct paths require the position API coin and market key to match a registered descriptor and the selected live market; the limit path uses the near-side executable book quote. A successful submission refreshes orders and positions but states that authoritative reconciliation is pending. Automated coverage: `src/lib/execution/positionClose.test.js` and `src/lib/components/positionCloseIdentity.test.js`; browser and funded lifecycle proof remain open.
 - Reverse slice: an explicit confirmation starts a two-leg reverse. It sends the reduce-only market close first, fetches positions, and sends the same-size opposite entry only when the refreshed exact-identity snapshot is flat. A non-flat or ambiguous snapshot pauses the action; an open-leg rejection reports that the account is flat with an error. Confirmed close-longs, close-shorts, flatten-all, and bid/ask/both cancel-all controls use the same exact-identity and reconciliation boundaries. Automated coverage: `src/lib/execution/positionReverse.test.js`, `src/lib/execution/flattenAll.test.js`, `src/lib/execution/cancelAll.test.js`, and `src/lib/execution/flattenSurface.test.js`; funded multi-market and partial-leg proof remain open.
 - Cancel-all slice: the open-orders panel now has separate confirmed controls for bids, asks, or both. Each order needs both exact market identifiers and a matching registered descriptor. The fan-out is serialized and shows a per-order outcome only after the refreshed authoritative open-order list omits that ID; refresh failure or a remaining ID is shown as unresolved. Automated coverage: `src/lib/execution/cancelAll.test.js`; close-all, funded fan-out evidence, and stale-state cancellation policy remain open.

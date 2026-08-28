@@ -24,7 +24,7 @@ try {
 	buildApprovalRecord = null;
 }
 
-const BUILD = 'viceterminal-2026-08-04';
+const BUILD = 'a'.repeat(40);
 
 // Canonical record shape produced by scripts/release-approval.mjs.
 const validApproval = () => ({
@@ -269,8 +269,12 @@ describe('audit journal (state trail)', () => {
 		// the runtime at that file.
 		const certFile = join(dir, 'evidence.json');
 		const certBody = JSON.stringify({
-			schemaVersion: 1,
-			network: 'testnet',
+			schemaVersion: 2,
+			network: 'mainnet',
+			commit: 'a'.repeat(40),
+			artifact: { commit: 'a'.repeat(40), sha256: 'b'.repeat(64), sizeBytes: 1 },
+			lockfileSha256: 'c'.repeat(64), policySha256: 'd'.repeat(64),
+			captureWindow: { startedAt: '2026-08-01T00:00:00Z', endedAt: '2026-08-01T01:00:00Z' }, validatorVersion: '2.0.0', features: ['limit'], actions: ['order.submit'], streams: ['hl.book'], cleanup: { zeroOpenOrders: true, zeroUnintendedPositions: true, zeroUnresolvedCommands: true, zeroRunningJobs: true },
 			pilot: { allowlisted: true, lowNotional: true },
 			uncertainOutcomes: 0,
 			duplicateOrders: 0,
@@ -327,8 +331,12 @@ describe('integration with the release-authority recording workflow', () => {
 		if (!buildApprovalRecord) return; // recording module not in this checkout yet
 		const certPath = join(dir, 'funded-testnet.json');
 		writeFileSync(certPath, JSON.stringify({
-			schemaVersion: 1,
-			network: 'testnet',
+			schemaVersion: 2,
+			network: 'mainnet',
+			commit: 'a'.repeat(40),
+			artifact: { commit: 'a'.repeat(40), sha256: 'b'.repeat(64), sizeBytes: 1 },
+			lockfileSha256: 'c'.repeat(64), policySha256: 'd'.repeat(64),
+			captureWindow: { startedAt: '2026-08-01T00:00:00Z', endedAt: '2026-08-01T01:00:00Z' }, validatorVersion: '2.0.0', features: ['limit'], actions: ['order.submit'], streams: ['hl.book'], cleanup: { zeroOpenOrders: true, zeroUnintendedPositions: true, zeroUnresolvedCommands: true, zeroRunningJobs: true },
 			pilot: { allowlisted: true, lowNotional: true },
 			uncertainOutcomes: 0,
 			duplicateOrders: 0,
@@ -382,8 +390,12 @@ describe('integration with the release-authority recording workflow', () => {
 		if (!buildApprovalRecord) return; // recording module not in this checkout yet
 		const certPath = join(dir, 'funded-testnet-partial.json');
 		writeFileSync(certPath, JSON.stringify({
-			schemaVersion: 1,
-			network: 'testnet',
+			schemaVersion: 2,
+			network: 'mainnet',
+			commit: 'a'.repeat(40),
+			artifact: { commit: 'a'.repeat(40), sha256: 'b'.repeat(64), sizeBytes: 1 },
+			lockfileSha256: 'c'.repeat(64), policySha256: 'd'.repeat(64),
+			captureWindow: { startedAt: '2026-08-01T00:00:00Z', endedAt: '2026-08-01T01:00:00Z' }, validatorVersion: '2.0.0', features: ['limit'], actions: ['order.submit'], streams: ['hl.book'], cleanup: { zeroOpenOrders: true, zeroUnintendedPositions: true, zeroUnresolvedCommands: true, zeroRunningJobs: true },
 			pilot: { allowlisted: true, lowNotional: true },
 			uncertainOutcomes: 0,
 			duplicateOrders: 0,

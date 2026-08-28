@@ -30,7 +30,7 @@
 				</div>
 			{/if}
 			<details class="rounded border border-terminal-border bg-terminal-bg p-2 text-2xs">
-				<summary class="cursor-pointer text-terminal-text-secondary">Details</summary>
+				<summary data-action-id="ui.src.lib.components.predictionmarketpanel.summary.h460d01c40f" class="cursor-pointer text-terminal-text-secondary">Details</summary>
 				<div class="mt-2 space-y-2 text-terminal-text-muted">
 					<p>{market.outcome?.questionDescription ?? market.outcome?.outcomeDescription ?? market.name}</p>
 					{#if market.outcome?.rawDescription}<p>Venue description: {market.outcome.rawDescription}</p>{/if}

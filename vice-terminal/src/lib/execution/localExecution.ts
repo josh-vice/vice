@@ -21,10 +21,10 @@ import { parseVenueError } from './venueErrors';
 import { venueError, venueIds } from './venueResponse';
 import { marketMatches } from '$lib/chart/chartModel';
 import { executionOwnerLease, executionOwnerScope } from './executionOwner';
-import { assertTradingAllowed } from './releaseSafety';
-import { assertFreshExecutionState } from './releaseSafety';
+import { assertTradingAllowed, assertFreshExecutionState } from './releaseSafety';
+import { assertExecutionEntitled, getExecutionEntitlement, reserveAggregateCapacity, type ExecutionRisk } from './releasePolicy';
 import { executionExpiresAfter } from './expiry';
-import { accountSyncStatus, deadmanStatus, fatFingerLimits, isConnected, marketDataStatus, positions, revenueSnapshot, revenueSyncStatus } from '$lib/stores';
+import { accountSyncStatus, deadmanStatus, fatFingerLimits, isConnected, marketDataStatus, openOrders, positions, revenueSnapshot, revenueSyncStatus } from '$lib/stores';
 import { validateFatFinger } from './fatFinger';
 import { reconcileCloids } from './reconcileCloid';
 import { assertNoUnresolvedExecutionCommands, beginExecutionCommand, finishExecutionCommand, unresolvedExecutionCommands } from './commandJournal';
@@ -116,12 +116,19 @@ class LocalExecutionClient {
 		if (!revenueAttributionReady(get(revenueSyncStatus), get(revenueSnapshot))) return undefined;
 		return builderForOrderType(this.builder, orderType);
 	}
+	private async assertRuntimePolicy(market: MarketDescriptor, actionId: string, orderFamily: string, notionalUsd: number, risk: ExecutionRisk): Promise<void> {
+		if (hyperliquidNetwork.network !== 'mainnet') return;
+		if (!this.mainAddress || !market.instrument || !Number.isFinite(notionalUsd) || notionalUsd < 0) throw new Error('Mainnet execution requires complete identity and finite notional');
+		const entitlement = await getExecutionEntitlement({ wallet: this.mainAddress, actionId, venue: 'hyperliquid', instrument: market.instrument, notionalUsd: String(notionalUsd), risk });
+		assertExecutionEntitled(entitlement, { wallet: this.mainAddress, actionId, venue: 'hyperliquid', instrument: market.instrument, orderFamily, notionalUsd: String(notionalUsd), aggregateNotionalUsd: String(notionalUsd + get(positions).reduce((total, position) => total + Math.abs(position.size) * (position.markPrice || market.lastPrice), 0) + get(openOrders).reduce((total, order) => total + Math.max(0, order.remaining) * (order.price || order.triggerPrice || market.lastPrice), 0)), expectedReleaseBuild: import.meta.env.VITE_RELEASE_BUILD, risk });
+		await reserveAggregateCapacity({ wallet: this.mainAddress, releaseBuild: entitlement.releaseBuild, policyVersion: entitlement.policyVersion, notionalUsd: String(notionalUsd), risk });
+	}
 
 	async placeOrder(market: MarketDescriptor, intent: NativeOrderIntent): Promise<ExecutionAck> {
 		assertHyperliquidMarketInstrument(market);
 		const exchange = this.requireExchange();
 		await this.assertCurrentAccount();
-		assertTradingAllowed();
+		assertTradingAllowed(undefined, intent.reduceOnly ? 'reduce' : 'increase');
 		assertFreshExecutionState(get(isConnected), get(accountSyncStatus), get(marketDataStatus));
 		assertNoUnresolvedExecutionCommands(this.mainAddress!);
 		if (intent.coin !== market.apiCoin) {
@@ -129,6 +136,7 @@ class LocalExecutionClient {
 		}
 		const size = formatVenueSize(intent.size, market);
 		const price = formatVenuePrice(intent.limitPrice, market);
+		await this.assertRuntimePolicy(market, 'order.submit', intent.orderType ?? 'limit', Number(size) * Number(price), intent.reduceOnly ? 'reduce' : 'increase');
 		const possiblySamePosition = get(positions).find((position) => position.apiCoin === market.apiCoin || position.marketKey === market.marketKey);
 		if (possiblySamePosition && !marketMatches(market, possiblySamePosition.apiCoin, possiblySamePosition.marketKey)) {
 			throw new Error('Position identity is incomplete; reconcile account state before applying local risk limits');
@@ -285,8 +293,9 @@ class LocalExecutionClient {
 		assertHyperliquidMarketInstrument(market);
 		const exchange = this.requireExchange();
 		await this.assertCurrentAccount();
-		assertTradingAllowed();
+		assertTradingAllowed(undefined, params.reduceOnly ? 'reduce' : 'increase');
 		assertFreshExecutionState(get(isConnected), get(accountSyncStatus), get(marketDataStatus));
+		await this.assertRuntimePolicy(market, 'algo.twap.start', 'twap', params.size * market.lastPrice, params.reduceOnly ? 'reduce' : 'increase');
 		assertNoUnresolvedExecutionCommands(this.mainAddress!);
 		const commandId = crypto.randomUUID();
 		this.actionStartedUs.set(commandId, nowUs());
@@ -410,8 +419,9 @@ class LocalExecutionClient {
 		assertHyperliquidMarketInstrument(market);
 		const exchange = this.requireExchange();
 		await this.assertCurrentAccount();
-		assertTradingAllowed();
+		assertTradingAllowed(undefined, params.reduceOnly ? 'reduce' : 'increase');
 		assertFreshExecutionState(get(isConnected), get(accountSyncStatus), get(marketDataStatus));
+		await this.assertRuntimePolicy(market, 'algo.scale.start', 'scale', params.size * Math.max(params.startPrice, params.endPrice), params.reduceOnly ? 'reduce' : 'increase');
 		assertNoUnresolvedExecutionCommands(this.mainAddress!);
 		const commandId = params.commandId ?? crypto.randomUUID();
 		this.actionStartedUs.set(commandId, nowUs());
@@ -467,6 +477,7 @@ class LocalExecutionClient {
 		await this.assertCurrentAccount();
 		assertTradingAllowed();
 		assertFreshExecutionState(get(isConnected), get(accountSyncStatus), get(marketDataStatus));
+		await this.assertRuntimePolicy(market, 'order.modify', order.type, order.size * newPrice, 'reduce');
 		assertNoUnresolvedExecutionCommands(this.mainAddress!);
 		const commandId = crypto.randomUUID();
 		this.actionStartedUs.set(commandId, nowUs());

@@ -61,7 +61,7 @@ function certificationFlag(type: OrderType): string | undefined {
 }
 
 export function unavailableOrderTypeMessage(type: OrderType): string {
-	return `${type} is unavailable until its funded-testnet lifecycle and reconnect certification passes`;
+	return `${type} is unavailable until its funded-mainnet lifecycle and reconnect certification passes`;
 }
 
 export function advancedOrderTypes(): OrderType[] {

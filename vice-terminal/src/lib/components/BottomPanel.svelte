@@ -384,19 +384,19 @@
 	<!-- Tab Header - FTX style -->
 	<div role="tablist" aria-label="Account activity" class="h-8 min-w-0 flex items-center justify-between overflow-x-auto px-2 border-b border-terminal-border bg-terminal-bg">
 		<div class="flex items-center">
-			<button role="tab" aria-selected={$bottomPanelTab === 'positions'} aria-controls="account-panel-content"
+			<button data-action-id="ui.src.lib.components.bottompanel.button.ha7479e6d1d" role="tab" aria-selected={$bottomPanelTab === 'positions'} aria-controls="account-panel-content"
 				class="px-3 py-1.5 text-2xs font-medium border-b-2 {$bottomPanelTab === 'positions' ? 'border-terminal-cyan text-terminal-cyan' : 'border-transparent text-terminal-text-secondary hover:text-terminal-text'}"
 				onclick={() => bottomPanelTab.set('positions')}>Positions ({privateStateLive ? $positions.length : 0})</button>
-			<button role="tab" aria-selected={$bottomPanelTab === 'algos'} aria-controls="account-panel-content"
+			<button data-action-id="ui.src.lib.components.bottompanel.button.hb3a55d0f6f" role="tab" aria-selected={$bottomPanelTab === 'algos'} aria-controls="account-panel-content"
 				class="px-3 py-1.5 text-2xs font-medium border-b-2 {$bottomPanelTab === 'algos' ? 'border-terminal-cyan text-terminal-cyan' : 'border-transparent text-terminal-text-secondary hover:text-terminal-text'}"
 				onclick={() => bottomPanelTab.set('algos')}>Algorithms ({$privacyMode ? '—' : $localAlgoJobs.filter((job) => job.status === 'running').length})</button>
-			<button role="tab" aria-selected={$bottomPanelTab === 'orders'} aria-controls="account-panel-content"
+			<button data-action-id="ui.src.lib.components.bottompanel.button.h25900683a4" role="tab" aria-selected={$bottomPanelTab === 'orders'} aria-controls="account-panel-content"
 				class="px-3 py-1.5 text-2xs font-medium border-b-2 {$bottomPanelTab === 'orders' ? 'border-terminal-cyan text-terminal-cyan' : 'border-transparent text-terminal-text-secondary hover:text-terminal-text'}"
 				onclick={() => bottomPanelTab.set('orders')}>Open Orders ({privateStateLive ? $openOrders.length : 0})</button>
-			<button role="tab" aria-selected={$bottomPanelTab === 'twaps'} aria-controls="account-panel-content"
+			<button data-action-id="ui.src.lib.components.bottompanel.button.hea0249a068" role="tab" aria-selected={$bottomPanelTab === 'twaps'} aria-controls="account-panel-content"
 				class="px-3 py-1.5 text-2xs font-medium border-b-2 {$bottomPanelTab === 'twaps' ? 'border-terminal-cyan text-terminal-cyan' : 'border-transparent text-terminal-text-secondary hover:text-terminal-text'}"
 				onclick={() => bottomPanelTab.set('twaps')}>TWAP ({$privacyMode ? '—' : $twapJobs.filter((job) => job.status === 'active').length})</button>
-			<button role="tab" aria-selected={$bottomPanelTab === 'fills'} aria-controls="account-panel-content"
+			<button data-action-id="ui.src.lib.components.bottompanel.button.ha633966a3d" role="tab" aria-selected={$bottomPanelTab === 'fills'} aria-controls="account-panel-content"
 				class="px-3 py-1.5 text-2xs font-medium border-b-2 {$bottomPanelTab === 'fills' ? 'border-terminal-cyan text-terminal-cyan' : 'border-transparent text-terminal-text-secondary hover:text-terminal-text'}"
 				onclick={() => bottomPanelTab.set('fills')}>Trade History</button>
 		</div>
@@ -410,7 +410,7 @@
 				<span class="text-terminal-text-muted">Net P&L: <span class="font-mono text-terminal-text-muted">—</span></span>
 			{/if}
 			{#if privateStateLive}
-				<button class="rounded border border-terminal-border px-1.5 py-0.5 text-3xs text-terminal-text-muted hover:text-terminal-cyan" onclick={downloadExecutionAudit}>Export audit</button>
+				<button data-action-id="ui.src.lib.components.bottompanel.button.h77c1085e24" class="rounded border border-terminal-border px-1.5 py-0.5 text-3xs text-terminal-text-muted hover:text-terminal-cyan" onclick={downloadExecutionAudit}>Export audit</button>
 			{/if}
 		</div>
 	</div>
@@ -424,14 +424,14 @@
 				{#if visiblePositions.some((position) => positionSupportsLifecycle(position.id))}
 					{#if !flattenConfirm}
 						<div class="flex gap-1">
-							<button class="rounded border border-terminal-border px-1.5 py-0.5 text-3xs text-terminal-text-muted hover:text-terminal-text disabled:opacity-50" disabled={flattenBusy} onclick={() => (flattenConfirm = 'long')}>CLOSE LONGS</button>
-							<button class="rounded border border-terminal-border px-1.5 py-0.5 text-3xs text-terminal-text-muted hover:text-terminal-text disabled:opacity-50" disabled={flattenBusy} onclick={() => (flattenConfirm = 'short')}>CLOSE SHORTS</button>
-							<button class="rounded border border-terminal-red/60 px-1.5 py-0.5 text-3xs text-terminal-red hover:bg-terminal-bg-hover disabled:opacity-50" disabled={flattenBusy} onclick={() => (flattenConfirm = 'both')}>FLATTEN ALL</button>
+							<button data-action-id="ui.src.lib.components.bottompanel.button.h9e2df8ab6c" class="rounded border border-terminal-border px-1.5 py-0.5 text-3xs text-terminal-text-muted hover:text-terminal-text disabled:opacity-50" disabled={flattenBusy} onclick={() => (flattenConfirm = 'long')}>CLOSE LONGS</button>
+							<button data-action-id="ui.src.lib.components.bottompanel.button.h6378894540" class="rounded border border-terminal-border px-1.5 py-0.5 text-3xs text-terminal-text-muted hover:text-terminal-text disabled:opacity-50" disabled={flattenBusy} onclick={() => (flattenConfirm = 'short')}>CLOSE SHORTS</button>
+							<button data-action-id="ui.src.lib.components.bottompanel.button.h611ace0ad0" class="rounded border border-terminal-red/60 px-1.5 py-0.5 text-3xs text-terminal-red hover:bg-terminal-bg-hover disabled:opacity-50" disabled={flattenBusy} onclick={() => (flattenConfirm = 'both')}>FLATTEN ALL</button>
 						</div>
 					{:else}
 						<div class="flex items-center gap-1 text-3xs text-terminal-yellow">
 							<span>Close {flattenConfirm === 'both' ? 'all positions' : flattenConfirm === 'long' ? 'all longs' : 'all shorts'}?</span>
-							<button class="rounded border border-terminal-border px-1.5 py-0.5" onclick={() => (flattenConfirm = null)}>No</button>
+							<button data-action-id="ui.src.lib.components.bottompanel.button.h8e5d4b6ce2" class="rounded border border-terminal-border px-1.5 py-0.5" onclick={() => (flattenConfirm = null)}>No</button>
 						</div>
 					{/if}
 				{:else}
@@ -491,33 +491,33 @@
 							<td class="cell-md text-right font-mono">${formatPrice(position.entryPrice)}</td>
 							<td class="cell-md text-center">
 								<div class="relative inline-flex gap-1">
-									<button
+									<button data-action-id="ui.src.lib.components.bottompanel.button.hbc731356fe"
 										class="px-2 py-1 text-3xs font-medium rounded bg-terminal-red/20 text-terminal-red hover:bg-terminal-red/30 transition-colors disabled:opacity-50"
 										disabled={positionActionBusy === position.id}
 										onclick={() => closePosition(position.id, 'market')}
 									>
 										{positionActionBusy === position.id ? 'WORKING…' : 'MARKET CLOSE'}
 									</button>
-									<button aria-label={`More close options for ${position.market}`} class="px-1.5 py-1 text-3xs rounded border border-terminal-border text-terminal-text-muted hover:text-terminal-text" disabled={positionActionBusy === position.id} onclick={() => (quickCloseMenu = quickCloseMenu === position.id ? '' : position.id)}>⌄</button>
+									<button data-action-id="ui.src.lib.components.bottompanel.button.hb98543d6f6" aria-label={`More close options for ${position.market}`} class="px-1.5 py-1 text-3xs rounded border border-terminal-border text-terminal-text-muted hover:text-terminal-text" disabled={positionActionBusy === position.id} onclick={() => (quickCloseMenu = quickCloseMenu === position.id ? '' : position.id)}>⌄</button>
 									{#if quickCloseMenu === position.id}
 										<div class="absolute right-0 top-7 z-20 min-w-36 rounded border border-terminal-border bg-terminal-bg p-1 shadow-lg">
-											<button class="w-full rounded px-2 py-1 text-left text-3xs text-terminal-text hover:bg-terminal-bg-hover" onclick={() => closePosition(position.id, 'quote')}>LIMIT @ QUOTE</button>
-											<button class="w-full rounded px-2 py-1 text-left text-3xs text-terminal-text hover:bg-terminal-bg-hover" onclick={() => closePositionTwap(position.id, 5)}>TWAP CLOSE · 5M</button>
-											<button class="w-full rounded px-2 py-1 text-left text-3xs text-terminal-text hover:bg-terminal-bg-hover" onclick={() => openScaleClose(position.id)}>SCALE CLOSE…</button>
-											<button class="w-full rounded px-2 py-1 text-left text-3xs text-terminal-yellow hover:bg-terminal-bg-hover" onclick={() => (reverseConfirm = position.id)}>REVERSE…</button>
+											<button data-action-id="ui.src.lib.components.bottompanel.button.hbca64992d4" class="w-full rounded px-2 py-1 text-left text-3xs text-terminal-text hover:bg-terminal-bg-hover" onclick={() => closePosition(position.id, 'quote')}>LIMIT @ QUOTE</button>
+											<button data-action-id="ui.src.lib.components.bottompanel.button.h16b2d8e299" class="w-full rounded px-2 py-1 text-left text-3xs text-terminal-text hover:bg-terminal-bg-hover" onclick={() => closePositionTwap(position.id, 5)}>TWAP CLOSE · 5M</button>
+											<button data-action-id="ui.src.lib.components.bottompanel.button.h00cb8fcdfb" class="w-full rounded px-2 py-1 text-left text-3xs text-terminal-text hover:bg-terminal-bg-hover" onclick={() => openScaleClose(position.id)}>SCALE CLOSE…</button>
+											<button data-action-id="ui.src.lib.components.bottompanel.button.h788d7af538" class="w-full rounded px-2 py-1 text-left text-3xs text-terminal-yellow hover:bg-terminal-bg-hover" onclick={() => (reverseConfirm = position.id)}>REVERSE…</button>
 										</div>
 									{/if}
 									{#if scaleCloseConfirm === position.id}
 										<div class="absolute right-0 top-7 z-30 w-56 rounded border border-terminal-yellow/50 bg-terminal-bg p-2 text-left shadow-lg">
 											<p class="text-3xs text-terminal-text">Reduce-only Scale close. Set the venue price range; it stays certification-gated.</p>
 											<div class="mt-2 grid grid-cols-2 gap-1 text-3xs">
-												<label class="text-terminal-text-muted">Start <input aria-label="Scale close start price" class="mt-0.5 w-full terminal-input px-1 py-0.5 text-right" type="number" min="0" step="any" bind:value={scaleCloseStart} /></label>
-												<label class="text-terminal-text-muted">End <input aria-label="Scale close end price" class="mt-0.5 w-full terminal-input px-1 py-0.5 text-right" type="number" min="0" step="any" bind:value={scaleCloseEnd} /></label>
-												<label class="text-terminal-text-muted">Levels <input aria-label="Scale close levels" class="mt-0.5 w-full terminal-input px-1 py-0.5 text-right" type="number" min="2" max="100" step="1" bind:value={scaleCloseLevels} /></label>
+												<label class="text-terminal-text-muted">Start <input data-action-id="ui.src.lib.components.bottompanel.input.hd40225050e" aria-label="Scale close start price" class="mt-0.5 w-full terminal-input px-1 py-0.5 text-right" type="number" min="0" step="any" bind:value={scaleCloseStart} /></label>
+												<label class="text-terminal-text-muted">End <input data-action-id="ui.src.lib.components.bottompanel.input.h20740e799d" aria-label="Scale close end price" class="mt-0.5 w-full terminal-input px-1 py-0.5 text-right" type="number" min="0" step="any" bind:value={scaleCloseEnd} /></label>
+												<label class="text-terminal-text-muted">Levels <input data-action-id="ui.src.lib.components.bottompanel.input.ha896ce3f1f" aria-label="Scale close levels" class="mt-0.5 w-full terminal-input px-1 py-0.5 text-right" type="number" min="2" max="100" step="1" bind:value={scaleCloseLevels} /></label>
 											</div>
 											<div class="mt-2 flex justify-end gap-1">
-												<button class="rounded border border-terminal-border px-1.5 py-0.5 text-3xs" onclick={() => (scaleCloseConfirm = '')}>Cancel</button>
-												<button class="rounded bg-terminal-yellow/20 px-1.5 py-0.5 text-3xs text-terminal-yellow" onclick={() => closePositionScale(position.id)}>Start Scale</button>
+												<button data-action-id="ui.src.lib.components.bottompanel.button.ha743a11c94" class="rounded border border-terminal-border px-1.5 py-0.5 text-3xs" onclick={() => (scaleCloseConfirm = '')}>Cancel</button>
+												<button data-action-id="ui.src.lib.components.bottompanel.button.hfc30a150c9" class="rounded bg-terminal-yellow/20 px-1.5 py-0.5 text-3xs text-terminal-yellow" onclick={() => closePositionScale(position.id)}>Start Scale</button>
 											</div>
 										</div>
 									{/if}
@@ -525,8 +525,8 @@
 										<div class="absolute right-0 top-7 z-30 w-52 rounded border border-terminal-yellow/50 bg-terminal-bg p-2 text-left shadow-lg">
 											<p class="text-3xs text-terminal-text">Reverse closes this position first. It opens the opposite side only after a flat account snapshot.</p>
 											<div class="mt-2 flex justify-end gap-1">
-												<button class="rounded border border-terminal-border px-1.5 py-0.5 text-3xs" onclick={() => (reverseConfirm = '')}>Cancel</button>
-												<button class="rounded bg-terminal-yellow/20 px-1.5 py-0.5 text-3xs text-terminal-yellow" onclick={() => reversePosition(position.id)}>Confirm reverse</button>
+												<button data-action-id="ui.src.lib.components.bottompanel.button.h0cc16b889b" class="rounded border border-terminal-border px-1.5 py-0.5 text-3xs" onclick={() => (reverseConfirm = '')}>Cancel</button>
+												<button data-action-id="ui.src.lib.components.bottompanel.button.h97eee7b5f6" class="rounded bg-terminal-yellow/20 px-1.5 py-0.5 text-3xs text-terminal-yellow" onclick={() => reversePosition(position.id)}>Confirm reverse</button>
 											</div>
 										</div>
 									{/if}
@@ -541,15 +541,15 @@
 				<span class="text-3xs text-terminal-text-muted">Cancel known orders only. Every order must match a registered API coin and market key.</span>
 				{#if !cancelAllConfirm}
 					<div class="flex gap-1">
-						<button class="rounded border border-terminal-border px-1.5 py-0.5 text-3xs text-terminal-text-muted hover:text-terminal-text disabled:opacity-50" disabled={cancelAllBusy} onclick={() => (cancelAllConfirm = 'buy')}>CANCEL BIDS</button>
-						<button class="rounded border border-terminal-border px-1.5 py-0.5 text-3xs text-terminal-text-muted hover:text-terminal-text disabled:opacity-50" disabled={cancelAllBusy} onclick={() => (cancelAllConfirm = 'sell')}>CANCEL ASKS</button>
-						<button class="rounded border border-terminal-red/60 px-1.5 py-0.5 text-3xs text-terminal-red hover:bg-terminal-red/10 disabled:opacity-50" disabled={cancelAllBusy} onclick={() => (cancelAllConfirm = 'both')}>CANCEL ALL</button>
+						<button data-action-id="ui.src.lib.components.bottompanel.button.h95d5ab29ba" class="rounded border border-terminal-border px-1.5 py-0.5 text-3xs text-terminal-text-muted hover:text-terminal-text disabled:opacity-50" disabled={cancelAllBusy} onclick={() => (cancelAllConfirm = 'buy')}>CANCEL BIDS</button>
+						<button data-action-id="ui.src.lib.components.bottompanel.button.h19636da2ee" class="rounded border border-terminal-border px-1.5 py-0.5 text-3xs text-terminal-text-muted hover:text-terminal-text disabled:opacity-50" disabled={cancelAllBusy} onclick={() => (cancelAllConfirm = 'sell')}>CANCEL ASKS</button>
+						<button data-action-id="ui.src.lib.components.bottompanel.button.h38c1066eca" class="rounded border border-terminal-red/60 px-1.5 py-0.5 text-3xs text-terminal-red hover:bg-terminal-red/10 disabled:opacity-50" disabled={cancelAllBusy} onclick={() => (cancelAllConfirm = 'both')}>CANCEL ALL</button>
 					</div>
 				{:else}
 					<div class="flex items-center gap-1 text-3xs text-terminal-yellow">
 						<span>Cancel {cancelAllConfirm === 'both' ? 'all' : cancelAllConfirm === 'buy' ? 'all bids' : 'all asks'}?</span>
-						<button class="rounded border border-terminal-border px-1.5 py-0.5" onclick={() => (cancelAllConfirm = null)}>No</button>
-						<button class="rounded bg-terminal-red/20 px-1.5 py-0.5 text-terminal-red" onclick={() => cancelAllOrders(cancelAllConfirm!)}>Confirm</button>
+						<button data-action-id="ui.src.lib.components.bottompanel.button.he3151e2c02" class="rounded border border-terminal-border px-1.5 py-0.5" onclick={() => (cancelAllConfirm = null)}>No</button>
+						<button data-action-id="ui.src.lib.components.bottompanel.button.hba5a702b49" class="rounded bg-terminal-red/20 px-1.5 py-0.5 text-terminal-red" onclick={() => cancelAllOrders(cancelAllConfirm!)}>Confirm</button>
 					</div>
 				{/if}
 			</div>
@@ -583,7 +583,7 @@
 							<td class="cell-md text-right font-mono">{formatSize(order.filled)}</td>
 							<td class="cell-md text-right font-mono text-terminal-text-muted">{formatTime(order.timestamp)}</td>
 							<td class="cell-md text-center">
-								<button
+								<button data-action-id="ui.src.lib.components.bottompanel.button.h3031bfaf94"
 									class="p-1 rounded hover:bg-terminal-red/20 text-terminal-text-muted hover:text-terminal-red transition-colors"
 									disabled={!order.apiCoin && !order.marketKey}
 									onclick={() => cancelOrder(order.id, order.apiCoin ?? order.marketKey ?? '')}
@@ -610,7 +610,7 @@
 						<td class="cell-md text-right">{formatSize(job.executedSize)} / {formatSize(job.size)}</td>
 						<td class="cell-md text-right">{job.minutes}m</td>
 						<td class="cell-md uppercase {job.status === 'error' ? 'text-terminal-red' : job.status === 'active' ? 'text-terminal-cyan' : 'text-terminal-text-muted'}" title={job.error}>{job.status}</td>
-						<td class="cell-md text-center">{#if job.status === 'active' && job.twapId != null}<button class="px-2 py-1 rounded bg-terminal-red/20 text-terminal-red hover:bg-terminal-red/30" onclick={() => stopTwap(job.twapId!, job.market)}>CANCEL</button>{/if}</td>
+						<td class="cell-md text-center">{#if job.status === 'active' && job.twapId != null}<button data-action-id="ui.src.lib.components.bottompanel.button.he94a447466" class="px-2 py-1 rounded bg-terminal-red/20 text-terminal-red hover:bg-terminal-red/30" onclick={() => stopTwap(job.twapId!, job.market)}>CANCEL</button>{/if}</td>
 					</tr>
 				{/each}</tbody>
 			</table>
@@ -624,7 +624,7 @@
 				</tr></thead>
 				<tbody>{#each $localAlgoJobs as job (job.id)}<tr class="border-b border-terminal-border/30">
 					<td class="cell-md uppercase text-terminal-cyan">{job.type}</td><td class="cell-md">{job.apiCoin}</td><td class="cell-md uppercase {job.status === 'failed' || job.status === 'emergencyStopped' ? 'text-terminal-red' : job.status === 'running' ? 'text-terminal-green' : 'text-terminal-text-muted'}" title={job.error}>{job.status}</td><td class="cell-md text-right">{job.childOrderIds.length}</td><td class="cell-md text-right">{job.type === 'chase' ? `${job.chases} / ${job.maxChases}` : job.type === 'swarm' ? `${job.slicesPlaced} / ${job.slicesTotal}` : job.type === 'ping_pong' ? `${job.completedLegs} / ${job.cycles * 2}` : job.type === 'iceberg' ? `${job.filledSize} / ${job.totalSize}` : job.type === 'scale' ? `${job.filledSize} / ${job.totalSize}` : job.type === 'adaptive_twap' || job.type === 'vwap' || job.type === 'pov' ? `${job.executedSize} / ${job.totalSize}` : job.type === 'break_even' || job.type === 'conditional_ladder' ? (job.activated ? 'armed' : 'waiting') : 'OCO'}</td>
-					<td class="cell-md text-right"><div class="flex justify-end gap-1">{#if job.type === 'chase'}{#if job.status === 'running'}<button class="px-1.5 py-0.5 rounded bg-terminal-yellow/15 text-terminal-yellow" onclick={() => pauseChase(job.id)}>PAUSE</button>{:else if !job.restartRecoveryRequired && (job.status === 'paused' || job.status === 'failed')}<button class="px-1.5 py-0.5 rounded bg-terminal-green/15 text-terminal-green" onclick={() => resumeChase(job.id)}>RESUME</button>{/if}{#if ['running', 'paused', 'failed'].includes(job.status)}<button class="px-1.5 py-0.5 rounded bg-terminal-red/15 text-terminal-red" onclick={() => cancelChase(job.id)}>CANCEL</button><button class="px-1.5 py-0.5 rounded bg-terminal-red/30 text-terminal-red" onclick={() => cancelChase(job.id, true)}>STOP</button>{/if}{:else if job.type === 'oco'}{#if job.status === 'running'}<button class="px-1.5 py-0.5 rounded bg-terminal-yellow/15 text-terminal-yellow" onclick={() => pauseOco(job.id)}>PAUSE</button>{:else if !job.restartRecoveryRequired && (job.status === 'paused' || job.status === 'failed')}<button class="px-1.5 py-0.5 rounded bg-terminal-green/15 text-terminal-green" onclick={() => resumeOco(job.id)}>RESUME</button>{/if}{#if ['running', 'paused', 'failed'].includes(job.status)}<button class="px-1.5 py-0.5 rounded bg-terminal-red/15 text-terminal-red" onclick={() => cancelOco(job.id)}>CANCEL</button><button class="px-1.5 py-0.5 rounded bg-terminal-red/30 text-terminal-red" onclick={() => cancelOco(job.id, true)}>STOP</button>{/if}{:else if job.type === 'trailing'}{#if job.status === 'running'}<button class="px-1.5 py-0.5 rounded bg-terminal-yellow/15 text-terminal-yellow" onclick={() => pauseTrailing(job.id)}>PAUSE</button>{:else if !job.restartRecoveryRequired && (job.status === 'paused' || job.status === 'failed')}<button class="px-1.5 py-0.5 rounded bg-terminal-green/15 text-terminal-green" onclick={() => resumeTrailing(job.id)}>RESUME</button>{/if}{#if ['running', 'paused', 'failed'].includes(job.status)}<button class="px-1.5 py-0.5 rounded bg-terminal-red/15 text-terminal-red" onclick={() => cancelTrailing(job.id)}>CANCEL</button><button class="px-1.5 py-0.5 rounded bg-terminal-red/30 text-terminal-red" onclick={() => cancelTrailing(job.id, true)}>STOP</button>{/if}{:else}{#if job.status === 'running'}<button class="px-1.5 py-0.5 rounded bg-terminal-yellow/15 text-terminal-yellow" onclick={() => pauseAlgo(job.id, job.type)}>PAUSE</button>{:else if canResumeAlgo(job)}<button class="px-1.5 py-0.5 rounded bg-terminal-green/15 text-terminal-green" onclick={() => resumeAlgo(job.id, job.type)}>RESUME</button>{/if}{#if ['running', 'paused', 'failed'].includes(job.status)}<button class="px-1.5 py-0.5 rounded bg-terminal-red/15 text-terminal-red" onclick={() => cancelAlgo(job.id, job.type)}>CANCEL</button><button class="px-1.5 py-0.5 rounded bg-terminal-red/30 text-terminal-red" onclick={() => cancelAlgo(job.id, job.type, true)}>STOP</button>{/if}{/if}</div></td>
+					<td class="cell-md text-right"><div class="flex justify-end gap-1">{#if job.type === 'chase'}{#if job.status === 'running'}<button data-action-id="ui.src.lib.components.bottompanel.button.h57d9501fb8" class="px-1.5 py-0.5 rounded bg-terminal-yellow/15 text-terminal-yellow" onclick={() => pauseChase(job.id)}>PAUSE</button>{:else if !job.restartRecoveryRequired && (job.status === 'paused' || job.status === 'failed')}<button data-action-id="ui.src.lib.components.bottompanel.button.h2117e2c558" class="px-1.5 py-0.5 rounded bg-terminal-green/15 text-terminal-green" onclick={() => resumeChase(job.id)}>RESUME</button>{/if}{#if ['running', 'paused', 'failed'].includes(job.status)}<button data-action-id="ui.src.lib.components.bottompanel.button.h1dc7bd5bdb" class="px-1.5 py-0.5 rounded bg-terminal-red/15 text-terminal-red" onclick={() => cancelChase(job.id)}>CANCEL</button><button data-action-id="ui.src.lib.components.bottompanel.button.h8df941a259" class="px-1.5 py-0.5 rounded bg-terminal-red/30 text-terminal-red" onclick={() => cancelChase(job.id, true)}>STOP</button>{/if}{:else if job.type === 'oco'}{#if job.status === 'running'}<button data-action-id="ui.src.lib.components.bottompanel.button.hb133adb8b9" class="px-1.5 py-0.5 rounded bg-terminal-yellow/15 text-terminal-yellow" onclick={() => pauseOco(job.id)}>PAUSE</button>{:else if !job.restartRecoveryRequired && (job.status === 'paused' || job.status === 'failed')}<button data-action-id="ui.src.lib.components.bottompanel.button.he7c3267146" class="px-1.5 py-0.5 rounded bg-terminal-green/15 text-terminal-green" onclick={() => resumeOco(job.id)}>RESUME</button>{/if}{#if ['running', 'paused', 'failed'].includes(job.status)}<button data-action-id="ui.src.lib.components.bottompanel.button.he5f4993d5b" class="px-1.5 py-0.5 rounded bg-terminal-red/15 text-terminal-red" onclick={() => cancelOco(job.id)}>CANCEL</button><button data-action-id="ui.src.lib.components.bottompanel.button.h9bf2be05d2" class="px-1.5 py-0.5 rounded bg-terminal-red/30 text-terminal-red" onclick={() => cancelOco(job.id, true)}>STOP</button>{/if}{:else if job.type === 'trailing'}{#if job.status === 'running'}<button data-action-id="ui.src.lib.components.bottompanel.button.h5181a6d51e" class="px-1.5 py-0.5 rounded bg-terminal-yellow/15 text-terminal-yellow" onclick={() => pauseTrailing(job.id)}>PAUSE</button>{:else if !job.restartRecoveryRequired && (job.status === 'paused' || job.status === 'failed')}<button data-action-id="ui.src.lib.components.bottompanel.button.hfafa552fd3" class="px-1.5 py-0.5 rounded bg-terminal-green/15 text-terminal-green" onclick={() => resumeTrailing(job.id)}>RESUME</button>{/if}{#if ['running', 'paused', 'failed'].includes(job.status)}<button data-action-id="ui.src.lib.components.bottompanel.button.h53e5af7576" class="px-1.5 py-0.5 rounded bg-terminal-red/15 text-terminal-red" onclick={() => cancelTrailing(job.id)}>CANCEL</button><button data-action-id="ui.src.lib.components.bottompanel.button.h5069ee0c59" class="px-1.5 py-0.5 rounded bg-terminal-red/30 text-terminal-red" onclick={() => cancelTrailing(job.id, true)}>STOP</button>{/if}{:else}{#if job.status === 'running'}<button data-action-id="ui.src.lib.components.bottompanel.button.hbab67be478" class="px-1.5 py-0.5 rounded bg-terminal-yellow/15 text-terminal-yellow" onclick={() => pauseAlgo(job.id, job.type)}>PAUSE</button>{:else if canResumeAlgo(job)}<button data-action-id="ui.src.lib.components.bottompanel.button.h8a38e6a903" class="px-1.5 py-0.5 rounded bg-terminal-green/15 text-terminal-green" onclick={() => resumeAlgo(job.id, job.type)}>RESUME</button>{/if}{#if ['running', 'paused', 'failed'].includes(job.status)}<button data-action-id="ui.src.lib.components.bottompanel.button.h978e5b7f74" class="px-1.5 py-0.5 rounded bg-terminal-red/15 text-terminal-red" onclick={() => cancelAlgo(job.id, job.type)}>CANCEL</button><button data-action-id="ui.src.lib.components.bottompanel.button.h5b4fbba339" class="px-1.5 py-0.5 rounded bg-terminal-red/30 text-terminal-red" onclick={() => cancelAlgo(job.id, job.type, true)}>STOP</button>{/if}{/if}</div></td>
 				</tr>{/each}</tbody>
 			</table>
 		{:else if $bottomPanelTab === 'fills'}

@@ -19,5 +19,7 @@ export const GET: RequestHandler = async () =>
 		network: hyperliquidTradingNetwork.network,
 		publicNetwork: hyperliquidPublicNetwork.network,
 		publicTestnet: hyperliquidPublicNetwork.isTestnet,
-		tradingNetwork: hyperliquidTradingNetwork.network
-	});
+		tradingNetwork: hyperliquidTradingNetwork.network,
+		commit: process.env.VICE_RELEASE_SHA ?? null,
+		releaseBuild: process.env.VICE_MAINNET_RELEASE_BUILD ?? process.env.VICE_RELEASE_SHA ?? null
+	}, { headers: { 'Cache-Control': 'no-store' } });

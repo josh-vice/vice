@@ -1,6 +1,6 @@
 # US-005 — Observable, gated releases
 
-Story schema v1.
+Story schema v2.
 
 As an operator, I need every release to prove the custody boundary, venue routing, build integrity, and failure behavior so that a fast terminal does not become an unsafe terminal.
 
@@ -154,6 +154,8 @@ As an operator, I need every release to prove the custody boundary, venue routin
 3. Complete funded-wallet stories in `US-002`, `US-003`, and `US-004`, recording latency snapshots and venue order IDs.
 4. Promote only when all acceptance criteria pass; roll back if stale/uncertain outcomes exceed zero during the canary.
 
+- Action IDs: story.us-005
+
 ## Operational contract
 
 - Persona: Release engineer promoting a non-custodial trading build through testnet, canary, and mainnet gates.
@@ -167,8 +169,8 @@ As an operator, I need every release to prove the custody boundary, venue routin
 - Latency expectations: Enforce receipt/store, frame-ready, local processing, and action/signed-dispatch budgets using versioned client telemetry; synthetic samples cannot certify production.
 - Telemetry: Retain release gate results, service health, feed/account SLOs, command uncertainty, reconciliation, builder/referral attribution, and rollback signals without secrets.
 - Linked tests: `preflight.mjs`, `release-gate.mjs`, latency boundary/gate tests, launcher tests, all category suites, `bun run dev:verify`, and CI workflows.
-- Funded-testnet evidence: Repeated US-002/003/004 story passes, low-notional allowlisted pilot, builder/referral reconciliation, and incident/rollback rehearsal are required before mainnet.
-- Given any required gate lacks authoritative evidence, when a release is evaluated, then promotion fails closed and names the missing evidence.
+- Funded-mainnet evidence: Repeated US-002/003/004 story passes, low-notional allowlisted pilot, builder/referral reconciliation, and incident/rollback rehearsal are required before mainnet.
+- US-005-AC-001: Given any required gate lacks authoritative evidence, when a release is evaluated, then promotion fails closed and names the missing evidence.
 - Latest fixture-bundle slice: production UI code no longer statically embeds simulated community messages, news posts, liquidations, or position badges; the development fixture module is dynamically imported only after the demo flag is enabled. Frontend tests and production build pass after this boundary change.
 - Latest order-flag slice: the ticket and local execution boundary now agree that only limit orders may use post-only; Market selects IOC semantics and incompatible stale flags are rejected before signing. Typecheck, focused order-flag tests, and production build pass.
 - Latest latency-gate slice: latency certification now treats `feedToFrameReadyMs` as a required finite, non-negative measurement alongside receipt-to-store, action-to-signed-dispatch, and local-processing values. Malformed frame-ready evidence fails closed instead of producing a misleading zero p99; focused latency-boundary coverage and the full frontend suite pass.

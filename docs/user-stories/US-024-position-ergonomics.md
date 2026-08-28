@@ -1,18 +1,20 @@
 # US-024: Position ergonomics in one action
 
-Story schema v1.
+Story schema v2.
 
 As an experienced Insilico terminal user, I want one-action position management: reverse, selected-market flatten, per-position market/limit-at-quote/Scale/TWAP close, bid/ask/both cancel-all, and long/short/all flatten — all with exact account-local fixed-point fat-finger limits and authoritative reconciliation.
 
 ## Acceptance criteria
 
-- Given a live position on the selected market, when I choose close, then the close intent uses the exact position identity and routes through the certified local-execution boundary; market close, limit-at-quote, Scale close, and TWAP close are available.
-- Given a live position, when I choose reverse, then the system closes first and opens only after an exact flat account snapshot; it never nets or skips the close leg.
-- Given multiple positions, when I flatten long, short, or all, then the plan targets exactly those markets and dispatches serially using live feed selection for each target.
-- Given resting orders on a market, when I cancel by bid, ask, or both, then an order is reported cancelled only after the refreshed open-order snapshot omits it.
-- Given an account-local fat-finger cap, when a close/reverse size exceeds it, then the action rejects before signing and explains the cap.
-- Given a partial fill or reconnect during close/reverse, when the snapshot returns authoritative, then the remaining legs resume only from the reconciled state; nothing re-dispatches from stale state.
+- US-024-AC-001: Given a live position on the selected market, when I choose close, then the close intent uses the exact position identity and routes through the certified local-execution boundary; market close, limit-at-quote, Scale close, and TWAP close are available.
+- US-024-AC-002: Given a live position, when I choose reverse, then the system closes first and opens only after an exact flat account snapshot; it never nets or skips the close leg.
+- US-024-AC-003: Given multiple positions, when I flatten long, short, or all, then the plan targets exactly those markets and dispatches serially using live feed selection for each target.
+- US-024-AC-004: Given resting orders on a market, when I cancel by bid, ask, or both, then an order is reported cancelled only after the refreshed open-order snapshot omits it.
+- US-024-AC-005: Given an account-local fat-finger cap, when a close/reverse size exceeds it, then the action rejects before signing and explains the cap.
+- US-024-AC-006: Given a partial fill or reconnect during close/reverse, when the snapshot returns authoritative, then the remaining legs resume only from the reconciled state; nothing re-dispatches from stale state.
 - When position actions are measured, then click→signed dispatch p99 < 10ms and frame updates stay within one 60Hz frame.
+
+- Action IDs: story.us-024
 
 ## Operational contract
 
@@ -27,7 +29,7 @@ As an experienced Insilico terminal user, I want one-action position management:
 - Latency expectations: action→signed dispatch p99 < 10ms; frame updates within one 60Hz frame.
 - Telemetry: Record position action class and latency without prices, sizes, or account contents.
 - Linked tests: `positionCloseIdentity.test.js`, `positionClose.test.js`, `positionReverse.test.js`, `flattenAll.test.js`, `flattenSurface.test.js`, `cancelAll.test.js`, `fatFinger.test.js`, `execution/scaleMath.test.js`, `execution/twaps.test.js`.
-- Funded-testnet evidence: Funded position-lifecycle proof (multi-market close, partial-leg, reconnect) remains open under US-010.
+- Funded-mainnet evidence: Funded position-lifecycle proof (multi-market close, partial-leg, reconnect) remains open under US-010.
 
 ## Evidence log
 

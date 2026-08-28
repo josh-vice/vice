@@ -1,19 +1,21 @@
 # US-022: DOM ladder one-click trading
 
-Story schema v1.
+Story schema v2.
 
 As an experienced Insilico terminal user, I want the depth ladder to trade with one click: click a price level to place a limit, Shift-click to place a stop, drag to reprice, and use the row controls to cancel, size quickly, flatten, or reverse — all with live row-aligned orders and positions.
 
 ## Acceptance criteria
 
-- Given a live L2 book for the selected market, when I click an armed price row, then a limit order is placed at that exact price through the certified local-execution boundary.
-- Given a live L2 book, when I Shift-click a price row, then a stop order is placed at that price with exact market identity.
-- Given a resting row order, when I drag it to a new price, then the order reprices to the new level and the row reflects the change.
-- Given a resting row order, when I use its cancel control, then the order cancels only after the refreshed open-order snapshot omits it.
-- Given quick-size presets, when I select a size, then the ticket and ladder use the venue-precision size; presets never bypass fat-finger limits or exact identity.
-- Given a selected market position, when I use flatten or reverse, then flatten closes exactly the selected market and reverse closes first and opens only after an exact flat account snapshot.
-- Given manual/auto recenter, when the book moves, then the ladder recenters per the selected mode without dropping rows or resetting zoom.
+- US-022-AC-001: Given a live L2 book for the selected market, when I click an armed price row, then a limit order is placed at that exact price through the certified local-execution boundary.
+- US-022-AC-002: Given a live L2 book, when I Shift-click a price row, then a stop order is placed at that price with exact market identity.
+- US-022-AC-003: Given a resting row order, when I drag it to a new price, then the order reprices to the new level and the row reflects the change.
+- US-022-AC-004: Given a resting row order, when I use its cancel control, then the order cancels only after the refreshed open-order snapshot omits it.
+- US-022-AC-005: Given quick-size presets, when I select a size, then the ticket and ladder use the venue-precision size; presets never bypass fat-finger limits or exact identity.
+- US-022-AC-006: Given a selected market position, when I use flatten or reverse, then flatten closes exactly the selected market and reverse closes first and opens only after an exact flat account snapshot.
+- US-022-AC-007: Given manual/auto recenter, when the book moves, then the ladder recenters per the selected mode without dropping rows or resetting zoom.
 - When ladder interactions are measured, then row-diff updates and drag frames stay within one 60Hz frame; book grouping and depth selections persist across reload.
+
+- Action IDs: story.us-022
 
 ## Operational contract
 
@@ -28,7 +30,7 @@ As an experienced Insilico terminal user, I want the depth ladder to trade with 
 - Latency expectations: click→signed dispatch p99 < 10ms; row-diff and drag frame updates within one 60Hz frame.
 - Telemetry: Record ladder action class and interaction latency without prices, sizes, or account contents.
 - Linked tests: `orderBookDomPlacement.test.js`, `ladder guard/identity/frame tests`, `bookAnalytics.test.js`, `bookGrouping.test.js`, `positionCloseIdentity.test.js`, `flattenAll.test.js`, `flattenSurface.test.js`, `ditherSurface.test.js`.
-- Funded-testnet evidence: Funded DOM lifecycle (place, drag-reprice, cancel, flatten, reverse) remains open under US-009; advanced-order certification 2026-08-06 covers the shared signing path.
+- Funded-mainnet evidence: Funded DOM lifecycle (place, drag-reprice, cancel, flatten, reverse) remains open under US-009; advanced-order certification 2026-08-06 covers the shared signing path.
 
 ## Evidence log
 

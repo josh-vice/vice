@@ -31,7 +31,7 @@
 			aria-live="polite"
 		>
 			<span class="text-terminal-green">UPDATE AVAILABLE</span>
-			<button
+			<button data-action-id="ui.src.lib.components.pwabanner.button.ha65c0f110c"
 				data-testid="pwa-reload-button"
 				type="button"
 				class="terminal-btn terminal-btn-primary !px-2 !py-0.5 !text-2xs"

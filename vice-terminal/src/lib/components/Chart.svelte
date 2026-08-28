@@ -709,14 +709,14 @@
 
 		<div class="flex items-center gap-2">
 			{#if chartActionsEnabled}
-			<button
+			<button data-action-id="ui.src.lib.components.chart.button.h192fc8b032"
 				class="px-2 py-1 text-2xs rounded transition-colors {$designerMode ? 'bg-terminal-cyan/20 text-terminal-cyan' : 'text-terminal-text-muted hover:text-terminal-text'}"
 				onclick={() => designerMode.update((v) => !v)}
 				title="Design draft — preview order levels on the chart before submitting from the ticket"
 			>
 				Design
 			</button>
-			<button
+			<button data-action-id="ui.src.lib.components.chart.button.h19d1acde11"
 				class="hidden sm:inline-flex px-2 py-1 text-2xs rounded transition-colors {$clickPlacementMode ? 'bg-terminal-green/20 text-terminal-green' : 'text-terminal-text-muted hover:text-terminal-text'}"
 				onclick={() => clickPlacementMode.update((v) => !v)}
 				title="Click placement — right-click the chart to submit an armed limit order"
@@ -724,7 +724,7 @@
 				{$clickPlacementMode ? 'Armed' : 'Click'}
 			</button>
 			{#if $clickPlacementMode}
-				<select bind:value={$clickPlacementSide} class="bg-terminal-bg border border-terminal-border rounded px-1 py-1 text-2xs">
+				<select data-action-id="ui.src.lib.components.chart.select.h8566a45bcc" bind:value={$clickPlacementSide} class="bg-terminal-bg border border-terminal-border rounded px-1 py-1 text-2xs">
 					<option value="auto">Auto</option>
 					<option value="buy">Buy</option>
 					<option value="sell">Sell</option>
@@ -733,7 +733,7 @@
 			{/if}
 			<div class="flex items-center gap-1 bg-terminal-bg rounded p-0.5">
 				{#each timeframes as tf}
-					<button
+					<button data-action-id="ui.src.lib.components.chart.button.hf59519be41"
 						class="px-2 py-1 text-xs font-medium rounded transition-all duration-150
 							   {$chartTimeframe === tf ? 'bg-terminal-bg-tertiary text-terminal-green' : 'text-terminal-text-secondary hover:text-terminal-text'}"
 						onclick={() => selectTf(tf)}
@@ -745,7 +745,7 @@
 		</div>
 	</div>
 
-	<div
+	<div data-action-id="chart.surface"
 		data-testid="trading-chart"
 		data-feed-status={$marketDataStatus}
 		data-candle-count={$chartCandles.length + ($liveCandle ? 1 : 0)}
@@ -779,7 +779,7 @@
 			{@const y = overlayCoordinates.get(`order:${order.id}`)}
 			{#if y !== undefined}
 				<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
-				<div
+				<div data-action-id="chart.order-drag"
 					role="group"
 					aria-label="Open order overlay"
 					class="absolute right-14 z-20 flex items-center rounded overflow-hidden shadow-lg tabular-nums text-3xs select-none transition-[top] duration-150 {order.side === 'buy' ? 'bg-terminal-green text-terminal-bg' : 'bg-terminal-red text-white'} {order.pending ? 'opacity-60' : ''}"
@@ -788,7 +788,7 @@
 					<span class="cursor-ns-resize px-2 py-1">
 						{order.pending ? 'PENDING' : order.status.toUpperCase()} · {order.triggerKind === 'takeProfit' ? 'TP' : order.triggerPrice ? 'STOP' : order.side.toUpperCase()} {order.remaining} @ {(order.triggerPrice || order.price)?.toFixed($selectedMarket?.priceDecimals ?? 2)}
 					</span>
-					<button
+					<button data-action-id="ui.src.lib.components.chart.button.hfe0d70279d"
 						class="px-1.5 py-1 bg-black/20 hover:bg-black/35"
 						aria-label="Cancel order"
 						onmousedown={(event) => event.stopPropagation()}
@@ -839,7 +839,7 @@
 			</div>
 		{/if}
 		{#if interactionError}
-			<button class="absolute top-10 left-1/2 -translate-x-1/2 text-2xs text-terminal-red bg-terminal-bg/95 border border-terminal-red/40 px-3 py-1 rounded z-30" onclick={() => (interactionError = '')}>
+			<button data-action-id="ui.src.lib.components.chart.button.he55dbda5cb" class="absolute top-10 left-1/2 -translate-x-1/2 text-2xs text-terminal-red bg-terminal-bg/95 border border-terminal-red/40 px-3 py-1 rounded z-30" onclick={() => (interactionError = '')}>
 				{interactionError}
 			</button>
 		{/if}

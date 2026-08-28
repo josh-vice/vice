@@ -4,6 +4,9 @@ export type HotkeyBindings = Record<HotkeyAction, string>;
 export const DEFAULT_HOTKEYS: HotkeyBindings = {
 	buy: 'b', sell: 's', size10: '1', size20: '2', size30: '3', size40: '4', size50: '5', size60: '6', size70: '7', size80: '8', size90: '9', time1m: 'alt+1', time5m: 'alt+2', time15m: 'alt+3', time1h: 'alt+4', time4h: 'alt+5', time1d: 'alt+6', armClick: 'a', cli: 'mod+k', focusChart: 'alt+c', focusBook: 'alt+b', focusTicket: 'alt+t', focusBottom: 'alt+p'
 };
+export const HOTKEY_ACTION_IDS: Record<HotkeyAction, string> = Object.fromEntries(
+	Object.keys(DEFAULT_HOTKEYS).map((action) => [action, `hotkey.${action}`])
+) as Record<HotkeyAction, string>;
 
 const STORAGE_KEY = 'vice.hotkeys.v1';
 

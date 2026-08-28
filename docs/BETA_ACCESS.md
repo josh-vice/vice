@@ -1,27 +1,34 @@
 # Vice Terminal closed-beta access
 
-The terminal supports a server-side invite gate for private testing. It is disabled when `VICE_BETA_ACCESS_CODES` is empty.
+The terminal requires a durable server-side invite gate when `VICE_BETA_REQUIRED=true`. Local development may use the legacy environment-code shim only while the durable gate is disabled.
 
 ## Vercel environment variables
 
 Set these as **server-only** variables. Do not use a `VITE_` prefix — Vite exposes `VITE_*` values to every browser visitor.
 
 ```env
-VICE_BETA_SESSION_SECRET=<long-random-secret-used-to-sign-session-cookies>
-VICE_BETA_ACCESS_CODES={"josh":"<owner-invite>","tester-01":"<unique-tester-invite>"}
+VICE_BETA_REQUIRED=true
+VICE_BETA_SESSION_SECRET=<long-random-secret-used-for-cookie-signing-and-hashes>
+UPSTASH_REDIS_REST_URL=https://<tenant>.upstash.io
+UPSTASH_REDIS_REST_TOKEN=<server-only-token>
 ```
 
-`VICE_BETA_ACCESS_CODES` accepts either:
+Create a tester record once, then deliver the generated code out of band:
 
-- a JSON object mapping a tester label to a unique invite code, recommended; or
-- a JSON array such as `[ {"id":"tester-01","code":"..."} ]`.
+```sh
+VICE_BETA_REQUIRED=true bun scripts/beta-access.mjs create \
+  --tester-id tester-01 --wallets 0x... \
+  --cohort beta --expires-at 2026-09-30T00:00:00Z
+```
 
-For a quick local-only setup, a comma/newline-separated list also works. A code can be labeled as `tester-01=code`.
-
-Each code creates a 30-day, signed, `HttpOnly`, `SameSite=Lax` session cookie. The invite code is never sent to the browser bundle and is never stored in `localStorage`. The SvelteKit server hook gates page routes and `/api/*` before they reach the terminal.
+The store keeps only an HMAC hash of the invite code, tester metadata, wallet
+allowlist, session version, status, cohort, expiry, and audit timestamps. Use
+`revoke`, `rotate`, `list`, and `revoke-all` for operator lifecycle changes.
+`list` never prints codes or wallet addresses. Cookies are 30-day `HttpOnly`,
+`Secure` in HTTPS, and `SameSite=Strict`.
 
 ## Rotation and revocation
 
-To revoke everyone, rotate `VICE_BETA_SESSION_SECRET` and redeploy. To revoke one tester, remove that tester's invite code and redeploy; existing signed sessions for that tester remain valid until their 30-day expiry unless the session secret is also rotated. For immediate individual revocation, rotate the session secret or add a persistent session store before beta expansion.
+`revoke` marks one tester inactive immediately. `rotate` increments that tester's session version, invalidating all existing sessions for that tester without affecting other testers. `revoke-all` marks every tester inactive. Secret rotation remains an emergency global invalidation fallback.
 
-The current implementation is intentionally a closed-beta access gate, not a full user account system. It does not collect email addresses, provide password recovery, or replace production identity/authentication.
+The implementation is a closed-beta access gate, not a general user account system. It does not collect email addresses, provide password recovery, or replace wallet identity/authentication.

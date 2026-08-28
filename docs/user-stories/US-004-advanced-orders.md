@@ -1,6 +1,6 @@
 # US-004: Reliable advanced orders
 
-Story schema v1.
+Story schema v2.
 
 As an advanced trader, I want every exposed strategy to have explicit lifecycle semantics and authoritative venue reconciliation so that automation never behaves like a decorative preset.
 
@@ -27,7 +27,7 @@ As an advanced trader, I want every exposed strategy to have explicit lifecycle 
 - Normal cancellation clears that algorithm's dead-man switch after child cancellation; emergency stop intentionally leaves the venue switch active so an interrupted session still has a short safety window.
 - OCO take-profit and stop-loss children are submitted on the opposing side of the entry so they reduce/close exposure rather than add to it.
 - Break-even and trailing-stop children use the same opposing-side invariant; a long entry exits with a sell and a short entry exits with a buy. `execution/protectionSide.test.js` guards this safety boundary.
-- Bracket TP/SL placement is explicitly gated behind `VITE_HL_CERTIFIED_BRACKET`. The implementation targets Hyperliquid's authoritative `positionTpsl` grouping so exit quantity follows the live position through partial entry fills, reconnects, and subsequent position-size changes; fixed-size `normalTpsl` is not used. The bracket remains unavailable until funded-testnet evidence proves entry, partial fill, protection creation, and restart recovery.
+- Bracket TP/SL placement is explicitly gated behind `VITE_HL_CERTIFIED_BRACKET`. The implementation targets Hyperliquid's authoritative `positionTpsl` grouping so exit quantity follows the live position through partial entry fills, reconnects, and subsequent position-size changes; fixed-size `normalTpsl` is not used. The bracket remains unavailable until funded-mainnet evidence proves entry, partial fill, protection creation, and restart recovery.
 - OCO user cancellation now remains paused for reconciliation when any known child cancel or dead-man clear is rejected/uncertain; it never reports a terminal cancelled state from a partial acknowledgement.
 - Traders can save, load, and delete up to 32 account/network-scoped order presets locally. Presets capture order intent and advanced configuration only; they never bypass exact market identity, current account state, venue precision, or execution safety checks. Wallet switch and disconnect clear the active preset view.
 - The order ticket's amount unit switch is functional: traders can enter venue base size or quote/USD notional, with conversion based on the current authoritative market price before the existing precision and margin checks.
@@ -51,8 +51,10 @@ As an advanced trader, I want every exposed strategy to have explicit lifecycle 
 - Scale validates every price, size, level, and skew value before it writes a runnable local job. Invalid Scale or auto-take-profit presets now return an error without leaving a persisted job that could fail only when it tries to place children. `execution/scaleLifecycle.test.js` guards this ordering.
 
 - `bun test src/lib/execution/scaleMath.test.js`
-- Funded testnet TWAP create/cancel, scale partial-acceptance/rejection/reconciliation, and Chase/OCO/trailing/Iceberg/Swarm/Ping-Pong child replace, sibling-cancel, slice accounting, alternating-leg, pause/resume, and restart tests.
+- Funded mainnet TWAP create/cancel, scale partial-acceptance/rejection/reconciliation, and Chase/OCO/trailing/Iceberg/Swarm/Ping-Pong child replace, sibling-cancel, slice accounting, alternating-leg, pause/resume, and restart tests.
 - Restart, duplicate-event, stale-book, and account-switch scenarios before exposing any stateful client algorithm.
+
+- Action IDs: story.us-004
 
 ## Operational contract
 
@@ -67,8 +69,8 @@ As an advanced trader, I want every exposed strategy to have explicit lifecycle 
 - Latency expectations: Child scheduling and local state transitions stay within local processing/action dispatch budgets; venue timing is recorded independently.
 - Telemetry: Record strategy type/certification, child IDs, slice progress, dead-man status, pause reason, reconciliation result, and per-child latency without private keys.
 - Linked tests: `execution/*Surface.test.js`, state/math/journal/reconcile tests, CLI parity, Rust contracts, chaos/load suites, and funded-testnet lifecycle tests.
-- Funded-testnet evidence: Every exposed strategy requires funded entry/partial-fill/reconnect/restart/cancel/error evidence before its flag is enabled; bracket requires position-TPSL proof.
-- Given a certified running strategy, when a child disappears without an authoritative fill, then the strategy pauses and never creates a replacement child until reconciliation succeeds.
+- Funded-mainnet evidence: Every exposed strategy requires funded entry/partial-fill/reconnect/restart/cancel/error evidence before its flag is enabled; bracket requires position-TPSL proof.
+- US-004-AC-001: Given a certified running strategy, when a child disappears without an authoritative fill, then the strategy pauses and never creates a replacement child until reconciliation succeeds.
 - Latest duplicate-prevention slice: every local algorithm timer now serializes asynchronous ticks per persisted job. A slow venue acknowledgement cannot overlap the next interval and submit a second child before the first child identity is persisted. The shared tick guard has direct concurrency tests and every advanced state-machine module is covered by a source-boundary safety test.
 - Latest capability-clarity slice: the ticket now reports how many implemented advanced strategies remain locked and explains that they are available for inspection in the order-type menu but require funded-testnet lifecycle and reconnect certification before selection. The quick bar and CLI remain certification-gated. `execution/advancedOrderSurface.test.js` guards the visible status and complete catalog.
 - Latest lifecycle-control slice: the compact Algorithms panel now passes every non-specialized row's persisted strategy type directly to its pause, resume, cancel, and emergency-stop dispatcher. The dispatcher is explicit for Iceberg, Swarm, adaptive TWAP/VWAP, POV, break-even, conditional ladder, Scale, and Ping-Pong; an unknown type fails rather than being treated as another strategy. A failed conditional ladder cannot display Resume because its persisted fired edge requires reconciliation or a new explicit job, while a paused stale/missed ladder may be manually re-armed. `components/algoControlSurface.test.js` guards this control boundary.

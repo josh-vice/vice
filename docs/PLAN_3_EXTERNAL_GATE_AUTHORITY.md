@@ -5,16 +5,16 @@ Scope: low-notional canary and mainnet promotion
 
 ## 1. Non-negotiable policy
 
-1. **Funded certification is the prerequisite.** No PLAN_3 external approval is valid until funded testnet certification has passed for the release scope.
+1. **Funded certification is the prerequisite.** No PLAN_3 external approval is valid until mainnet funded certification has passed for the release scope.
 2. **Canary is not mainnet authority.** The person or process that deploys/runs the canary or low-notional pilot may collect evidence, but cannot self-authorize mainnet promotion.
 3. **Mainnet has a separate release authority.** Josh is the release authority for PLAN_3: only Josh may approve the four external items below and issue the final mainnet go/no-go. This authority is separate from canary/low-notional deployment authority and may not be delegated by implication.
 4. **Mainnet is fail-closed.** A green build, static test suite, or successful canary does not substitute for an approved and verified external gate.
 
 ## 2. Required precondition: Gate 0
 
-Before any item below can be approved, the release packet must contain a passing funded-certification manifest for the exact release scope. Acceptable certification evidence is the validated, versioned testnet manifest proving the required funded lifecycle coverage (including repeated US-002/003/004 passes, reconnect and restart behavior, venue order IDs, zero duplicate outcomes, zero uncertain outcomes, and the allowlisted low-notional pilot). The manifest must identify the release/build, network, and capture timestamps; it must contain no keys or signatures.
+Before any item below can be approved, the release packet must contain a passing funded-mainnet certification manifest for the exact release scope. It must prove repeated US-002/003/004 passes, reconnect and restart behavior, venue order IDs, zero duplicate outcomes, zero uncertain outcomes, cleanup, and the allowlisted low-notional pilot. The manifest must identify the full release SHA, artifact and policy digests, target network, and capture timestamps; it must contain no keys or signatures.
 
-At promotion time the runtime funded-evidence file (`VICE_FUNDED_TESTNET_EVIDENCE`) must be byte-identical to the manifest that satisfied Gate 0: its sha256 must equal the `fundedCertification.sha256` recorded in the approval record and its path must resolve to the same evidence reference. A different-but-valid manifest never satisfies the gate.
+At promotion time the runtime mainnet evidence file (`VICE_MAINNET_EVIDENCE`) must be byte-identical to the manifest that satisfied Gate 0: its sha256 must equal the `fundedCertification.sha256` recorded in the approval record and its path must resolve to the same evidence reference. A different-but-valid manifest never satisfies the gate.
 
 If Gate 0 is absent, stale, malformed, wrong-network, or failing, all four approvals are invalid and mainnet remains blocked.
 

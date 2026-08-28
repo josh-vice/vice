@@ -49,9 +49,11 @@ describe('workflow security boundary', () => {
 		for (const w of workflows) {
 			const src = readFileSync(join(WORKFLOWS, w), 'utf8');
 			expect(src.includes('permissions:\n  contents: read')).toBe(true);
-			// No job may mint a wider write scope.
+			// No job may mint a wider write scope; release attestation is the
+			// sole exception and needs only OIDC plus attestation write access.
 			expect(src).not.toMatch(/permissions:\s*\n\s+contents: write/);
-			expect(src).not.toContain('id-token: write');
+			if (w !== 'release.yml') expect(src).not.toContain('id-token: write');
+			if (w !== 'release.yml') expect(src).not.toContain('attestations: write');
 		}
 	});
 

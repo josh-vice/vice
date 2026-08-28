@@ -1,6 +1,6 @@
 # US-012: Dockable workspace, power input, and the dither design language
 
-Story schema v1. Status: In progress (dither stale/depth language and privacy mode partially implemented).
+Story schema v2. Status: In progress (dither stale/depth language and privacy mode partially implemented).
 
 As a daily driver of the terminal, I want a fast, saved workspace with power-user input (programmable hotkeys, a chainable CLI, layouts, privacy mode) and a coherent visual language, so that Vice matches professional terminal flexibility without creating a second execution system.
 
@@ -14,7 +14,9 @@ As a daily driver of the terminal, I want a fast, saved workspace with power-use
 - The ordered-dither design language is applied consistently: dithered depth bars in the book, dither stale veils on any non-live data surface, and dither rules in panel headers; dither density communicates state (light = texture, half-tone = stale, heavy = halted/disabled) and is documented as a design token set in `vice-terminal/src/lib/styles/dither.css`.
 - Dither and animation effects never run per-tick work on the data hot path; they are pure CSS mask/compositor effects with zero JavaScript cost and do not regress the one-frame frame-ready budget.
 - Dormant surfaces (options, RFQ, strategy builder, trollbox, DEX comparison) remain development-only scaffolding behind the fixture flag. OptionsChain is deliberately absent from the public component barrel; no dormant surface may be added to production navigation without authoritative data, an explicit user story, and its own release gate.
-- Given a trader with a custom hotkey bound to a certified action, when the key fires while an input is focused, then the hotkey is suppressed exactly as the current global handler suppresses built-ins.
+- US-012-AC-001: Given a trader with a custom hotkey bound to a certified action, when the key fires while an input is focused, then the hotkey is suppressed exactly as the current global handler suppresses built-ins.
+
+- Action IDs: story.us-012
 
 ## Operational contract
 
@@ -29,7 +31,7 @@ As a daily driver of the terminal, I want a fast, saved workspace with power-use
 - Latency expectations: Hotkey/CLI dispatch adds no measurable overhead to the action-to-signed-dispatch p99 <10 ms budget; dither styling adds zero JS on the frame-ready path.
 - Telemetry: Record preset/binding/alias usage counts, cheat-sheet opens, and privacy-mode adoption without recording bound values or command contents.
 - Linked tests: binding conflict/suppression tests, CLI chain/alias/variable parser tests with certification-gate coverage, preset persistence tests, dither-utility CSS regression checks in the browser surface suite.
-- Funded-testnet evidence: Not execution-bearing beyond existing gates; hotkey/CLI-dispatched certified orders reuse each order type's own funded evidence, plus one funded chained-command lifecycle proving stop-on-failure.
+- Funded-mainnet evidence: Not execution-bearing beyond existing gates; hotkey/CLI-dispatched certified orders reuse each order type's own funded evidence, plus one funded chained-command lifecycle proving stop-on-failure.
 
 ## Evidence log
 

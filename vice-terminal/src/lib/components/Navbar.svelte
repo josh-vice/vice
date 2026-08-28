@@ -30,7 +30,7 @@
 	import { canPresentAccountState, healthLabel } from '$lib/productionTruth';
 	import { Terminal, Wallet, LogOut, Download, Volume2, VolumeX, Eye, EyeOff, Lock, Unlock, LifeBuoy } from 'lucide-svelte';
 	import { hyperliquidPublicNetwork, hyperliquidTradingNetwork } from '$lib/hl/network';
-	import { tradingKillSwitchActive } from '$lib/execution/releaseSafety';
+	import { tradingKillSwitchActive, startReleasePolicyMonitor } from '$lib/execution/releaseSafety';
 	import { downloadLatencyEvidence } from '$lib/execution/latencyEvidence';
 	import ReportIssue from './ReportIssue.svelte';
 	import { onMount } from 'svelte';
@@ -47,6 +47,11 @@
 		} catch (error) {
 			latencyMessage = error instanceof Error ? `Latency download failed: ${error.message}` : 'Latency download failed.';
 		}
+	}
+	async function logoutBeta(): Promise<void> {
+		await fetch('/api/beta/logout', { method: 'POST', headers: { 'content-type': 'application/json' } }).catch(() => undefined);
+		disconnectWallet();
+		if (typeof window !== 'undefined') window.location.assign('/login');
 	}
 	function resetWorkspaceLayout(): void {
 		requestWorkspaceLayoutReset();
@@ -89,6 +94,11 @@
 		};
 	}
 	onMount(() => installDiagnostics());
+	$effect(() => {
+		const address = $walletAddress;
+		if (!address) return;
+		return startReleasePolicyMonitor(address);
+	});
 
 	function formatAddress(address: string | null): string {
 		return address ? `${address.slice(0, 6)}...${address.slice(-4)}` : '';
@@ -126,24 +136,24 @@
 
 <nav class="h-11 bg-terminal-bg border-b border-terminal-border flex items-center justify-between px-3 select-none gap-2">
 	<div class="flex items-center gap-3 flex-shrink-0">
-		<a href="/trade" class="flex items-center gap-2 hover:opacity-90 transition-opacity">
+		<a data-action-id="ui.src.lib.components.navbar.a.h1d0c0146b5" href="/trade" class="flex items-center gap-2 hover:opacity-90 transition-opacity">
 			<div class="w-6 h-6 rounded bg-black flex items-center justify-center overflow-hidden ring-1 ring-terminal-red/40">
 				<img src="/flamingo.png" alt="Vice Terminal flamingo logo" class="w-full h-full object-contain" />
 			</div>
 			<span class="font-semibold text-sm tracking-tight hidden sm:inline">Vice <span class="text-terminal-red">Terminal</span></span>
 		</a>
 		<div class="flex items-center gap-0.5" aria-label="Market type">
-			<button
+			<button data-action-id="ui.src.lib.components.navbar.button.hfae5728d64"
 				aria-pressed={$marketType === 'perp'}
 				class="px-2.5 py-1.5 text-xs font-medium rounded transition-colors {$marketType === 'perp' ? 'bg-terminal-bg-tertiary text-terminal-cyan' : 'text-terminal-text-secondary hover:text-terminal-text'}"
 				onclick={() => setMarketType('perp')}
 			>Perps</button>
-			<button
+			<button data-action-id="ui.src.lib.components.navbar.button.h9981d1b1e7"
 				aria-pressed={$marketType === 'spot'}
 				class="px-2.5 py-1.5 text-xs font-medium rounded transition-colors {$marketType === 'spot' ? 'bg-terminal-bg-tertiary text-terminal-cyan' : 'text-terminal-text-secondary hover:text-terminal-text'}"
 				onclick={() => setMarketType('spot')}
 			>Spot</button>
-			<button data-testid="prediction-filter"
+			<button data-action-id="ui.src.lib.components.navbar.button.h4091c0a56b" data-testid="prediction-filter"
 				aria-pressed={$marketType === 'prediction'}
 				class="px-2.5 py-1.5 text-xs font-medium rounded transition-colors {$marketType === 'prediction' ? 'bg-terminal-bg-tertiary text-terminal-yellow' : 'text-terminal-text-secondary hover:text-terminal-text'}"
 				onclick={() => setMarketType('prediction')}
@@ -170,7 +180,7 @@
 		{#if tradingKillSwitchActive()}
 			<span class="hidden sm:inline px-1.5 py-0.5 rounded text-3xs font-semibold uppercase bg-terminal-red/20 text-terminal-red" title="New trading is disabled by release safety policy">TRADING HALTED</span>
 		{/if}
-		<button
+		<button data-action-id="ui.src.lib.components.navbar.button.h433b56bf7b"
 			class="hidden xl:flex items-center rounded border border-terminal-border bg-terminal-bg-secondary px-1 py-0.5 text-3xs text-terminal-text-secondary"
 			title={$workspaceLocked ? 'Customize the workspace layout' : 'Finish customizing and keep this layout'} data-testid="workspace-customize-toggle"
 			onclick={() => setWorkspaceLocked(!$workspaceLocked)}
@@ -179,19 +189,19 @@
 			{#if $workspaceLocked}<Unlock class="w-3.5 h-3.5 text-terminal-cyan" />{:else}<Lock class="w-3.5 h-3.5 text-terminal-yellow" />{/if}
 			<span class="px-1 text-terminal-text-muted">{ $workspaceLocked ? 'LOCKED' : 'UNLOCKED' }</span>
 		</button>
-		<button
+		<button data-action-id="ui.src.lib.components.navbar.button.he3429eed83"
 			class="hidden xl:flex items-center rounded border border-terminal-border bg-terminal-bg-secondary px-1 py-0.5 text-3xs text-terminal-text-secondary"
 			title="Choose a saved workspace starting layout"
 		>
 			<span class="px-1 text-terminal-text-muted">VIEW</span>
-			<select aria-label="Workspace preset" disabled={$workspaceLocked} bind:value={$workspacePreset} onchange={(event) => setWorkspacePreset(event.currentTarget.value as WorkspacePreset)} class="bg-transparent outline-none text-terminal-text disabled:opacity-50">
+			<select data-action-id="ui.src.lib.components.navbar.select.h26167d9429" aria-label="Workspace preset" disabled={$workspaceLocked} bind:value={$workspacePreset} onchange={(event) => setWorkspacePreset(event.currentTarget.value as WorkspacePreset)} class="bg-transparent outline-none text-terminal-text disabled:opacity-50">
 				<option value="default">Default</option>
 				<option value="chart">Chart max</option>
 				<option value="data">Data dense</option>
 			</select>
 		</button>
 		<div class="hidden xl:block relative">
-			<button data-testid="workspace-widgets-toggle" class="rounded border border-terminal-border bg-terminal-bg-secondary px-2 py-1 text-3xs text-terminal-text-secondary hover:text-terminal-text" onclick={() => panelMenuOpen = !panelMenuOpen} aria-expanded={panelMenuOpen}>WIDGETS</button>
+			<button data-action-id="ui.src.lib.components.navbar.button.h65fd3ff80e" data-testid="workspace-widgets-toggle" class="rounded border border-terminal-border bg-terminal-bg-secondary px-2 py-1 text-3xs text-terminal-text-secondary hover:text-terminal-text" onclick={() => panelMenuOpen = !panelMenuOpen} aria-expanded={panelMenuOpen}>WIDGETS</button>
 			{#if panelMenuOpen}
 				<div class="absolute right-0 top-full z-50 mt-1 w-48 rounded border border-terminal-border bg-terminal-bg-panel p-1 shadow-xl" role="menu" aria-label="Workspace widgets">
 					{#if $workspaceLocked}
@@ -200,52 +210,52 @@
 						<div class="px-2 py-1 text-3xs text-terminal-text-muted">Choose visible widgets</div>
 						{#each panels as panel}
 							<label class="flex cursor-pointer items-center gap-2 px-2 py-1 text-3xs text-terminal-text-secondary hover:bg-terminal-bg-hover">
-								<input type="checkbox" checked={$workspacePanels[panel.id]} onchange={(event) => setWorkspacePanel(panel.id, event.currentTarget.checked)} class="accent-terminal-cyan" />
+								<input data-action-id="ui.src.lib.components.navbar.input.h586b50caab" type="checkbox" checked={$workspacePanels[panel.id]} onchange={(event) => setWorkspacePanel(panel.id, event.currentTarget.checked)} class="accent-terminal-cyan" />
 								{panel.label}
 							</label>
 						{/each}
 					{/if}
 					<div class="my-1 border-t border-terminal-border"></div>
-					<button class="w-full rounded px-2 py-1 text-left text-3xs text-terminal-yellow hover:bg-terminal-bg-hover" onclick={resetWorkspaceLayout}>Reset this layout</button>
+					<button data-action-id="ui.src.lib.components.navbar.button.h5966106868" class="w-full rounded px-2 py-1 text-left text-3xs text-terminal-yellow hover:bg-terminal-bg-hover" onclick={resetWorkspaceLayout}>Reset this layout</button>
 				</div>
 			{/if}
 		</div>
 		<div class="hidden xl:block relative">
-			<button class="rounded border border-terminal-border bg-terminal-bg-secondary px-2 py-1 text-3xs text-terminal-text-secondary hover:text-terminal-text" onclick={() => { hotkeyMenuOpen = !hotkeyMenuOpen; bindings = loadHotkeys(); hotkeyMessage = ''; }}>HOTKEYS</button>
+			<button data-action-id="ui.src.lib.components.navbar.button.he6d49c41f8" class="rounded border border-terminal-border bg-terminal-bg-secondary px-2 py-1 text-3xs text-terminal-text-secondary hover:text-terminal-text" onclick={() => { hotkeyMenuOpen = !hotkeyMenuOpen; bindings = loadHotkeys(); hotkeyMessage = ''; }}>HOTKEYS</button>
 			{#if hotkeyMenuOpen}
 				<div class="absolute right-0 top-full z-50 mt-1 w-56 rounded border border-terminal-border bg-terminal-bg-panel p-2 shadow-xl">
 					<div class="mb-1 text-3xs text-terminal-text-muted">Click a binding, then press its new key.</div>
 					{#each hotkeyLabels as item}
-						<div class="flex items-center justify-between gap-2 py-0.5 text-3xs"><span>{item.label}</span><button class="min-w-12 rounded bg-terminal-bg-secondary px-1 py-0.5 font-mono text-terminal-cyan" onkeydown={(event) => captureHotkey(event, item.id)}>{bindings[item.id]}</button></div>
+						<div class="flex items-center justify-between gap-2 py-0.5 text-3xs"><span>{item.label}</span><button data-action-id="ui.src.lib.components.navbar.button.head1fba58b" class="min-w-12 rounded bg-terminal-bg-secondary px-1 py-0.5 font-mono text-terminal-cyan" onkeydown={(event) => captureHotkey(event, item.id)}>{bindings[item.id]}</button></div>
 					{/each}
 					{#if hotkeyMessage}<div class="mt-1 text-3xs text-terminal-yellow">{hotkeyMessage}</div>{/if}
 				</div>
 			{/if}
 		</div>
-		<button
+		<button data-action-id="ui.src.lib.components.navbar.button.h49bec52bd3"
 			class="hidden lg:flex p-1.5 rounded text-terminal-text-secondary hover:text-terminal-text hover:bg-terminal-bg-hover"
 			onclick={() => setPrivacyMode(!$privacyMode)}
 			title={$privacyMode ? 'Show private account values' : 'Hide private account values'}
 			aria-label={$privacyMode ? 'Show private account values' : 'Hide private account values'}
 		>{#if $privacyMode}<EyeOff class="w-4 h-4" />{:else}<Eye class="w-4 h-4" />{/if}</button>
-		<button
+		<button data-action-id="ui.src.lib.components.navbar.button.h47b0c026b5"
 			class="hidden lg:flex p-1.5 rounded text-terminal-text-secondary hover:text-terminal-text hover:bg-terminal-bg-hover"
 			onclick={() => void setSoundMuted(!$soundMuted)}
 			title={$soundMuted ? 'Enable notification sounds' : 'Mute notification sounds'}
 			aria-label={$soundMuted ? 'Enable notification sounds' : 'Mute notification sounds'}
 		>{#if $soundMuted}<VolumeX class="w-4 h-4" />{:else}<Volume2 class="w-4 h-4" />{/if}</button>
-		<button
+		<button data-action-id="ui.src.lib.components.navbar.button.h84fcc9088b"
 			class="hidden lg:flex p-1.5 rounded transition-colors {$cliOpen ? 'bg-terminal-cyan/20 text-terminal-cyan' : 'text-terminal-text-secondary hover:text-terminal-text hover:bg-terminal-bg-hover'}"
 			onclick={toggleCLI}
 			title="Toggle CLI (⌘K)"
 		><Terminal class="w-4 h-4" /></button>
-		<button
+		<button data-action-id="ui.src.lib.components.navbar.button.hafe3bd1871"
 			class="hidden lg:flex p-1.5 rounded text-terminal-text-secondary hover:text-terminal-text hover:bg-terminal-bg-hover"
 			onclick={downloadLatency}
 			title="Download measured client latency evidence"
 			aria-label="Download measured client latency evidence"
 		><Download class="w-4 h-4" /></button>
-		<button
+		<button data-action-id="ui.src.lib.components.navbar.button.hcda7934898"
 			class="hidden lg:flex p-1.5 rounded text-terminal-text-secondary hover:text-terminal-text hover:bg-terminal-bg-hover"
 			onclick={() => (reportIssueOpen = true)}
 			title="Report an issue — download a privacy-safe support bundle"
@@ -290,12 +300,15 @@
 					<div class="w-1.5 h-1.5 rounded-full {healthColor($walletStatus)}"></div>
 					<span class="text-xs font-mono">{$privacyMode ? '••••••' : formatAddress($walletAddress)}</span>
 				</div>
-				<button class="p-1.5 rounded text-terminal-text-secondary hover:text-terminal-red hover:bg-terminal-red-bg" onclick={disconnectWallet} title="Disconnect">
+				<button data-action-id="wallet.disconnect" class="p-1.5 rounded text-terminal-text-secondary hover:text-terminal-red hover:bg-terminal-red-bg" onclick={disconnectWallet} title="Disconnect">
+					<LogOut class="w-4 h-4" />
+				</button>
+				<button data-action-id="auth.logout" class="p-1.5 rounded text-terminal-text-secondary hover:text-terminal-red hover:bg-terminal-red-bg" onclick={logoutBeta} title="Log out of beta session" aria-label="Log out of beta session">
 					<LogOut class="w-4 h-4" />
 				</button>
 			</div>
 		{:else}
-			<button
+			<button data-action-id="ui.src.lib.components.navbar.button.h8b70c2a332"
 				class="flex items-center gap-1.5 px-2.5 py-1.5 bg-terminal-green text-terminal-bg font-medium text-xs rounded hover:bg-terminal-green-dim disabled:opacity-50"
 				onclick={connectWallet}
 				disabled={$walletStatus === 'connecting'}
@@ -308,22 +321,22 @@
 		</nav>
 	{#if $walletSelectionOpen}
 		<div class="fixed inset-0 z-50 flex items-center justify-center px-4">
-			<button class="absolute inset-0 bg-black/60" aria-label="Close wallet picker" onclick={cancelWalletSelection}></button>
+			<button data-action-id="ui.src.lib.components.navbar.button.h623c4d3de1" class="absolute inset-0 bg-black/60" aria-label="Close wallet picker" onclick={cancelWalletSelection}></button>
 			<div use:walletDialogFocus class="relative w-full max-w-sm rounded border border-terminal-border bg-terminal-bg-panel p-3 shadow-2xl" role="dialog" tabindex="-1" aria-modal="true" aria-labelledby="wallet-picker-title">
 				<div class="mb-2 flex items-center justify-between">
 					<h2 id="wallet-picker-title" class="text-sm font-semibold text-terminal-text">Choose EVM wallet</h2>
-					<button class="rounded px-1.5 py-0.5 text-xs text-terminal-text-muted hover:text-terminal-text" onclick={cancelWalletSelection} aria-label="Close wallet picker">×</button>
+					<button data-action-id="ui.src.lib.components.navbar.button.h4c4d510c56" class="rounded px-1.5 py-0.5 text-xs text-terminal-text-muted hover:text-terminal-text" onclick={cancelWalletSelection} aria-label="Close wallet picker">×</button>
 				</div>
 				<p class="mb-3 text-3xs text-terminal-text-muted">MetaMask, Rabby, Coinbase Wallet, Brave Wallet, and other EIP-6963 wallets are supported.</p>
 				<div class="space-y-1.5">
 					{#each $walletCandidates as wallet}
-						<button class="flex w-full items-center justify-between rounded border border-terminal-border px-2.5 py-2 text-left text-xs text-terminal-text hover:border-terminal-cyan hover:bg-terminal-cyan/5" onclick={() => selectWalletProvider(wallet)}>
+						<button data-action-id="ui.src.lib.components.navbar.button.hf907b940b4" class="flex w-full items-center justify-between rounded border border-terminal-border px-2.5 py-2 text-left text-xs text-terminal-text hover:border-terminal-cyan hover:bg-terminal-cyan/5" onclick={() => selectWalletProvider(wallet)}>
 							<span>{wallet.name}</span>
 							<span class="text-3xs text-terminal-text-muted">Connect</span>
 						</button>
 					{/each}
 				</div>
-				<button class="mt-3 w-full rounded border border-terminal-border px-2 py-1.5 text-3xs text-terminal-text-muted hover:text-terminal-text" onclick={cancelWalletSelection}>Cancel</button>
+				<button data-action-id="ui.src.lib.components.navbar.button.hb910bdaea1" class="mt-3 w-full rounded border border-terminal-border px-2 py-1.5 text-3xs text-terminal-text-muted hover:text-terminal-text" onclick={cancelWalletSelection}>Cancel</button>
 			</div>
 		</div>
 	{/if}

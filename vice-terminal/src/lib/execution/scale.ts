@@ -25,6 +25,9 @@ const tickGuard = createTickGuard();
 function sync(): void { localAlgoJobs.set(loadLocalAlgoJobs()); }
 function save(job: LocalScaleJob): void { upsertLocalAlgoJob(job); sync(); }
 function stop(id: string): void { const timer = timers.get(id); if (timer) clearInterval(timer); timers.delete(id); }
+export function stopAllScaleTimers(): void {
+	for (const id of timers.keys()) stop(id);
+}
 
 function recoverPendingDispatch(job: LocalScaleJob): LocalScaleJob {
 	const owner = get(walletAddress);

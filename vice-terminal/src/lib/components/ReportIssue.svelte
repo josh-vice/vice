@@ -6,7 +6,6 @@
 	import { downloadSupportBundle, supportBundleFilename } from '$lib/diagnostics/download';
 	import { X, Download, Camera, ShieldCheck } from 'lucide-svelte';
 	import { onMount } from 'svelte';
-
 	let { onClose }: { onClose: () => void } = $props();
 	let description = $state('');
 	let screenshotDataUrl: string | null = $state(null);
@@ -14,6 +13,7 @@
 	let captureError = $state<string | null>(null);
 	let downloading = $state(false);
 	let bundleSummary: { filename: string; bytes: number } | null = $state(null);
+	const supportUrl = import.meta.env.PUBLIC_BETA_SUPPORT_URL?.trim() || null;
 	let dialogElement: HTMLDivElement;
 	let previousFocus: HTMLElement | null = null;
 
@@ -69,7 +69,7 @@
 	}
 </script>
 
-<div
+<div data-action-id="ui.src.lib.components.reportissue.div.h5fab364641"
 	bind:this={dialogElement}
 	class="fixed inset-0 z-[10000] flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
 	role="dialog"
@@ -87,7 +87,7 @@
 	<div class="w-full max-w-lg rounded-lg border border-terminal-border bg-terminal-bg-panel shadow-2xl">
 		<div class="flex items-center justify-between border-b border-terminal-border px-4 py-3">
 			<h2 class="font-mono text-sm font-semibold text-terminal-text">Report an issue</h2>
-			<button
+			<button data-action-id="ui.src.lib.components.reportissue.button.hc09825a96a"
 				type="button"
 				class="terminal-btn !px-2 !py-1 !text-2xs"
 				data-testid="report-issue-close"
@@ -103,6 +103,9 @@
 				Help support diagnose the issue. Nothing here is uploaded automatically —
 				you download a privacy-safe support bundle and attach it to your ticket.
 			</p>
+			{#if supportUrl}
+				<a data-action-id="diagnostics.support" href={supportUrl} target="_blank" rel="noopener noreferrer" class="font-mono text-2xs text-terminal-cyan underline">Open beta support</a>
+			{/if}
 
 			<div class="flex items-start gap-2 rounded border border-terminal-green/40 bg-terminal-green/5 px-3 py-2">
 				<ShieldCheck size={14} class="mt-0.5 shrink-0 text-terminal-green" />
@@ -114,7 +117,7 @@
 
 			<label class="block">
 				<span class="mb-1 block font-mono text-2xs text-terminal-text-secondary">What happened? (optional)</span>
-				<textarea
+				<textarea data-action-id="ui.src.lib.components.reportissue.textarea.h1e8a4f9266"
 					data-testid="report-issue-description"
 					bind:value={description}
 					rows={3}
@@ -125,7 +128,7 @@
 			</label>
 
 			<div class="flex items-center gap-2">
-				<button
+				<button data-action-id="ui.src.lib.components.reportissue.button.h79cb8be8bc"
 					type="button"
 					data-testid="report-issue-screenshot"
 					class="terminal-btn"
@@ -155,7 +158,7 @@
 			{/if}
 
 			<div class="flex flex-col gap-1.5">
-				<button
+				<button data-action-id="ui.src.lib.components.reportissue.button.ha103d39caa"
 					type="button"
 					data-testid="report-issue-download"
 					class="terminal-btn terminal-btn-primary"

@@ -1,18 +1,20 @@
 # US-021: Chart trading parity for the power user
 
-Story schema v1.
+Story schema v2.
 
 As an experienced Insilico terminal user, I want the interactive chart to place, modify, and cancel orders the way Insilico's Designer/Interactive Chart does — drag to modify, armed right-click placement, click-to-fill — so that I can trade from price action without leaving the chart.
 
 ## Acceptance criteria
 
-- Given a live selected market with an authenticated agent, when I right-click arm the chart and click a price level, then a limit order is placed at the exact clicked price with the selected market identity, and the ticket reflects it.
-- Given a resting chart order, when I drag its handle to a new price, then the order modifies to that price and trigger semantics are preserved (a stop stays a stop, a limit stays a limit).
-- Given a chart order line or position line, when I interact with it, then the overlay shows exact identity and price and the underlying order/position is the same canonical record shown in the account panel.
-- Given a filled or partially filled entry, when position and liquidation lines are drawn, then they reflect authoritative account state and update only from live snapshots (never stale cached state).
-- Given a public-only session, when the chart renders, then all order controls are hidden or disabled; chart trading is impossible without an authenticated agent.
+- US-021-AC-001: Given a live selected market with an authenticated agent, when I right-click arm the chart and click a price level, then a limit order is placed at the exact clicked price with the selected market identity, and the ticket reflects it.
+- US-021-AC-002: Given a resting chart order, when I drag its handle to a new price, then the order modifies to that price and trigger semantics are preserved (a stop stays a stop, a limit stays a limit).
+- US-021-AC-003: Given a chart order line or position line, when I interact with it, then the overlay shows exact identity and price and the underlying order/position is the same canonical record shown in the account panel.
+- US-021-AC-004: Given a filled or partially filled entry, when position and liquidation lines are drawn, then they reflect authoritative account state and update only from live snapshots (never stale cached state).
+- US-021-AC-005: Given a public-only session, when the chart renders, then all order controls are hidden or disabled; chart trading is impossible without an authenticated agent.
 - When chart interactions are measured, then label updates are rAF-coalesced, zoom never resets on data arrival, and feed→frame-ready p99 stays under one 60Hz frame.
-- Given a reconnect during chart editing, when the account snapshot returns authoritative, then chart overlays reappear only after `live` status; they are never restored from stale private state.
+- US-021-AC-006: Given a reconnect during chart editing, when the account snapshot returns authoritative, then chart overlays reappear only after `live` status; they are never restored from stale private state.
+
+- Action IDs: story.us-021
 
 ## Operational contract
 
@@ -27,7 +29,7 @@ As an experienced Insilico terminal user, I want the interactive chart to place,
 - Latency expectations: drag-to-modify dispatch p99 < 10ms; label and overlay updates within one frame of the underlying store change.
 - Telemetry: Record chart action class and latency without prices, sizes, or account contents.
 - Linked tests: `vice-terminal/src/lib/chart/*.test.js`, `chartReadOnlySurface.test.js`, `ditherSurface.test.js`, `bun run test:browser`, funded chart-execution E2E.
-- Funded-testnet evidence: Chart order place/modify/cancel lifecycle on funded testnet (US-003 E2E pending; advanced-order certification 2026-08-06 covers the shared signing path).
+- Funded-mainnet evidence: Chart order place/modify/cancel lifecycle on funded mainnet (US-003 E2E pending; advanced-order certification 2026-08-06 covers the shared signing path).
 
 ## Evidence log
 

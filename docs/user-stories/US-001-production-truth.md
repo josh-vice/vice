@@ -1,17 +1,17 @@
 # US-001: Trustworthy production state
 
-Story schema v1.
+Story schema v2.
 
 As a disconnected trader, I want every data and account surface to state its real status so that I never mistake fixtures, stale values, or unsupported functionality for live production state.
 
 ## Acceptance criteria
 
-- Given a production build, when the application starts, then positions, orders, fills, balances, the order book, trades, and chart account overlays contain no fixture data.
-- Given public market data is live while no wallet is connected, then DATA may show LIVE while ACCOUNT remains OFF and equity remains hidden.
-- Given a feed is connecting, stale, failed, or offline, then its panel communicates that state and does not render placeholder rows as actionable data.
+- US-001-AC-001: Given a production build, when the application starts, then positions, orders, fills, balances, the order book, trades, and chart account overlays contain no fixture data.
+- US-001-AC-002: Given public market data is live while no wallet is connected, then DATA may show LIVE while ACCOUNT remains OFF and equity remains hidden.
+- US-001-AC-003: Given a feed is connecting, stale, failed, or offline, then its panel communicates that state and does not render placeholder rows as actionable data.
 - Community/news surfaces without an authenticated live provider show an explicit unavailable state; simulated messages, liquidations, and PnL badges are development-fixture-only.
-- Given a wallet disconnects, then private account data and account totals are cleared immediately.
-- Given a surface is not operational on Hyperliquid, then it is absent from production navigation and cannot masquerade as an available venue or product.
+- US-001-AC-004: Given a wallet disconnects, then private account data and account totals are cleared immediately.
+- US-001-AC-005: Given a surface is not operational on Hyperliquid, then it is absent from production navigation and cannot masquerade as an available venue or product.
 - Development fixtures require both a development build and `VITE_ENABLE_DEMO_FIXTURES=true`.
 - Dormant options/RFQ and cross-venue comparison components are also explicitly unavailable outside the development fixture flag; they cannot render simulated quotes, payoff estimates, or derived DEX metrics in production. They are not exported through the production component barrel, so a new live route must add an explicit authoritative-data and release-gate decision rather than importing an old prototype by default.
 - Disconnected desktop and mobile layouts show an empty market identity (`—`) rather than a fabricated BTC/default instrument.
@@ -22,6 +22,8 @@ As a disconnected trader, I want every data and account surface to state its rea
 - Unsupported-surface policy test: `bun test src/lib/unsupportedSurface.test.js`
 - Production compilation: `bun run build`
 - Runtime check: disconnected desktop and narrow-desktop layouts with public feeds online and account state offline.
+
+- Action IDs: story.us-001
 
 ## Operational contract
 
@@ -38,8 +40,8 @@ As a disconnected trader, I want every data and account surface to state its rea
 - Latency expectations: Public feed-to-store and chart frame-ready remain within shared release budgets without fixture seeding.
 - Telemetry: Record feed health, snapshot generation, stale transitions, and feed-to-store/next-frame-ready latency without account contents.
 - Linked tests: `productionTruth.test.js`, `unsupportedSurface.test.js`, `mobileParity.test.js`, `bun run test:browser`, and `bun run dev:verify`.
-- Funded-testnet evidence: Funded account-state and live-feed replay remains a release prerequisite for private overlays.
-- Given a production build, when a feed or wallet disconnects, then the corresponding surface is empty or explicitly degraded and no fake state is actionable.
+- Funded-mainnet evidence: Funded account-state and live-feed replay remains a release prerequisite for private overlays.
+- US-001-AC-006: Given a production build, when a feed or wallet disconnects, then the corresponding surface is empty or explicitly degraded and no fake state is actionable.
 - Production import boundary: display-only helpers used by live components must come from fixture-free modules; importing the development data module is permitted only through the explicit development-fixture loader.
 
 ## Evidence log

@@ -41,7 +41,7 @@
 
 <!-- Backdrop -->
 {#if open}
-	<button
+	<button data-action-id="ui.src.lib.components.mobileordersheet.button.h99a7877882"
 		class="fixed inset-0 z-40 bg-black/60"
 		onclick={close}
 		aria-label="Close order sheet"
@@ -58,7 +58,7 @@
 	role="dialog"
 >
 	<!-- Drag handle -->
-	<div
+	<div data-action-id="ui.src.lib.components.mobileordersheet.div.h261fa53abc"
 		class="pt-3 pb-1 flex justify-center flex-shrink-0 cursor-grab active:cursor-grabbing"
 		role="button"
 		tabindex="0"
@@ -88,7 +88,7 @@
 				<span class="px-2 py-0.5 rounded text-2xs font-bold bg-terminal-yellow/15 text-terminal-yellow">Read only</span>
 			{/if}
 		</div>
-		<button
+		<button data-action-id="ui.src.lib.components.mobileordersheet.button.h16cb4e5c4b"
 			class="w-7 h-7 flex items-center justify-center rounded-full bg-terminal-bg-secondary text-terminal-text-muted hover:text-terminal-text transition-colors"
 			onclick={close}
 			aria-label="Close"

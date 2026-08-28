@@ -40,9 +40,9 @@ const config = {
 					'https://demo-trading-openapi.blofin.com',
 					'wss://api.hyperliquid.xyz',
 					'wss://api.hyperliquid-testnet.xyz',
-					'ws://127.0.0.1:*',
-					'ws://localhost:*'
+					...(process.env.NODE_ENV === 'production' ? [] : ['ws://127.0.0.1:*', 'ws://localhost:*'])
 				],
+				'report-uri': ['/api/csp-report'],
 				'worker-src': ['self', 'blob:'],
 				'manifest-src': ['self']
 			}

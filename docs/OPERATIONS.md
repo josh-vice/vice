@@ -1,13 +1,13 @@
 # Vice Terminal operations runbook
 
-This runbook is the release and incident source of truth for the non-custodial Hyperliquid terminal. It describes the controls that exist in this repository; it does not replace venue documentation or funded-testnet evidence.
+This runbook is the release and incident source of truth for the non-custodial terminal. It describes controls in this repository; final readiness is mainnet-only and depends on the immutable evidence and operator records named below.
 
 ## Custody boundary
 
 - The browser is the only place that generates, unlocks, encrypts, and uses a Hyperliquid agent key.
 - The connected wallet remains the account authority. The server never receives a user private key and hosted mutation routes are intentionally unavailable.
 - The encrypted agent is device-local and account/network scoped. A wallet switch or account mismatch must invalidate the active execution scope.
-- Testnet is the default. Never enable mainnet by changing only the network variable.
+- `VITE_HL_TRADING_NETWORK` is the authoritative network selector. The legacy alias is accepted only when it unambiguously resolves to mainnet or testnet.
 
 Before enabling trading, verify the session endpoint reports `tradingMode=local-encrypted-agent`, `serverSigning=false`, and `custody=browser-only-encrypted-agent`.
 
@@ -72,7 +72,7 @@ Measured latency evidence is a separate gate and is never synthesized by the sta
 VICE_LATENCY_EVIDENCE=/path/to/client-latency.json bun run test:latency
 ```
 
-The file must be versioned client telemetry with `schemaVersion: 1`, `source: "client-telemetry"`, `network`, `capturedAt`, and `samples`. The command fails closed if the file is missing, malformed, has no valid samples, or violates any p99 budget.
+The file must be versioned client telemetry with `schemaVersion: 2`, `source: "client-telemetry"`, `network: "mainnet"`, `commit`, `releaseBuild`, `capturedAt`, and measured feed/dispatch samples. The command fails closed if the file is missing, malformed, has no valid samples, violates any p99 budget, or does not identify the expected full release SHA.
 
 ## Revenue, builder, and referral controls
 
@@ -176,15 +176,16 @@ Promotion remains blocked while any uncertain execution, stale account state, st
 
 ## Rollout ladder
 
-1. **Local/testnet:** run `bun run check`, runtime smoke, browser surface checks, and all focused suites. Confirm no fixture account state is visible with `VITE_ENABLE_DEMO_FIXTURES=false`.
-2. **Funded testnet:** execute the user stories in `docs/user-stories/US-002-non-custodial-execution.md`, `US-003-chart-trading.md`, and `US-004-advanced-orders.md` with a funded testnet wallet. Capture venue IDs, latency samples, reconnects, duplicate events, partial fills, rejected modifications, restart recovery, and dead-man outcomes.
-3. **Strategy certification:** enable only the specific `VITE_HL_CERTIFIED_*` flag for a strategy after its funded-testnet lifecycle and recovery evidence passes. An explicit per-type `false` always wins over the global flag.
-4. **Low-notional canary:** use a controlled allowlist and low notional on the target network. Keep the kill switch ready and require zero unresolved outcomes during the observation window.
-5. **Mainnet promotion:** require `VITE_HL_NETWORK=mainnet`, `VITE_HL_MAINNET_ACK=I_ACCEPT_REAL_MAINNET_TRADING`, a valid builder configuration if revenue is enabled, completed custody/revenue review, and signed evidence for every exposed strategy. Mainnet is not approved by a green build alone.
+1. **Local verification:** run `bun run check`, `bun run test:actions`, `bun run test:streams`, runtime smoke, browser surface checks, and focused suites. Confirm no fixture account state is visible with `VITE_ENABLE_DEMO_FIXTURES=false`.
+2. **Mainnet stream certification:** run `VICE_STREAM_EVIDENCE_DIR=<secure-output> bun run test:streams:mainnet`; every catalogued stream must prove first valid frame, sustained freshness, stale→reconnect→live convergence, and exact identity.
+3. **Funded mainnet lifecycle:** run `bun run test:e2e:mainnet` and `bun run test:mainnet-evidence` only with dedicated owner/counterparty keys, allowlisted wallets, exact policy/approval digests, and a positive hard USD cap. Capture two clean passes per mutating action/family/channel and mandatory cleanup.
+4. **Strategy certification:** enable a `VITE_HL_CERTIFIED_*` flag only when the same exact release manifest proves its mainnet lifecycle and recovery evidence. Missing evidence leaves the action disabled.
+5. **Observation and soak:** run `VICE_SOAK_MAINNET_EVIDENCE=<secure-output> bun run test:soak:mainnet`, complete the named operator observation window, and rehearse remote halt/revocation and rollback.
+6. **Immutable deployment:** deploy the exact artifact bound by `release/vice-manifest.json`; verify with `VICE_DEPLOYMENT_URL=<url> VICE_RELEASE_SHA=<full-sha> bun run test:deployed`.
 
-Mainnet preflight also requires `VICE_FUNDED_TESTNET_EVIDENCE=/path/to/funded-evidence.json`, `VICE_LATENCY_EVIDENCE=/path/to/client-latency.json`, and a non-empty `VICE_MAINNET_ALLOWLIST`. The funded evidence manifest must prove at least two funded-testnet passes for US-002/003/004, reconnect and restart behavior, venue order IDs, zero duplicates, zero uncertain outcomes, and an allowlisted low-notional pilot. Latency evidence must be client-telemetry captured on testnet and pass every production SLO. Missing, malformed, wrong-network, or failing evidence blocks promotion. A builder address is required on mainnet only when `VITE_HL_ENABLE_BUILDER_REVENUE=true`.
+Mainnet preflight requires `VITE_HL_TRADING_NETWORK=mainnet`, the exact `VITE_HL_MAINNET_ACK`, `VICE_MAINNET_EVIDENCE`, `VICE_LATENCY_EVIDENCE`, `VICE_MAINNET_ALLOWLIST`, release policy/approval digests, assigned operators, and a clean exact-build manifest. Testnet and replay are useful for fault injection only; they cannot satisfy final evidence.
 
-Rollback means enabling the kill switch, stopping new sessions, preserving journals and telemetry, reconciling authoritative state, and reverting the deployment only after venue risk is controlled.
+Rollback means: halt risk-increasing dispatch, reconcile authoritative venue state, revoke local agents if needed, deploy the exact prior immutable artifact, force and confirm client update, verify build/policy identity, run canary smoke, then reopen.
 
 ## Performance and reliability targets
 
@@ -194,8 +195,8 @@ The release target is receipt-to-store p99 < 5 ms, action-to-signed-dispatch p99
 
 - All production checks pass from a clean checkout.
 - Runtime launcher, smoke, SSR/CSP surface, and shutdown checks pass.
-- Funded-testnet stories pass for every exposed order type.
+- Funded-mainnet stories pass for every exposed order type and interaction channel.
 - No pending or uncertain journal entry remains.
 - Catalog is complete/live, or the product is visibly degraded and promotion is blocked.
 - Builder/referral behavior is explicitly approved, accurately disclosed, and verified against authoritative venue state.
-- Incident owner, rollback command, and kill-switch operator are identified for the deployment.
+- Incident commander, beta-support owner, rollback command, release owner, and kill-switch operator are identified for the deployment.

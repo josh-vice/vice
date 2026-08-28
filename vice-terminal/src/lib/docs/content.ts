@@ -679,6 +679,9 @@ for (const group of docGroups) {
 		if (slug !== 'overview' && topics[slug]) topics[slug].group = group.label;
 	}
 }
+export const DOC_ACTION_IDS: Readonly<Record<string, string>> = Object.fromEntries(
+	Object.keys(topics).map((slug) => [slug, `docs.topic.${slug}`])
+);
 
 const visualAssignments: Record<string, NonNullable<DocTopic['visual']>> = {
 	'connect-wallet': { src: '/docs/setup/connect-wallet.png', alt: 'Vice Terminal wallet connection walkthrough with wallet provider, network, account identity, and health preview', caption: 'Choose a wallet and verify the network, exact account, requested read-only authority, and private account health before continuing.' },

@@ -50,8 +50,8 @@
 			<div><dt>24h volume</dt><dd class="font-mono text-terminal-text">{formatVolume(market.volume24h)}</dd></div>
 		</dl>
 		<p class="mt-auto text-3xs text-terminal-text-muted">{linkGroup ? 'Read-only linked public quote snapshot.' : 'Read-only independent quote snapshot.'} It does not own a book, chart, account, or execution context.</p>
-		{#if linkGroup}<button class="rounded border border-terminal-border px-2 py-1 text-3xs text-terminal-text-muted hover:text-terminal-cyan" onclick={setSnapshotAsLinkContext}>Set {linkGroup} link to this snapshot</button>{/if}
-		<button class="rounded border border-terminal-border px-2 py-1 text-3xs text-terminal-text-muted hover:text-terminal-cyan" onclick={useInSharedWorkspace}>Use in shared workspace</button>
+		{#if linkGroup}<button data-action-id="ui.src.lib.components.marketsnapshotpanel.button.h7ca10297c7" class="rounded border border-terminal-border px-2 py-1 text-3xs text-terminal-text-muted hover:text-terminal-cyan" onclick={setSnapshotAsLinkContext}>Set {linkGroup} link to this snapshot</button>{/if}
+		<button data-action-id="ui.src.lib.components.marketsnapshotpanel.button.h097a233245" class="rounded border border-terminal-border px-2 py-1 text-3xs text-terminal-text-muted hover:text-terminal-cyan" onclick={useInSharedWorkspace}>Use in shared workspace</button>
 	{:else}
 		<p class="text-3xs text-terminal-yellow">This {linkGroup ? 'linked' : 'saved'} market is unavailable in the current catalog. No replacement was inferred.</p>
 		<p class="text-3xs text-terminal-text-muted">Market identity: {activeMarketKey || 'missing'}</p>

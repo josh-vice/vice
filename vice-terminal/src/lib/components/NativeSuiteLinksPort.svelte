@@ -19,21 +19,21 @@
 <main data-testid="native-suite-links-port" class="min-h-screen bg-terminal-bg px-4 py-5 text-terminal-text sm:px-6">
 	<header class="mx-auto flex max-w-5xl items-center justify-between gap-4 border-b border-terminal-border pb-4">
 		<div><p class="text-3xs font-semibold uppercase tracking-[0.2em] text-terminal-cyan">Native widget port · {port.story}</p><h1 class="mt-1 text-xl font-semibold">{port.title}</h1></div>
-		<a href="/hub" class="rounded border border-terminal-border px-3 py-2 text-xs text-terminal-text-secondary hover:border-terminal-cyan hover:text-terminal-cyan">Open preserved Hub</a>
+		<a data-action-id="ui.src.lib.components.nativesuitelinksport.a.hcab1552eb8" href="/hub" class="rounded border border-terminal-border px-3 py-2 text-xs text-terminal-text-secondary hover:border-terminal-cyan hover:text-terminal-cyan">Open preserved Hub</a>
 	</header>
 
 	<section class="mx-auto max-w-5xl py-5">
 		<h2 class="text-xs font-semibold uppercase tracking-[0.16em] text-terminal-text-secondary">Vice Suite</h2>
 		<div class="mt-3 grid gap-3 sm:grid-cols-2">
 			{#each firstPartyLinks as link (link.href)}
-				<a href={link.href} class="rounded border border-terminal-border bg-terminal-bg-panel p-4 transition hover:border-terminal-cyan/60 hover:bg-terminal-bg-hover"><p class="text-sm font-semibold {link.accent}">{link.title}</p><p class="mt-1 text-sm leading-6 text-terminal-text-secondary">{link.detail}</p></a>
+				<a data-action-id="ui.src.lib.components.nativesuitelinksport.a.ha90ac0adba" href={link.href} class="rounded border border-terminal-border bg-terminal-bg-panel p-4 transition hover:border-terminal-cyan/60 hover:bg-terminal-bg-hover"><p class="text-sm font-semibold {link.accent}">{link.title}</p><p class="mt-1 text-sm leading-6 text-terminal-text-secondary">{link.detail}</p></a>
 			{/each}
 		</div>
 
 		<h2 class="mt-7 text-xs font-semibold uppercase tracking-[0.16em] text-terminal-text-secondary">Community tools</h2>
 		<div class="mt-3 grid gap-3 sm:grid-cols-2">
 			{#each communityLinks as link (link.href)}
-				<a href={link.href} target="_blank" rel="noopener noreferrer" class="rounded border border-terminal-border bg-terminal-bg-panel p-4 transition hover:border-terminal-pink/60 hover:bg-terminal-bg-hover"><p class="text-sm font-semibold text-terminal-pink">{link.title}</p><p class="mt-1 text-sm leading-6 text-terminal-text-secondary">{link.detail}</p></a>
+				<a data-action-id="ui.src.lib.components.nativesuitelinksport.a.hb810e25470" href={link.href} target="_blank" rel="noopener noreferrer" class="rounded border border-terminal-border bg-terminal-bg-panel p-4 transition hover:border-terminal-pink/60 hover:bg-terminal-bg-hover"><p class="text-sm font-semibold text-terminal-pink">{link.title}</p><p class="mt-1 text-sm leading-6 text-terminal-text-secondary">{link.detail}</p></a>
 			{/each}
 		</div>
 		<p class="mt-4 text-xs leading-5 text-terminal-text-muted">{port.provenance}. This navigation-only port preserves the legacy Suite destinations and creates no market feed, account, signer, order, telemetry, or execution path.</p>

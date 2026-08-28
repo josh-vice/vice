@@ -86,15 +86,15 @@ describe('E2E suite structure (static gate — no browser)', () => {
 		const funded = await listSpecs(`${E2E}/funded`);
 		expect(funded.length).toBeGreaterThan(0);
 		const src = await read(funded[0]);
-		// Explicit env gate refuses to mutate without all gates.
-		expect(src).toContain('VICE_E2E_FUNDED');
-		expect(src).toContain('VITE_HL_NETWORK=testnet');
+		// Explicit env gate refuses to mutate without all mainnet gates.
+		expect(src).toContain('VICE_E2E_MAINNET');
+		expect(src).toContain('VITE_HL_TRADING_NETWORK');
 		expect(src).toContain('VICE_E2E_ALLOWLIST');
 		expect(src).toContain('VICE_E2E_NOTIONAL_CAP_USD');
 		expect(src).toContain('VICE_E2E_OWNER_KEY');
-		// Cleanup / zero-exposure proof is mandatory.
-		expect(src).toContain('cancel-all');
+		expect(src).toContain('VICE_E2E_COUNTERPARTY_KEY');
 		expect(src).toContain('flatten');
+		expect(src).toContain('cancel');
 		// Funded dir must be excluded by the normal config.
 		const cfg = await read(`${E2E}/playwright.config.js`);
 		expect(cfg).toContain('funded');
@@ -106,10 +106,10 @@ describe('E2E suite structure (static gate — no browser)', () => {
 		// misleading successful funded-gate exit.
 		const src = await read((await listSpecs(`${E2E}/funded`))[0]);
 		expect(src).toContain('missing');
-		expect(src).toContain('Refusing to mutate a venue');
+		expect(src).toContain('Funded mainnet gate refused');
 		const runner = await read(resolve(ROOT, 'scripts/e2e-gate.mjs'));
 		expect(runner).toContain('assertFundedInvocationGates');
-		expect(runner).toContain('Funded E2E gate refused before build');
+		expect(runner).toContain('Funded mainnet E2E gate refused before build');
 		expect(runner.indexOf('assertFundedInvocationGates();')).toBeLessThan(runner.indexOf('await ensureProductionBuild();'));
 	});
 

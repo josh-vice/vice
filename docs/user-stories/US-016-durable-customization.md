@@ -1,6 +1,6 @@
 # US-016: Durable customization
 
-Story schema v1.
+Story schema v2.
 
 As a returning user, I want layouts, widgets, notes, alerts, and preferences to survive upgrades and recover safely so that customization never becomes a source of trading risk.
 
@@ -9,7 +9,9 @@ As a returning user, I want layouts, widgets, notes, alerts, and preferences to 
 - Existing Suite localStorage records migrate through versioned IndexedDB with dual-read, validation, backup/export, rollback, and corruption recovery.
 - GridStack dashboard layouts and Dockview trade layouts remain separate but share approved public context and design tokens.
 - Imports reject malformed, incompatible, private, or executable content.
-- Given an upgrade or interrupted migration, when the user reopens Vice, then the prior valid state restores or the app preserves a recoverable export and starts safely.
+- US-016-AC-001: Given an upgrade or interrupted migration, when the user reopens Vice, then the prior valid state restores or the app preserves a recoverable export and starts safely.
+
+- Action IDs: story.us-016
 
 ## Operational contract
 
@@ -24,7 +26,7 @@ As a returning user, I want layouts, widgets, notes, alerts, and preferences to 
 - Latency expectations: Persistence is debounced and cannot block chart, DOM, or signing hot paths.
 - Telemetry: Record anonymous migration version/outcome counts only.
 - Linked tests: Migration, corruption, rollback, import, export, layout, browser-reload, and performance suites.
-- Funded-testnet evidence: None; execution controls retain their own certification gates after restore.
+- Funded-mainnet evidence: None; execution controls retain their own certification gates after restore.
 
 ## Current evidence
 

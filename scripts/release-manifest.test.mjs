@@ -113,6 +113,7 @@ describe('manifest construction', () => {
 		expect(manifest.kind).toBe(KIND);
 		expect(manifest.schemaVersion).toBe(MANIFEST_SCHEMA_VERSION);
 		expect(manifest.lockfile.sha256).toBe(sha256Buffer(Buffer.from('LOCKFILE-V1\n')));
+		expect(manifest.artifact.commit).toBe(head.commit);
 		expect(manifest.artifact.sha256).toBe(sha256Buffer(Buffer.from('ARTIFACT-CONTENT\n')));
 		expect(manifest.artifact.sizeBytes).toBe(Buffer.byteLength('ARTIFACT-CONTENT\n'));
 		expect(manifest.contentSha256).toBeTruthy();
@@ -140,6 +141,14 @@ describe('manifest verification', () => {
 		expect(verifyManifest(manifest, { root: dir }).ok).toBe(true);
 		rmSync(dir, { recursive: true, force: true });
 	});
+	test('verify rejects a manifest for a different expected SHA', async () => {
+		const dir = makeRepoWithArtifact();
+		const manifest = await buildManifest({ cwd: dir, artifactPath: 'dist.tar.gz', strict: true });
+		const result = verifyManifest(manifest, { root: dir, expectedSha: 'f'.repeat(40) });
+		expect(result.ok).toBe(false);
+		expect(result.errors.some((error) => error.includes('expected full SHA'))).toBe(true);
+		rmSync(dir, { recursive: true, force: true });
+	});
 
 	test('verify detects an artifact that changed on disk after the manifest was bound', async () => {
 		const dir = makeRepoWithArtifact('V1\n');
@@ -149,6 +158,14 @@ describe('manifest verification', () => {
 		const result = verifyManifest(manifest, { root: dir });
 		expect(result.ok).toBe(false);
 		expect(result.errors.some((e) => e.includes('artifact.sha256 changed on disk'))).toBe(true);
+		rmSync(dir, { recursive: true, force: true });
+	});
+	test('verify rejects absolute and escaping provenance paths', async () => {
+		const dir = makeRepoWithArtifact();
+		const manifest = await buildManifest({ cwd: dir, artifactPath: 'dist.tar.gz', strict: true });
+		const result = verifyManifest({ ...manifest, artifact: { ...manifest.artifact, path: '../outside.tar.gz' } }, { root: dir });
+		expect(result.ok).toBe(false);
+		expect(result.errors.some((error) => error.includes('path must remain inside release root'))).toBe(true);
 		rmSync(dir, { recursive: true, force: true });
 	});
 

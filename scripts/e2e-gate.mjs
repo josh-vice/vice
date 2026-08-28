@@ -33,16 +33,16 @@ const ONLY = process.env.E2E_ONLY;
 function assertFundedInvocationGates() {
 	if (!process.argv.includes('--funded')) return;
 	const missing = [];
-	if (process.env.VICE_E2E_FUNDED !== '1') missing.push('VICE_E2E_FUNDED=1');
-	if ((process.env.VITE_HL_NETWORK ?? '').trim().toLowerCase() !== 'testnet') missing.push('VITE_HL_NETWORK=testnet');
-	if (!(process.env.VICE_E2E_ALLOWLIST ?? '').trim()) missing.push('VICE_E2E_ALLOWLIST');
+	if (process.env.VICE_E2E_MAINNET !== '1') missing.push('VICE_E2E_MAINNET=1');
+	if ((process.env.VITE_HL_TRADING_NETWORK ?? '').trim().toLowerCase() !== 'mainnet') missing.push('VITE_HL_TRADING_NETWORK=mainnet');
+	if (process.env.VICE_E2E_MAINNET_ACK !== 'I_ACCEPT_REAL_MAINNET_TRADING') missing.push('VICE_E2E_MAINNET_ACK=I_ACCEPT_REAL_MAINNET_TRADING');
+	for (const key of ['VICE_E2E_ALLOWLIST', 'VICE_E2E_APPROVAL_SHA256', 'VICE_E2E_POLICY_SHA256']) if (!(process.env[key] ?? '').trim()) missing.push(`${key}=<configured>`);
 	const cap = Number(process.env.VICE_E2E_NOTIONAL_CAP_USD);
 	if (!Number.isFinite(cap) || cap <= 0) missing.push('VICE_E2E_NOTIONAL_CAP_USD>0');
-	const ownerKey = process.env.VICE_E2E_OWNER_KEY;
-	if (!ownerKey || !existsSync(ownerKey)) missing.push('VICE_E2E_OWNER_KEY=<existing path>');
-	if (missing.length > 0) {
-		throw new Error(`Funded E2E gate refused before build: missing ${missing.join(', ')}. Refusing to mutate a venue.`);
+	for (const key of ['VICE_E2E_OWNER_KEY', 'VICE_E2E_COUNTERPARTY_KEY']) {
+		if (!process.env[key] || !existsSync(process.env[key])) missing.push(`${key}=<existing path>`);
 	}
+	if (missing.length > 0) throw new Error(`Funded mainnet E2E gate refused before build: missing ${missing.join(', ')}. Refusing to mutate a venue.`);
 }
 
 // ---------------------------------------------------------------------------

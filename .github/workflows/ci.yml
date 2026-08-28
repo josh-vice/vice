@@ -210,3 +210,24 @@ jobs:
             cargo-
       - name: Start owned stack and run read-only runtime smoke
         run: bash scripts/dev-verify.sh
+  # ---- Required aggregation gate ------------------------------------------
+  # Parallel jobs remain independent for throughput; this job is the single
+  # required status that proves the complete CI composition before promotion.
+  required-gate:
+    name: Required release-gate aggregation
+    if: always()
+    needs: [source-checks, frontend-tests, backend-tests, build, browser-e2e, runtime-smoke]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require every parallel gate
+        run: |
+          set -euo pipefail
+          for result in \
+            "${{ needs.source-checks.result }}" \
+            "${{ needs.frontend-tests.result }}" \
+            "${{ needs.backend-tests.result }}" \
+            "${{ needs.build.result }}" \
+            "${{ needs.browser-e2e.result }}" \
+            "${{ needs.runtime-smoke.result }}"; do
+            test "$result" = success || { echo "::error::parallel release gate result=$result"; exit 1; }
+          done

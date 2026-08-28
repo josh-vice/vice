@@ -66,32 +66,32 @@
 		<p class="mt-1 text-xs text-terminal-text-secondary">Stored as encrypted browser-local ciphertext. This setup does not enable BloFin trading or add BloFin to terminal navigation.</p>
 	</div>
 
-	<form class="space-y-3" onsubmit={(event) => { event.preventDefault(); void save(); }}>
+	<form data-action-id="ui.src.lib.components.blofincredentialsetup.form.h0102a3880f" class="space-y-3" onsubmit={(event) => { event.preventDefault(); void save(); }}>
 		<label class="block text-xs text-terminal-text-secondary">Environment
-			<select bind:value={environment} onchange={changeEnvironment} class="mt-1 w-full rounded border border-terminal-border bg-terminal-bg-secondary px-2 py-1.5 text-sm text-terminal-text">
+			<select data-action-id="ui.src.lib.components.blofincredentialsetup.select.hb06d2fb30f" bind:value={environment} onchange={changeEnvironment} class="mt-1 w-full rounded border border-terminal-border bg-terminal-bg-secondary px-2 py-1.5 text-sm text-terminal-text">
 				<option value="demo">Demo</option>
 				<option value="live">Live — storage only</option>
 			</select>
 		</label>
 		<label class="block text-xs text-terminal-text-secondary">API key
-			<input bind:value={apiKey} autocomplete="off" required class="mt-1 w-full rounded border border-terminal-border bg-terminal-bg-secondary px-2 py-1.5 text-sm text-terminal-text" />
+			<input data-action-id="ui.src.lib.components.blofincredentialsetup.input.h86572df4a2" bind:value={apiKey} autocomplete="off" required class="mt-1 w-full rounded border border-terminal-border bg-terminal-bg-secondary px-2 py-1.5 text-sm text-terminal-text" />
 		</label>
 		<label class="block text-xs text-terminal-text-secondary">Secret key
-			<input bind:value={secretKey} type="password" autocomplete="new-password" required class="mt-1 w-full rounded border border-terminal-border bg-terminal-bg-secondary px-2 py-1.5 text-sm text-terminal-text" />
+			<input data-action-id="ui.src.lib.components.blofincredentialsetup.input.h449c93a967" bind:value={secretKey} type="password" autocomplete="new-password" required class="mt-1 w-full rounded border border-terminal-border bg-terminal-bg-secondary px-2 py-1.5 text-sm text-terminal-text" />
 		</label>
 		<label class="block text-xs text-terminal-text-secondary">Passphrase
-			<input bind:value={passphrase} type="password" autocomplete="new-password" required class="mt-1 w-full rounded border border-terminal-border bg-terminal-bg-secondary px-2 py-1.5 text-sm text-terminal-text" />
+			<input data-action-id="ui.src.lib.components.blofincredentialsetup.input.h462e7afaee" bind:value={passphrase} type="password" autocomplete="new-password" required class="mt-1 w-full rounded border border-terminal-border bg-terminal-bg-secondary px-2 py-1.5 text-sm text-terminal-text" />
 		</label>
 		<label class="block text-xs text-terminal-text-secondary">Local unlock phrase
-			<input bind:value={unlockPhrase} type="password" autocomplete="new-password" minlength="12" required class="mt-1 w-full rounded border border-terminal-border bg-terminal-bg-secondary px-2 py-1.5 text-sm text-terminal-text" />
+			<input data-action-id="ui.src.lib.components.blofincredentialsetup.input.h6e849e1309" bind:value={unlockPhrase} type="password" autocomplete="new-password" minlength="12" required class="mt-1 w-full rounded border border-terminal-border bg-terminal-bg-secondary px-2 py-1.5 text-sm text-terminal-text" />
 		</label>
 		<fieldset class="rounded border border-terminal-border p-2">
 			<legend class="px-1 text-xs text-terminal-text-secondary">Declared venue permissions</legend>
-			<label class="mt-1 flex items-center gap-2 text-xs text-terminal-text"><input type="checkbox" bind:checked={readPermission} /> READ — required for verification</label>
-			<label class="mt-2 flex items-center gap-2 text-xs text-terminal-text"><input type="checkbox" bind:checked={tradePermission} /> TRADE — retained locally for future certified use</label>
+			<label class="mt-1 flex items-center gap-2 text-xs text-terminal-text"><input data-action-id="ui.src.lib.components.blofincredentialsetup.input.hc9c4da866f" type="checkbox" bind:checked={readPermission} /> READ — required for verification</label>
+			<label class="mt-2 flex items-center gap-2 text-xs text-terminal-text"><input data-action-id="ui.src.lib.components.blofincredentialsetup.input.h690d018834" type="checkbox" bind:checked={tradePermission} /> TRADE — retained locally for future certified use</label>
 			<p class="mt-2 text-2xs text-terminal-red">TRANSFER and withdrawal permissions are prohibited.</p>
 		</fieldset>
-		<button type="submit" disabled={saving} class="rounded bg-terminal-cyan px-3 py-1.5 text-xs font-semibold text-terminal-bg disabled:opacity-50">{saving ? 'Encrypting…' : 'Encrypt locally'}</button>
+		<button data-action-id="ui.src.lib.components.blofincredentialsetup.button.hd202b88239" type="submit" disabled={saving} class="rounded bg-terminal-cyan px-3 py-1.5 text-xs font-semibold text-terminal-bg disabled:opacity-50">{saving ? 'Encrypting…' : 'Encrypt locally'}</button>
 	</form>
 
 	<section class="mt-4 border-t border-terminal-border pt-3" aria-labelledby="blofin-local-credentials-title">
@@ -102,7 +102,7 @@
 				{#each storedFingerprints as keyFingerprint}
 					<li class="flex items-center justify-between gap-2 rounded border border-terminal-border px-2 py-1.5 text-2xs">
 						<code class="min-w-0 truncate text-terminal-text-muted">{keyFingerprint}</code>
-						<button type="button" disabled={removingFingerprint === keyFingerprint} class="rounded border border-terminal-red px-2 py-1 text-terminal-red disabled:opacity-50" onclick={() => removeLocalCredential(keyFingerprint)}>{removingFingerprint === keyFingerprint ? 'Removing…' : 'Remove local ciphertext'}</button>
+						<button data-action-id="ui.src.lib.components.blofincredentialsetup.button.ha0b31a0e92" type="button" disabled={removingFingerprint === keyFingerprint} class="rounded border border-terminal-red px-2 py-1 text-terminal-red disabled:opacity-50" onclick={() => removeLocalCredential(keyFingerprint)}>{removingFingerprint === keyFingerprint ? 'Removing…' : 'Remove local ciphertext'}</button>
 					</li>
 				{/each}
 			</ul>

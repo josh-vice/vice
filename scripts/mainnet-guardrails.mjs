@@ -141,7 +141,7 @@ export function evaluatePromotion({ approval, runtime }) {
 
 	// Gate 0 — funded certification prerequisite (recorded, validated, and
 	// anchored to the EXACT manifest the release authority certified). The
-	// runtime evidence file (VICE_FUNDED_TESTNET_EVIDENCE) must byte-match the
+	// runtime evidence file (VICE_MAINNET_EVIDENCE) must byte-match the manifest
 	// sha256 recorded in the approval record and resolve to the same reference,
 	// so a different-but-valid manifest can never satisfy the gate.
 	if (cert.validated !== true) {
@@ -154,7 +154,7 @@ export function evaluatePromotion({ approval, runtime }) {
 	if (!certSha) {
 		block(blocks, gates, 'gate0', 'Gate 0 funded certification sha256 is not recorded in the approval record; the exact certified manifest cannot be verified', 'missing');
 	} else if (!runtime.fundedEvidenceSha256) {
-		block(blocks, gates, 'gate0', 'runtime funded evidence sha256 (VICE_FUNDED_TESTNET_EVIDENCE) could not be computed or is not set', 'missing');
+		block(blocks, gates, 'gate0', 'runtime mainnet evidence sha256 (VICE_MAINNET_EVIDENCE) could not be computed or is not set', 'missing');
 	} else if (runtime.fundedEvidenceSha256.toLowerCase() !== certSha) {
 		block(blocks, gates, 'gate0', `funded-certification manifest mismatch: runtime evidence sha256=${runtime.fundedEvidenceSha256} does not match the approval record sha256=${certSha}; the exact approved manifest is required`, 'mismatch');
 	}
@@ -299,7 +299,7 @@ export async function appendGateJournal(journalPath, entry) {
 
 export function runtimeFromEnv(env = process.env) {
 	return {
-		network: env.VITE_HL_NETWORK ?? 'testnet',
+		network: env.VITE_HL_TRADING_NETWORK ?? (env.VITE_HL_NETWORK === 'mainnet' ? 'mainnet' : 'testnet'),
 		releaseBuild: env.VICE_MAINNET_RELEASE_BUILD ?? '',
 		allowlist: env.VICE_MAINNET_ALLOWLIST ?? '',
 		cap: env.VICE_MAINNET_CAP ?? '',
@@ -309,7 +309,7 @@ export function runtimeFromEnv(env = process.env) {
 		releaseAuthority: env.VICE_MAINNET_RELEASE_AUTHORITY ?? RELEASE_AUTHORITY_DEFAULT,
 		approvalPath: env.VICE_MAINNET_RELEASE_AUTHORITY_APPROVAL ?? '',
 		journalPath: env.VICE_MAINNET_GATE_JOURNAL ?? '',
-		fundedEvidencePath: env.VICE_FUNDED_TESTNET_EVIDENCE ?? ''
+		fundedEvidencePath: env.VICE_MAINNET_EVIDENCE ?? ''
 	};
 }
 

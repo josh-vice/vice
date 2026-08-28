@@ -49,12 +49,12 @@ import { readdirSync, statSync, readFileSync } from 'node:fs';
 import { resolve, relative, join } from 'node:path';
 import { spawnSync } from 'node:child_process';
 
-export const MANIFEST_SCHEMA_VERSION = 1;
+export const MANIFEST_SCHEMA_VERSION = 2;
 export const KIND = 'vice-release-manifest';
 
 // Stable fields that participate in the content checksum. `builtAt` is a
 // runtime observation, not part of the reproducible identity.
-export const CHECKSUMED_FIELDS = ['schemaVersion', 'kind', 'ref', 'commit', 'branch', 'lockfile.sha256', 'artifact.sha256', 'artifact.sizeBytes', 'tests.sha256'];
+export const CHECKSUMED_FIELDS = ['schemaVersion', 'kind', 'ref', 'commit', 'branch', 'lockfile.sha256', 'artifact.sha256', 'artifact.sizeBytes', 'tests.sha256', 'releaseBuild', 'policy.sha256', 'approval.sha256', 'observation.sha256'];
 
 // ---------------------------------------------------------------------------
 // Pure hash helpers
@@ -169,6 +169,10 @@ export async function buildManifest({
 	lockfilePath = 'bun.lock',
 	artifactPath = null,
 	testsPath = null,
+	policyPath = null,
+	approvalPath = null,
+	observationPath = null,
+	releaseBuild = null,
 	strict = false,
 	expectedSha = null
 } = {}) {
@@ -184,7 +188,8 @@ export async function buildManifest({
 		ref: head.ref,
 		commit: head.commit,
 		short: head.short,
-		branch: head.branch
+		branch: head.branch,
+		releaseBuild: releaseBuild ?? process.env.VICE_MAINNET_RELEASE_BUILD ?? null
 	};
 
 	if (lockfilePath) {
@@ -197,6 +202,7 @@ export async function buildManifest({
 		const full = resolve(base, artifactPath);
 		manifest.artifact = {
 			path: artifactPath,
+			commit: head.commit,
 			sha256: sha256File(full),
 			sizeBytes: fileSize(full)
 		};
@@ -207,6 +213,9 @@ export async function buildManifest({
 			sha256: sha256File(resolve(base, testsPath))
 		};
 	}
+	if (policyPath) manifest.policy = { path: policyPath, sha256: sha256File(resolve(base, policyPath)) };
+	if (approvalPath) manifest.approval = { path: approvalPath, sha256: sha256File(resolve(base, approvalPath)) };
+	if (observationPath) manifest.observation = { path: observationPath, sha256: sha256File(resolve(base, observationPath)) };
 
 	manifest.contentSha256 = manifestContentChecksum(CHECKSUMED_FIELDS, manifest);
 	return manifest;
@@ -216,34 +225,45 @@ export async function buildManifest({
 // Verification
 // ---------------------------------------------------------------------------
 
-export function verifyManifest(manifest, { root = null } = {}) {
+export function verifyManifest(manifest, { root = null, expectedSha = null, requireProvenance = false } = {}) {
 	const errors = [];
-
-	// Recompute the content checksum over the stable fields.
-	const expectedContent = manifestContentChecksum(CHECKSUMED_FIELDS, manifest);
-	if (manifest.contentSha256 && expectedContent !== manifest.contentSha256) {
-		errors.push(`contentSha256 mismatch: manifest ${manifest.contentSha256}, recomputed ${expectedContent}`);
+	if (manifest?.schemaVersion !== MANIFEST_SCHEMA_VERSION) errors.push(`schemaVersion must be ${MANIFEST_SCHEMA_VERSION}`);
+	if (!/^[a-f0-9]{40}$/i.test(manifest?.commit ?? '')) errors.push('manifest commit must be a full SHA');
+	if (expectedSha && (!/^[a-f0-9]{40}$/i.test(expectedSha) || manifest?.commit?.toLowerCase() !== expectedSha.toLowerCase())) errors.push(`manifest commit ${manifest?.commit ?? '(missing)'} does not match expected full SHA ${expectedSha}`);
+	if (requireProvenance) {
+		for (const field of ['releaseBuild', 'lockfile', 'artifact', 'tests', 'policy', 'approval', 'observation']) if (!manifest?.[field]) errors.push(`manifest missing ${field} provenance`);
+		if (!/^[a-f0-9]{40}$/i.test(manifest?.releaseBuild ?? '')) errors.push('releaseBuild must be the full release SHA');
+		if (manifest?.releaseBuild && manifest.releaseBuild.toLowerCase() !== manifest.commit?.toLowerCase()) errors.push('releaseBuild does not match manifest commit');
+		if (manifest?.artifact?.commit && manifest.artifact.commit.toLowerCase() !== manifest.commit?.toLowerCase()) errors.push('artifact commit does not match manifest commit');
+		for (const field of ['lockfile', 'artifact', 'tests', 'policy', 'approval', 'observation']) {
+			if (manifest?.[field] && (!manifest[field].path || !/^[a-f0-9]{64}$/i.test(manifest[field].sha256 ?? ''))) errors.push(`${field} provenance must include a path and SHA-256 digest`);
+		}
+		if (!/^[a-f0-9]{64}$/i.test(manifest?.contentSha256 ?? '')) errors.push('contentSha256 must be a SHA-256 digest');
 	}
-
-	// Re-hash referenced files if they still exist.
+	const expectedContent = manifestContentChecksum(CHECKSUMED_FIELDS, manifest);
+	if (manifest.contentSha256 && expectedContent !== manifest.contentSha256) errors.push(`contentSha256 mismatch: manifest ${manifest.contentSha256}, recomputed ${expectedContent}`);
 	const base = root ? resolve(root) : null;
 	const tryHash = (relPath, section) => {
 		if (!relPath || !base) return;
 		try {
+			if (typeof relPath !== 'string' || relPath.startsWith('/') || relPath.startsWith('~')) throw new Error('path must remain inside release root');
 			const full = resolve(base, relPath);
+			const inside = relative(base, full);
+			if (inside === '..' || inside.startsWith('../')) throw new Error('path must remain inside release root');
 			const actual = sha256File(full);
 			const expected = manifest[section]?.sha256;
-			if (expected && actual !== expected) {
-				errors.push(`${section}.sha256 changed on disk: manifest ${expected}, current ${actual}`);
-			}
-		} catch {
-			errors.push(`${section} referenced file ${relPath} is missing or unreadable`);
+			if (expected && actual !== expected) errors.push(`${section}.sha256 changed on disk: manifest ${expected}, current ${actual}`);
+		} catch (error) {
+			if (error instanceof Error && error.message === 'path must remain inside release root') errors.push(`${section} path must remain inside release root`);
+			else errors.push(`${section} referenced file ${relPath} is missing or unreadable`);
 		}
 	};
 	if (manifest.lockfile) tryHash(manifest.lockfile.path, 'lockfile');
 	if (manifest.artifact) tryHash(manifest.artifact.path, 'artifact');
 	if (manifest.tests) tryHash(manifest.tests.path, 'tests');
-
+	if (manifest.policy) tryHash(manifest.policy.path, 'policy');
+	if (manifest.approval) tryHash(manifest.approval.path, 'approval');
+	if (manifest.observation) tryHash(manifest.observation.path, 'observation');
 	return { ok: errors.length === 0, errors };
 }
 
@@ -260,7 +280,7 @@ function exec(args, cwd) {
 }
 
 function parseArgs(argv) {
-	const opts = { release: false, verify: null, out: null, artifact: null, lockfile: null, tests: null, expectedSha: null };
+	const opts = { release: false, verify: null, out: null, artifact: null, lockfile: null, tests: null, policy: null, approval: null, observation: null, expectedSha: null };
 	for (let i = 0; i < argv.length; i++) {
 		const arg = argv[i];
 		switch (arg) {
@@ -282,6 +302,15 @@ function parseArgs(argv) {
 			case '--tests':
 				opts.tests = argv[++i];
 				break;
+			case '--policy':
+				opts.policy = argv[++i];
+				break;
+			case '--approval':
+				opts.approval = argv[++i];
+				break;
+			case '--observation':
+				opts.observation = argv[++i];
+				break;
 			case '--expected-sha':
 				opts.expectedSha = argv[++i];
 				break;
@@ -300,12 +329,15 @@ async function main(argv) {
 	const artifact = opts.artifact ?? process.env.VICE_ARTIFACT ?? null;
 	const lockfile = opts.lockfile ?? process.env.VICE_LOCKFILE ?? 'bun.lock';
 	const tests = opts.tests ?? process.env.VICE_TEST_SUMMARY ?? null;
+	const policy = opts.policy ?? process.env.VICE_RELEASE_POLICY ?? null;
+	const approval = opts.approval ?? process.env.VICE_RELEASE_APPROVAL ?? null;
+	const observation = opts.observation ?? process.env.VICE_OBSERVATION_MANIFEST ?? null;
 	const expectedSha = opts.expectedSha ?? process.env.VICE_RELEASE_SHA ?? null;
 
 	if (opts.verify) {
 		const manifestPath = resolve(root, opts.verify);
 		const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
-		const result = verifyManifest(manifest, { root });
+		const result = verifyManifest(manifest, { root, expectedSha, requireProvenance: opts.release });
 		if (!result.ok) {
 			console.error('release-manifest: verification FAILED');
 			for (const e of result.errors) console.error(`  - ${e}`);
@@ -321,6 +353,9 @@ async function main(argv) {
 		lockfilePath: lockfile,
 		artifactPath: artifact,
 		testsPath: tests,
+		policyPath: policy,
+		approvalPath: approval,
+		observationPath: observation,
 		strict: opts.release,
 		expectedSha
 	});

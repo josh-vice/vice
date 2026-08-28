@@ -380,7 +380,7 @@
 		<!-- Language + News tabs -->
 		<div class="flex items-center gap-0 ml-2">
 			{#each (['EN','ZH','RU'] as Language[]) as lang}
-				<button
+				<button data-action-id="ui.src.lib.components.pitchat.button.h4253a8d8d2"
 					role="tab"
 					aria-selected={activeTab === lang}
 					class="px-1.5 py-0.5 text-2xs rounded transition-colors {activeTab === lang ? 'text-terminal-cyan bg-terminal-cyan/10' : 'text-terminal-text-muted hover:text-terminal-text'}"
@@ -388,7 +388,7 @@
 				>{lang}</button>
 			{/each}
 			{#if demoFixturesEnabled}
-			<button
+			<button data-action-id="ui.src.lib.components.pitchat.button.h7a2c529f46"
 				role="tab"
 				aria-selected={activeTab === 'NEWS'}
 				class="flex items-center gap-0.5 px-1.5 py-0.5 text-2xs rounded transition-colors ml-0.5
@@ -404,7 +404,7 @@
 		<div class="ml-auto flex items-center gap-1">
 			{#if demoFixturesEnabled && activeTab === 'NEWS'}
 				<!-- Manage subscriptions (fixtures) -->
-				<button
+				<button data-action-id="ui.src.lib.components.pitchat.button.h3fe67804ea"
 					class="text-2xs px-1.5 py-0.5 rounded transition-colors flex items-center gap-0.5
 						{newsShowSettings ? 'text-terminal-yellow bg-terminal-yellow/10' : 'text-terminal-text-muted hover:text-terminal-text hover:bg-terminal-bg-hover'}"
 					onclick={() => (newsShowSettings = !newsShowSettings)}
@@ -414,7 +414,7 @@
 				</button>
 			{:else if demoFixturesEnabled}
 				<!-- Custom handle button -->
-				<button
+				<button data-action-id="ui.src.lib.components.pitchat.button.h52970a1aaf"
 					class="text-2xs text-terminal-text-muted hover:text-terminal-text px-1.5 py-0.5 rounded hover:bg-terminal-bg-hover transition-colors truncate max-w-[80px]"
 					title="Set display nickname"
 					onclick={() => { editingHandle = true; handleInput = customHandle; }}
@@ -431,7 +431,7 @@
 
 			<!-- Pop-out -->
 			{#if onPopOut}
-				<button
+				<button data-action-id="ui.src.lib.components.pitchat.button.h66651e7c04"
 					class="text-terminal-text-muted hover:text-terminal-text p-0.5 rounded hover:bg-terminal-bg-hover transition-colors"
 					title="Pop out"
 					onclick={onPopOut}
@@ -447,7 +447,7 @@
 		<div class="absolute inset-0 z-50 flex items-center justify-center bg-black/60">
 			<div class="bg-terminal-bg-secondary border border-terminal-border rounded p-4 w-56 shadow-xl">
 				<p class="text-2xs text-terminal-text-muted mb-2 uppercase tracking-wide">Custom display name</p>
-				<input
+				<input data-action-id="ui.src.lib.components.pitchat.input.h2efad6f9b3"
 					class="w-full bg-terminal-bg border border-terminal-border rounded px-2 py-1.5 text-xs text-terminal-text font-mono outline-none focus:border-terminal-cyan mb-3"
 					maxlength="12"
 					placeholder="e.g. WHALE"
@@ -455,8 +455,8 @@
 					onkeydown={(e) => { if (e.key === 'Enter') saveHandle(); if (e.key === 'Escape') editingHandle = false; }}
 				/>
 				<div class="flex gap-2">
-					<button class="flex-1 py-1 text-2xs rounded bg-terminal-cyan/20 text-terminal-cyan border border-terminal-cyan/30 hover:bg-terminal-cyan/30 transition-colors" onclick={saveHandle}>Save</button>
-					<button class="flex-1 py-1 text-2xs rounded bg-terminal-bg-hover text-terminal-text-muted hover:text-terminal-text transition-colors" onclick={() => editingHandle = false}>Cancel</button>
+					<button data-action-id="ui.src.lib.components.pitchat.button.h99b50a3b12" class="flex-1 py-1 text-2xs rounded bg-terminal-cyan/20 text-terminal-cyan border border-terminal-cyan/30 hover:bg-terminal-cyan/30 transition-colors" onclick={saveHandle}>Save</button>
+					<button data-action-id="ui.src.lib.components.pitchat.button.hda23508e70" class="flex-1 py-1 text-2xs rounded bg-terminal-bg-hover text-terminal-text-muted hover:text-terminal-text transition-colors" onclick={() => editingHandle = false}>Cancel</button>
 				</div>
 			</div>
 		</div>
@@ -486,7 +486,7 @@
 									<div class="text-3xs text-terminal-text-muted">{acc.handle}</div>
 								</div>
 								<!-- Follow toggle -->
-								<button
+								<button data-action-id="ui.src.lib.components.pitchat.button.h83cdd83c86"
 									class="flex items-center gap-0.5 px-1.5 py-0.5 rounded text-2xs font-medium transition-colors border
 										{acc.followed
 										? 'border-terminal-cyan/40 text-terminal-cyan bg-terminal-cyan/8 hover:bg-terminal-red/10 hover:text-terminal-red hover:border-terminal-red/40'
@@ -571,7 +571,7 @@
 
 	<!-- ─── Chat Message Feed (shown when NOT on News tab) ───────────────────── -->
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
-	<div
+	<div data-action-id="chat.message-feed"
 		class="flex-1 overflow-y-auto min-h-0 px-2 py-1.5 space-y-0.5 font-mono scrollbar-thin {activeTab === 'NEWS' ? 'hidden' : ''}"
 		bind:this={messageContainer}
 		onscroll={onScroll}
@@ -655,7 +655,7 @@
 
 	<!-- Input bar (hidden on News tab) -->
 	<div class="flex items-center gap-1.5 px-2 py-1.5 border-t border-terminal-border flex-shrink-0 bg-terminal-bg-secondary {activeTab === 'NEWS' ? 'hidden' : ''}">
-		<input
+		<input data-action-id="ui.src.lib.components.pitchat.input.hd5ff18ab25"
 			bind:this={inputEl}
 			bind:value={input}
 			placeholder="/ for commands (local console)…"
@@ -667,7 +667,7 @@
 		{#if input.length > 0}
 			<span class="text-3xs text-terminal-text-muted tabular-nums">{input.length}/280</span>
 		{/if}
-		<button
+		<button data-action-id="ui.src.lib.components.pitchat.button.h304a9dbf6d"
 			class="text-2xs px-2 py-0.5 rounded bg-terminal-green/20 text-terminal-green border border-terminal-green/30 hover:bg-terminal-green/30 transition-colors disabled:opacity-40"
 			disabled={input.trim().length === 0}
 			onclick={send}

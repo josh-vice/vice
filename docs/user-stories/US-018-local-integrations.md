@@ -1,6 +1,6 @@
 # US-018: Installable local integrations
 
-Story schema v1.
+Story schema v2.
 
 As a power user, I want a PWA, Stream Deck/local bridge, encrypted preference sync, and a user-controlled runner so that Vice stays available across devices without handing custody to Vice.
 
@@ -9,7 +9,9 @@ As a power user, I want a PWA, Stream Deck/local bridge, encrypted preference sy
 - The PWA remains usable for public monitoring offline and clearly distinguishes offline data from live trading state.
 - Stream Deck/local integrations invoke only the shared, certified action boundary and respect focus, consent, health, and kill-switch rules.
 - Cross-device preference and runner monitoring payloads are end-to-end encrypted; the relay cannot read credentials, account contents, strategy values, or order contents.
-- Given a runner loss, stale feed, revoked pairing, or expired command, when a job cannot be proven safe, then it pauses rather than dispatching late or replaying.
+- US-018-AC-001: Given a runner loss, stale feed, revoked pairing, or expired command, when a job cannot be proven safe, then it pauses rather than dispatching late or replaying.
+
+- Action IDs: story.us-018
 
 ## Operational contract
 
@@ -24,7 +26,7 @@ As a power user, I want a PWA, Stream Deck/local bridge, encrypted preference sy
 - Latency expectations: Local bridge and runner commands preserve the action-to-signed-dispatch budget or report their separate path.
 - Telemetry: Opt-in anonymous health aggregates only; no secrets, addresses, markets, prices, sizes, or strategies.
 - Linked tests: Pairing, encryption-envelope, replay, expiry, offline, bridge-policy, runner-restart, and browser suites.
-- Funded-testnet evidence: Runner action evidence per certified strategy plus kill/restart/revocation proof.
+- Funded-mainnet evidence: Runner action evidence per certified strategy plus kill/restart/revocation proof.
 
 ## Current evidence
 

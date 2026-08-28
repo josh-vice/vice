@@ -1,6 +1,6 @@
 # US-014: Complete widget quality
 
-Story schema v1.
+Story schema v2.
 
 As a dashboard user, I want every available widget to be truthful, configurable, fast, accessible, and durable so that the Suite remains useful as I customize it.
 
@@ -9,7 +9,9 @@ As a dashboard user, I want every available widget to be truthful, configurable,
 - The widget catalog contains every current manifest and fails CI when a manifest lacks a matching acceptance record.
 - Each widget proves source/units/provenance; loading, empty, stale, error, recovery, resize, settings migration, keyboard use, privacy, cleanup, and visual behavior.
 - Widgets consume typed public context and shared data services; no widget creates a signing path or silently routes by display symbol.
-- Given a user who removes, hides, restores, imports, or resizes a widget, when the layout updates, then data resources are cleaned up and the saved configuration remains valid.
+- US-014-AC-001: Given a user who removes, hides, restores, imports, or resizes a widget, when the layout updates, then data resources are cleaned up and the saved configuration remains valid.
+
+- Action IDs: story.us-014
 
 ## Operational contract
 
@@ -24,7 +26,7 @@ As a dashboard user, I want every available widget to be truthful, configurable,
 - Latency expectations: Hidden/off-screen widgets pause; visible updates stay within the per-panel render budget and cannot monopolize a frame.
 - Telemetry: Record anonymous widget lifecycle and health aggregates without settings values, markets, or account data.
 - Linked tests: Widget-catalog validator, component, visual, accessibility, resize, cleanup, migration, and memory-soak suites.
-- Funded-testnet evidence: None unless a widget initiates a certified execution handoff; then it reuses that action's evidence.
+- Funded-mainnet evidence: None unless a widget initiates a certified execution handoff; then it reuses that action's evidence.
 
 ## Current evidence
 

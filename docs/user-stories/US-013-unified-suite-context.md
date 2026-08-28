@@ -1,6 +1,6 @@
 # US-013: Unified Suite context
 
-Story schema v1.
+Story schema v2.
 
 As a trader, I want Hub, Scanner, Gallery, and Trade to share an exact public market context so that I can move from research to action without losing venue truth or leaking private state.
 
@@ -9,7 +9,9 @@ As a trader, I want Hub, Scanner, Gallery, and Trade to share an exact public ma
 - The shell exposes Dashboard, Trade, Scanner, Gallery, and Academy on desktop and mobile, with Simple-first and persisted Pro workspace modes.
 - A public handoff carries only schema version, venue, environment, canonical instrument key, product kind, timeframe, and optional link group; display symbols never route an order.
 - Hub, Scanner, alerts, charts, and widgets open Trade through the same validated public handoff; account, credentials, orders, and signing state never enter it.
-- Given a trader who selects a Scanner market, when they choose Trade, then Trade opens the exact venue/instrument/timeframe or fails closed with a visible reason.
+- US-013-AC-001: Given a trader who selects a Scanner market, when they choose Trade, then Trade opens the exact venue/instrument/timeframe or fails closed with a visible reason.
+
+- Action IDs: story.us-013
 
 ## Operational contract
 
@@ -24,7 +26,7 @@ As a trader, I want Hub, Scanner, Gallery, and Trade to share an exact public ma
 - Latency expectations: Context handoff adds no network round trip and no measurable overhead to execution dispatch.
 - Telemetry: Record anonymous route and handoff outcomes without market, account, wallet, or order values.
 - Linked tests: Context-schema, malformed-route, deep-link, shell-navigation, privacy-boundary, mobile, and browser handoff suites.
-- Funded-testnet evidence: Certified chart/DOM handoffs reuse the destination action's funded evidence; public-only handoffs require browser evidence only.
+- Funded-mainnet evidence: Certified chart/DOM handoffs reuse the destination action's funded evidence; public-only handoffs require browser evidence only.
 
 ## Current evidence
 

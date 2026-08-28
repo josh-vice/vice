@@ -1,6 +1,6 @@
 # US-017: Explicit multi-account and basket execution
 
-Story schema v1.
+Story schema v2.
 
 As a multi-venue trader, I want to inspect accounts together and execute explicit per-account or basket actions so that I can manage fragmented exposure without losing venue-level truth.
 
@@ -9,7 +9,9 @@ As a multi-venue trader, I want to inspect accounts together and execute explici
 - Account aggregation preserves venue, environment, account reference, instrument identity, source timestamp, and health for every row.
 - Basket actions preview all legs, require explicit account selection, journal deterministic child commands, stop on uncertainty, and reconcile every venue before reporting completion.
 - A degraded venue never falsely marks another venue stale or accepts a cross-venue inference.
-- Given a basket with one partial or uncertain leg, when reconciliation cannot prove final state, then remaining legs pause and the UI reports partial completion.
+- US-017-AC-001: Given a basket with one partial or uncertain leg, when reconciliation cannot prove final state, then remaining legs pause and the UI reports partial completion.
+
+- Action IDs: story.us-017
 
 ## Operational contract
 
@@ -24,7 +26,7 @@ As a multi-venue trader, I want to inspect accounts together and execute explici
 - Latency expectations: Aggregation is off the active execution hot path; basket preparation never delays manual single-order signing.
 - Telemetry: Record anonymous per-venue health and outcome classes without account or order values.
 - Linked tests: Venue contract, account identity, basket partial-leg, restart, reconciliation, and funded E2E suites.
-- Funded-testnet evidence: Per-venue and multi-leg place, partial-fill, cancel, reconnect, restart, revoked-key, and uncertainty proof.
+- Funded-mainnet evidence: Per-venue and multi-leg place, partial-fill, cancel, reconnect, restart, revoked-key, and uncertainty proof.
 
 ## Current evidence
 

@@ -261,7 +261,7 @@
 			<!-- Header -->
 			<div class="flex items-center justify-between px-5 py-4 border-b border-terminal-border">
 				<h2 class="text-sm font-semibold text-terminal-text">Strategy Builder</h2>
-				<button
+				<button data-action-id="ui.src.lib.components.strategybuilder.button.hc3c2eabe1f"
 					class="text-terminal-text-muted hover:text-terminal-text transition-colors"
 					onclick={() => (isOpen = false)}
 					aria-label="Close"
@@ -286,7 +286,7 @@
 					<div class="flex gap-2">
 						{#each outlooks as o}
 							{@const active = selectedOutlook === o.id}
-							<button
+							<button data-action-id="ui.src.lib.components.strategybuilder.button.hd5b072b784"
 								class="flex-1 flex flex-col items-center gap-1.5 py-3 rounded border transition-all text-xs font-medium
 									{active
 										? 'bg-terminal-green/15 border-terminal-green text-terminal-green'
@@ -310,7 +310,7 @@
 						<div class="space-y-1.5">
 							{#each filteredStrategies as s}
 								{@const path = payoffPaths[s.key]}
-								<button
+								<button data-action-id="ui.src.lib.components.strategybuilder.button.hb408866474"
 									class="w-full flex items-center gap-3 px-3 py-3 rounded border border-terminal-border bg-terminal-bg-secondary hover:border-terminal-border-light hover:bg-terminal-bg-hover transition-all text-left"
 									onclick={() => pickStrategy(s.key)}
 								>
@@ -351,7 +351,7 @@
 			<!-- Modal Header -->
 			<div class="flex items-center justify-between px-6 py-4 border-b border-terminal-border flex-shrink-0">
 				<div class="flex items-center gap-3">
-					<button
+					<button data-action-id="ui.src.lib.components.strategybuilder.button.hb40be7fde9"
 						class="text-terminal-text-muted hover:text-terminal-text transition-colors text-xs flex items-center gap-1"
 						onclick={() => { step = 1; }}
 					>
@@ -364,7 +364,7 @@
 						{defaultExpiry ? ` · ${expiryLabel(defaultExpiry)}` : ''}
 					</h2>
 				</div>
-				<button
+				<button data-action-id="ui.src.lib.components.strategybuilder.button.hd3e5a67aee"
 					class="text-terminal-text-muted hover:text-terminal-text transition-colors"
 					onclick={() => (isOpen = false)}
 					aria-label="Close"
@@ -397,7 +397,7 @@
 						<div class="text-2xs text-terminal-text-muted uppercase tracking-wide mb-2">Strategy</div>
 						<div class="flex flex-wrap gap-2">
 							{#each strategyButtons as key}
-								<button
+								<button data-action-id="ui.src.lib.components.strategybuilder.button.h1f666511b7"
 									class="px-3 py-1.5 rounded text-sm font-semibold transition-colors border
 										{selectedStrategyKey === key
 											? 'bg-terminal-text text-terminal-bg border-terminal-text'
@@ -407,7 +407,7 @@
 									{strategies[key].name}
 								</button>
 							{/each}
-							<button class="px-3 py-1.5 rounded text-sm font-semibold border bg-terminal-bg-secondary text-terminal-text border-terminal-border hover:border-terminal-border-light">
+							<button data-action-id="ui.src.lib.components.strategybuilder.button.h46762547cb" class="px-3 py-1.5 rounded text-sm font-semibold border bg-terminal-bg-secondary text-terminal-text border-terminal-border hover:border-terminal-border-light">
 								Custom
 							</button>
 						</div>
@@ -435,12 +435,12 @@
 
 								<!-- Direction toggle -->
 								<div class="flex rounded overflow-hidden border border-terminal-border text-2xs">
-									<button
+									<button data-action-id="ui.src.lib.components.strategybuilder.button.h9acaf22e3a"
 										class="flex-1 px-1.5 py-1 font-semibold transition-colors
 											{leg.side === 'buy' ? 'bg-terminal-green/20 text-terminal-green border-r border-terminal-green/30' : 'text-terminal-text-muted hover:text-terminal-text'}"
 										onclick={() => { workingLegs[i] = { ...leg, side: 'buy' }; workingLegs = [...workingLegs]; }}
 									>Buy</button>
-									<button
+									<button data-action-id="ui.src.lib.components.strategybuilder.button.hcafe398e32"
 										class="flex-1 px-1.5 py-1 font-semibold transition-colors
 											{leg.side === 'sell' ? 'bg-terminal-red/20 text-terminal-red' : 'text-terminal-text-muted hover:text-terminal-text'}"
 										onclick={() => { workingLegs[i] = { ...leg, side: 'sell' }; workingLegs = [...workingLegs]; }}
@@ -448,7 +448,7 @@
 								</div>
 
 								<!-- Expiry -->
-								<select
+								<select data-action-id="ui.src.lib.components.strategybuilder.select.h412882e392"
 									class="bg-terminal-bg-secondary border border-terminal-border rounded px-2 py-1 text-2xs text-terminal-text focus:border-terminal-cyan outline-none appearance-none"
 									value={leg.expiry}
 									onchange={(e) => { workingLegs[i] = { ...leg, expiry: e.currentTarget.value }; workingLegs = [...workingLegs]; }}
@@ -459,7 +459,7 @@
 								</select>
 
 								<!-- Strike -->
-								<select
+								<select data-action-id="ui.src.lib.components.strategybuilder.select.hd316106f08"
 									class="bg-terminal-bg-secondary border border-terminal-border rounded px-2 py-1 text-2xs font-mono text-terminal-text focus:border-terminal-cyan outline-none appearance-none"
 									value={leg.strike}
 									onchange={(e) => { workingLegs[i] = { ...leg, strike: parseFloat(e.currentTarget.value) }; workingLegs = [...workingLegs]; }}
@@ -470,7 +470,7 @@
 								</select>
 
 								<!-- Quantity -->
-								<input
+								<input data-action-id="ui.src.lib.components.strategybuilder.input.h5ff9b93a7a"
 									type="number"
 									min="1"
 									class="bg-terminal-bg-secondary border border-terminal-border rounded px-2 py-1 text-2xs font-mono text-terminal-text focus:border-terminal-cyan outline-none w-full"
@@ -479,7 +479,7 @@
 								/>
 
 								<!-- Remove -->
-								<button
+								<button data-action-id="ui.src.lib.components.strategybuilder.button.h6d368dadd4"
 									class="text-terminal-text-muted hover:text-terminal-red transition-colors flex items-center justify-center"
 									onclick={() => removeLeg(i)}
 									aria-label="Remove leg"
@@ -490,7 +490,7 @@
 						{/each}
 
 						<!-- Add leg -->
-						<button
+						<button data-action-id="ui.src.lib.components.strategybuilder.button.h070e85fdd3"
 							class="flex items-center gap-1.5 mt-2 px-3 py-1.5 text-xs border border-terminal-border rounded text-terminal-text-muted hover:text-terminal-text hover:border-terminal-border-light transition-colors"
 							onclick={addLeg}
 						>
@@ -503,7 +503,7 @@
 					<div class="px-5 pb-5 pt-3 border-t border-terminal-border space-y-3 flex-shrink-0">
 						<div>
 							<div class="text-2xs text-terminal-text-muted uppercase tracking-wide mb-1.5">Amount</div>
-							<input
+							<input data-action-id="ui.src.lib.components.strategybuilder.input.hf60d550195"
 								type="number"
 								min="1"
 								step="1"
@@ -511,7 +511,7 @@
 								class="w-full bg-terminal-bg-secondary border border-terminal-border rounded px-3 py-2 text-sm font-mono text-terminal-text focus:border-terminal-cyan outline-none"
 							/>
 						</div>
-						<button
+						<button data-action-id="ui.src.lib.components.strategybuilder.button.h5f69b0fc9a"
 							class="w-full py-3 rounded bg-terminal-text text-terminal-bg font-semibold text-sm hover:opacity-90 transition-opacity"
 							onclick={submit}
 							disabled={workingLegs.length === 0}
@@ -527,7 +527,7 @@
 					<!-- Tabs -->
 					<div class="h-10 flex items-center px-5 border-b border-terminal-border gap-6 flex-shrink-0">
 						{#each ['payoff', 'greeks', 'trades', 'book'] as tab}
-							<button
+							<button data-action-id="ui.src.lib.components.strategybuilder.button.h5c1881c02a"
 								class="py-2.5 text-sm capitalize border-b-2 transition-colors -mb-px
 									{activeTab === tab ? 'border-terminal-text text-terminal-text font-medium' : 'border-transparent text-terminal-text-muted hover:text-terminal-text'}"
 								onclick={() => (activeTab = tab)}

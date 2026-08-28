@@ -18,7 +18,7 @@
 <main data-testid="native-candle-countdown-port" class="min-h-screen bg-terminal-bg px-4 py-5 text-terminal-text sm:px-6">
 	<header class="mx-auto flex max-w-4xl items-center justify-between gap-4 border-b border-terminal-border pb-4">
 		<div><p class="text-3xs font-semibold uppercase tracking-[0.2em] text-terminal-cyan">Native widget port · {port.story}</p><h1 class="mt-1 text-xl font-semibold">{port.title}</h1></div>
-		<a href="/hub" class="rounded border border-terminal-border px-3 py-2 text-xs text-terminal-text-secondary hover:border-terminal-cyan hover:text-terminal-cyan">Open preserved Hub</a>
+		<a data-action-id="ui.src.lib.components.nativecandlecountdownport.a.hd95ae679c6" href="/hub" class="rounded border border-terminal-border px-3 py-2 text-xs text-terminal-text-secondary hover:border-terminal-cyan hover:text-terminal-cyan">Open preserved Hub</a>
 	</header>
 
 	<section class="mx-auto max-w-4xl py-5">

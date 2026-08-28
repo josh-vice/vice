@@ -8,6 +8,14 @@ export const WORKSPACE_TOPOLOGIES: Record<WorkspacePreset, Readonly<Record<Works
 	chart: { watchlist: false, marketData: false, ticket: false, bottom: false, chat: false },
 	data: { watchlist: true, marketData: true, ticket: false, bottom: true, chat: false }
 };
+export const WORKSPACE_ACTION_IDS = {
+	preset: 'workspace.preset',
+	lock: 'workspace.lock',
+	reset: 'workspace.reset',
+	panel: 'workspace.panel',
+	link: 'workspace.link',
+	contextAction: 'workspace.context-action'
+} as const;
 
 const STORAGE_KEY = 'vice.workspace-preset.v1';
 const PANELS_STORAGE_KEY = 'vice.workspace-panels.v1';

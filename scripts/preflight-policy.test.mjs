@@ -4,10 +4,10 @@ const source = await Bun.file(new URL('./preflight.mjs', import.meta.url)).text(
 
 describe('mainnet promotion policy wiring', () => {
 	test('requires funded evidence, allowlist, and measured latency on mainnet', () => {
-		expect(source).toContain("await readMainnetEvidence(process.env.VICE_FUNDED_TESTNET_EVIDENCE)");
+		expect(source).toContain("await readMainnetEvidence(process.env.VICE_MAINNET_EVIDENCE)");
 		expect(source).toContain("process.env.VICE_MAINNET_ALLOWLIST?.trim()");
 		expect(source).toContain("await runLatencyGate(process.env.VICE_LATENCY_EVIDENCE)");
-		expect(source).toContain("latency.network !== 'testnet'");
+		expect(source).toContain("latency.network !== 'mainnet'");
 		expect(source).toContain('!latency.pass');
 	});
 
@@ -26,5 +26,10 @@ describe('mainnet promotion policy wiring', () => {
 		expect(source).toContain("await runDependencyAudit({");
 		expect(source).toContain('Dependency integrity gate failed');
 		expect(source).toContain('VICE_AUDIT_EXCEPTIONS');
+	});
+	test('requires durable beta access configuration for mainnet', () => {
+		expect(source).toContain("process.env.VICE_BETA_REQUIRED?.trim().toLowerCase() !== 'true'");
+		expect(source).toContain('UPSTASH_REDIS_REST_URL');
+		expect(source).toContain('VICE_BETA_SESSION_SECRET');
 	});
 });

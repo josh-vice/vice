@@ -1,80 +1,69 @@
 name: staging-smoke
 
-# Staging smoke design, gated on an explicit environment approval.
-#
-# The `staging` environment is REQUIRED on the smoke job. Until a human with
-# `environment: staging` review/approval rights approves the run, this job does
-# NOT start. The smoke job itself is read-only against the locally-started
-# stack (no venue mutation, no signing, no wallet credentials).
-#
-# Publish / deploy are intentionally ABSENT or disabled here: there is no
-# `vercel`/`deploy`/`publish` command and no write to a deployment environment.
-# Shipping to staging remains a separate, explicitly-approved human action in
-# the operator runbook (docs/VERCEL_DEPLOYMENT.md). This workflow only proves
-# the artifact passes the read-only runtime surface BEFORE any deployment is
-# considered.
+# Approval-gated canary validation. This workflow downloads the immutable
+# artifact produced by release.yml; it never rebuilds source and never trades.
 on:
   workflow_dispatch:
     inputs:
-      manifest:
-        description: 'Path (relative to repo root) to the release manifest whose artifact should be smoke-tested, e.g. release/vice-manifest.json'
+      artifact-run-id:
+        description: 'Release workflow run ID containing the immutable artifact'
+        required: true
+      artifact-name:
+        description: 'Release artifact name, normally vice-release-<full-sha>'
+        required: true
+      expected-sha:
+        description: 'Full commit SHA bound to the artifact'
+        required: true
+      deployment-url:
+        description: 'Already deployed canary URL for read-only smoke'
         required: true
 
 permissions:
   contents: read
-  # Read-only: no deployments, no releases, no packages.
+  actions: read
 
 concurrency:
   group: staging-smoke
   cancel-in-progress: false
 
-env:
-  VICE_BACKEND_PORT: 8081
-
 jobs:
   staging-smoke:
-    name: Approval-gated staging smoke (read-only)
+    name: Approval-gated immutable-artifact canary smoke
     runs-on: ubuntu-latest
     timeout-minutes: 45
     environment: staging
     steps:
-      - name: Clean checkout
+      - name: Clean checkout at expected commit
         uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.expected-sha }}
+          fetch-depth: 0
       - name: Setup Bun (pinned)
         uses: oven-sh/setup-bun@v2
         with:
           bun-version: 1.3.9
-      - name: Setup Rust (pinned toolchain)
-        uses: dtolnay/rust-toolchain@stable
       - name: Frozen install
         run: bun install --frozen-lockfile
-      - name: Cache Cargo (Cargo.lock-keyed)
-        uses: actions/cache@v4
+      - name: Download immutable release artifact
+        uses: actions/download-artifact@v4
         with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            vice-backend/target
-          key: cargo-${{ hashFiles('vice-backend/Cargo.lock') }}
-          restore-keys: |
-            cargo-
-
-      - name: Confirm the release manifest exists (artifacts to be smoke-tested)
-        run: |
-          set -euo pipefail
-          if test -f "${{ inputs.manifest }}"; then
-            bun scripts/release-manifest.mjs --release --verify "${{ inputs.manifest }}"
-          else
-            echo "::error::Manifest ${{ inputs.manifest }} not found in this checkout. Supply the manifest path from the release run (uploaded artifact)."
-            exit 1
-          fi
-
-      - name: Start owned stack and run read-only runtime smoke
+          name: ${{ inputs.artifact-name }}
+          run-id: ${{ inputs.artifact-run-id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: .release-artifact
+      - name: Verify manifest, artifact, and exact SHA
         env:
-          VICE_BACKEND_URL: http://127.0.0.1:8081
-          VICE_FRONTEND_URL: http://localhost:5173
-          VITE_HL_NETWORK: testnet
+          VICE_RELEASE_SHA: ${{ inputs.expected-sha }}
         run: |
           set -euo pipefail
-          bash scripts/dev-verify.sh
-          echo "Publish/deploy remains disabled until an explicit human approval and manual operator action."
+          test -f .release-artifact/release/vice-manifest.json
+          cp .release-artifact/release/vice-manifest.json release/vice-manifest.json
+          mkdir -p release/provenance vice-terminal/.vercel
+          cp -R .release-artifact/release/provenance/. release/provenance/
+          cp -R .release-artifact/vice-terminal/.vercel/output vice-terminal/.vercel/output
+          bun scripts/release-manifest.mjs --release --verify release/vice-manifest.json
+      - name: Probe deployed canary for exact identity
+        env:
+          VICE_DEPLOYMENT_URL: ${{ inputs.deployment-url }}
+          VICE_RELEASE_SHA: ${{ inputs.expected-sha }}
+        run: bun scripts/deployed-smoke.mjs

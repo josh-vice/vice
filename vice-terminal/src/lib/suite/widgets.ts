@@ -69,5 +69,8 @@ export const nativeWidgetPorts = {
 		status: 'ported'
 	}
 } as const;
+export const NATIVE_WIDGET_ACTION_IDS = Object.fromEntries(
+	Object.keys(nativeWidgetPorts).map((id) => [id, `widget.${id}.open`])
+) as Record<NativeWidgetPortId, string>;
 
 export type NativeWidgetPortId = keyof typeof nativeWidgetPorts;

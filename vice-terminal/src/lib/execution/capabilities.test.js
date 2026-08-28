@@ -16,7 +16,7 @@ describe('US-004 advanced capability release gate', () => {
 	});
 
 	test('returns an explicit certification message', () => {
-		expect(unavailableOrderTypeMessage('scale')).toContain('funded-testnet');
+		expect(unavailableOrderTypeMessage('scale')).toContain('funded-mainnet');
 	});
 
 	test('supports independent certification flags without allowing a global flag to override an explicit denial', () => {

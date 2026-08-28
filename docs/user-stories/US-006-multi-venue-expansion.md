@@ -1,6 +1,6 @@
 # US-006: Multi-venue trading expansion
 
-Story schema v1. Status: Live-read verified public foundations; private and execution paths remain blocked.
+Story schema v2. Status: Live-read verified public foundations; private and execution paths remain blocked.
 
 As a trader who splits flow across venues, I want Vice to support additional perp DEXs (Lighter, Nado) and centralized exchanges (Blofin, then Binance) with the same identity, custody, and reconciliation guarantees as Hyperliquid, so that one terminal covers my execution without weakening safety.
 
@@ -13,7 +13,9 @@ As a trader who splits flow across venues, I want Vice to support additional per
 - Feed health, staleness, reconnection, and account reconciliation report per-venue; one venue degrading never falsely marks another venue stale.
 - Order types exposed per venue are only those certified on that venue; certification flags become venue-scoped.
 - A venue that is configured off is absent from production navigation (US-001 semantics).
-- Given a trader with Lighter and Hyperliquid connected, when the Hyperliquid feed degrades, then Lighter markets remain live and actionable while Hyperliquid surfaces are explicitly degraded.
+- US-006-AC-001: Given a trader with Lighter and Hyperliquid connected, when the Hyperliquid feed degrades, then Lighter markets remain live and actionable while Hyperliquid surfaces are explicitly degraded.
+
+- Action IDs: story.us-006
 
 ## Operational contract
 
@@ -28,7 +30,7 @@ As a trader who splits flow across venues, I want Vice to support additional per
 - Latency expectations: Per-venue receipt-to-store p99 <5 ms and action-to-signed-dispatch p99 <10 ms on the reference desktop, measured and gated per venue.
 - Telemetry: Record venue ID, command IDs, per-venue dispatch/ack latency, rejection categories, and attribution state without credentials.
 - Linked tests: venue adapter contract tests mirroring `execution/venueFormat.test.js`, `blofin/setup.test.js`, per-venue journal/reconciliation suites, catalog identity tests, and funded per-venue E2E.
-- Funded-testnet evidence: Each venue requires its own funded (or venue-testnet) place/partial-fill/modify/cancel/reconnect/restart evidence before exposure; CEX venues additionally require key-rotation and revoked-key failure evidence.
+- Funded-mainnet evidence: Each venue requires its own funded (or venue-testnet) place/partial-fill/modify/cancel/reconnect/restart evidence before exposure; CEX venues additionally require key-rotation and revoked-key failure evidence.
 
 ## Evidence
 

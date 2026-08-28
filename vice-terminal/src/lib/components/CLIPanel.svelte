@@ -128,7 +128,7 @@
 				<span class="text-2xs text-terminal-text-muted">Press ESC to close • Tab to autocomplete • ↑↓ for history • ; chains commands</span>
 			</div>
 			<div class="flex items-center gap-1">
-				<button
+				<button data-action-id="ui.src.lib.components.clipanel.button.h9dc3204b7f"
 					class="p-1.5 rounded hover:bg-terminal-bg-hover text-terminal-text-secondary hover:text-terminal-text transition-colors"
 					onclick={() => isExpanded = !isExpanded}
 				>
@@ -138,7 +138,7 @@
 						<Maximize2 class="w-4 h-4" />
 					{/if}
 				</button>
-				<button
+				<button data-action-id="ui.src.lib.components.clipanel.button.h58ab24be4d"
 					class="p-1.5 rounded hover:bg-terminal-red/20 text-terminal-text-secondary hover:text-terminal-red transition-colors"
 					onclick={() => cliOpen.set(false)}
 				>
@@ -192,7 +192,7 @@
 			{#if showSuggestions}
 				<div class="absolute bottom-full left-0 right-0 bg-terminal-bg-secondary border border-terminal-border rounded-t-lg mb-1 mx-4 overflow-hidden shadow-xl">
 					{#each filteredSuggestions.slice(0, 5) as suggestion, i}
-						<button
+						<button data-action-id="ui.src.lib.components.clipanel.button.h5136998352"
 							class="w-full text-left px-4 py-2 text-sm font-mono transition-colors
 								   {i === selectedSuggestion ? 'bg-terminal-bg-tertiary text-terminal-green' : 'text-terminal-text-secondary hover:bg-terminal-bg-hover'}"
 							onclick={() => selectSuggestion(suggestion)}
@@ -205,7 +205,7 @@
 
 			<div class="flex items-center gap-3 px-4 py-3 bg-terminal-bg">
 				<span class="text-terminal-green font-mono">❯</span>
-				<input
+				<input data-action-id="ui.src.lib.components.clipanel.input.h7bef816ec0"
 					bind:this={inputRef}
 					bind:value={inputValue}
 					type="text"
@@ -215,7 +215,7 @@
 					oninput={handleInput}
 					onkeypress={(e) => e.key === 'Enter' && handleSubmit()}
 				/>
-				<button
+				<button data-action-id="ui.src.lib.components.clipanel.button.h56913d87c4"
 					class="px-3 py-1.5 rounded bg-terminal-green text-terminal-bg font-medium text-xs hover:bg-terminal-green-dim transition-colors"
 					onclick={handleSubmit}
 				>

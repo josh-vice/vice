@@ -28,7 +28,7 @@
 	</header>
 
 	<label class="mb-4 block max-w-sm text-2xs text-terminal-text-muted">Filter exact instrument or asset
-		<input aria-label="Filter BloFin public markets" bind:value={query} class="mt-1 w-full terminal-input px-2 py-1.5 text-sm" placeholder="BTC-USDT" />
+		<input data-action-id="ui.src.routes.review.blofin.page.input.hc0f9460558" aria-label="Filter BloFin public markets" bind:value={query} class="mt-1 w-full terminal-input px-2 py-1.5 text-sm" placeholder="BTC-USDT" />
 	</label>
 
 	{#if loading}

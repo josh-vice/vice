@@ -405,7 +405,7 @@
 <div class="h-full flex flex-col bg-terminal-bg-panel">
 	<!-- Buy/Sell Tabs -->
 	<div class="grid grid-cols-2 border-b border-terminal-border flex-shrink-0">
-		<button
+		<button data-action-id="ui.src.lib.components.orderticket.button.h3165c9fc1f"
 			class="py-2 text-xs font-medium transition-colors
 				   {$orderSide === 'buy'
 					? 'bg-terminal-cyan/10 text-terminal-cyan border-b-2 border-terminal-cyan'
@@ -414,7 +414,7 @@
 		>
 			Buy {baseAsset}
 		</button>
-		<button
+		<button data-action-id="ui.src.lib.components.orderticket.button.h645dde7b3e"
 			class="py-2 text-xs font-medium transition-colors
 				   {$orderSide === 'sell'
 					? 'bg-terminal-red/10 text-terminal-red border-b-2 border-terminal-red'
@@ -429,7 +429,7 @@
 	<div class="flex-1 overflow-y-auto p-2.5 space-y-2.5 scrollbar-none">
 		<div class="grid grid-cols-4 gap-1">
 			{#each availableQuickTypes as quick}
-				<button
+				<button data-action-id="ui.src.lib.components.orderticket.button.hc5d9ff4cb4"
 					class="py-1.5 rounded text-2xs font-medium {$orderType === quick.id ? 'bg-terminal-cyan/15 text-terminal-cyan ring-1 ring-terminal-cyan/40' : 'bg-terminal-bg text-terminal-text-muted hover:text-terminal-text'}"
 					onclick={() => pickType(quick.id)}
 				>{quick.label}</button>
@@ -446,19 +446,19 @@
 		{#if $isConnected}
 			<div class="rounded border border-terminal-border/60 bg-terminal-bg p-1.5 space-y-1">
 				<div class="flex items-center gap-1">
-					<select class="min-w-0 flex-1 terminal-input text-3xs py-1" value="" onchange={(event) => usePreset(event.currentTarget.value)}>
+					<select data-action-id="ui.src.lib.components.orderticket.select.hde28becad8" class="min-w-0 flex-1 terminal-input text-3xs py-1" value="" onchange={(event) => usePreset(event.currentTarget.value)}>
 						<option value="">Load preset…</option>
 						{#each $orderPresets as preset}
 							<option value={preset.id}>{preset.name} · {preset.orderType}</option>
 						{/each}
 					</select>
-					<input class="w-20 terminal-input text-3xs py-1 px-1" bind:value={presetName} maxlength="40" placeholder="Name" aria-label="Preset name" />
-					<button class="px-1.5 py-1 rounded bg-terminal-cyan/15 text-terminal-cyan text-3xs" onclick={savePreset} disabled={!presetName.trim()}>Save</button>
+					<input data-action-id="ui.src.lib.components.orderticket.input.he13ce8388c" class="w-20 terminal-input text-3xs py-1 px-1" bind:value={presetName} maxlength="40" placeholder="Name" aria-label="Preset name" />
+					<button data-action-id="ui.src.lib.components.orderticket.button.h56ef0f2413" class="px-1.5 py-1 rounded bg-terminal-cyan/15 text-terminal-cyan text-3xs" onclick={savePreset} disabled={!presetName.trim()}>Save</button>
 				</div>
 				{#if $orderPresets.length > 0}
 					<div class="flex gap-1 overflow-x-auto scrollbar-none">
 						{#each $orderPresets.slice(0, 4) as preset}
-							<button class="shrink-0 text-3xs text-terminal-text-muted hover:text-terminal-text" title="Delete preset" onclick={() => deleteOrderPreset(preset.id)}>{preset.name} ×</button>
+							<button data-action-id="ui.src.lib.components.orderticket.button.h6a74c86c9a" class="shrink-0 text-3xs text-terminal-text-muted hover:text-terminal-text" title="Delete preset" onclick={() => deleteOrderPreset(preset.id)}>{preset.name} ×</button>
 						{/each}
 					</div>
 				{/if}
@@ -467,7 +467,7 @@
 		{/if}
 		<!-- Order Type Selector (custom dropdown for grouping + descriptions) -->
 		<div class="relative">
-			<button
+			<button data-action-id="ui.src.lib.components.orderticket.button.h61d0cd3d1f"
 				class="w-full flex items-center justify-between bg-terminal-bg border border-terminal-border rounded px-2.5 py-2 text-xs hover:border-terminal-cyan/50 transition-colors"
 				onclick={() => (typeMenuOpen = !typeMenuOpen)}
 			>
@@ -483,7 +483,7 @@
 						<div class="px-2 py-1 text-3xs uppercase tracking-wide text-terminal-text-muted bg-terminal-bg-tertiary/40">{g.group}</div>
 						{#each g.types as t}
 							{@const certified = isAdvancedOrderCertified(t.id)}
-							<button
+							<button data-action-id="ui.src.lib.components.orderticket.button.hd2a4b6e82a"
 								class="w-full text-left px-2.5 py-1.5 transition-colors flex flex-col
 									   {certified ? 'hover:bg-terminal-bg-hover' : 'cursor-not-allowed opacity-60'}
 									   {t.id === $orderType ? 'bg-terminal-cyan/10' : ''}"
@@ -505,18 +505,18 @@
 			<div class="flex items-center justify-between mb-1">
 				<span class="text-3xs text-terminal-text-muted">Amount</span>
 				<div class="flex items-center gap-1">
-					{#if marketProfile.amountUnits.includes('base')}<button class="px-1.5 py-0.5 text-3xs rounded {amountUnit === 'base' ? 'bg-terminal-bg-tertiary text-terminal-text' : 'text-terminal-text-muted hover:text-terminal-text'}" onclick={() => setAmountUnit('base')}>{baseAsset}</button>{/if}
-					{#if marketProfile.amountUnits.includes('quote')}<button class="px-1.5 py-0.5 text-3xs rounded {amountUnit === 'quote' ? 'bg-terminal-bg-tertiary text-terminal-text' : 'text-terminal-text-muted hover:text-terminal-text'}" onclick={() => setAmountUnit('quote')}>{quoteAsset}</button>{/if}
+					{#if marketProfile.amountUnits.includes('base')}<button data-action-id="ui.src.lib.components.orderticket.button.he5d584f437" class="px-1.5 py-0.5 text-3xs rounded {amountUnit === 'base' ? 'bg-terminal-bg-tertiary text-terminal-text' : 'text-terminal-text-muted hover:text-terminal-text'}" onclick={() => setAmountUnit('base')}>{baseAsset}</button>{/if}
+					{#if marketProfile.amountUnits.includes('quote')}<button data-action-id="ui.src.lib.components.orderticket.button.h8c9984834d" class="px-1.5 py-0.5 text-3xs rounded {amountUnit === 'quote' ? 'bg-terminal-bg-tertiary text-terminal-text' : 'text-terminal-text-muted hover:text-terminal-text'}" onclick={() => setAmountUnit('quote')}>{quoteAsset}</button>{/if}
 				</div>
 			</div>
 			<div class="flex items-center gap-1">
-				<button
+				<button data-action-id="ui.src.lib.components.orderticket.button.h60b761af0b"
 					class="p-1.5 bg-terminal-bg rounded hover:bg-terminal-bg-hover transition-colors"
 					onclick={() => orderSize.update((s) => Math.max(0, s - 0.01))}
 				>
 					<Minus class="w-3 h-3 text-terminal-text-muted" />
 				</button>
-				<input
+				<input data-action-id="ui.src.lib.components.orderticket.input.h322ec251fe"
 					type="number"
 					value={amountInputValue}
 					oninput={(event) => setAmountInput(Number(event.currentTarget.value))}
@@ -524,8 +524,9 @@
 					step={amountUnit === 'base' ? '0.001' : '0.01'}
 					min="0"
 					placeholder="0"
+					aria-label="Order amount"
 				/>
-				<button
+				<button data-action-id="ui.src.lib.components.orderticket.button.h538ecdd58c"
 					class="p-1.5 bg-terminal-bg rounded hover:bg-terminal-bg-hover transition-colors"
 					onclick={() => orderSize.update((s) => s + 0.01)}
 				>
@@ -534,7 +535,7 @@
 			</div>
 			<div class="flex gap-0.5 mt-1">
 				{#each SIZE_PRESETS as preset}
-					<button
+					<button data-action-id="ui.src.lib.components.orderticket.button.h77b1731cbf"
 						class="flex-1 py-1 text-3xs rounded bg-terminal-bg hover:bg-terminal-bg-hover transition-colors text-terminal-text-muted"
 						onclick={() => setSizePercent(preset)}
 					>
@@ -549,10 +550,10 @@
 			<div>
 				<span class="text-3xs text-terminal-text-muted block mb-1">{$orderType === 'stop_limit' ? 'Limit price' : 'Price'}</span>
 				<div class="flex items-center gap-1">
-					<button class="p-1.5 bg-terminal-bg rounded hover:bg-terminal-bg-hover transition-colors" onclick={() => orderPrice.update((p) => (p || 0) - 1)}>
+					<button data-action-id="ui.src.lib.components.orderticket.button.h2c0b318903" class="p-1.5 bg-terminal-bg rounded hover:bg-terminal-bg-hover transition-colors" onclick={() => orderPrice.update((p) => (p || 0) - 1)}>
 						<Minus class="w-3 h-3 text-terminal-text-muted" />
 					</button>
-					<input
+					<input data-action-id="ui.src.lib.components.orderticket.input.hdf732c07e3"
 						type="number"
 						bind:value={$orderPrice}
 						onfocus={() => focusChartField('entry')}
@@ -560,8 +561,9 @@
 						class="flex-1 terminal-input text-center font-mono text-xs py-1.5"
 						step="0.1"
 						placeholder="0.00"
+						aria-label="Order price"
 					/>
-					<button class="p-1.5 bg-terminal-bg rounded hover:bg-terminal-bg-hover transition-colors" onclick={() => orderPrice.update((p) => (p || 0) + 1)}>
+					<button data-action-id="ui.src.lib.components.orderticket.button.h6aec707dd7" class="p-1.5 bg-terminal-bg rounded hover:bg-terminal-bg-hover transition-colors" onclick={() => orderPrice.update((p) => (p || 0) + 1)}>
 						<Plus class="w-3 h-3 text-terminal-text-muted" />
 					</button>
 				</div>
@@ -572,7 +574,7 @@
 		{#if needsTrigger}
 			<div>
 				<span class="text-3xs text-terminal-text-muted block mb-1">Trigger price</span>
-				<input
+				<input data-action-id="ui.src.lib.components.orderticket.input.h98f5bf7ee"
 					type="number"
 					value={$advancedConfig.triggerPrice}
 					oninput={(event) => updateCfg('triggerPrice', +event.currentTarget.value)}
@@ -581,19 +583,20 @@
 					class="w-full terminal-input font-mono text-xs py-1.5 px-2"
 					step="0.1"
 					placeholder="Click chart"
+					aria-label="Trigger price"
 				/>
 			</div>
 		{/if}
 
 		<!-- ===== Advanced parameter blocks ===== -->
 		<details class="rounded border border-terminal-border/60 bg-terminal-bg-secondary" data-testid="advanced-order-options">
-			<summary class="cursor-pointer px-2 py-1.5 text-3xs uppercase tracking-wide text-terminal-text-muted">Advanced order options</summary>
+			<summary data-action-id="ui.src.lib.components.orderticket.summary.h98272e1083" class="cursor-pointer px-2 py-1.5 text-3xs uppercase tracking-wide text-terminal-text-muted">Advanced order options</summary>
 		{#if $orderType === 'trailing_stop'}
 			<div class="bg-terminal-bg rounded p-2 space-y-1.5">
 				<span class="text-3xs text-terminal-text-muted uppercase">Trailing Stop</span>
 				<label class="flex items-center justify-between text-2xs">
 					<span class="text-terminal-text-secondary">Trail offset (%)</span>
-					<input type="number" value={$advancedConfig.trailOffset} oninput={(e) => updateCfg('trailOffset', +e.currentTarget.value)} class="w-20 terminal-input font-mono text-2xs py-1 px-1.5 text-right" step="0.1" />
+					<input data-action-id="ui.src.lib.components.orderticket.input.h5b3b05d4d0" type="number" value={$advancedConfig.trailOffset} oninput={(e) => updateCfg('trailOffset', +e.currentTarget.value)} class="w-20 terminal-input font-mono text-2xs py-1 px-1.5 text-right" step="0.1" />
 				</label>
 			</div>
 		{/if}
@@ -601,7 +604,7 @@
 		{#if $orderType === 'maker'}
 			<div class="bg-terminal-bg rounded p-2 space-y-1.5">
 				<span class="text-3xs text-terminal-text-muted uppercase">Maker routing</span>
-				<label class="flex items-center justify-between text-2xs"><span class="text-terminal-text-secondary">Book offset (ticks)</span><input type="number" value={$advancedConfig.makerOffsetTicks ?? 0} oninput={(e) => updateCfg('makerOffsetTicks', +e.currentTarget.value)} class="w-20 terminal-input text-2xs py-1 px-1.5 text-right" min="0" step="1" /></label>
+				<label class="flex items-center justify-between text-2xs"><span class="text-terminal-text-secondary">Book offset (ticks)</span><input data-action-id="ui.src.lib.components.orderticket.input.h686addc33c" type="number" value={$advancedConfig.makerOffsetTicks ?? 0} oninput={(e) => updateCfg('makerOffsetTicks', +e.currentTarget.value)} class="w-20 terminal-input text-2xs py-1 px-1.5 text-right" min="0" step="1" /></label>
 			</div>
 		{/if}
 
@@ -609,24 +612,24 @@
 			<div class="bg-terminal-bg rounded p-2 space-y-1.5">
 				<span class="text-3xs text-terminal-text-muted uppercase">Conditional ladder</span>
 				{#if ($advancedConfig.conditionalTriggerSource ?? 'priceCross') !== 'time'}
-					<label class="flex items-center justify-between text-2xs"><span class="text-terminal-text-secondary">Trigger kind</span><select value={$advancedConfig.conditionalTriggerKind ?? 'stop'} onchange={(e) => updateCfg('conditionalTriggerKind', e.currentTarget.value as 'stop' | 'takeProfit')} class="terminal-input text-2xs py-1 px-1.5"><option value="stop">Stop</option><option value="takeProfit">Take profit</option></select></label>
+					<label class="flex items-center justify-between text-2xs"><span class="text-terminal-text-secondary">Trigger kind</span><select data-action-id="ui.src.lib.components.orderticket.select.hcfdab1e3b5" value={$advancedConfig.conditionalTriggerKind ?? 'stop'} onchange={(e) => updateCfg('conditionalTriggerKind', e.currentTarget.value as 'stop' | 'takeProfit')} class="terminal-input text-2xs py-1 px-1.5"><option value="stop">Stop</option><option value="takeProfit">Take profit</option></select></label>
 				{/if}
-				<label class="flex items-center justify-between text-2xs"><span class="text-terminal-text-secondary">Trigger source</span><select value={$advancedConfig.conditionalTriggerSource ?? 'priceCross'} onchange={(e) => updateCfg('conditionalTriggerSource', e.currentTarget.value)} class="terminal-input text-2xs py-1 px-1.5"><option value="priceCross">Live price cross</option><option value="candleClose">Completed candle close</option><option value="candleVolume">Completed candle volume</option><option value="time">Local time</option><option value="syntheticPair">Synthetic pair</option></select></label>
+				<label class="flex items-center justify-between text-2xs"><span class="text-terminal-text-secondary">Trigger source</span><select data-action-id="ui.src.lib.components.orderticket.select.he917adcc63" value={$advancedConfig.conditionalTriggerSource ?? 'priceCross'} onchange={(e) => updateCfg('conditionalTriggerSource', e.currentTarget.value)} class="terminal-input text-2xs py-1 px-1.5"><option value="priceCross">Live price cross</option><option value="candleClose">Completed candle close</option><option value="candleVolume">Completed candle volume</option><option value="time">Local time</option><option value="syntheticPair">Synthetic pair</option></select></label>
 				{#if ($advancedConfig.conditionalTriggerSource ?? 'priceCross') === 'candleClose' || ($advancedConfig.conditionalTriggerSource ?? 'priceCross') === 'candleVolume'}
-					<label class="flex items-center justify-between text-2xs"><span class="text-terminal-text-secondary">Candle interval</span><select value={$advancedConfig.conditionalTriggerInterval ?? $chartTimeframe} onchange={(e) => updateCfg('conditionalTriggerInterval', e.currentTarget.value as '1m' | '5m' | '15m' | '1h' | '4h' | '1D')} class="terminal-input text-2xs py-1 px-1.5"><option value="1m">1m</option><option value="5m">5m</option><option value="15m">15m</option><option value="1h">1h</option><option value="4h">4h</option><option value="1D">1D</option></select></label>
+					<label class="flex items-center justify-between text-2xs"><span class="text-terminal-text-secondary">Candle interval</span><select data-action-id="ui.src.lib.components.orderticket.select.h42d329838d" value={$advancedConfig.conditionalTriggerInterval ?? $chartTimeframe} onchange={(e) => updateCfg('conditionalTriggerInterval', e.currentTarget.value as '1m' | '5m' | '15m' | '1h' | '4h' | '1D')} class="terminal-input text-2xs py-1 px-1.5"><option value="1m">1m</option><option value="5m">5m</option><option value="15m">15m</option><option value="1h">1h</option><option value="4h">4h</option><option value="1D">1D</option></select></label>
 				{/if}
 				{#if ($advancedConfig.conditionalTriggerSource ?? 'priceCross') === 'time'}
-					<label class="flex items-center justify-between text-2xs"><span class="text-terminal-text-secondary">Local fire time</span><input aria-label="Conditional ladder local fire time" type="datetime-local" value={localDateTimeInput($advancedConfig.conditionalTriggerAtMs)} onchange={(e) => updateCfg('conditionalTriggerAtMs', new Date(e.currentTarget.value).getTime())} class="terminal-input text-2xs py-1 px-1.5" /></label>
+					<label class="flex items-center justify-between text-2xs"><span class="text-terminal-text-secondary">Local fire time</span><input data-action-id="ui.src.lib.components.orderticket.input.had97eee9aa" aria-label="Conditional ladder local fire time" type="datetime-local" value={localDateTimeInput($advancedConfig.conditionalTriggerAtMs)} onchange={(e) => updateCfg('conditionalTriggerAtMs', new Date(e.currentTarget.value).getTime())} class="terminal-input text-2xs py-1 px-1.5" /></label>
 				{:else}
 					{#if ($advancedConfig.conditionalTriggerSource ?? 'priceCross') === 'syntheticPair'}
-						<label class="flex items-center justify-between text-2xs"><span class="text-terminal-text-secondary">Reference market</span><input aria-label="Conditional pair reference market" list="conditional-pair-markets" value={$advancedConfig.conditionalPairMarketKey ?? ''} onchange={(e) => updateCfg('conditionalPairMarketKey', e.currentTarget.value)} class="w-40 terminal-input text-2xs py-1 px-1.5" placeholder="Exact market key" /><datalist id="conditional-pair-markets">{#each $marketRegistry.filter((market) => market.marketKey !== $selectedMarket?.marketKey) as market (market.marketKey)}<option value={market.marketKey}>{market.apiCoin}</option>{/each}</datalist></label>
-						<label class="flex items-center justify-between text-2xs"><span class="text-terminal-text-secondary">Pair operation</span><select value={$advancedConfig.conditionalPairOperation ?? 'ratio'} onchange={(e) => updateCfg('conditionalPairOperation', e.currentTarget.value)} class="terminal-input text-2xs py-1 px-1.5"><option value="ratio">Left / reference</option><option value="spread">Left − reference</option></select></label>
+						<label class="flex items-center justify-between text-2xs"><span class="text-terminal-text-secondary">Reference market</span><input data-action-id="ui.src.lib.components.orderticket.input.h1a9f63d7ef" aria-label="Conditional pair reference market" list="conditional-pair-markets" value={$advancedConfig.conditionalPairMarketKey ?? ''} onchange={(e) => updateCfg('conditionalPairMarketKey', e.currentTarget.value)} class="w-40 terminal-input text-2xs py-1 px-1.5" placeholder="Exact market key" /><datalist id="conditional-pair-markets">{#each $marketRegistry.filter((market) => market.marketKey !== $selectedMarket?.marketKey) as market (market.marketKey)}<option value={market.marketKey}>{market.apiCoin}</option>{/each}</datalist></label>
+						<label class="flex items-center justify-between text-2xs"><span class="text-terminal-text-secondary">Pair operation</span><select data-action-id="ui.src.lib.components.orderticket.select.h53287fab3f" value={$advancedConfig.conditionalPairOperation ?? 'ratio'} onchange={(e) => updateCfg('conditionalPairOperation', e.currentTarget.value)} class="terminal-input text-2xs py-1 px-1.5"><option value="ratio">Left / reference</option><option value="spread">Left − reference</option></select></label>
 					{/if}
-					<label class="flex items-center justify-between text-2xs"><span class="text-terminal-text-secondary">{($advancedConfig.conditionalTriggerSource ?? 'priceCross') === 'candleVolume' ? 'Trigger volume' : ($advancedConfig.conditionalTriggerSource ?? 'priceCross') === 'candleClose' ? 'Trigger close' : ($advancedConfig.conditionalTriggerSource ?? 'priceCross') === 'syntheticPair' ? 'Pair threshold' : 'Trigger price'}</span><input type="number" value={$advancedConfig.conditionalTriggerPrice ?? 0} oninput={(e) => updateCfg('conditionalTriggerPrice', +e.currentTarget.value)} onfocus={() => focusChartField('trigger')} onblur={blurChartField} class="w-24 terminal-input text-2xs py-1 px-1.5 text-right" step="0.1" /></label>
+					<label class="flex items-center justify-between text-2xs"><span class="text-terminal-text-secondary">{($advancedConfig.conditionalTriggerSource ?? 'priceCross') === 'candleVolume' ? 'Trigger volume' : ($advancedConfig.conditionalTriggerSource ?? 'priceCross') === 'candleClose' ? 'Trigger close' : ($advancedConfig.conditionalTriggerSource ?? 'priceCross') === 'syntheticPair' ? 'Pair threshold' : 'Trigger price'}</span><input data-action-id="ui.src.lib.components.orderticket.input.h8026870423" type="number" value={$advancedConfig.conditionalTriggerPrice ?? 0} oninput={(e) => updateCfg('conditionalTriggerPrice', +e.currentTarget.value)} onfocus={() => focusChartField('trigger')} onblur={blurChartField} class="w-24 terminal-input text-2xs py-1 px-1.5 text-right" step="0.1" /></label>
 				{/if}
-				<label class="flex items-center justify-between text-2xs"><span class="text-terminal-text-secondary">Start price</span><input type="number" value={$advancedConfig.scaleStartPrice ?? 0} oninput={(e) => updateCfg('scaleStartPrice', +e.currentTarget.value)} class="w-24 terminal-input text-2xs py-1 px-1.5 text-right" step="0.1" /></label>
-				<label class="flex items-center justify-between text-2xs"><span class="text-terminal-text-secondary">End price</span><input type="number" value={$advancedConfig.scaleEndPrice ?? 0} oninput={(e) => updateCfg('scaleEndPrice', +e.currentTarget.value)} class="w-24 terminal-input text-2xs py-1 px-1.5 text-right" step="0.1" /></label>
-				<label class="flex items-center justify-between text-2xs"><span class="text-terminal-text-secondary">Levels</span><input type="number" value={$advancedConfig.scaleLevels ?? 5} oninput={(e) => updateCfg('scaleLevels', +e.currentTarget.value)} class="w-20 terminal-input text-2xs py-1 px-1.5 text-right" min="2" max="100" /></label>
+				<label class="flex items-center justify-between text-2xs"><span class="text-terminal-text-secondary">Start price</span><input data-action-id="ui.src.lib.components.orderticket.input.hf81c653d39" type="number" value={$advancedConfig.scaleStartPrice ?? 0} oninput={(e) => updateCfg('scaleStartPrice', +e.currentTarget.value)} class="w-24 terminal-input text-2xs py-1 px-1.5 text-right" step="0.1" /></label>
+				<label class="flex items-center justify-between text-2xs"><span class="text-terminal-text-secondary">End price</span><input data-action-id="ui.src.lib.components.orderticket.input.h658a0f11c6" type="number" value={$advancedConfig.scaleEndPrice ?? 0} oninput={(e) => updateCfg('scaleEndPrice', +e.currentTarget.value)} class="w-24 terminal-input text-2xs py-1 px-1.5 text-right" step="0.1" /></label>
+				<label class="flex items-center justify-between text-2xs"><span class="text-terminal-text-secondary">Levels</span><input data-action-id="ui.src.lib.components.orderticket.input.hfefd50d607" type="number" value={$advancedConfig.scaleLevels ?? 5} oninput={(e) => updateCfg('scaleLevels', +e.currentTarget.value)} class="w-20 terminal-input text-2xs py-1 px-1.5 text-right" min="2" max="100" /></label>
 			</div>
 		{/if}
 
@@ -635,27 +638,27 @@
 				<span class="text-3xs text-terminal-text-muted uppercase">{$orderType === 'bracket' ? 'Bracket' : 'OCO'} Levels</span>
 				<label class="flex items-center justify-between text-2xs">
 					<span class="text-terminal-green">Take profit</span>
-					<input type="number" value={$advancedConfig.takeProfit} oninput={(e) => updateCfg('takeProfit', +e.currentTarget.value)} onfocus={() => focusChartField('takeProfit')} onblur={blurChartField} class="w-24 terminal-input font-mono text-2xs py-1 px-1.5 text-right" step="0.1" />
+					<input data-action-id="ui.src.lib.components.orderticket.input.ha3e6beeb5a" type="number" value={$advancedConfig.takeProfit} oninput={(e) => updateCfg('takeProfit', +e.currentTarget.value)} onfocus={() => focusChartField('takeProfit')} onblur={blurChartField} class="w-24 terminal-input font-mono text-2xs py-1 px-1.5 text-right" step="0.1" />
 				</label>
 				<label class="flex items-center justify-between text-2xs">
 					<span class="text-terminal-red">Stop loss</span>
-					<input type="number" value={$advancedConfig.stopLoss} oninput={(e) => updateCfg('stopLoss', +e.currentTarget.value)} onfocus={() => focusChartField('stopLoss')} onblur={blurChartField} class="w-24 terminal-input font-mono text-2xs py-1 px-1.5 text-right" step="0.1" />
+					<input data-action-id="ui.src.lib.components.orderticket.input.h6ed726d2d8" type="number" value={$advancedConfig.stopLoss} oninput={(e) => updateCfg('stopLoss', +e.currentTarget.value)} onfocus={() => focusChartField('stopLoss')} onblur={blurChartField} class="w-24 terminal-input font-mono text-2xs py-1 px-1.5 text-right" step="0.1" />
 				</label>
 				<div class="flex items-center gap-1 pt-1">
-					<input type="number" bind:value={$chartRiskPercent} min="0.1" max="100" step="0.1" class="w-16 terminal-input text-2xs py-1" />
+					<input data-action-id="ui.src.lib.components.orderticket.input.h3c1f61556e" type="number" bind:value={$chartRiskPercent} min="0.1" max="100" step="0.1" class="w-16 terminal-input text-2xs py-1" />
 					<span class="text-3xs text-terminal-text-muted">% equity risk</span>
-					<button class="ml-auto px-2 py-1 text-3xs rounded bg-terminal-cyan/15 text-terminal-cyan" onclick={applyRiskSize}>Size</button>
+					<button data-action-id="ui.src.lib.components.orderticket.button.h880fcab698" class="ml-auto px-2 py-1 text-3xs rounded bg-terminal-cyan/15 text-terminal-cyan" onclick={applyRiskSize}>Size</button>
 				</div>
 			</div>
 		{/if}
 
 		{#if !['twap', 'adaptive_twap', 'vwap', 'pov', 'scale', 'conditional_ladder', 'oco', 'trailing_stop', 'break_even', 'maker', 'chase', 'swarm', 'iceberg', 'ping_pong'].includes($orderType)}
 			<div class="bg-terminal-bg rounded p-2 space-y-1.5">
-				<label class="flex items-center gap-2 text-2xs text-terminal-text-secondary"><input type="checkbox" checked={$advancedConfig.autoTakeProfitEnabled ?? false} onchange={(event) => updateCfg('autoTakeProfitEnabled', event.currentTarget.checked)} class="accent-terminal-green" /><span>Auto take-profit with reduce-only Scale</span></label>
+				<label class="flex items-center gap-2 text-2xs text-terminal-text-secondary"><input data-action-id="ui.src.lib.components.orderticket.input.he7bd18cc61" type="checkbox" checked={$advancedConfig.autoTakeProfitEnabled ?? false} onchange={(event) => updateCfg('autoTakeProfitEnabled', event.currentTarget.checked)} class="accent-terminal-green" /><span>Auto take-profit with reduce-only Scale</span></label>
 				{#if $advancedConfig.autoTakeProfitEnabled}
-					<label class="flex items-center justify-between text-2xs"><span class="text-terminal-text-secondary">Start price</span><input type="number" value={$advancedConfig.autoTakeProfitStartPrice ?? 0} oninput={(event) => updateCfg('autoTakeProfitStartPrice', +event.currentTarget.value)} class="w-24 terminal-input text-2xs py-1 px-1.5 text-right" step="0.1" /></label>
-					<label class="flex items-center justify-between text-2xs"><span class="text-terminal-text-secondary">End price</span><input type="number" value={$advancedConfig.autoTakeProfitEndPrice ?? 0} oninput={(event) => updateCfg('autoTakeProfitEndPrice', +event.currentTarget.value)} class="w-24 terminal-input text-2xs py-1 px-1.5 text-right" step="0.1" /></label>
-					<label class="flex items-center justify-between text-2xs"><span class="text-terminal-text-secondary">Levels</span><input type="number" value={$advancedConfig.autoTakeProfitLevels ?? 3} oninput={(event) => updateCfg('autoTakeProfitLevels', +event.currentTarget.value)} class="w-20 terminal-input text-2xs py-1 px-1.5 text-right" min="2" max="100" /></label>
+					<label class="flex items-center justify-between text-2xs"><span class="text-terminal-text-secondary">Start price</span><input data-action-id="ui.src.lib.components.orderticket.input.h432ec94ce5" type="number" value={$advancedConfig.autoTakeProfitStartPrice ?? 0} oninput={(event) => updateCfg('autoTakeProfitStartPrice', +event.currentTarget.value)} class="w-24 terminal-input text-2xs py-1 px-1.5 text-right" step="0.1" /></label>
+					<label class="flex items-center justify-between text-2xs"><span class="text-terminal-text-secondary">End price</span><input data-action-id="ui.src.lib.components.orderticket.input.h06b376128d" type="number" value={$advancedConfig.autoTakeProfitEndPrice ?? 0} oninput={(event) => updateCfg('autoTakeProfitEndPrice', +event.currentTarget.value)} class="w-24 terminal-input text-2xs py-1 px-1.5 text-right" step="0.1" /></label>
+					<label class="flex items-center justify-between text-2xs"><span class="text-terminal-text-secondary">Levels</span><input data-action-id="ui.src.lib.components.orderticket.input.hd10325bc25" type="number" value={$advancedConfig.autoTakeProfitLevels ?? 3} oninput={(event) => updateCfg('autoTakeProfitLevels', +event.currentTarget.value)} class="w-20 terminal-input text-2xs py-1 px-1.5 text-right" min="2" max="100" /></label>
 					<p class="text-3xs text-terminal-text-muted">Entry is blocked if the requested range is not profitable. Scale still needs its own funded-testnet certification.</p>
 				{/if}
 			</div>
@@ -664,9 +667,9 @@
 		{#if volatilitySizingCertified()}
 			<div class="bg-terminal-bg rounded p-2 space-y-1.5">
 				<span class="text-3xs text-terminal-text-muted uppercase">Volatility sizing</span>
-				<label class="flex items-center justify-between text-2xs"><span class="text-terminal-text-secondary">ATR lookback</span><input type="number" value={$advancedConfig.volatilityLookback ?? 20} oninput={(e) => updateCfg('volatilityLookback', +e.currentTarget.value)} class="w-20 terminal-input text-2xs py-1 px-1.5 text-right" min="2" max="200" /></label>
-				<label class="flex items-center justify-between text-2xs"><span class="text-terminal-text-secondary">Stop ATR multiplier</span><input type="number" value={$advancedConfig.volatilityMultiplier ?? 2} oninput={(e) => updateCfg('volatilityMultiplier', +e.currentTarget.value)} class="w-20 terminal-input text-2xs py-1 px-1.5 text-right" min="0.1" step="0.1" /></label>
-				<button class="w-full px-2 py-1 text-3xs rounded bg-terminal-cyan/15 text-terminal-cyan" onclick={applyVolatilitySize}>Size from live ATR</button>
+				<label class="flex items-center justify-between text-2xs"><span class="text-terminal-text-secondary">ATR lookback</span><input data-action-id="ui.src.lib.components.orderticket.input.hb087c77e76" type="number" value={$advancedConfig.volatilityLookback ?? 20} oninput={(e) => updateCfg('volatilityLookback', +e.currentTarget.value)} class="w-20 terminal-input text-2xs py-1 px-1.5 text-right" min="2" max="200" /></label>
+				<label class="flex items-center justify-between text-2xs"><span class="text-terminal-text-secondary">Stop ATR multiplier</span><input data-action-id="ui.src.lib.components.orderticket.input.h48ceb574f6" type="number" value={$advancedConfig.volatilityMultiplier ?? 2} oninput={(e) => updateCfg('volatilityMultiplier', +e.currentTarget.value)} class="w-20 terminal-input text-2xs py-1 px-1.5 text-right" min="0.1" step="0.1" /></label>
+				<button data-action-id="ui.src.lib.components.orderticket.button.h8af072fb0e" class="w-full px-2 py-1 text-3xs rounded bg-terminal-cyan/15 text-terminal-cyan" onclick={applyVolatilitySize}>Size from live ATR</button>
 			</div>
 		{/if}
 
@@ -675,15 +678,15 @@
 				<span class="text-3xs text-terminal-text-muted uppercase">TWAP Schedule</span>
 				<label class="flex items-center justify-between text-2xs">
 					<span class="text-terminal-text-secondary">Duration (min)</span>
-					<input type="number" value={$advancedConfig.twapDuration} oninput={(e) => updateCfg('twapDuration', +e.currentTarget.value)} class="w-20 terminal-input font-mono text-2xs py-1 px-1.5 text-right" />
+					<input data-action-id="ui.src.lib.components.orderticket.input.h2c5c127c72" type="number" value={$advancedConfig.twapDuration} oninput={(e) => updateCfg('twapDuration', +e.currentTarget.value)} class="w-20 terminal-input font-mono text-2xs py-1 px-1.5 text-right" />
 				</label>
 				<label class="flex items-center justify-between text-2xs">
 					<span class="text-terminal-text-secondary">Intervals</span>
-					<input type="number" value={$advancedConfig.twapIntervals} oninput={(e) => updateCfg('twapIntervals', +e.currentTarget.value)} class="w-20 terminal-input font-mono text-2xs py-1 px-1.5 text-right" />
+					<input data-action-id="ui.src.lib.components.orderticket.input.h67c1435a00" type="number" value={$advancedConfig.twapIntervals} oninput={(e) => updateCfg('twapIntervals', +e.currentTarget.value)} class="w-20 terminal-input font-mono text-2xs py-1 px-1.5 text-right" />
 				</label>
 				<label class="flex items-center justify-between text-2xs cursor-pointer">
 					<span class="text-terminal-text-secondary">Randomize timing</span>
-					<input type="checkbox" checked={$advancedConfig.twapRandomize} onchange={(e) => updateCfg('twapRandomize', e.currentTarget.checked)} class="w-3 h-3 accent-terminal-cyan" />
+					<input data-action-id="ui.src.lib.components.orderticket.input.h696776873a" type="checkbox" checked={$advancedConfig.twapRandomize} onchange={(e) => updateCfg('twapRandomize', e.currentTarget.checked)} class="w-3 h-3 accent-terminal-cyan" />
 				</label>
 			</div>
 		{/if}
@@ -691,19 +694,19 @@
 		{#if $orderType === 'adaptive_twap' || $orderType === 'vwap'}
 			<div class="bg-terminal-bg rounded p-2 space-y-1.5">
 				<span class="text-3xs text-terminal-text-muted uppercase">{$orderType === 'vwap' ? 'VWAP Schedule' : 'Adaptive TWAP Schedule'}</span>
-				<label class="flex items-center justify-between text-2xs"><span class="text-terminal-text-secondary">Duration (min)</span><input type="number" value={$advancedConfig.adaptiveDuration ?? 30} oninput={(e) => updateCfg('adaptiveDuration', +e.currentTarget.value)} class="w-20 terminal-input text-2xs py-1 px-1.5 text-right" min="1" max="1440" /></label>
-				<label class="flex items-center justify-between text-2xs"><span class="text-terminal-text-secondary">Intervals</span><input type="number" value={$advancedConfig.adaptiveIntervals ?? 10} oninput={(e) => updateCfg('adaptiveIntervals', +e.currentTarget.value)} class="w-20 terminal-input text-2xs py-1 px-1.5 text-right" min="2" max="100" /></label>
-				<label class="flex items-center justify-between text-2xs"><span class="text-terminal-text-secondary">Participation</span><input type="number" value={$advancedConfig.adaptiveParticipation ?? 0.1} oninput={(e) => updateCfg('adaptiveParticipation', +e.currentTarget.value)} class="w-20 terminal-input text-2xs py-1 px-1.5 text-right" min="0.01" max="1" step="0.01" /></label>
-				<label class="flex items-center justify-between text-2xs"><span class="text-terminal-text-secondary">Book offset (ticks)</span><input type="number" value={$advancedConfig.adaptiveOffsetTicks ?? 1} oninput={(e) => updateCfg('adaptiveOffsetTicks', +e.currentTarget.value)} class="w-20 terminal-input text-2xs py-1 px-1.5 text-right" min="0" /></label>
+				<label class="flex items-center justify-between text-2xs"><span class="text-terminal-text-secondary">Duration (min)</span><input data-action-id="ui.src.lib.components.orderticket.input.h58fb334539" type="number" value={$advancedConfig.adaptiveDuration ?? 30} oninput={(e) => updateCfg('adaptiveDuration', +e.currentTarget.value)} class="w-20 terminal-input text-2xs py-1 px-1.5 text-right" min="1" max="1440" /></label>
+				<label class="flex items-center justify-between text-2xs"><span class="text-terminal-text-secondary">Intervals</span><input data-action-id="ui.src.lib.components.orderticket.input.h1d06867f5a" type="number" value={$advancedConfig.adaptiveIntervals ?? 10} oninput={(e) => updateCfg('adaptiveIntervals', +e.currentTarget.value)} class="w-20 terminal-input text-2xs py-1 px-1.5 text-right" min="2" max="100" /></label>
+				<label class="flex items-center justify-between text-2xs"><span class="text-terminal-text-secondary">Participation</span><input data-action-id="ui.src.lib.components.orderticket.input.hc7612f587d" type="number" value={$advancedConfig.adaptiveParticipation ?? 0.1} oninput={(e) => updateCfg('adaptiveParticipation', +e.currentTarget.value)} class="w-20 terminal-input text-2xs py-1 px-1.5 text-right" min="0.01" max="1" step="0.01" /></label>
+				<label class="flex items-center justify-between text-2xs"><span class="text-terminal-text-secondary">Book offset (ticks)</span><input data-action-id="ui.src.lib.components.orderticket.input.h01619d1d53" type="number" value={$advancedConfig.adaptiveOffsetTicks ?? 1} oninput={(e) => updateCfg('adaptiveOffsetTicks', +e.currentTarget.value)} class="w-20 terminal-input text-2xs py-1 px-1.5 text-right" min="0" /></label>
 			</div>
 		{/if}
 
 		{#if $orderType === 'pov'}
 			<div class="bg-terminal-bg rounded p-2 space-y-1.5">
 				<span class="text-3xs text-terminal-text-muted uppercase">Participation of Volume</span>
-				<label class="flex items-center justify-between text-2xs"><span class="text-terminal-text-secondary">Duration (min)</span><input type="number" value={$advancedConfig.adaptiveDuration ?? 30} oninput={(e) => updateCfg('adaptiveDuration', +e.currentTarget.value)} class="w-20 terminal-input text-2xs py-1 px-1.5 text-right" min="1" max="1440" /></label>
-				<label class="flex items-center justify-between text-2xs"><span class="text-terminal-text-secondary">Participation</span><input type="number" value={$advancedConfig.povParticipation ?? 0.1} oninput={(e) => updateCfg('povParticipation', +e.currentTarget.value)} class="w-20 terminal-input text-2xs py-1 px-1.5 text-right" min="0.01" max="1" step="0.01" /></label>
-				<label class="flex items-center justify-between text-2xs"><span class="text-terminal-text-secondary">Trade window</span><input type="number" value={$advancedConfig.povWindowTrades ?? 20} oninput={(e) => updateCfg('povWindowTrades', +e.currentTarget.value)} class="w-20 terminal-input text-2xs py-1 px-1.5 text-right" min="1" max="200" /></label>
+				<label class="flex items-center justify-between text-2xs"><span class="text-terminal-text-secondary">Duration (min)</span><input data-action-id="ui.src.lib.components.orderticket.input.he87862b8a9" type="number" value={$advancedConfig.adaptiveDuration ?? 30} oninput={(e) => updateCfg('adaptiveDuration', +e.currentTarget.value)} class="w-20 terminal-input text-2xs py-1 px-1.5 text-right" min="1" max="1440" /></label>
+				<label class="flex items-center justify-between text-2xs"><span class="text-terminal-text-secondary">Participation</span><input data-action-id="ui.src.lib.components.orderticket.input.h518d5cb609" type="number" value={$advancedConfig.povParticipation ?? 0.1} oninput={(e) => updateCfg('povParticipation', +e.currentTarget.value)} class="w-20 terminal-input text-2xs py-1 px-1.5 text-right" min="0.01" max="1" step="0.01" /></label>
+				<label class="flex items-center justify-between text-2xs"><span class="text-terminal-text-secondary">Trade window</span><input data-action-id="ui.src.lib.components.orderticket.input.h517c5a483c" type="number" value={$advancedConfig.povWindowTrades ?? 20} oninput={(e) => updateCfg('povWindowTrades', +e.currentTarget.value)} class="w-20 terminal-input text-2xs py-1 px-1.5 text-right" min="1" max="200" /></label>
 				<p class="text-3xs text-terminal-text-muted">Children wait when public volume is insufficient.</p>
 			</div>
 		{/if}
@@ -711,9 +714,9 @@
 		{#if $orderType === 'break_even'}
 			<div class="bg-terminal-bg rounded p-2 space-y-1.5">
 				<span class="text-3xs text-terminal-text-muted uppercase">Break-even protection</span>
-				<label class="flex items-center justify-between text-2xs"><span class="text-terminal-text-secondary">Trigger distance</span><input type="number" value={$advancedConfig.breakEvenTrigger ?? 0} oninput={(e) => updateCfg('breakEvenTrigger', +e.currentTarget.value)} class="w-20 terminal-input text-2xs py-1 px-1.5 text-right" min="0.00000001" step="0.1" /></label>
-				<label class="flex items-center justify-between text-2xs"><span class="text-terminal-text-secondary">Entry offset</span><input type="number" value={$advancedConfig.breakEvenOffset ?? 0} oninput={(e) => updateCfg('breakEvenOffset', +e.currentTarget.value)} class="w-20 terminal-input text-2xs py-1 px-1.5 text-right" min="0" step="0.1" /></label>
-				<label class="flex items-center gap-2 text-2xs text-terminal-text-secondary"><input type="checkbox" checked={$advancedConfig.deadmanEnabled ?? false} onchange={(e) => updateCfg('deadmanEnabled', e.currentTarget.checked)} class="accent-terminal-red" /><span>Arm account-wide dead-man switch</span></label>
+				<label class="flex items-center justify-between text-2xs"><span class="text-terminal-text-secondary">Trigger distance</span><input data-action-id="ui.src.lib.components.orderticket.input.h03a8b51df9" type="number" value={$advancedConfig.breakEvenTrigger ?? 0} oninput={(e) => updateCfg('breakEvenTrigger', +e.currentTarget.value)} class="w-20 terminal-input text-2xs py-1 px-1.5 text-right" min="0.00000001" step="0.1" /></label>
+				<label class="flex items-center justify-between text-2xs"><span class="text-terminal-text-secondary">Entry offset</span><input data-action-id="ui.src.lib.components.orderticket.input.h06a78dbec8" type="number" value={$advancedConfig.breakEvenOffset ?? 0} oninput={(e) => updateCfg('breakEvenOffset', +e.currentTarget.value)} class="w-20 terminal-input text-2xs py-1 px-1.5 text-right" min="0" step="0.1" /></label>
+				<label class="flex items-center gap-2 text-2xs text-terminal-text-secondary"><input data-action-id="ui.src.lib.components.orderticket.input.h4df9c435a5" type="checkbox" checked={$advancedConfig.deadmanEnabled ?? false} onchange={(e) => updateCfg('deadmanEnabled', e.currentTarget.checked)} class="accent-terminal-red" /><span>Arm account-wide dead-man switch</span></label>
 			</div>
 		{/if}
 
@@ -722,19 +725,19 @@
 				<span class="text-3xs text-terminal-text-muted uppercase">Scale Ladder</span>
 				<label class="flex items-center justify-between text-2xs">
 					<span class="text-terminal-text-secondary">Order count</span>
-					<input type="number" value={$advancedConfig.scaleLevels} oninput={(e) => updateCfg('scaleLevels', +e.currentTarget.value)} class="w-20 terminal-input font-mono text-2xs py-1 px-1.5 text-right" />
+					<input data-action-id="ui.src.lib.components.orderticket.input.h66739022dc" type="number" value={$advancedConfig.scaleLevels} oninput={(e) => updateCfg('scaleLevels', +e.currentTarget.value)} class="w-20 terminal-input font-mono text-2xs py-1 px-1.5 text-right" />
 				</label>
 				<label class="flex items-center justify-between text-2xs">
 					<span class="text-terminal-text-secondary">Start price</span>
-					<input type="number" value={$advancedConfig.scaleStartPrice} oninput={(e) => updateCfg('scaleStartPrice', +e.currentTarget.value)} onfocus={() => focusChartField('scaleStart')} onblur={blurChartField} class="w-24 terminal-input font-mono text-2xs py-1 px-1.5 text-right" step="0.1" />
+					<input data-action-id="ui.src.lib.components.orderticket.input.h6fbc7790b2" type="number" value={$advancedConfig.scaleStartPrice} oninput={(e) => updateCfg('scaleStartPrice', +e.currentTarget.value)} onfocus={() => focusChartField('scaleStart')} onblur={blurChartField} class="w-24 terminal-input font-mono text-2xs py-1 px-1.5 text-right" step="0.1" />
 				</label>
 				<label class="flex items-center justify-between text-2xs">
 					<span class="text-terminal-text-secondary">End price</span>
-					<input type="number" value={$advancedConfig.scaleEndPrice} oninput={(e) => updateCfg('scaleEndPrice', +e.currentTarget.value)} onfocus={() => focusChartField('scaleEnd')} onblur={blurChartField} class="w-24 terminal-input font-mono text-2xs py-1 px-1.5 text-right" step="0.1" />
+					<input data-action-id="ui.src.lib.components.orderticket.input.h15ecd45132" type="number" value={$advancedConfig.scaleEndPrice} oninput={(e) => updateCfg('scaleEndPrice', +e.currentTarget.value)} onfocus={() => focusChartField('scaleEnd')} onblur={blurChartField} class="w-24 terminal-input font-mono text-2xs py-1 px-1.5 text-right" step="0.1" />
 				</label>
 				<label class="flex items-center justify-between text-2xs">
 					<span class="text-terminal-text-secondary">Size skew</span>
-					<input type="number" value={$advancedConfig.scaleSkew} oninput={(e) => updateCfg('scaleSkew', +e.currentTarget.value)} class="w-20 terminal-input font-mono text-2xs py-1 px-1.5 text-right" step="0.1" />
+					<input data-action-id="ui.src.lib.components.orderticket.input.h08a4ff5956" type="number" value={$advancedConfig.scaleSkew} oninput={(e) => updateCfg('scaleSkew', +e.currentTarget.value)} class="w-20 terminal-input font-mono text-2xs py-1 px-1.5 text-right" step="0.1" />
 				</label>
 			</div>
 		{/if}
@@ -744,10 +747,10 @@
 				<span class="text-3xs text-terminal-text-muted uppercase">Iceberg</span>
 				<label class="flex items-center justify-between text-2xs">
 					<span class="text-terminal-text-secondary">Display size ({baseAsset})</span>
-					<input type="number" value={$advancedConfig.icebergDisplaySize} oninput={(e) => updateCfg('icebergDisplaySize', +e.currentTarget.value)} class="w-20 terminal-input font-mono text-2xs py-1 px-1.5 text-right" step="0.01" />
+					<input data-action-id="ui.src.lib.components.orderticket.input.h9245e28e53" type="number" value={$advancedConfig.icebergDisplaySize} oninput={(e) => updateCfg('icebergDisplaySize', +e.currentTarget.value)} class="w-20 terminal-input font-mono text-2xs py-1 px-1.5 text-right" step="0.01" />
 				</label>
 				<label class="flex items-center gap-1.5 cursor-pointer">
-					<input
+					<input data-action-id="ui.src.lib.components.orderticket.input.hc625e1303a"
 						type="checkbox"
 						checked={$advancedConfig.icebergWaitForFill ?? true}
 						onchange={(e) => updateCfg('icebergWaitForFill', e.currentTarget.checked)}
@@ -758,7 +761,7 @@
 				{#if !($advancedConfig.icebergWaitForFill ?? true)}
 					<label class="flex items-center justify-between text-2xs">
 						<span class="text-terminal-text-secondary">Refill delay (ms)</span>
-						<input type="number" value={$advancedConfig.icebergRefillMs} oninput={(e) => updateCfg('icebergRefillMs', +e.currentTarget.value)} class="w-20 terminal-input font-mono text-2xs py-1 px-1.5 text-right" />
+						<input data-action-id="ui.src.lib.components.orderticket.input.he355ff4e41" type="number" value={$advancedConfig.icebergRefillMs} oninput={(e) => updateCfg('icebergRefillMs', +e.currentTarget.value)} class="w-20 terminal-input font-mono text-2xs py-1 px-1.5 text-right" />
 					</label>
 				{/if}
 			</div>
@@ -769,20 +772,20 @@
 				<span class="text-3xs text-terminal-text-muted uppercase">Chase</span>
 				<label class="flex items-center justify-between text-2xs">
 					<span class="text-terminal-text-secondary">Offset (ticks)</span>
-					<input type="number" value={$advancedConfig.chaseOffset} oninput={(e) => updateCfg('chaseOffset', +e.currentTarget.value)} class="w-20 terminal-input font-mono text-2xs py-1 px-1.5 text-right" />
+					<input data-action-id="ui.src.lib.components.orderticket.input.h8133fdd738" type="number" value={$advancedConfig.chaseOffset} oninput={(e) => updateCfg('chaseOffset', +e.currentTarget.value)} class="w-20 terminal-input font-mono text-2xs py-1 px-1.5 text-right" />
 				</label>
 				<label class="flex items-center justify-between text-2xs">
 					<span class="text-terminal-text-secondary">Max chases</span>
-					<input type="number" value={$advancedConfig.chaseMaxChases} oninput={(e) => updateCfg('chaseMaxChases', +e.currentTarget.value)} class="w-20 terminal-input font-mono text-2xs py-1 px-1.5 text-right" />
+					<input data-action-id="ui.src.lib.components.orderticket.input.hbe8222ee3b" type="number" value={$advancedConfig.chaseMaxChases} oninput={(e) => updateCfg('chaseMaxChases', +e.currentTarget.value)} class="w-20 terminal-input font-mono text-2xs py-1 px-1.5 text-right" />
 				</label>
 				<label class="flex items-center gap-2 text-2xs text-terminal-text-secondary">
-					<input type="checkbox" checked={$advancedConfig.deadmanEnabled ?? false} onchange={(e) => updateCfg('deadmanEnabled', e.currentTarget.checked)} class="accent-terminal-red" />
+					<input data-action-id="ui.src.lib.components.orderticket.input.hc0bbaa45fe" type="checkbox" checked={$advancedConfig.deadmanEnabled ?? false} onchange={(e) => updateCfg('deadmanEnabled', e.currentTarget.checked)} class="accent-terminal-red" />
 					<span>Arm account-wide dead-man switch</span>
 				</label>
 				{#if $advancedConfig.deadmanEnabled}
 					<label class="flex items-center justify-between text-2xs">
 						<span class="text-terminal-text-secondary">Cancel-all timeout (ms)</span>
-						<input type="number" min="5000" value={$advancedConfig.deadmanMs ?? 30000} oninput={(e) => updateCfg('deadmanMs', +e.currentTarget.value)} class="w-24 terminal-input font-mono text-2xs py-1 px-1.5 text-right" />
+						<input data-action-id="ui.src.lib.components.orderticket.input.h71aea26fe3" type="number" min="5000" value={$advancedConfig.deadmanMs ?? 30000} oninput={(e) => updateCfg('deadmanMs', +e.currentTarget.value)} class="w-24 terminal-input font-mono text-2xs py-1 px-1.5 text-right" />
 					</label>
 					<p class="text-3xs text-terminal-red">Hyperliquid's switch cancels all account orders when it expires.</p>
 				{/if}
@@ -794,11 +797,11 @@
 				<span class="text-3xs text-terminal-text-muted uppercase">Swarm</span>
 				<label class="flex items-center justify-between text-2xs">
 					<span class="text-terminal-text-secondary">Order count</span>
-					<input type="number" value={$advancedConfig.swarmOrders} oninput={(e) => updateCfg('swarmOrders', +e.currentTarget.value)} class="w-20 terminal-input font-mono text-2xs py-1 px-1.5 text-right" />
+					<input data-action-id="ui.src.lib.components.orderticket.input.hf39b4840bf" type="number" value={$advancedConfig.swarmOrders} oninput={(e) => updateCfg('swarmOrders', +e.currentTarget.value)} class="w-20 terminal-input font-mono text-2xs py-1 px-1.5 text-right" />
 				</label>
 				<label class="flex items-center justify-between text-2xs">
 					<span class="text-terminal-text-secondary">Spread (%)</span>
-					<input type="number" value={$advancedConfig.swarmSpread} oninput={(e) => updateCfg('swarmSpread', +e.currentTarget.value)} class="w-20 terminal-input font-mono text-2xs py-1 px-1.5 text-right" step="0.1" />
+					<input data-action-id="ui.src.lib.components.orderticket.input.ha1927b09af" type="number" value={$advancedConfig.swarmSpread} oninput={(e) => updateCfg('swarmSpread', +e.currentTarget.value)} class="w-20 terminal-input font-mono text-2xs py-1 px-1.5 text-right" step="0.1" />
 				</label>
 			</div>
 		{/if}
@@ -808,11 +811,11 @@
 				<span class="text-3xs text-terminal-text-muted uppercase">Ping Pong</span>
 				<label class="flex items-center justify-between text-2xs">
 					<span class="text-terminal-text-secondary">Range (%)</span>
-					<input type="number" value={$advancedConfig.pingPongRange} oninput={(e) => updateCfg('pingPongRange', +e.currentTarget.value)} class="w-20 terminal-input font-mono text-2xs py-1 px-1.5 text-right" step="0.1" />
+					<input data-action-id="ui.src.lib.components.orderticket.input.h9d8b95b713" type="number" value={$advancedConfig.pingPongRange} oninput={(e) => updateCfg('pingPongRange', +e.currentTarget.value)} class="w-20 terminal-input font-mono text-2xs py-1 px-1.5 text-right" step="0.1" />
 				</label>
 				<label class="flex items-center justify-between text-2xs">
 					<span class="text-terminal-text-secondary">Cycles</span>
-					<input type="number" value={$advancedConfig.pingPongCycles} oninput={(e) => updateCfg('pingPongCycles', +e.currentTarget.value)} class="w-20 terminal-input font-mono text-2xs py-1 px-1.5 text-right" />
+					<input data-action-id="ui.src.lib.components.orderticket.input.h7eea75b0a4" type="number" value={$advancedConfig.pingPongCycles} oninput={(e) => updateCfg('pingPongCycles', +e.currentTarget.value)} class="w-20 terminal-input font-mono text-2xs py-1 px-1.5 text-right" />
 				</label>
 			</div>
 		{/if}
@@ -824,7 +827,7 @@
 				<span class="text-3xs text-terminal-text-muted">Leverage</span>
 				<span class="text-3xs font-mono text-terminal-cyan">{$orderLeverage}x</span>
 			</div>
-			<input
+			<input data-action-id="ui.src.lib.components.orderticket.input.h22cfd6fe44"
 				type="range"
 				bind:value={$orderLeverage}
 				min="1"
@@ -844,19 +847,19 @@
 		<div class="flex items-center gap-3 flex-wrap">
 			{#if marketProfile.supportsReduceOnly}
 			<label class="flex items-center gap-1.5 cursor-pointer">
-				<input type="checkbox" bind:checked={$reduceOnly} class="w-3 h-3 rounded border-terminal-border bg-terminal-bg accent-terminal-green" />
+				<input data-action-id="ui.src.lib.components.orderticket.input.hb813b84419" type="checkbox" bind:checked={$reduceOnly} class="w-3 h-3 rounded border-terminal-border bg-terminal-bg accent-terminal-green" />
 				<span class="text-3xs text-terminal-text-secondary">Reduce Only</span>
 			</label>
 			{/if}
 			{#if marketProfile.supportsPostOnly}
 			<label class="flex items-center gap-1.5 cursor-pointer">
-				<input type="checkbox" checked={$postOnly} onchange={(event) => setPostOnly(event.currentTarget.checked)} class="w-3 h-3 rounded border-terminal-border bg-terminal-bg accent-terminal-green" />
+				<input data-action-id="ui.src.lib.components.orderticket.input.h7d79015ccc" type="checkbox" checked={$postOnly} onchange={(event) => setPostOnly(event.currentTarget.checked)} class="w-3 h-3 rounded border-terminal-border bg-terminal-bg accent-terminal-green" />
 				<span class="text-3xs text-terminal-text-secondary">POST</span>
 			</label>
 			{/if}
 			{#if marketProfile.supportsIoc}
 			<label class="flex items-center gap-1.5 cursor-pointer">
-				<input type="checkbox" checked={$ioc} onchange={(event) => setIoc(event.currentTarget.checked)} class="w-3 h-3 rounded border-terminal-border bg-terminal-bg accent-terminal-green" />
+				<input data-action-id="ui.src.lib.components.orderticket.input.h67777448a8" type="checkbox" checked={$ioc} onchange={(event) => setIoc(event.currentTarget.checked)} class="w-3 h-3 rounded border-terminal-border bg-terminal-bg accent-terminal-green" />
 				<span class="text-3xs text-terminal-text-secondary">IOC</span>
 			</label>
 			{/if}
@@ -885,11 +888,11 @@
 			<span class="block text-3xs uppercase text-terminal-text-muted">Local risk limits</span>
 			<label class="flex items-center justify-between gap-2 text-2xs">
 				<span class="text-terminal-text-secondary">Max order (USD)</span>
-				<input aria-label="Maximum order notional" type="number" min="0" step="any" value={$fatFingerLimits.maxOrderNotional} oninput={(event) => setFatFingerLimit('order', event.currentTarget.value)} class="w-24 terminal-input font-mono text-2xs py-1 px-1.5 text-right" placeholder="Off" />
+				<input data-action-id="ui.src.lib.components.orderticket.input.h78d5935b89" aria-label="Maximum order notional" type="number" min="0" step="any" value={$fatFingerLimits.maxOrderNotional} oninput={(event) => setFatFingerLimit('order', event.currentTarget.value)} class="w-24 terminal-input font-mono text-2xs py-1 px-1.5 text-right" placeholder="Off" />
 			</label>
 			<label class="flex items-center justify-between gap-2 text-2xs">
 				<span class="text-terminal-text-secondary">Max {$selectedMarket?.symbol ?? 'market'} position</span>
-				<input aria-label="Maximum position notional" type="number" min="0" step="any" value={$selectedMarket ? ($fatFingerLimits.maxPositionNotionalByMarket[$selectedMarket.marketKey] ?? '') : ''} oninput={(event) => setFatFingerLimit('position', event.currentTarget.value)} disabled={!$selectedMarket} class="w-24 terminal-input font-mono text-2xs py-1 px-1.5 text-right disabled:opacity-50" placeholder="Off" />
+				<input data-action-id="ui.src.lib.components.orderticket.input.h475905b6d6" aria-label="Maximum position notional" type="number" min="0" step="any" value={$selectedMarket ? ($fatFingerLimits.maxPositionNotionalByMarket[$selectedMarket.marketKey] ?? '') : ''} oninput={(event) => setFatFingerLimit('position', event.currentTarget.value)} disabled={!$selectedMarket} class="w-24 terminal-input font-mono text-2xs py-1 px-1.5 text-right disabled:opacity-50" placeholder="Off" />
 			</label>
 			<p class="text-3xs text-terminal-text-muted">Saved on this device. Limits reject before signing.</p>
 		</div>
@@ -911,7 +914,7 @@
 			</p>
 			{#if builderRevenueEnabled() && configuredBuilder() && enablePhase.kind !== 'step'}
 				<label class="mb-1.5 flex items-start gap-1.5 rounded border border-terminal-border/60 bg-terminal-bg-secondary px-2 py-1.5 text-3xs text-terminal-text-muted">
-					<input type="checkbox" bind:checked={builderOptIn} class="mt-0.5 accent-terminal-cyan" />
+					<input data-action-id="ui.src.lib.components.orderticket.input.hf7922f360e" type="checkbox" bind:checked={builderOptIn} class="mt-0.5 accent-terminal-cyan" />
 					<span>I approve the optional 0.1 bp Vice builder fee for eligible orders. This requests a one-time wallet approval; leaving it unchecked still enables local trading without builder attribution.</span>
 				</label>
 			{/if}
@@ -926,7 +929,7 @@
 					<div class="font-medium text-terminal-cyan">{enablementProgressLabel(enablePhase.step)}</div>
 					<div class="mt-0.5 text-terminal-text-muted">{enablePhase.detail}</div>
 					{#if enablementIsCancellable(enablePhase)}
-						<button class="mt-1.5 text-terminal-cyan hover:underline" onclick={dismissEnablement}>Cancel</button>
+						<button data-action-id="ui.src.lib.components.orderticket.button.h9cd5ffb282" class="mt-1.5 text-terminal-cyan hover:underline" onclick={dismissEnablement}>Cancel</button>
 					{/if}
 				</div>
 			{:else if enablePhase.kind === 'error'}
@@ -939,7 +942,7 @@
 					<div class="mt-0.5 text-terminal-text-muted">{enablePhase.error.message}</div>
 					<div class="mt-1.5 flex items-center gap-1.5">
 						{#if enablementIsRetryable(enablePhase)}
-							<button
+							<button data-action-id="ui.src.lib.components.orderticket.button.hd0b615625c"
 								class="rounded border border-terminal-cyan/60 px-1.5 py-0.5 text-terminal-cyan hover:bg-terminal-cyan/10 disabled:opacity-50"
 								disabled={!enableRetryAvailable}
 								onclick={retryEnableSecureTrading}
@@ -948,14 +951,14 @@
 							</button>
 						{/if}
 						{#if enablePhase.error.message.includes('explicit takeover')}
-							<button
+							<button data-action-id="ui.src.lib.components.orderticket.button.h053953045e"
 								class="rounded border border-terminal-yellow/60 px-1.5 py-0.5 text-terminal-yellow hover:bg-terminal-yellow/10"
 								onclick={takeOverExpiredLease}
 							>
 								Take over after expiry
 							</button>
 						{/if}
-						<button class="rounded border border-terminal-border px-1.5 py-0.5 hover:bg-terminal-bg" onclick={dismissEnablement}>Dismiss</button>
+						<button data-action-id="ui.src.lib.components.orderticket.button.h9653243098" class="rounded border border-terminal-border px-1.5 py-0.5 hover:bg-terminal-bg" onclick={dismissEnablement}>Dismiss</button>
 					</div>
 				</div>
 			{/if}
@@ -972,14 +975,14 @@
 					<div class="mt-1 text-terminal-yellow">Revenue attribution is temporarily unavailable; no estimate is shown.</div>
 				{/if}
 				{#if !referralConfirmOpen}
-					<button class="ml-1 text-terminal-cyan hover:underline" onclick={() => (referralConfirmOpen = true)}>Review optional referral</button>
+					<button data-action-id="ui.src.lib.components.orderticket.button.hbee1dad2e0" class="ml-1 text-terminal-cyan hover:underline" onclick={() => (referralConfirmOpen = true)}>Review optional referral</button>
 				{:else}
 					<div class="mt-1.5 rounded border border-terminal-yellow/40 bg-terminal-yellow/5 p-1.5 text-terminal-text">
 						<div>Vice will request referral code <span class="font-mono text-terminal-cyan">{configuredReferralCode() ?? 'configured code'}</span> for this wallet.</div>
 						<div class="mt-1 text-terminal-text-muted">Hyperliquid decides eligibility. Existing referrers are never overwritten. A wallet confirmation is required, and the result is verified afterward.</div>
 						<div class="mt-1.5 flex gap-1.5">
-							<button class="rounded border border-terminal-cyan/60 px-1.5 py-0.5 text-terminal-cyan hover:bg-terminal-cyan/10 disabled:opacity-50" disabled={referralBusy} onclick={requestReferral}>{referralBusy ? 'Waiting…' : 'Confirm and request'}</button>
-							<button class="rounded border border-terminal-border px-1.5 py-0.5 hover:bg-terminal-bg" disabled={referralBusy} onclick={() => (referralConfirmOpen = false)}>Cancel</button>
+							<button data-action-id="ui.src.lib.components.orderticket.button.h38ae150fb8" class="rounded border border-terminal-cyan/60 px-1.5 py-0.5 text-terminal-cyan hover:bg-terminal-cyan/10 disabled:opacity-50" disabled={referralBusy} onclick={requestReferral}>{referralBusy ? 'Waiting…' : 'Confirm and request'}</button>
+							<button data-action-id="ui.src.lib.components.orderticket.button.ha8e19a422a" class="rounded border border-terminal-border px-1.5 py-0.5 hover:bg-terminal-bg" disabled={referralBusy} onclick={() => (referralConfirmOpen = false)}>Cancel</button>
 						</div>
 					</div>
 				{/if}
@@ -989,7 +992,7 @@
 		{#if submitError}
 			<p class="text-2xs text-terminal-red mb-1.5">{submitError}</p>
 		{/if}
-		<button
+		<button data-action-id="ui.src.lib.components.orderticket.button.heb1fe67786" data-testid="order-submit"
 			class="w-full py-2.5 rounded font-medium text-sm transition-all active:scale-[0.98]
 				   disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1.5
 				   {$orderSide === 'buy'

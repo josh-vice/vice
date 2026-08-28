@@ -23,8 +23,8 @@
 		<h1 class="mt-6 max-w-4xl text-4xl font-extrabold leading-[1.06] tracking-[-0.045em] text-white sm:text-6xl">The execution terminal built around <span class="brand-gradient">trader control.</span></h1>
 		<p class="mt-6 max-w-3xl text-lg leading-8 text-[#a8a3bb]">Vice Terminal brings institutional-grade crypto workflows into one high-clarity workspace: fast to operate, non-custodial by design, and ambitious enough to become the command center for every serious trader.</p>
 		<div class="mt-8 flex flex-wrap gap-3">
-			<a href="/docs/interface-overview" class="inline-flex items-center gap-2 rounded bg-[#00d4d4] px-4 py-2.5 text-sm font-bold text-[#08070f] transition hover:shadow-[0_0_24px_rgba(0,212,212,.28)]">Explore the interface <ArrowRight size={16} /></a>
-			<a href="/docs/launch-roadmap" class="inline-flex items-center gap-2 rounded border border-[#4b4566] px-4 py-2.5 text-sm font-semibold text-[#d7d8e3] transition hover:border-[#ff2e88] hover:text-[#ff6cae]">View launch roadmap</a>
+			<a data-action-id="ui.src.routes.docs.page.a.h639d41e657" href="/docs/interface-overview" class="inline-flex items-center gap-2 rounded bg-[#00d4d4] px-4 py-2.5 text-sm font-bold text-[#08070f] transition hover:shadow-[0_0_24px_rgba(0,212,212,.28)]">Explore the interface <ArrowRight size={16} /></a>
+			<a data-action-id="ui.src.routes.docs.page.a.hc09f392e94" href="/docs/launch-roadmap" class="inline-flex items-center gap-2 rounded border border-[#4b4566] px-4 py-2.5 text-sm font-semibold text-[#d7d8e3] transition hover:border-[#ff2e88] hover:text-[#ff6cae]">View launch roadmap</a>
 		</div>
 
 		<section class="mt-14 overflow-hidden rounded-md border border-[#272235] bg-[#0d0b18] shadow-[0_30px_90px_rgba(0,0,0,.3)]">
@@ -32,7 +32,7 @@
 				<div class="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.15em] text-[#00d4d4]"><LayoutDashboard size={15} /> Platform overview</div>
 				<p class="mt-2 text-sm text-[#a9abba]">Scan markets, form a thesis, execute, and manage risk without changing contexts.</p>
 			</div>
-			<a href="/docs/interface-overview" class="group block p-3 sm:p-5">
+			<a data-action-id="ui.src.routes.docs.page.a.h60644cf426" href="/docs/interface-overview" class="group block p-3 sm:p-5">
 				<img src="/docs/vice-workspace-overview.png" alt="Vice Terminal desktop workspace" class="w-full rounded border border-[#363049] transition group-hover:border-[#00d4d4]/40" />
 				<div class="flex items-center justify-between px-1 pt-4 text-sm"><span class="text-[#9294a7]">Take a guided tour of the complete workspace.</span><span class="flex items-center gap-1 text-[#00d4d4]">Interface overview <ArrowRight size={14} /></span></div>
 			</a>
@@ -41,7 +41,7 @@
 		<section class="mt-16 grid gap-4 md:grid-cols-2">
 			{#each modules as module}
 				{@const ModuleIcon = module.icon}
-				<a href={module.href} class="group rounded-md border border-[#272235] bg-gradient-to-br from-[#14121f] to-[#0d0b18] p-6 transition hover:-translate-y-0.5 hover:border-[#00d4d4]/55 hover:shadow-[0_0_24px_rgba(0,212,212,.1)]">
+				<a data-action-id="ui.src.routes.docs.page.a.hd96d4c814b" href={module.href} class="group rounded-md border border-[#272235] bg-gradient-to-br from-[#14121f] to-[#0d0b18] p-6 transition hover:-translate-y-0.5 hover:border-[#00d4d4]/55 hover:shadow-[0_0_24px_rgba(0,212,212,.1)]">
 					<ModuleIcon size={21} class="text-[#ff2e88]" />
 					<p class="mt-7 text-[10px] font-bold tracking-[0.16em] text-[#77798e]">{module.eyebrow}</p>
 					<h2 class="mt-2 flex items-center justify-between text-xl font-semibold tracking-tight text-white">{module.title}<ArrowRight size={16} class="opacity-0 transition group-hover:opacity-100" /></h2>
@@ -56,7 +56,7 @@
 				<div><p class="text-xs font-bold uppercase tracking-[0.16em] text-[#ff2e88]">Full capability set</p><h2 class="mt-3 text-3xl font-semibold tracking-[-0.035em] text-white">Built for the whole trading day.</h2><p class="mt-4 leading-7 text-[#a8a3bb]">Every capability shares a consistent market identity, risk model, custody boundary, and execution standard.</p></div>
 				<div class="space-y-1">
 					{#each capabilities as capability, i}
-						<a href={capability[2]} class="group block rounded border border-transparent p-5 transition hover:border-[#272235] hover:bg-[#14121f]">
+						<a data-action-id="ui.src.routes.docs.page.a.h6ec2f69bd0" href={capability[2]} class="group block rounded border border-transparent p-5 transition hover:border-[#272235] hover:bg-[#14121f]">
 							<div class="flex gap-4"><span class="mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded bg-[#ff2e88]/10 text-xs font-bold text-[#ff6cae]">0{i + 1}</span><div><h3 class="flex items-center gap-2 font-semibold text-white">{capability[0]}<ArrowRight size={13} class="opacity-0 transition group-hover:opacity-100" /></h3><p class="mt-1.5 text-sm leading-6 text-[#a8a3bb]">{capability[1]}</p></div></div>
 						</a>
 					{/each}

@@ -1,6 +1,6 @@
 # US-008: Market-data richness without staleness
 
-Story schema v1. Status: In progress.
+Story schema v2. Status: In progress.
 
 As an active trader, I want funding, open interest, liquidations, price alerts, and a configurable order book alongside the existing feeds, so that Vice matches Insilico's data surface while keeping every value provably live.
 
@@ -12,7 +12,9 @@ As an active trader, I want funding, open interest, liquidations, price alerts, 
 - Order book precision grouping (nSigFigs) and level depth are user-adjustable; regrouping is a resubscription with explicit connecting state, not a client-side approximation presented as venue data.
 - Fill/order events produce optional sound notifications with a global mute; sounds never substitute for the visual authoritative state.
 - A privacy mode hides balances, position sizes, and PnL across all account surfaces for streaming.
-- Given a live selected market, when funding flips sign or an alert threshold crosses, then the surface becomes frame-ready within one animation frame of store commit and any configured alert fires exactly once per crossing.
+- US-008-AC-001: Given a live selected market, when funding flips sign or an alert threshold crosses, then the surface becomes frame-ready within one animation frame of store commit and any configured alert fires exactly once per crossing.
+
+- Action IDs: story.us-008
 
 ## Operational contract
 
@@ -27,7 +29,7 @@ As an active trader, I want funding, open interest, liquidations, price alerts, 
 - Latency expectations: Stats and tape updates stay within the receipt-to-store p99 <5 ms and one-frame frame-ready budgets; alert evaluation adds no per-tick allocation on the hot path.
 - Telemetry: Record feed health transitions, alert fire/miss counts, and grouping changes without account contents or alert prices.
 - Linked tests: stats-context normalization tests, liquidation-flag tape tests, alert crossing/rearm/missed-window tests, book-grouping resubscription identity tests.
-- Funded-testnet evidence: Not execution-bearing; requires live-feed evidence that stats/liquidations/alerts track authoritative venue data through reconnect and stale windows on testnet.
+- Funded-mainnet evidence: Not execution-bearing; requires live-feed evidence that stats/liquidations/alerts track authoritative venue data through reconnect and stale windows on testnet.
 
 ## Evidence log
 

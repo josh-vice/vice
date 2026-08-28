@@ -1,6 +1,6 @@
 # US-009: DOM ladder click-trading
 
-Story schema v1. Status: In progress.
+Story schema v2. Status: In progress.
 
 As a scalper, I want a depth-of-market price ladder with click and drag trading, so that I can work orders against visible liquidity faster than any ticket, at parity with Insilico's DOM.
 
@@ -12,8 +12,10 @@ As a scalper, I want a depth-of-market price ladder with click and drag trading,
 - A ladder footer exposes flatten and reverse actions plus a quick size field with the shared sizing presets.
 - The ladder recenters on last price manually or automatically, never during an active drag, and scrolling/zoom state survives data updates.
 - Ladder updates are frame-coalesced; a full book update re-renders only changed rows within one frame at 60 Hz.
-- Given an armed DOM, when the trader left-clicks a bid level with a valid size, then exactly one local command is created at that exact price and the resting order appears on the ladder only from the authoritative order stream.
+- US-009-AC-001: Given an armed DOM, when the trader left-clicks a bid level with a valid size, then exactly one local command is created at that exact price and the resting order appears on the ladder only from the authoritative order stream.
 - The DOM is a candidate first surface for the native WASM renderer; adoption requires it to meet the same latency evidence as the DOM's web implementation before replacing it.
+
+- Action IDs: story.us-009
 
 ## Operational contract
 
@@ -28,7 +30,7 @@ As a scalper, I want a depth-of-market price ladder with click and drag trading,
 - Latency expectations: Book-update-to-ladder-frame-ready within one frame; click-to-signed-dispatch p99 <10 ms; per-update allocations bounded.
 - Telemetry: Record ladder mode, placement/modify/cancel latency, recenter events, and frame-budget violations without order contents.
 - Linked tests: ladder placement/guard tests mirroring `chart/clickTrading` coverage, row-alignment identity tests, frame-coalescing scheduler tests, flatten/reverse boundary tests.
-- Funded-testnet evidence: Funded ladder place/modify/cancel/partial-fill/reconnect/restart lifecycle with venue order IDs before exposure; flatten/reverse require position-lifecycle evidence.
+- Funded-mainnet evidence: Funded ladder place/modify/cancel/partial-fill/reconnect/restart lifecycle with venue order IDs before exposure; flatten/reverse require position-lifecycle evidence.
 
 ## Evidence log
 

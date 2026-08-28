@@ -1,6 +1,6 @@
 # US-007: Every Hyperliquid market class as a first-class surface
 
-Story schema v1. Status: In progress.
+Story schema v2. Status: In progress.
 
 As a Hyperliquid-native trader, I want perps, spot, HIP-3 builder markets, RWAs, and prediction markets to be discoverable, labeled, and tradable as distinct product classes, so that the entire venue catalog is usable without guessing what an instrument actually is.
 
@@ -12,7 +12,9 @@ As a Hyperliquid-native trader, I want perps, spot, HIP-3 builder markets, RWAs,
 - Contract details (funding, leverage caps, margin tier, oracle source, HIP-3 DEX owner) are visible per market before trading.
 - Sizing, leverage clamps, and precision follow each class's authoritative constraints (already true for spot 1x and HIP-3 maxLeverage; extended to any class-specific rule the venue exposes).
 - Every class participates in the same feed-health, identity, and reconciliation guarantees; no class ships as display-only without an explicit unavailable label.
-- Given a trader searching "election", when a HIP-3 prediction market matches, then it appears grouped under prediction markets with its resolution metadata and can be traded with the same chart/ticket/book surfaces as any perp.
+- US-007-AC-001: Given a trader searching "election", when a HIP-3 prediction market matches, then it appears grouped under prediction markets with its resolution metadata and can be traded with the same chart/ticket/book surfaces as any perp.
+
+- Action IDs: story.us-007
 
 ## Operational contract
 
@@ -27,7 +29,7 @@ As a Hyperliquid-native trader, I want perps, spot, HIP-3 builder markets, RWAs,
 - Latency expectations: Class filtering and grouping stay within the virtualized watchlist frame budget; no added per-frame catalog scans.
 - Telemetry: Record class distribution counts, classification-source (authoritative vs generic), and filter usage without account contents.
 - Linked tests: catalog classification tests extending `hl/markets.test.js`, watchlist grouping/filter tests, class-constraint sizing tests.
-- Funded-testnet evidence: At least one funded trade lifecycle on a HIP-3 market and, where testnet availability allows, an RWA and a prediction market, proving identity, sizing clamps, and reconciliation per class.
+- Funded-mainnet evidence: At least one funded trade lifecycle on a HIP-3 market and, where testnet availability allows, an RWA and a prediction market, proving identity, sizing clamps, and reconciliation per class.
 
 ## Evidence log
 

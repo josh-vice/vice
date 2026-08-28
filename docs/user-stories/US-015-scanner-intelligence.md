@@ -1,6 +1,6 @@
 # US-015: Scanner intelligence to action
 
-Story schema v1.
+Story schema v2.
 
 As a research-driven trader, I want Scanner, Focus, alerts, news, and positioning data to explain their source and hand off an exact trade context so that I can act without guessing.
 
@@ -9,7 +9,9 @@ As a research-driven trader, I want Scanner, Focus, alerts, news, and positionin
 - Scanner, Focus, wallet inspection, alert, news, and positioning views disclose source, cadence, scope, and freshness.
 - Symbol-scoped Scanner views use explicit routes/actions and never infer scope from stale state.
 - Every action routes through US-013 exact public context and never submits an order from analytics.
-- Given a trader viewing an unavailable source, when they attempt a handoff, then the UI retains research context but blocks execution until an exact live destination is available.
+- US-015-AC-001: Given a trader viewing an unavailable source, when they attempt a handoff, then the UI retains research context but blocks execution until an exact live destination is available.
+
+- Action IDs: story.us-015
 
 ## Operational contract
 
@@ -24,7 +26,7 @@ As a research-driven trader, I want Scanner, Focus, alerts, news, and positionin
 - Latency expectations: Scanner polling or aggregation cannot contend with active trade rendering.
 - Telemetry: Record anonymous feature use and source health only.
 - Linked tests: Source-provenance, route, scope, stale, handoff, visual, and load-isolation suites.
-- Funded-testnet evidence: Certified downstream execution uses the relevant trade-story evidence.
+- Funded-mainnet evidence: Certified downstream execution uses the relevant trade-story evidence.
 
 ## Current evidence
 

@@ -36,15 +36,15 @@
 	<h2 id="blofin-private-verify-title" class="text-sm font-semibold text-terminal-text">Read-only private verification</h2>
 	<p class="mt-1 text-xs text-terminal-text-secondary">Unlock one device-local key only to check that BloFin returns one complete private snapshot. Vice does not retain account values, open a private socket, or send an order.</p>
 
-	<form class="mt-4 space-y-3" onsubmit={(event) => { event.preventDefault(); void verify(); }}>
+	<form data-action-id="ui.src.lib.components.blofinprivateverification.form.h9342e694bd" class="mt-4 space-y-3" onsubmit={(event) => { event.preventDefault(); void verify(); }}>
 		<label class="block text-xs text-terminal-text-secondary">Environment
-			<select bind:value={environment} onchange={changeEnvironment} class="mt-1 w-full rounded border border-terminal-border bg-terminal-bg-secondary px-2 py-1.5 text-sm text-terminal-text">
+			<select data-action-id="ui.src.lib.components.blofinprivateverification.select.h3a97c3d25b" bind:value={environment} onchange={changeEnvironment} class="mt-1 w-full rounded border border-terminal-border bg-terminal-bg-secondary px-2 py-1.5 text-sm text-terminal-text">
 				<option value="demo">Demo</option>
 				<option value="live">Live — read only</option>
 			</select>
 		</label>
 		<label class="block text-xs text-terminal-text-secondary">Local key fingerprint
-			<select bind:value={keyFingerprint} disabled={fingerprints.length === 0} class="mt-1 w-full rounded border border-terminal-border bg-terminal-bg-secondary px-2 py-1.5 font-mono text-sm text-terminal-text disabled:opacity-50">
+			<select data-action-id="ui.src.lib.components.blofinprivateverification.select.ha048d883ad" bind:value={keyFingerprint} disabled={fingerprints.length === 0} class="mt-1 w-full rounded border border-terminal-border bg-terminal-bg-secondary px-2 py-1.5 font-mono text-sm text-terminal-text disabled:opacity-50">
 				{#if fingerprints.length === 0}
 					<option value="">No encrypted key stored for this environment</option>
 				{:else}
@@ -53,9 +53,9 @@
 			</select>
 		</label>
 		<label class="block text-xs text-terminal-text-secondary">Local unlock phrase
-			<input bind:value={unlockPhrase} type="password" autocomplete="current-password" minlength="12" required class="mt-1 w-full rounded border border-terminal-border bg-terminal-bg-secondary px-2 py-1.5 text-sm text-terminal-text" />
+			<input data-action-id="ui.src.lib.components.blofinprivateverification.input.h71116c7ace" bind:value={unlockPhrase} type="password" autocomplete="current-password" minlength="12" required class="mt-1 w-full rounded border border-terminal-border bg-terminal-bg-secondary px-2 py-1.5 text-sm text-terminal-text" />
 		</label>
-		<button type="submit" disabled={verifying || !keyFingerprint || !unlockPhrase} class="rounded border border-terminal-cyan px-3 py-1.5 text-xs font-semibold text-terminal-cyan disabled:opacity-50">{verifying ? 'Verifying…' : 'Verify read-only access'}</button>
+		<button data-action-id="ui.src.lib.components.blofinprivateverification.button.hf89e83019e" type="submit" disabled={verifying || !keyFingerprint || !unlockPhrase} class="rounded border border-terminal-cyan px-3 py-1.5 text-xs font-semibold text-terminal-cyan disabled:opacity-50">{verifying ? 'Verifying…' : 'Verify read-only access'}</button>
 	</form>
 
 	{#if result?.ok}

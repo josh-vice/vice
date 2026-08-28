@@ -83,7 +83,7 @@ export async function readLatencyEvidence(path) {
 export async function runLatencyGate(path) {
 	const evidence = await readLatencyEvidence(path);
 	const result = evaluateLatencyGates(evidence.samples, evidence.dispatchSamples);
-	return { ...result, schemaVersion: evidence.schemaVersion, network: evidence.network, capturedAt: evidence.capturedAt };
+	return { ...result, schemaVersion: evidence.schemaVersion, network: evidence.network, commit: evidence.commit ?? null, releaseBuild: evidence.releaseBuild ?? null, policySha256: evidence.policySha256 ?? null, capturedAt: evidence.capturedAt };
 }
 
 if (import.meta.main) {
@@ -93,6 +93,10 @@ if (import.meta.main) {
 		process.exit(1);
 	}
 	try {
+		const expectedSha = process.env.VICE_RELEASE_SHA?.trim();
+		if (!/^[a-f0-9]{40}$/i.test(expectedSha ?? '')) throw new Error('VICE_RELEASE_SHA must be a full commit SHA for mainnet latency certification');
+		const evidence = await readLatencyEvidence(path);
+		if (evidence.network !== 'mainnet' || evidence.commit !== expectedSha || evidence.releaseBuild !== expectedSha) throw new Error('latency evidence network or build identity does not match');
 		const result = await runLatencyGate(path);
 		console.log(JSON.stringify(result, null, 2));
 		if (!result.pass) process.exit(1);

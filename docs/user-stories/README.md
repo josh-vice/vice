@@ -2,7 +2,7 @@
 
 Every production capability starts with a versioned user story. A story is complete only when its acceptance criteria have automated coverage and the relevant release gates pass. Unsupported or unverified behavior must remain unavailable in production.
 
-Each story uses schema v1 operational-contract fields for persona, preconditions, success/failure, reconnect, restart, stale/offline behavior, custody, latency, telemetry, linked tests, and funded-testnet evidence. `bun run test:stories` validates the catalog and is part of `bun run test:release`.
+Each story uses schema v2 operational-contract fields for persona, preconditions, success/failure, reconnect, restart, stale/offline behavior, custody, latency, telemetry, linked tests, funded-mainnet evidence, action IDs, and stable criterion IDs. `bun run test:stories` validates the catalog and is part of `bun run test:release`.
 
 | ID | Story | Automated coverage | Status |
 | --- | --- | --- | --- |
@@ -35,4 +35,46 @@ Each story uses schema v1 operational-contract fields for persona, preconditions
 | US-027 | Persistent automation with honest disclosure | `execution/conditionalTriggers.test.js`, `conditionalLadderSurface.test.js`, `execution/algoJobs.test.js`, `execution/algoCancellation.test.js`, `execution/childDispatchRecovery.test.js`, `execution/scaleLifecycle.test.js`, `runner/*` tests, `automationTelemetry.test.js`, `orderPersistenceDisclosure.test.js` | Implemented; advanced-order certification 2026-08-06 INVALIDATED 2026-08-11 (hardened validator), trigger-fired evidence (2026-08-04) valid; browser restart evidence for every local algorithm pending |
 | US-028 | Latency discipline end to end | `scripts/latency-gate.mjs`, `scripts/latency-gate.test.mjs`, `src/lib/execution/latencyGates.ts`, `src/lib/native/performance.test.js`, `test:latency` | In progress; measured Chromium client-latency capture pending |
 
-Competitive context for US-006 through US-012 lives in [`docs/INSILICO_GAP_ANALYSIS.md`](../INSILICO_GAP_ANALYSIS.md).
+Competitive context for US-006 through US-012 lives in [`docs/TERMINAL_COMPETITIVE_GAP_ANALYSIS.md`](../TERMINAL_COMPETITIVE_GAP_ANALYSIS.md). The canonical normalized benchmark is [`docs/competitive/terminal-matrix.json`](../competitive/terminal-matrix.json).
+
+<!-- GENERATED STORY STATUS START -->
+| ID | Story | Criteria | Status |
+| --- | --- | ---: | --- |
+| US-001 | Trustworthy production state | 6 | blocked |
+| US-002 | Non-custodial local execution | 1 | blocked |
+| US-003 | Insilico-style chart trading | 1 | blocked |
+| US-004 | Reliable advanced orders | 1 | blocked |
+| US-005 | — Observable, gated releases | 1 | blocked |
+| US-006 | Multi-venue trading expansion | 1 | blocked |
+| US-007 | Every Hyperliquid market class as a first-class surface | 1 | blocked |
+| US-008 | Market-data richness without staleness | 1 | blocked |
+| US-009 | DOM ladder click-trading | 1 | blocked |
+| US-010 | One-action position and risk ergonomics | 1 | blocked |
+| US-011 | Persistent conditional automation without custody compromise | 1 | blocked |
+| US-012 | Dockable workspace, power input, and the dither design language | 1 | blocked |
+| US-013 | Unified Suite context | 1 | blocked |
+| US-014 | Complete widget quality | 1 | blocked |
+| US-015 | Scanner intelligence to action | 1 | blocked |
+| US-016 | Durable customization | 1 | blocked |
+| US-017 | Explicit multi-account and basket execution | 1 | blocked |
+| US-018 | Installable local integrations | 1 | blocked |
+| US-019 | Competitive release truth | 3 | blocked |
+| US-020 | Cold start to live trading in bounded time | 5 | blocked |
+| US-021 | Chart trading parity for the power user | 6 | blocked |
+| US-022 | DOM ladder one-click trading | 7 | blocked |
+| US-023 | Order ticket precision and presets | 6 | blocked |
+| US-024 | Position ergonomics in one action | 6 | blocked |
+| US-025 | Workspace, hotkeys, and CLI power input | 6 | blocked |
+| US-026 | Market-data richness and price awareness | 8 | blocked |
+| US-027 | Persistent automation with honest disclosure | 7 | blocked |
+| US-028 | Latency discipline end to end | 6 | blocked |
+| US-029 | Exhaustive interaction certification | 4 | blocked |
+| US-030 | Watch-only mode | 1 | blocked |
+| US-031 | Multi-account and basket execution | 1 | blocked |
+| US-032 | User-run automation boundary | 1 | blocked |
+| US-033 | Venue adapter coverage | 1 | blocked |
+| US-034 | Remote halt and reduce-risk recovery | 1 | blocked |
+| US-035 | Beta access and session lifecycle | 1 | blocked |
+| US-036 | Live feed provenance HUD | 1 | blocked |
+| US-037 | Immutable deployed-artifact promotion | 1 | blocked |
+<!-- GENERATED STORY STATUS END -->

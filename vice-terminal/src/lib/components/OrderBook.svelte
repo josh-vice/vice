@@ -328,15 +328,15 @@
 	<div class="h-8 px-2 border-b border-terminal-border flex items-center justify-between text-2xs">
 		<span class="text-terminal-text-secondary">Order book</span>
 		{#if $clickPlacementMode}<span class="text-3xs text-terminal-green">DOM ARMED</span>{/if}
-		{#if hasBook}<button aria-label="Recenter DOM ladder" onclick={recenterLadder} class="ml-1 text-3xs text-terminal-cyan hover:underline">Center</button>{/if}
+		{#if hasBook}<button data-action-id="ui.src.lib.components.orderbook.button.hae500c5419" aria-label="Recenter DOM ladder" onclick={recenterLadder} class="ml-1 text-3xs text-terminal-cyan hover:underline">Center</button>{/if}
 		<span data-testid="dom-follow-status" class="text-3xs {followLastPrice ? 'text-terminal-text-muted' : 'text-terminal-yellow'}">{followLastPrice ? 'AUTO' : 'MANUAL'}</span>
 		{#if hasBook}<span data-testid="book-imbalance" title={`Displayed size imbalance across the top ${$bookDepth} validated book levels`} class="text-3xs {bookImbalance.label === 'bid' ? 'text-terminal-green' : bookImbalance.label === 'ask' ? 'text-terminal-red' : 'text-terminal-text-muted'}">{bookImbalance.label === 'unavailable' ? 'IMB —' : `IMB ${bookImbalance.imbalance >= 0 ? '+' : ''}${(bookImbalance.imbalance * 100).toFixed(0)}% ${bookImbalance.label === 'balanced' ? 'BAL' : bookImbalance.label.toUpperCase()}`}</span>{/if}
-		<button aria-label="Cancel buy DOM orders" disabled={!canCancelKnownOrders || cancellingOrderId !== ''} onclick={() => void cancelLadderSide('buy')} class="ml-1 text-3xs text-terminal-green hover:underline disabled:opacity-40">Cancel buys</button>
-		<button aria-label="Cancel sell DOM orders" disabled={!canCancelKnownOrders || cancellingOrderId !== ''} onclick={() => void cancelLadderSide('sell')} class="ml-1 text-3xs text-terminal-red hover:underline disabled:opacity-40">Cancel sells</button>
-		<select aria-label="Order book precision grouping" bind:value={$bookSigFigs} onchange={(event) => changeGrouping(Number(event.currentTarget.value))} class="ml-auto bg-terminal-bg-secondary text-3xs text-terminal-text-secondary outline-none">
+		<button data-action-id="ui.src.lib.components.orderbook.button.h33ccd9ac10" aria-label="Cancel buy DOM orders" disabled={!canCancelKnownOrders || cancellingOrderId !== ''} onclick={() => void cancelLadderSide('buy')} class="ml-1 text-3xs text-terminal-green hover:underline disabled:opacity-40">Cancel buys</button>
+		<button data-action-id="ui.src.lib.components.orderbook.button.h16e0b23a10" aria-label="Cancel sell DOM orders" disabled={!canCancelKnownOrders || cancellingOrderId !== ''} onclick={() => void cancelLadderSide('sell')} class="ml-1 text-3xs text-terminal-red hover:underline disabled:opacity-40">Cancel sells</button>
+		<select data-action-id="ui.src.lib.components.orderbook.select.h66f3c47197" aria-label="Order book precision grouping" bind:value={$bookSigFigs} onchange={(event) => changeGrouping(Number(event.currentTarget.value))} class="ml-auto bg-terminal-bg-secondary text-3xs text-terminal-text-secondary outline-none">
 			<option value={2}>2 sig</option><option value={3}>3 sig</option><option value={4}>4 sig</option><option value={5}>5 sig</option>
 		</select>
-		<select aria-label="Order book displayed depth" bind:value={$bookDepth} onchange={(event) => changeDepth(Number(event.currentTarget.value))} class="bg-terminal-bg-secondary text-3xs text-terminal-text-secondary outline-none">
+		<select data-action-id="ui.src.lib.components.orderbook.select.h45115ede29" aria-label="Order book displayed depth" bind:value={$bookDepth} onchange={(event) => changeDepth(Number(event.currentTarget.value))} class="bg-terminal-bg-secondary text-3xs text-terminal-text-secondary outline-none">
 			<option value={12}>12 lvl</option><option value={24}>24 lvl</option><option value={50}>50 lvl</option>
 		</select>
 		<span class="text-3xs {$marketDataStatus === 'live' ? 'text-terminal-text-muted' : 'text-terminal-yellow'}">{baseAsset}/{quoteAsset}{#if $marketDataStatus !== 'live'} · {healthLabel($marketDataStatus)}{/if}</span>
@@ -350,18 +350,18 @@
 
 	{#if hasBook}
 		<div data-testid="order-book-live" class="contents">
-		<div data-testid="dom-ladder-viewport" class="flex-1 min-h-0 overflow-y-auto scrollbar-none" onscroll={onLadderScroll}>
+		<div data-action-id="dom.ladder.scroll" data-testid="dom-ladder-viewport" class="flex-1 min-h-0 overflow-y-auto scrollbar-none" onscroll={onLadderScroll}>
 			<div class="flex-1 min-h-0 overflow-hidden flex flex-col justify-end">
 				{#each visibleAsks as ask (ask.price)}
 					<div class="relative">
-					<button aria-label={`Sell at ${ask.price}`} disabled={placingPrice !== null} class="w-full relative grid grid-cols-3 px-2 py-0.5 text-2xs tabular-nums text-left hover:bg-terminal-red-bg/70 disabled:opacity-50" onmouseup={() => finishLadderOrderDrag(ask.price)} onclick={(event) => handleLadderRowClick('sell', ask.price, event)}>
+					<button data-action-id="ui.src.lib.components.orderbook.button.h48ea8e6494" aria-label={`Sell at ${ask.price}`} disabled={placingPrice !== null} class="w-full relative grid grid-cols-3 px-2 py-0.5 text-2xs tabular-nums text-left hover:bg-terminal-red-bg/70 disabled:opacity-50" onmouseup={() => finishLadderOrderDrag(ask.price)} onclick={(event) => handleLadderRowClick('sell', ask.price, event)}>
 						<span class="absolute right-0 inset-y-0 bg-terminal-red/30 pointer-events-none" style="width:{getDepthPercent(ask.total)}%"></span>
 						<span class="relative text-terminal-red">{formatPrice(ask.price)}</span>
 						<span class="relative text-right text-terminal-text-secondary">{formatSize(ask.size)}</span>
 						<span class="relative text-right text-terminal-text-muted">{formatSize(ask.total)}</span>
 					</button>
 					{#each ordersAtPrice(ask.price) as order (order.id)}
-						<button aria-label={`Cancel ${order.side} order at ${ask.price}`} disabled={cancellingOrderId === order.id} class="absolute left-1 top-0.5 z-10 max-w-[70%] truncate rounded bg-terminal-red px-1 text-3xs text-white disabled:opacity-50" onmousedown={(event) => startLadderOrderDrag(event, order.id)} onclick={() => { draggingOrderId = ''; void cancelLadderOrder(order.id, order.apiCoin ?? order.marketKey); }}>{order.pending ? 'PENDING' : `× ${formatSize(order.remaining)}`}</button>
+						<button data-action-id="ui.src.lib.components.orderbook.button.h9074071889" aria-label={`Cancel ${order.side} order at ${ask.price}`} disabled={cancellingOrderId === order.id} class="absolute left-1 top-0.5 z-10 max-w-[70%] truncate rounded bg-terminal-red px-1 text-3xs text-white disabled:opacity-50" onmousedown={(event) => startLadderOrderDrag(event, order.id)} onclick={() => { draggingOrderId = ''; void cancelLadderOrder(order.id, order.apiCoin ?? order.marketKey); }}>{order.pending ? 'PENDING' : `× ${formatSize(order.remaining)}`}</button>
 					{/each}
 					{#each positionsAtPrice(ask.price) as position (position.id)}
 						<span data-testid={`dom-position-${position.id}`} class="absolute right-1 top-0.5 z-10 rounded bg-terminal-bg/90 px-1 text-3xs {position.side === 'long' ? 'text-terminal-green' : 'text-terminal-red'}">{position.side.toUpperCase()} {formatSize(position.size)}</span>
@@ -380,14 +380,14 @@
 			<div class="flex-1 min-h-0 overflow-hidden">
 				{#each visibleBids as bid (bid.price)}
 					<div class="relative">
-					<button aria-label={`Buy at ${bid.price}`} disabled={placingPrice !== null} class="w-full relative grid grid-cols-3 px-2 py-0.5 text-2xs tabular-nums text-left hover:bg-terminal-green-bg/70 disabled:opacity-50" onmouseup={() => finishLadderOrderDrag(bid.price)} onclick={(event) => handleLadderRowClick('buy', bid.price, event)}>
+					<button data-action-id="ui.src.lib.components.orderbook.button.h55c941b334" aria-label={`Buy at ${bid.price}`} disabled={placingPrice !== null} class="w-full relative grid grid-cols-3 px-2 py-0.5 text-2xs tabular-nums text-left hover:bg-terminal-green-bg/70 disabled:opacity-50" onmouseup={() => finishLadderOrderDrag(bid.price)} onclick={(event) => handleLadderRowClick('buy', bid.price, event)}>
 						<span class="absolute right-0 inset-y-0 bg-terminal-green/30 pointer-events-none" style="width:{getDepthPercent(bid.total)}%"></span>
 						<span class="relative text-terminal-green">{formatPrice(bid.price)}</span>
 						<span class="relative text-right text-terminal-text-secondary">{formatSize(bid.size)}</span>
 						<span class="relative text-right text-terminal-text-muted">{formatSize(bid.total)}</span>
 					</button>
 					{#each ordersAtPrice(bid.price) as order (order.id)}
-						<button aria-label={`Cancel ${order.side} order at ${bid.price}`} disabled={cancellingOrderId === order.id} class="absolute left-1 top-0.5 z-10 max-w-[70%] truncate rounded bg-terminal-green px-1 text-3xs text-terminal-bg disabled:opacity-50" onmousedown={(event) => startLadderOrderDrag(event, order.id)} onclick={() => { draggingOrderId = ''; void cancelLadderOrder(order.id, order.apiCoin ?? order.marketKey); }}>{order.pending ? 'PENDING' : `× ${formatSize(order.remaining)}`}</button>
+						<button data-action-id="ui.src.lib.components.orderbook.button.hc5ecd0a3de" aria-label={`Cancel ${order.side} order at ${bid.price}`} disabled={cancellingOrderId === order.id} class="absolute left-1 top-0.5 z-10 max-w-[70%] truncate rounded bg-terminal-green px-1 text-3xs text-terminal-bg disabled:opacity-50" onmousedown={(event) => startLadderOrderDrag(event, order.id)} onclick={() => { draggingOrderId = ''; void cancelLadderOrder(order.id, order.apiCoin ?? order.marketKey); }}>{order.pending ? 'PENDING' : `× ${formatSize(order.remaining)}`}</button>
 					{/each}
 					{#each positionsAtPrice(bid.price) as position (position.id)}
 						<span data-testid={`dom-position-${position.id}`} class="absolute right-1 top-0.5 z-10 rounded bg-terminal-bg/90 px-1 text-3xs {position.side === 'long' ? 'text-terminal-green' : 'text-terminal-red'}">{position.side.toUpperCase()} {formatSize(position.size)}</span>
@@ -400,20 +400,20 @@
 		<div data-testid="dom-quick-size" class="border-t border-terminal-border px-2 py-1.5">
 			<div class="flex items-center gap-1">
 				<label for="dom-quick-size-input" class="text-3xs text-terminal-text-muted">Size</label>
-				<input id="dom-quick-size-input" aria-label="DOM quick order size" type="number" min="0" step="any" bind:value={$orderSize} class="min-w-0 flex-1 terminal-input px-1.5 py-0.5 text-right font-mono text-2xs" />
+				<input data-action-id="ui.src.lib.components.orderbook.input.h91d16f9124" id="dom-quick-size-input" aria-label="DOM quick order size" type="number" min="0" step="any" bind:value={$orderSize} class="min-w-0 flex-1 terminal-input px-1.5 py-0.5 text-right font-mono text-2xs" />
 				{#each [25, 50, 75, 100] as percent}
-					<button aria-label={`Set DOM size to ${percent} percent`} onclick={() => setOrderSizePercent(percent)} class="rounded bg-terminal-bg-secondary px-1 py-0.5 text-3xs text-terminal-text-secondary hover:bg-terminal-bg-hover">{percent === 100 ? 'MAX' : `${percent}%`}</button>
+					<button data-action-id="ui.src.lib.components.orderbook.button.h015281d8c3" aria-label={`Set DOM size to ${percent} percent`} onclick={() => setOrderSizePercent(percent)} class="rounded bg-terminal-bg-secondary px-1 py-0.5 text-3xs text-terminal-text-secondary hover:bg-terminal-bg-hover">{percent === 100 ? 'MAX' : `${percent}%`}</button>
 				{/each}
 			</div>
 			{#if marketProfile.supportsPositionLifecycle}
-				<button aria-label="Flatten selected market position" disabled={flattening || !privateStateLive} onclick={() => void flattenDomMarket()} class="mt-1 w-full rounded border border-terminal-red/60 px-1 py-0.5 text-3xs text-terminal-red hover:bg-terminal-red-bg disabled:opacity-40">{flattening ? 'Reconciling flatten…' : 'Flatten market'}</button>
+				<button data-action-id="ui.src.lib.components.orderbook.button.hb9e21363e0" aria-label="Flatten selected market position" disabled={flattening || !privateStateLive} onclick={() => void flattenDomMarket()} class="mt-1 w-full rounded border border-terminal-red/60 px-1 py-0.5 text-3xs text-terminal-red hover:bg-terminal-red-bg disabled:opacity-40">{flattening ? 'Reconciling flatten…' : 'Flatten market'}</button>
 				{#if reverseConfirm}
 					<div class="mt-1 rounded border border-terminal-yellow/50 bg-terminal-yellow/5 p-1 text-3xs text-terminal-text">
 						<p>Reverse closes first. It opens the other side only after a flat account snapshot.</p>
-						<div class="mt-1 flex justify-end gap-1"><button onclick={() => (reverseConfirm = false)} class="rounded border border-terminal-border px-1 py-0.5">Cancel</button><button disabled={reversing} onclick={() => void reverseDomMarket()} class="rounded bg-terminal-yellow/20 px-1 py-0.5 text-terminal-yellow disabled:opacity-40">{reversing ? 'Reconciling…' : 'Confirm reverse'}</button></div>
+						<div class="mt-1 flex justify-end gap-1"><button data-action-id="ui.src.lib.components.orderbook.button.h47b4323a2c" onclick={() => (reverseConfirm = false)} class="rounded border border-terminal-border px-1 py-0.5">Cancel</button><button data-action-id="ui.src.lib.components.orderbook.button.h746df937cf" disabled={reversing} onclick={() => void reverseDomMarket()} class="rounded bg-terminal-yellow/20 px-1 py-0.5 text-terminal-yellow disabled:opacity-40">{reversing ? 'Reconciling…' : 'Confirm reverse'}</button></div>
 					</div>
 				{:else}
-					<button aria-label="Reverse selected market position" disabled={reversing || !privateStateLive} onclick={() => (reverseConfirm = true)} class="mt-1 w-full rounded border border-terminal-yellow/60 px-1 py-0.5 text-3xs text-terminal-yellow hover:bg-terminal-yellow/10 disabled:opacity-40">Reverse market</button>
+					<button data-action-id="ui.src.lib.components.orderbook.button.h1b599d90dd" aria-label="Reverse selected market position" disabled={reversing || !privateStateLive} onclick={() => (reverseConfirm = true)} class="mt-1 w-full rounded border border-terminal-yellow/60 px-1 py-0.5 text-3xs text-terminal-yellow hover:bg-terminal-yellow/10 disabled:opacity-40">Reverse market</button>
 				{/if}
 			{:else}
 				<div data-testid="dom-position-controls-unavailable" class="mt-1 text-center text-3xs text-terminal-text-muted">Position lifecycle not applicable</div>

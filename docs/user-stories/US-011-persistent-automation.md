@@ -1,6 +1,6 @@
 # US-011: Persistent conditional automation without custody compromise
 
-Story schema v1. Status: In progress.
+Story schema v2. Status: In progress.
 
 As a trader who cannot babysit a browser tab, I want conditional and long-running orders to survive tab and device lifecycle to the maximum extent possible without giving anyone custody, so that Vice answers Insilico's Cortex while keeping the non-custodial boundary intact.
 
@@ -11,7 +11,9 @@ As a trader who cannot babysit a browser tab, I want conditional and long-runnin
 - Conditional triggers reach parity with Cortex trigger types: price cross, candle close, candle volume, time-based, and synthetic pair-price triggers, evaluated from live feeds with the existing conditional-ladder state machine pattern.
 - Dead-man `scheduleCancel` protection remains the default answer for "what if my tab dies mid-strategy," armed per US-004 semantics.
 - If the self-hosted orchestrator ships, it reuses the same journaled execution client, certification flags, and reconciliation rules; a divergent second execution path is prohibited.
-- Given a running local algo and a closed tab, when the trader reopens Vice on the same device, then the job resumes only after authoritative reconciliation, and any venue-side dead-man cancellation that fired in between is reported truthfully.
+- US-011-AC-001: Given a running local algo and a closed tab, when the trader reopens Vice on the same device, then the job resumes only after authoritative reconciliation, and any venue-side dead-man cancellation that fired in between is reported truthfully.
+
+- Action IDs: story.us-011
 
 ## Operational contract
 
@@ -26,7 +28,7 @@ As a trader who cannot babysit a browser tab, I want conditional and long-runnin
 - Latency expectations: Trigger-evaluation-to-dispatch stays within the local processing p99 <2 ms and signing p99 <10 ms budgets on the reference device.
 - Telemetry: Browser-local trigger telemetry persists the device-local persistence class, runtime, trigger type, and fire/miss/pause counts only. It never stores a market, threshold, strategy value, account, wallet, or order. An orchestrator runtime remains unavailable.
 - Linked tests: trigger evaluation tests per type, persistence-class disclosure surface tests, orchestrator/browser shared-boundary contract tests, missed-crossing rearm tests.
-- Funded-testnet evidence: Each trigger type requires funded fire/miss/reconnect/restart evidence; the orchestrator additionally requires kill/resume and divergence-detection evidence before any exposure.
+- Funded-mainnet evidence: Each trigger type requires funded fire/miss/reconnect/restart evidence; the orchestrator additionally requires kill/resume and divergence-detection evidence before any exposure.
 
 ## Evidence log
 

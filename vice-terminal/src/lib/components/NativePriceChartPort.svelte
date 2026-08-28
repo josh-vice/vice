@@ -9,7 +9,7 @@
 <main data-testid="native-price-chart-port" class="min-h-screen bg-terminal-bg px-4 py-5 text-terminal-text sm:px-6">
 	<header class="mx-auto flex max-w-6xl items-center justify-between gap-4 border-b border-terminal-border pb-4">
 		<div><p class="text-3xs font-semibold uppercase tracking-[0.2em] text-terminal-cyan">Native widget port · {port.story}</p><h1 class="mt-1 text-xl font-semibold">{port.title}</h1></div>
-		<a href="/hub" class="rounded border border-terminal-border px-3 py-2 text-xs text-terminal-text-secondary hover:border-terminal-cyan hover:text-terminal-cyan">Open preserved Hub</a>
+		<a data-action-id="ui.src.lib.components.nativepricechartport.a.heb94c62983" href="/hub" class="rounded border border-terminal-border px-3 py-2 text-xs text-terminal-text-secondary hover:border-terminal-cyan hover:text-terminal-cyan">Open preserved Hub</a>
 	</header>
 
 	<section class="mx-auto grid max-w-6xl gap-4 py-5 lg:grid-cols-[minmax(0,1fr)_18rem]">

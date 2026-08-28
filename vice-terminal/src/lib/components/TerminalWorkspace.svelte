@@ -254,7 +254,7 @@
 			<!-- Timeframe selector -->
 			<div class="h-8 bg-terminal-bg-secondary flex items-center px-3 gap-1 flex-shrink-0 overflow-x-auto scrollbar-none">
 				{#each ['1m', '5m', '15m', '1h', '4h', '1D'] as tf}
-					<button
+					<button data-action-id="ui.src.lib.components.terminalworkspace.button.h6bafdfb5de"
 						class="px-2.5 py-1 text-2xs font-medium rounded whitespace-nowrap transition-colors
 							{tf === $chartTimeframe ? 'bg-terminal-bg-tertiary text-terminal-text' : 'text-terminal-text-muted'}"
 						onclick={() => setChartTimeframe(tf)}
@@ -277,12 +277,12 @@
 			<div class="h-[220px] flex-shrink-0 border-t border-terminal-border flex flex-col bg-terminal-bg-panel">
 				<!-- Toggle tabs -->
 				<div class="h-8 flex items-center px-3 gap-4 border-b border-terminal-border flex-shrink-0">
-					<button
+					<button data-action-id="ui.src.lib.components.terminalworkspace.button.hfae50da4ca"
 						class="text-xs font-medium pb-0.5 transition-colors border-b-2
 							{mobileBookTab === 'book' ? 'border-terminal-cyan text-terminal-text' : 'border-transparent text-terminal-text-muted'}"
 						onclick={() => (mobileBookTab = 'book')}
 					>Orderbook</button>
-					<button
+					<button data-action-id="ui.src.lib.components.terminalworkspace.button.h462ca92e5d"
 						class="text-xs font-medium pb-0.5 transition-colors border-b-2
 							{mobileBookTab === 'trades' ? 'border-terminal-cyan text-terminal-text' : 'border-transparent text-terminal-text-muted'}"
 						onclick={() => (mobileBookTab = 'trades')}
@@ -309,11 +309,11 @@
 					<span class="text-3xs text-terminal-text-muted">Ask</span>
 					<span class="font-mono text-xs text-terminal-red font-semibold">{$orderBook.asks[0] ? formatPrice($orderBook.asks[0].price) : '—'}</span>
 				</div>
-				<button
+				<button data-action-id="ui.src.lib.components.terminalworkspace.button.hc4d6380acb"
 					class="flex-1 h-9 rounded-lg bg-terminal-green text-terminal-bg text-sm font-bold active:scale-[0.97] transition-transform"
 					onclick={() => { orderSide.set('buy'); orderSheetOpen = true; }}
 				>Buy</button>
-				<button
+				<button data-action-id="ui.src.lib.components.terminalworkspace.button.h3d5ffa31d6"
 					class="flex-1 h-9 rounded-lg bg-terminal-red text-white text-sm font-bold active:scale-[0.97] transition-transform"
 					onclick={() => { orderSide.set('sell'); orderSheetOpen = true; }}
 				>Sell</button>
@@ -336,7 +336,7 @@
 	<nav class="lg:hidden flex-shrink-0 h-14 border-t border-terminal-border bg-terminal-bg-secondary flex items-stretch safe-area-pb">
 		{#each mobileTabs as tab}
 			{@const active = mobileTab === tab.id}
-			<button
+			<button data-action-id="ui.src.lib.components.terminalworkspace.button.h8272f5fb11"
 				class="flex-1 flex flex-col items-center justify-center gap-0.5 transition-colors relative"
 				onclick={() => (mobileTab = tab.id)}
 				aria-pressed={active}

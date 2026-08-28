@@ -39,11 +39,11 @@ export async function sha256File(path) {
 	return createHash('sha256').update(await file.text()).digest('hex');
 }
 
-// Validates the funded-testnet certification manifest through the certified
+// Validates the funded-mainnet certification manifest through the certified
 // validator and returns the Gate 0 evidence to store alongside the approval.
-export async function checkFundedCertification(certPath, { ref } = {}) {
+export async function checkFundedCertification(certPath, { ref, expectedSha } = {}) {
 	if (!certPath) throw new Error('funded certification evidence path is required (Gate 0)');
-	const evidence = await readMainnetEvidence(certPath); // throws on any failure
+	const evidence = await readMainnetEvidence(certPath, { expectedSha });
 	const checkedAt = new Date().toISOString();
 	const sha256 = await sha256File(certPath);
 	return {
@@ -53,6 +53,9 @@ export async function checkFundedCertification(certPath, { ref } = {}) {
 			validated: true,
 			validator: GATE0_VALIDATOR,
 			schemaVersion: evidence.schemaVersion,
+			commit: evidence.commit,
+			artifactSha256: evidence.artifact.sha256,
+			policySha256: evidence.policySha256,
 			checkedAt,
 			summary: {
 				network: evidence.network,
@@ -71,10 +74,12 @@ export async function checkFundedCertification(certPath, { ref } = {}) {
 export function createApprovalRecord({ release, certification } = {}) {
 	assertNoCredentialMaterial(release);
 	if (!release || typeof release !== 'object') throw new Error('release is required');
-	if (!release.build || typeof release.build !== 'string') throw new Error('release.build is required');
 	if (!release.scope || typeof release.scope !== 'string') throw new Error('release.scope is required');
 	if (release.network !== MAINNET_NETWORK) throw new Error(`release.network must be ${MAINNET_NETWORK}`);
+	if (!/^[a-f0-9]{40}$/i.test(release.build)) throw new Error('release.build must be a full commit SHA');
 	if (!certification?.fundedCertification?.validated) throw new Error('Gate 0 (funded certification) must pass before any approval can be recorded');
+	if (certification.fundedCertification.commit?.toLowerCase() !== release.build.toLowerCase()) throw new Error('funded certification commit does not match release/build');
+	for (const [field, evidenceField] of [['artifactSha256', 'artifactSha256'], ['lockfileSha256', 'lockfileSha256'], ['policySha256', 'policySha256']]) if (release[field] && certification.fundedCertification[evidenceField] !== release[field]) throw new Error(`funded certification ${field} does not match release provenance`);
 	const record = {
 		schemaVersion: APPROVAL_SCHEMA_VERSION,
 		kind: 'mainnet-release-approval',
@@ -195,7 +200,7 @@ export function assertNoCredentialMaterial(value, path = '') {
 // ---------------------------------------------------------------------------
 
 export async function buildApprovalRecord({ release, certPath, approvals = [], finalDecision = null, operatorCheck = null }) {
-	const certification = await checkFundedCertification(certPath);
+	const certification = await checkFundedCertification(certPath, { expectedSha: /^[a-f0-9]{40}$/i.test(release?.build ?? '') ? release.build : undefined });
 	const record = createApprovalRecord({ release, certification });
 	for (const a of approvals) {
 		recordApproval(record, a.item, { approver: a.approver ?? RELEASE_AUTHORITY, evidence: a.evidence });

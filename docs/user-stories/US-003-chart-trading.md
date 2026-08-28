@@ -1,6 +1,6 @@
 # US-003: Insilico-style chart trading
 
-Story schema v1.
+Story schema v2.
 
 As an active trader, I want authenticated orders, positions, and local drafts to be directly manipulable on the chart so that chart execution is fast without obscuring venue truth.
 
@@ -26,7 +26,7 @@ As an active trader, I want authenticated orders, positions, and local drafts to
 
 - `bun test src/lib/chart`
 - Browser interaction tests for active fields, drag accept/reject, cancel, armed/unarmed right-click, Escape, and zoom retention.
-- Funded testnet comparison against authoritative open orders after every mutation.
+- Funded mainnet comparison against authoritative open orders after every mutation.
 - `chart/overlayScheduling.test.js` guards the frame-coalesced overlay path and rejects regression to fixed 50 ms polling.
 - `hl/candleMerge.test.js` guards snapshot precedence and preservation of newer live candles during history hydration.
 - Global 1–9 sizing hotkeys now use the same authoritative sizing action as the ticket percentage presets: perp sizes use margin-free and leverage, while spot sizes use the selected quote-token balance with no leverage. Both paths use market price and venue precision; they no longer multiply a zero/current size. `orderSizing.test.js` guards the shared action boundary.
@@ -34,6 +34,8 @@ As an active trader, I want authenticated orders, positions, and local drafts to
 - Chart history refresh identity is keyed by the exact `apiCoin`/`marketKey` descriptor rather than the display symbol, preventing candle-series reuse across colliding labels.
 - Latest drag-safety slice: rejected chart modifications now explicitly reschedule the overlay coordinate so the preview returns to the authoritative snapshot with a short transition, and trigger/stop-limit rejection messages identify the authoritative trigger price rather than incorrectly reporting a limit price. Focused chart/execution coverage passes with 13 tests and 61 assertions; funded mutation comparison remains pending.
 - Ticket stop-trigger correction: the ticket now forwards its configured stop/stop-limit trigger price and stop semantics to the shared local order boundary. The visible trigger field therefore matches the signed venue intent instead of silently falling back to the limit price. Automated coverage: `src/lib/components/orderTicketStopTrigger.test.js`; browser and funded trigger proof remain required.
+
+- Action IDs: story.us-003
 
 ## Operational contract
 
@@ -58,8 +60,8 @@ As an active trader, I want authenticated orders, positions, and local drafts to
 - Latest venue-sizing slice: percentage sizing and the leverage control now clamp to the selected descriptor's authoritative `maxLeverage` (spot remains 1x). A market switch cannot leave a stale higher leverage active; order-sizing coverage protects the shared calculation and ticket boundary.
 - Latest catalog-switch slice: periodic catalog replacement now participates in the same exact-API-coin feed-selection path as user market clicks. A selected market replaced during refresh cannot leave the chart subscribed to a stale API coin while the watchlist shows another descriptor; feed identity coverage passes.
 - Latest rapid-switch slice: market and timeframe subscription transitions are serialized with lifecycle invalidation, so rapid clicks or reconnect teardown cannot let an older unsubscribe detach a newer exact-coin feed. Focused identity coverage, source typecheck, production build, and live runtime verification pass.
-- Funded-testnet evidence: Compare every chart place/modify/cancel/trigger mutation against authoritative open orders and positions, including partial fills and rejection rollback.
-- Given an armed chart interaction, when the trader right-clicks a valid non-crossing price, then exactly one local command is created and its authoritative result is reflected on the chart.
+- Funded-mainnet evidence: Compare every chart place/modify/cancel/trigger mutation against authoritative open orders and positions, including partial fills and rejection rollback.
+- US-003-AC-001: Given an armed chart interaction, when the trader right-clicks a valid non-crossing price, then exactly one local command is created and its authoritative result is reflected on the chart.
 
 ## Current evidence
 

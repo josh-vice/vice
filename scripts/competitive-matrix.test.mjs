@@ -1,37 +1,45 @@
 import { describe, expect, test } from 'bun:test';
 import { validateCheckedInCompetitiveMatrix, validateCompetitiveMatrix } from './competitive-matrix.mjs';
 
-describe('Insilico competitive matrix', () => {
+const source = { id: 'docs', url: 'https://example.com/docs', accessedAt: '2026-08-01T00:00:00.000Z', sourceKind: 'official-doc', evidenceLevel: 'documented' };
+const capability = (status = {}) => ({
+	id: 'x',
+	category: 'chart',
+	benchmarkSources: ['docs'],
+	viceStories: ['US-001'],
+	viceActionIds: ['chart.design'],
+	status: { implemented: false, interactionCertified: false, fundedMainnetCertified: false, mainnetEnabled: false, ...status },
+	evidenceIds: ['evidence-x'],
+	nextGate: 'capture direct evidence'
+});
+
+describe('terminal competitive matrix', () => {
 	test('validates the checked-in benchmark', async () => {
 		expect(await validateCheckedInCompetitiveMatrix()).toEqual([]);
 	});
 
-	test('rejects an unsupported green claim', () => {
-		const errors = validateCompetitiveMatrix({ schemaVersion: 1, lastIndexed: '2026-07-29', capabilities: [{ id: 'x', sourceUrl: 'https://example.com', viceStories: ['US-001'], status: 'exceeds', nextGate: 'none' }] });
-		expect(errors).toContain('x: green status requires direct evidence');
+	test('rejects an unsupported mainnet claim', () => {
+		const errors = validateCompetitiveMatrix({ schemaVersion: 2, lastIndexed: '2026-08-01', sources: [source], capabilities: [capability({ mainnetEnabled: true })] }, new Date('2026-08-03T12:00:00Z'));
+		expect(errors).toContain('x: mainnetEnabled requires implemented, interactionCertified, and fundedMainnetCertified');
 	});
 
-	test('rejects an outdated matrix source date that would imply a stale parity claim', () => {
-		const errors = validateCompetitiveMatrix(
-			{ schemaVersion: 1, lastIndexed: '2020-01-01', capabilities: [{ id: 'x', sourceUrl: 'https://example.com', viceStories: ['US-001'], status: 'behind', nextGate: 'none' }] },
-			new Date('2026-08-03T12:00:00Z')
-		);
+	test('rejects an outdated source date', () => {
+		const errors = validateCompetitiveMatrix({ schemaVersion: 2, lastIndexed: '2020-01-01', sources: [source], capabilities: [capability()] }, new Date('2026-08-03T12:00:00Z'));
 		expect(errors.join(' ')).toContain('outdated source date');
 	});
 
-	test('rejects a green row without a current verification date', () => {
-		const errors = validateCompetitiveMatrix(
-			{ schemaVersion: 1, lastIndexed: '2026-08-01', capabilities: [{ id: 'x', sourceUrl: 'https://example.com', viceStories: ['US-001'], status: 'meets', evidence: 'measured', nextGate: 'none' }] },
-			new Date('2026-08-03T12:00:00Z')
-		);
-		expect(errors).toContain('x: green status requires a current verificationDate within 30 days');
+	test('rejects stale source records', () => {
+		const errors = validateCompetitiveMatrix({ schemaVersion: 2, lastIndexed: '2026-08-01', sources: [{ ...source, accessedAt: '2020-01-01T00:00:00.000Z' }], capabilities: [capability()] }, new Date('2026-08-03T12:00:00Z'));
+		expect(errors.join(' ')).toContain('source accessedAt must be current');
 	});
 
-	test('accepts a green row with direct evidence and a current verification date', () => {
-		const errors = validateCompetitiveMatrix(
-			{ schemaVersion: 1, lastIndexed: '2026-08-01', capabilities: [{ id: 'x', sourceUrl: 'https://example.com', viceStories: ['US-001'], status: 'meets', evidence: 'measured', verificationDate: '2026-08-01', nextGate: 'none' }] },
-			new Date('2026-08-03T12:00:00Z')
-		);
+	test('accepts a fully evidenced capability state', () => {
+		const errors = validateCompetitiveMatrix({
+			schemaVersion: 2,
+			lastIndexed: '2026-08-01',
+			sources: [source],
+			capabilities: [capability({ implemented: true, interactionCertified: true, fundedMainnetCertified: true, mainnetEnabled: true })]
+		}, new Date('2026-08-03T12:00:00Z'));
 		expect(errors).toEqual([]);
 	});
 });

@@ -19,6 +19,13 @@ import { isAdvancedOrderCertified, unavailableOrderTypeMessage } from '$lib/exec
 import { deleteCliPreference, expandCliInput, loadCliPreferences, setCliPreference } from './preferences';
 
 const SUPPORTED_ALGOS = new Set(['twap', 'adaptive_twap', 'vwap', 'pov', 'break_even', 'maker', 'conditional_ladder', 'scale', 'chase', 'swarm', 'iceberg', 'ping_pong', 'oco', 'trailing_stop']);
+export const CLI_ACTION_IDS = {
+	execute: 'cli.execute',
+	chain: 'cli.chain',
+	repeat: 'cli.repeat',
+	alias: 'cli.alias',
+	variable: 'cli.variable'
+} as const;
 
 function resolveCliMarket(raw: string) {
 	const identity = raw.trim().toLowerCase();

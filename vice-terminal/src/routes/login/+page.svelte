@@ -49,10 +49,10 @@
 			<p class="mt-1 text-xs leading-5 text-terminal-text-secondary">Enter your invite code to access the research and trading workspace.</p>
 		</div>
 
-		<form class="mt-7 space-y-4" onsubmit={submit}>
+		<form data-action-id="ui.src.routes.login.page.form.h7b380cd50c" class="mt-7 space-y-4" onsubmit={submit}>
 			<label class="block text-xs font-medium text-terminal-text-secondary" for="beta-code">
 				Beta code
-				<input
+				<input data-action-id="ui.src.routes.login.page.input.ha876aa6cb8"
 					id="beta-code"
 					class="terminal-input mt-1.5 w-full"
 					bind:value={code}
@@ -68,7 +68,7 @@
 				<p class="text-xs text-terminal-red" role="alert">{error}</p>
 			{/if}
 
-			<button type="submit" class="terminal-btn-primary w-full justify-center" disabled={submitting} aria-busy={submitting}>
+			<button data-action-id="ui.src.routes.login.page.button.hb26a4e43a4" type="submit" class="terminal-btn-primary w-full justify-center" disabled={submitting} aria-busy={submitting}>
 				{#if submitting}Entering…{:else}Enter beta{/if}
 			</button>
 		</form>

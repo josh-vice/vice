@@ -18,21 +18,22 @@ import {
 	serializeApprovalRecord
 } from './release-approval.mjs';
 
-const BUILD = 'viceterminal-2026-08-04';
+const BUILD = 'a'.repeat(40);
 const RELEASE = { build: BUILD, scope: 'low-notional canary to mainnet promotion', network: 'mainnet' };
 
 const VALID_CERT = {
-	schemaVersion: 1,
-	network: 'testnet',
-	pilot: { allowlisted: true, lowNotional: true },
-	uncertainOutcomes: 0,
-	duplicateOrders: 0,
-	venueOrderIds: ['1001', '1002'],
-	stories: {
-		'US-002': { passes: 2, reconnect: true, restart: true },
-		'US-003': { passes: 2, reconnect: true, restart: true },
-		'US-004': { passes: 2, reconnect: true, restart: true }
-	}
+	schemaVersion: 2,
+	network: 'mainnet',
+	commit: 'a'.repeat(40),
+	artifact: { commit: 'a'.repeat(40), sha256: 'b'.repeat(64), sizeBytes: 1 },
+	lockfileSha256: 'c'.repeat(64),
+	policySha256: 'd'.repeat(64),
+	captureWindow: { startedAt: '2026-08-01T00:00:00Z', endedAt: '2026-08-01T01:00:00Z' },
+	validatorVersion: '2.0.0',
+	features: ['limit'], actions: ['order.submit'], streams: ['hl.book'],
+	cleanup: { zeroOpenOrders: true, zeroUnintendedPositions: true, zeroUnresolvedCommands: true, zeroRunningJobs: true },
+	uncertainOutcomes: 0, duplicateOrders: 0, venueOrderIds: ['1001', '1002'],
+	stories: { 'US-002': { passes: 2, reconnect: true, restart: true }, 'US-003': { passes: 2, reconnect: true, restart: true }, 'US-004': { passes: 2, reconnect: true, restart: true } }
 };
 
 // A certification object that is already validated — used to exercise the pure
@@ -43,9 +44,9 @@ const PASSED_CERT = {
 		sha256: 'a'.repeat(64),
 		validated: true,
 		validator: 'readMainnetEvidence@scripts/mainnet-evidence.mjs',
-		schemaVersion: 1,
+		schemaVersion: 2,
 		checkedAt: '2026-08-04T00:00:00.000Z',
-		summary: { network: 'testnet', venueOrderIds: 2, stories: {} }
+		summary: { network: 'mainnet', venueOrderIds: 2, stories: {} }, policySha256: 'd'.repeat(64), artifactSha256: 'b'.repeat(64), commit: 'a'.repeat(40)
 	}
 };
 
@@ -102,8 +103,8 @@ describe('Gate 0: funded certification prerequisite', () => {
 	});
 
 	test('rejects a malformed or failing certification manifest', async () => {
-		await expect(checkFundedCertification(tempCert({ ...VALID_CERT, schemaVersion: 2 }))).rejects.toThrow('schemaVersion');
-		await expect(checkFundedCertification(tempCert({ ...VALID_CERT, network: 'mainnet' }))).rejects.toThrow('network');
+		await expect(checkFundedCertification(tempCert({ ...VALID_CERT, schemaVersion: 1 }))).rejects.toThrow('schemaVersion');
+		await expect(checkFundedCertification(tempCert({ ...VALID_CERT, network: 'testnet' }))).rejects.toThrow('network');
 		await expect(checkFundedCertification(tempCert({ ...VALID_CERT, uncertainOutcomes: 1 }))).rejects.toThrow('uncertain');
 	});
 
