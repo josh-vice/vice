@@ -418,6 +418,10 @@ async function loadCandleHistory(coin: string, interval: string, generation: num
 		const liveDuringFlight = inProgress ? [...get(chartCandles), inProgress] : get(chartCandles);
 		const merged = mergeCandleSnapshot(candles, liveDuringFlight);
 		if (merged.length === 0) return;
+		// The REST snapshot is the authoritative history baseline. Keep the
+		// in-progress bar separate so lightweight-charts receives all committed
+		// bars immediately instead of only the final candle.
+		chartCandles.set(merged.slice(0, -1));
 		liveCandle.set(merged[merged.length - 1]);
 		saveCachedCandleHistory(hyperliquidPublicNetwork.network, marketKey, coin, interval, merged);
 	} catch (e) {
@@ -814,8 +818,15 @@ export async function startHlFeeds(initialCoin?: string): Promise<void> {
 		// explicitly non-live until the current session's feeds and snapshot prove
 		// freshness, but a returning trader never waits on socket setup to see a chart.
 		renderCachedCandleHistory(coin, get(chartTimeframe));
-		await subscribeAllMids();
+		// Open the public-plane socket immediately, but do not make the selected
+		// market wait for all-mids/context subscription acknowledgements. The
+		// plane is created synchronously before subscribeMarket reaches its first
+		// await, so candle/trade forwarding remains available to that path.
+		const allMidsPromise = subscribeAllMids().catch((error) => {
+			console.error('[hl] all-mids subscription failed:', error);
+		});
 		await subscribeMarket(coin);
+		await allMidsPromise;
 		// Catalog expansion is useful but not part of the selected-market critical
 		// path. It starts only after chart/book/trades have had first access to the
 		// shared venue request budget.

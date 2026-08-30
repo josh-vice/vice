@@ -9,6 +9,7 @@
 	import { buildPositionCloseIntent } from '$lib/execution/positionClose';
 	import { buildPositionReversePlan, reverseCloseReconciliation } from '$lib/execution/positionReverse';
 	import { get } from 'svelte/store';
+	import { tick } from 'svelte';
 	import { topOfBookImbalance } from '$lib/bookAnalytics';
 	import { marketCapabilities } from '$lib/marketCapabilities';
 	import { marketMatches } from '$lib/chart/chartModel';
@@ -33,7 +34,7 @@
 	let reversing = false;
 	let followLastPrice = true;
 	let suppressLadderScroll = false;
-	let recenterFrame: number | null = null;
+	let recenterPending = false;
 	let ladderCenter: HTMLDivElement | undefined;
 
 	function getDepthPercent(total: number): number {
@@ -50,13 +51,14 @@
 	}
 
 	function scheduleLadderRecenter(): void {
-		if (!followLastPrice || draggingOrderId || !ladderCenter || recenterFrame !== null || typeof requestAnimationFrame === 'undefined') return;
-		recenterFrame = requestAnimationFrame(() => {
-			recenterFrame = null;
+		if (!followLastPrice || draggingOrderId || !ladderCenter || recenterPending) return;
+		recenterPending = true;
+		void tick().then(() => {
+			recenterPending = false;
 			if (!followLastPrice || draggingOrderId || !ladderCenter) return;
 			suppressLadderScroll = true;
 			ladderCenter.scrollIntoView({ block: 'center' });
-			requestAnimationFrame(() => { suppressLadderScroll = false; });
+			queueMicrotask(() => { suppressLadderScroll = false; });
 		});
 	}
 

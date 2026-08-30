@@ -51,6 +51,9 @@ test('US-009 armed DOM placement uses the shared exact-identity limit boundary',
 	expect(source).toContain('onmouseup={() => finishLadderOrderDrag(ask.price)}');
 	expect(source).toContain('onmouseup={() => finishLadderOrderDrag(bid.price)}');
 	expect(source).toContain('function scheduleLadderRecenter(): void');
+	expect(source).toContain("import { tick } from 'svelte';");
+	expect(source).toContain('void tick().then(() => {');
+	expect(source).not.toContain('recenterFrame');
 	expect(source).toContain("ladderCenter.scrollIntoView({ block: 'center' })");
 	expect(source).toContain('function onLadderScroll(): void');
 	expect(source).toContain('data-testid="dom-ladder-viewport"');

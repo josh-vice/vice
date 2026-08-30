@@ -30,8 +30,12 @@ describe('exact feed identity boundary', () => {
 		const startupSource = source.slice(source.indexOf('export async function startHlFeeds'));
 		expect(source).toContain('hydrateCachedCandleHistory(coin, tf, generation);');
 		expect(startupSource).toContain('renderCachedCandleHistory(coin, get(chartTimeframe));');
-		expect(startupSource.indexOf('renderCachedCandleHistory(coin, get(chartTimeframe));')).toBeLessThan(startupSource.indexOf('await subscribeAllMids();'));
+		expect(startupSource).toContain('const allMidsPromise = subscribeAllMids().catch(');
+		expect(startupSource.indexOf('renderCachedCandleHistory(coin, get(chartTimeframe));')).toBeLessThan(startupSource.indexOf('const allMidsPromise = subscribeAllMids().catch('));
+		expect(startupSource.indexOf('const allMidsPromise = subscribeAllMids().catch(')).toBeLessThan(startupSource.indexOf('await subscribeMarket(coin);'));
+		expect(startupSource.indexOf('await subscribeMarket(coin);')).toBeLessThan(startupSource.indexOf('await allMidsPromise;'));
 		expect(source).toContain('const candleHistoryPromise = withTimeout(');
+		expect(source).toContain('chartCandles.set(merged.slice(0, -1));');
 		expect(source).toContain('const bookSubscriptionPromise = bookClient.l2Book');
 		expect(source.indexOf('const candleHistoryPromise = withTimeout(')).toBeLessThan(source.indexOf('const bookSubscriptionPromise = bookClient.l2Book'));
 		expect(source).toContain('activeSubs.l2Book = await bookSubscriptionPromise;');
