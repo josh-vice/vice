@@ -479,8 +479,11 @@ async function loadMarketSnapshots(coin: string, generation: number, bookEpoch: 
 		const normalizedTrades = mergeRecentTrades(get(recentTrades), normalizeTrades(trades.value), RECENT_TRADES_LIMIT);
 		recentTrades.set(normalizedTrades);
 		for (const trade of [...normalizedTrades].reverse()) upsertTradeCandle(trade, generation);
-		markMarketFeedAlive('trades');
-		loaded = true;
+		// An empty REST window is not proof that the trade stream is healthy.
+		if (normalizedTrades.length > 0) {
+			markMarketFeedAlive('trades');
+			loaded = true;
+		}
 	}
 	if (book.status === 'rejected') console.warn('[hl] order book snapshot failed:', book.reason);
 	if (trades.status === 'rejected') console.warn('[hl] recent trades snapshot failed:', trades.reason);
@@ -567,7 +570,7 @@ async function subscribeMarketNow(apiCoin: string, timeframe?: string): Promise<
 			// a separate order-book socket handshake; both startup paths run now.
 			await candleHistoryPromise;
 			activeSubs.l2Book = await bookSubscriptionPromise;
-			activeSubs.l2Book.failureSignal.addEventListener('abort', scheduleMarketRecovery, { once: true });
+			activeSubs.l2Book?.failureSignal?.addEventListener('abort', scheduleMarketRecovery, { once: true });
 			snapshotLoaded = await snapshotPromise;
 			// Creating subscriptions is not evidence that data is flowing. Do not
 			// promote the UI to live until all required selected-market feeds have
@@ -656,7 +659,7 @@ export function resubscribeOrderBook(apiCoin: string): Promise<void> {
 			pendingBookSequences.push(sequence);
 			scheduleBookCommit(generation, bookEpoch);
 		});
-		activeSubs.l2Book.failureSignal.addEventListener('abort', scheduleMarketRecovery, { once: true });
+		activeSubs.l2Book?.failureSignal?.addEventListener('abort', scheduleMarketRecovery, { once: true });
 	});
 	marketSwitchQueue = run.catch(() => undefined);
 	return run;
@@ -761,7 +764,7 @@ export async function subscribeAllMids(): Promise<void> {
 				if (updated) selectedMarket.set(updated);
 			}
 		});
-		activeSubs.allDexsAssetCtxs.failureSignal.addEventListener('abort', () => {
+		activeSubs.allDexsAssetCtxs?.failureSignal?.addEventListener('abort', () => {
 			marketContextStatus.set('stale');
 			scheduleMarketRecovery();
 		}, { once: true });
@@ -775,7 +778,7 @@ export async function subscribeAllMids(): Promise<void> {
 				if (updated) selectedMarket.set(updated);
 			}
 		});
-		activeSubs.spotAssetCtxs.failureSignal.addEventListener('abort', () => {
+		activeSubs.spotAssetCtxs?.failureSignal?.addEventListener('abort', () => {
 			marketContextStatus.set('stale');
 			scheduleMarketRecovery();
 		}, { once: true });

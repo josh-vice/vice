@@ -88,7 +88,11 @@ export async function assertCleanRuntime(evidence, { ignoreConsole = [], allowFa
 	}
 }
 export async function seedMarketTaxonomyFixture(page) {
-	await page.route('**/info', (route) => route.abort());
+	await page.route('**/info', (route) => {
+		const hostname = new URL(route.request().url()).hostname;
+		if (hostname !== 'api.hyperliquid.xyz' && hostname !== 'api.hyperliquid-testnet.xyz') return route.fallback();
+		return route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
+	});
 	await page.addInitScript(() => {
 		const perp = {
 			marketKey: 'perp:BTC', apiCoin: 'BTC', assetId: 0, kind: 'corePerp', dex: null,
