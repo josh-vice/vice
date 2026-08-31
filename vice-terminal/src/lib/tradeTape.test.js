@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { mergeRecentTrades, filterTradesByMinimumNotional } from './tradeTape';
+import { RECENT_TRADES_LIMIT, mergeRecentTrades, filterTradesByMinimumNotional } from './tradeTape';
 import { readFileSync } from 'node:fs';
 
 const trades = [
@@ -25,10 +25,28 @@ describe('US-008 trade tape minimum notional filter', () => {
 		];
 		expect(mergeRecentTrades(existing, incoming, 3)).toEqual([incoming[1], incoming[0], existing[0]]);
 	});
+	test('defaults to a rolling window of the 100 newest unique trades', () => {
+		const batch = Array.from({ length: 125 }, (_, index) => ({
+			id: `trade-${index}`,
+			price: 100 + index,
+			size: 1,
+			side: 'buy',
+			timestamp: index
+		}));
 
-	test('does not fabricate public liquidation labels when the venue trade schema lacks them', () => {
+		const result = mergeRecentTrades([], batch);
+		expect(RECENT_TRADES_LIMIT).toBe(100);
+		expect(result).toHaveLength(100);
+		expect(result[0].id).toBe('trade-124');
+		expect(result.at(-1)?.id).toBe('trade-25');
+	});
+
+	test('does not expose unsupported liquidation UI in the market trades panel', () => {
 		const source = readFileSync(new URL('./components/RecentTrades.svelte', import.meta.url), 'utf8');
-		expect(source).toContain('Liquidation labels unavailable');
-		expect(source).toContain('does not classify liquidation orders');
+		const subscriptions = readFileSync(new URL('./hl/subscriptions.ts', import.meta.url), 'utf8');
+		expect(source).not.toContain('Liquidation labels unavailable');
+		expect(source).toContain('latest 100');
+		expect(subscriptions).toContain('mergeRecentTrades(get(recentTrades), normalizeTrades(trades.value), RECENT_TRADES_LIMIT)');
+		expect(subscriptions).toContain('mergeRecentTrades(get(recentTrades), trades, RECENT_TRADES_LIMIT)');
 	});
 });

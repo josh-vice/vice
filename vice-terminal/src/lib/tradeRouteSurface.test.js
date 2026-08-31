@@ -5,3 +5,9 @@ test('US-013 canonical trade route owns the single terminal workspace', async ()
 	expect(source).toContain("import TerminalWorkspace from '$lib/components/TerminalWorkspace.svelte';");
 	expect(source).toContain('<TerminalWorkspace />');
 });
+
+test('desktop workspace omits the redundant market metadata strip', async () => {
+	const source = await Bun.file(new URL('./components/TerminalWorkspace.svelte', import.meta.url)).text();
+	expect(source).not.toContain('data-testid="market-disclosure"');
+	expect(source).toContain('Authoritative Hyperliquid market stats');
+});

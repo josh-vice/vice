@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 
 describe('break-even release surface', () => {
-	test('break-even is independently certified and wired through ticket, CLI, and execution', async () => {
+	test('break-even is catalogued and wired through ticket, CLI, and execution', async () => {
 		const capability = await Bun.file(new URL('./capabilities.ts', import.meta.url)).text();
 		const orders = await Bun.file(new URL('../hl/orders.ts', import.meta.url)).text();
 		const cli = await Bun.file(new URL('../cli/executor.ts', import.meta.url)).text();

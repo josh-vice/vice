@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 
 describe('POV release surface', () => {
-	test('POV is independently certified and wired through the execution path', async () => {
+	test('POV is catalogued and wired through the execution path', async () => {
 		const capability = await Bun.file(new URL('./capabilities.ts', import.meta.url)).text();
 		const orders = await Bun.file(new URL('../hl/orders.ts', import.meta.url)).text();
 		const cli = await Bun.file(new URL('../cli/executor.ts', import.meta.url)).text();

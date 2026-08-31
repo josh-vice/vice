@@ -54,6 +54,9 @@ export function parseLatencyEvidence(value) {
 				throw new Error(`latency evidence samples[${index}].${field} must be a non-negative number`);
 			}
 		}
+		if (sample.storeToPaintMs !== undefined && (!Number.isFinite(sample.storeToPaintMs) || sample.storeToPaintMs < 0)) {
+			throw new Error(`latency evidence samples[${index}].storeToPaintMs must be a non-negative number when supplied`);
+		}
 	}
 	if (!Array.isArray(value.dispatchSamples)) {
 		throw new Error('latency evidence dispatchSamples must be an array');
@@ -63,6 +66,30 @@ export function parseLatencyEvidence(value) {
 			!Number.isFinite(sample.actionToSignedDispatchMs) || sample.actionToSignedDispatchMs < 0 ||
 			!Number.isFinite(sample.localProcessingMs) || sample.localProcessingMs < 0) {
 			throw new Error(`latency evidence dispatchSamples[${index}] must contain measured non-negative timings`);
+		}
+		if (sample.inputToSubmitMs !== undefined && (!Number.isFinite(sample.inputToSubmitMs) || sample.inputToSubmitMs < 0)) {
+			throw new Error(`latency evidence dispatchSamples[${index}].inputToSubmitMs must be a non-negative number when supplied`);
+		}
+	}
+	for (const field of ['inputToSubmitSamples', 'recoverySamples']) {
+		if (value[field] !== undefined) {
+			if (!Array.isArray(value[field]) || value[field].some((sample) => !Number.isFinite(sample) || sample < 0)) {
+				throw new Error(`latency evidence ${field} must contain non-negative numbers when supplied`);
+			}
+		}
+	}
+	if (value.percentiles !== undefined) {
+		if (!value.percentiles || typeof value.percentiles !== 'object' || Array.isArray(value.percentiles)) {
+			throw new Error('latency evidence percentiles must be an object when supplied');
+		}
+		for (const [name, percentile] of Object.entries(value.percentiles)) {
+			if (!percentile || typeof percentile !== 'object' || !Number.isSafeInteger(percentile.count) || percentile.count < 0 ||
+				!Number.isFinite(percentile.p50) || percentile.p50 < 0 ||
+				!Number.isFinite(percentile.p95) || percentile.p95 < 0 ||
+				!Number.isFinite(percentile.p99) || percentile.p99 < 0 ||
+				!Number.isFinite(percentile.max) || percentile.max < 0) {
+				throw new Error(`latency evidence percentiles.${name} must contain non-negative summary values`);
+			}
 		}
 	}
 	return value;

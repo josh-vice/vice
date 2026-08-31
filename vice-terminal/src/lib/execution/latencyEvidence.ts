@@ -1,7 +1,15 @@
-import { dispatchLatencySamples } from './telemetry';
+import { dispatchLatencySamples, inputToSubmitLatencySamples, recoveryLatencySamples } from './telemetry';
 import { causalFeedLatencySamples, runtimeHealthSnapshot, type RuntimeHealthSnapshot } from '$lib/native/performance';
 
 export type LatencyEvidenceNetwork = 'testnet' | 'mainnet';
+
+export type LatencyPercentiles = {
+	count: number;
+	p50: number;
+	p95: number;
+	p99: number;
+	max: number;
+};
 
 export type ClientLatencyEvidence = {
 	schemaVersion: 2;
@@ -14,12 +22,38 @@ export type ClientLatencyEvidence = {
 		feed: string;
 		sequence: number;
 		receiptToStoreMs: number;
+		storeToPaintMs: number;
 		feedToFrameReadyMs: number;
 		actionToSignedDispatchMs?: number;
 		localProcessingMs?: number;
 	}>;
-	dispatchSamples: Array<{ actionToSignedDispatchMs: number; localProcessingMs: number }>;
+	dispatchSamples: Array<{ actionToSignedDispatchMs: number; localProcessingMs: number; inputToSubmitMs?: number }>;
+	inputToSubmitSamples: number[];
+	recoverySamples: number[];
+	percentiles: {
+		sourceToStore: LatencyPercentiles;
+		storeToPaint: LatencyPercentiles;
+		feedToFrameReady: LatencyPercentiles;
+		inputToSubmit: LatencyPercentiles;
+		recovery: LatencyPercentiles;
+	};
 };
+
+function summarize(values: readonly number[]): LatencyPercentiles {
+	const sorted = values.filter((value) => Number.isFinite(value) && value >= 0).sort((a, b) => a - b);
+	const percentile = (fraction: number): number => {
+		if (sorted.length === 0) return 0;
+		const index = Math.min(sorted.length - 1, Math.max(0, Math.ceil(sorted.length * fraction) - 1));
+		return sorted[index] ?? 0;
+	};
+	return {
+		count: sorted.length,
+		p50: percentile(0.5),
+		p95: percentile(0.95),
+		p99: percentile(0.99),
+		max: sorted.at(-1) ?? 0
+	};
+}
 
 /**
  * Build release evidence from timings actually observed in this browser session.
@@ -32,6 +66,8 @@ export function buildLatencyEvidence(
 ): ClientLatencyEvidence {
 	const feed = causalFeedLatencySamples();
 	const dispatchSamples = dispatchLatencySamples();
+	const inputToSubmitSamples = inputToSubmitLatencySamples();
+	const recoverySamples = recoveryLatencySamples();
 	return {
 		schemaVersion: 2,
 		source: 'client-telemetry',
@@ -42,9 +78,19 @@ export function buildLatencyEvidence(
 			feed: sample.feed,
 			sequence: sample.sequence,
 			receiptToStoreMs: sample.receiptToStoreMs,
+			storeToPaintMs: sample.storeToPaintMs,
 			feedToFrameReadyMs: sample.feedToFrameReadyMs
 		})),
-		dispatchSamples
+		dispatchSamples,
+		inputToSubmitSamples,
+		recoverySamples,
+		percentiles: {
+			sourceToStore: summarize(feed.map((sample) => sample.receiptToStoreMs)),
+			storeToPaint: summarize(feed.map((sample) => sample.storeToPaintMs)),
+			feedToFrameReady: summarize(feed.map((sample) => sample.feedToFrameReadyMs)),
+			inputToSubmit: summarize(inputToSubmitSamples),
+			recovery: summarize(recoverySamples)
+		}
 	};
 }
 

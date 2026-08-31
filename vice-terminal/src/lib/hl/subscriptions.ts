@@ -27,6 +27,7 @@ import { createCoreBtcBootstrapMarket, readCachedMarketCatalog, startMarketRegis
 import { hyperliquidPublicNetwork } from './network';
 import { applyAllDexPerpContexts, applySpotContexts } from './liveMarketUpdates';
 import { mergeCandleSnapshot, mergeTradeIntoCandles } from './candleMerge';
+import { RECENT_TRADES_LIMIT, mergeRecentTrades } from '$lib/tradeTape';
 import { bookSigFigs, loadBookDepth, loadBookSigFigs } from '$lib/bookGrouping';
 import { startHyperliquidPublicPlane, type PublicPlaneSession } from '$lib/data-plane/hyperliquidPublicPlane';
 import { hyperliquidBookEvent } from '$lib/venue/hyperliquid';
@@ -120,7 +121,6 @@ function markMarketContextAlive(kind: 'perp' | 'spot'): void {
 	}
 }
 
-const MAX_TRADES = 50;
 const STARTUP_HTTP_TIMEOUT_MS = 4_000;
 
 async function withTimeout<T>(promise: Promise<T>, timeoutMs: number, label: string): Promise<T> {
@@ -476,7 +476,7 @@ async function loadMarketSnapshots(coin: string, generation: number, bookEpoch: 
 		} else console.warn('[hl] order book snapshot was malformed or crossed');
 	}
 	if (trades.status === 'fulfilled') {
-		const normalizedTrades = normalizeTrades(trades.value).slice(0, MAX_TRADES);
+		const normalizedTrades = mergeRecentTrades(get(recentTrades), normalizeTrades(trades.value), RECENT_TRADES_LIMIT);
 		recentTrades.set(normalizedTrades);
 		for (const trade of [...normalizedTrades].reverse()) upsertTradeCandle(trade, generation);
 		markMarketFeedAlive('trades');
@@ -694,7 +694,7 @@ export async function subscribeAllMids(): Promise<void> {
 				markFeedReceive('trades', event.sequence, event.receivedAtMonoMs);
 				markMarketFeedAlive('trades');
 				const trades = event.trades;
-				recentTrades.set(trades.slice(0, MAX_TRADES));
+				recentTrades.set(mergeRecentTrades(get(recentTrades), trades, RECENT_TRADES_LIMIT));
 				if (!candleStreamHealthy()) {
 					for (const trade of trades) upsertTradeCandle(trade, marketGeneration);
 				}

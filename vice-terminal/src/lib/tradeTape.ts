@@ -1,7 +1,10 @@
 import type { Trade } from './types';
 
+/** The market-trades tab retains the newest unique trades in this rolling window. */
+export const RECENT_TRADES_LIMIT = 100;
+
 /** Merge incremental websocket batches into a bounded newest-first tape. */
-export function mergeRecentTrades(existing: Trade[], incoming: Trade[], limit = 50): Trade[] {
+export function mergeRecentTrades(existing: Trade[], incoming: Trade[], limit = RECENT_TRADES_LIMIT): Trade[] {
 	const byId = new Map<string, Trade>();
 	for (const trade of [...existing, ...incoming]) byId.set(trade.id, trade);
 	return [...byId.values()]

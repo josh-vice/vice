@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { positions, openOrders, fills, bottomPanelTab, marketRegistry, twapJobs, localAlgoJobs, deadmanStatus, isConnected, walletAddress, accountSyncStatus, orderBook, selectedMarket, selectMarket, selectMarketForExecution } from '$lib/stores';
-	import { exportExecutionAudit } from '$lib/execution/commandJournal';
+	import { exportExecutionAudit, replayStoredExecutionAudit } from '$lib/execution/commandJournal';
+	import { executionTelemetry } from '$lib/execution/telemetry';
 	import { automationTriggerTelemetry } from '$lib/execution/automationTelemetry';
 	import { privacyMode } from '$lib/privacyMode';
 	import { formatPrice, formatSize, formatTime } from '$lib/format';
@@ -338,6 +339,14 @@
 		setTimeout(() => URL.revokeObjectURL(url), 0);
 		auditExportMessage = 'Downloaded a local audit record. It includes your account and command IDs, but no private key, signature, request body, or venue error text.';
 	}
+	function replayLocalExecutionAudit(): void {
+		if (!privateStateLive || !$walletAddress) return;
+		const replay = replayStoredExecutionAudit($walletAddress);
+		auditExportMessage = `Audit replay ${replay.finalState}: ${replay.entriesReplayed} entries, ${replay.unresolvedCommandIds.length} unresolved, ${replay.errors.length} validation errors.`;
+	}
+	function telemetryMs(value: number, count: number): string {
+		return count > 0 ? `${value.toFixed(1)}ms` : '—';
+	}
 	async function stopTwap(twapId: number, market: string) {
 		if (!privateStateLive) {
 			twapError = 'Account state is stale; TWAP cancellation is paused until reconciliation completes';
@@ -402,17 +411,32 @@
 		</div>
 
 		<!-- P&L Summary - FTX style right side -->
-		<div class="hidden sm:flex items-center gap-4 text-2xs">
-			<span class="text-terminal-text-muted">Dead-man: <span class="font-mono {$deadmanStatus === 'armed' && privateStateLive ? 'text-terminal-yellow' : $deadmanStatus === 'uncertain' && privateStateLive ? 'text-terminal-red' : 'text-terminal-text-secondary'}">{privateStateLive ? $deadmanStatus.toUpperCase() : '—'}</span></span>
+		<div class="flex items-center gap-2 text-2xs">
+			<div class="hidden sm:flex items-center gap-4">
+				<span class="text-terminal-text-muted">Dead-man: <span class="font-mono {$deadmanStatus === 'armed' && privateStateLive ? 'text-terminal-yellow' : $deadmanStatus === 'uncertain' && privateStateLive ? 'text-terminal-red' : 'text-terminal-text-secondary'}">{privateStateLive ? $deadmanStatus.toUpperCase() : '—'}</span></span>
+				{#if privateStateLive}
+					<span class="text-terminal-text-muted">Net P&L: <span class="font-mono {totalUnrealizedPnl >= 0 ? 'text-terminal-green' : 'text-terminal-red'}">{totalUnrealizedPnl >= 0 ? '+' : ''}${totalUnrealizedPnl.toFixed(2)}</span></span>
+				{:else}
+					<span class="text-terminal-text-muted">Net P&L: <span class="font-mono text-terminal-text-muted">—</span></span>
+				{/if}
+			</div>
 			{#if privateStateLive}
-				<span class="text-terminal-text-muted">Net P&L: <span class="font-mono {totalUnrealizedPnl >= 0 ? 'text-terminal-green' : 'text-terminal-red'}">{totalUnrealizedPnl >= 0 ? '+' : ''}${totalUnrealizedPnl.toFixed(2)}</span></span>
-			{:else}
-				<span class="text-terminal-text-muted">Net P&L: <span class="font-mono text-terminal-text-muted">—</span></span>
-			{/if}
-			{#if privateStateLive}
-				<button data-action-id="ui.src.lib.components.bottompanel.button.h77c1085e24" class="rounded border border-terminal-border px-1.5 py-0.5 text-3xs text-terminal-text-muted hover:text-terminal-cyan" onclick={downloadExecutionAudit}>Export audit</button>
+				<div class="flex items-center gap-2">
+					<button data-action-id="ui.src.lib.components.bottompanel.button.h77c1085e24" class="rounded border border-terminal-border px-1.5 py-0.5 text-3xs text-terminal-text-muted hover:text-terminal-cyan" onclick={downloadExecutionAudit}>Export audit</button>
+					<button data-action-id="ui.src.lib.components.bottompanel.button.audit-replay" data-testid="audit-replay" class="rounded border border-terminal-border px-1.5 py-0.5 text-3xs text-terminal-text-muted hover:text-terminal-cyan" onclick={replayLocalExecutionAudit}>Replay audit</button>
+				</div>
 			{/if}
 		</div>
+	</div>
+	<div data-testid="execution-lifecycle-telemetry" role="group" aria-label="Execution lifecycle telemetry" class="flex items-center gap-2 overflow-x-auto whitespace-nowrap border-b border-terminal-border/60 bg-terminal-bg-secondary px-3 py-1 text-3xs tabular-nums text-terminal-text-muted">
+		<span class="font-medium text-terminal-text-secondary">Execution lifecycle</span>
+		<span>accepted {$executionTelemetry.accepted}</span>
+		<span>rejected {$executionTelemetry.rejected}</span>
+		<span>unknown {$executionTelemetry.unknown}</span>
+		<span>reconciled {$executionTelemetry.reconciled}</span>
+		<span>ack p50/p95/p99 {telemetryMs($executionTelemetry.p50Ms, $executionTelemetry.count)} / {telemetryMs($executionTelemetry.p95Ms, $executionTelemetry.count)} / {telemetryMs($executionTelemetry.p99Ms, $executionTelemetry.count)}</span>
+		<span>input→submit p95 {telemetryMs($executionTelemetry.inputToSubmitP95Ms, $executionTelemetry.inputToSubmitCount)}</span>
+		<span>recovery p95 {telemetryMs($executionTelemetry.recoveryP95Ms, $executionTelemetry.recoveryCount)}</span>
 	</div>
 	{#if auditExportMessage}<div class="border-b border-terminal-border px-3 py-1 text-3xs text-terminal-text-muted" role="status">{auditExportMessage}</div>{/if}
 

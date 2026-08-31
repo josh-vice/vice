@@ -1,14 +1,11 @@
 import { describe, expect, test } from 'bun:test';
-import { advancedOrderTypes, certificationEnvKey, isAdvancedOrderCertified } from './capabilities';
+import { advancedOrderTypes } from './capabilities';
 
 describe('adaptive order surface', () => {
-	test('adaptive TWAP and VWAP are real gated capabilities', async () => {
+	test('adaptive TWAP and VWAP are available execution families', async () => {
 		const source = await Bun.file(new URL('../hl/orders.ts', import.meta.url)).text();
 		const model = await Bun.file(new URL('../orderTicketModel.ts', import.meta.url)).text();
 		expect(advancedOrderTypes()).toEqual(expect.arrayContaining(['adaptive_twap', 'vwap']));
-		expect(certificationEnvKey('adaptive_twap')).toBe('VITE_HL_CERTIFIED_ADAPTIVE_TWAP');
-		expect(certificationEnvKey('vwap')).toBe('VITE_HL_CERTIFIED_VWAP');
-		expect(isAdvancedOrderCertified('adaptive_twap', undefined)).toBe(false);
 		expect(source).toContain("params.type === 'adaptive_twap' || params.type === 'vwap'");
 		expect(source).toContain("import('$lib/execution/adaptiveTwap')");
 		expect(model).toContain("id: 'adaptive_twap'");

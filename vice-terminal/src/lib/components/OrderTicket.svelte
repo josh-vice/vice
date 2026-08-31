@@ -1,15 +1,21 @@
 <script lang="ts">
-	import { selectedMarket, marketRegistry, orderSide, orderType, orderPrice, orderSize, orderLeverage, reduceOnly, postOnly, ioc, activeSubaccount, balances, advancedConfig, orderPresets, applyOrderPreset, saveOrderPreset, deleteOrderPreset, priceInputFocused, chartActiveField, chartDraft, chartRiskPercent, chartCandles, chartTimeframe, designerMode, isConnected, executionStatus, enableTrading, setOrderSizePercent, fatFingerLimits, setFatFingerLimits } from '$lib/stores';
+	import { selectedMarket, marketRegistry, orderSide, orderType, orderPrice, orderSize, orderLeverage, reduceOnly, postOnly, ioc, activeSubaccount, balances, advancedConfig, orderPresets, applyOrderPreset, saveOrderPreset, deleteOrderPreset, priceInputFocused, chartActiveField, chartDraft, chartRiskPercent, chartCandles, chartTimeframe, designerMode, isConnected, executionStatus, enableTrading, setOrderSizePercent, fatFingerLimits, setFatFingerLimits, orderBook, positions, accountSyncStatus, marketDataStatus } from '$lib/stores';
 	import { cancelEnableTrading } from '$lib/stores';
 	import { ORDER_TYPE_GROUPS, QUICK_ORDER_TYPES, SIZE_PRESETS, persistenceClass } from '$lib/orderTicketModel';
-	import type { OrderSide, OrderType } from '$lib/types';
+	import type { OrderSide, OrderType, OrderBook } from '$lib/types';
 	import { Minus, Plus, Zap, ChevronDown } from 'lucide-svelte';
 	import { placeOrder, startAlgoOrder, fetchOpenOrders } from '$lib/hl/orders';
 	import { riskBasedSize } from '$lib/chart/tradingMath';
 	import { volatilityBasedSize, volatilitySizingCertified } from '$lib/chart/volatilitySizing';
-	import { advancedOrderTypes, isAdvancedOrderCertified, unavailableOrderTypeMessage } from '$lib/execution/capabilities';
+	import { advancedOrderTypes, isAdvancedOrderCertified, isAdvancedOrderType, unavailableOrderTypeMessage } from '$lib/execution/capabilities';
+	import { monotonicNowUs } from '$lib/execution/clock';
+	import { recordInputToSubmit } from '$lib/execution/telemetry';
+	import { estimateOrderPreview, type OrderPreview } from '$lib/orderPreview';
+	import { marketMatches } from '$lib/chart/chartModel';
+	import { formatPrice, formatSize } from '$lib/format';
 	import { tradingKillSwitchActive, tradingKillSwitchMessage } from '$lib/execution/releaseSafety';
 	import { privacyMode } from '$lib/privacyMode';
+	import PositionMarketActions from '$lib/components/PositionMarketActions.svelte';
 	import { onDestroy } from 'svelte';
 	import { marketCapabilities } from '$lib/marketCapabilities';
 	import {
@@ -24,6 +30,14 @@
 		type EnablementPhase
 	} from '$lib/execution/enablement';
 
+
+type AlgorithmOrderType = Exclude<OrderType, 'limit' | 'market' | 'stop' | 'stop_limit' | 'bracket'>;
+
+function isAlgorithmOrderType(type: OrderType): type is AlgorithmOrderType {
+	return type !== 'bracket' && isAdvancedOrderType(type);
+}
+
+const EMPTY_ORDER_BOOK: OrderBook = { bids: [], asks: [], spread: 0, spreadPercent: 0 };
 
 	let typeMenuOpen = false;
 	let submitError = '';
@@ -85,8 +99,8 @@
 
 	onDestroy(stopEnableRetryTimer);
 	let presetName = '';
-	let presetMessage = '';
 	let amountUnit: 'base' | 'quote' = 'base';
+	let presetMessage = '';
 	$: marketProfile = marketCapabilities($selectedMarket);
 	$: if (marketProfile.amountUnit === 'quote') amountUnit = 'quote';
 	$: if (marketProfile.amountUnit === 'base') amountUnit = 'base';
@@ -94,10 +108,9 @@
 	// Keep the complete catalog discoverable. Certification is an execution gate,
 	// never a reason to make an existing order type silently disappear.
 	$: availableOrderTypeGroups = ORDER_TYPE_GROUPS
-		.map((group) => ({ ...group, types: group.types.filter((type) => marketProfile.allowedOrderTypes.includes(type.id) || (marketProfile.supportsAdvancedOrders && isAdvancedOrderCertified(type.id))) }))
+		.map((group) => ({ ...group, types: group.types.filter((type) => marketProfile.allowedOrderTypes.includes(type.id) || (marketProfile.supportsAdvancedOrders && isAdvancedOrderType(type.id))) }))
 		.filter((group) => group.types.length > 0);
-	$: availableQuickTypes = QUICK_ORDER_TYPES.filter((type) => marketProfile.allowedOrderTypes.includes(type.id) && isAdvancedOrderCertified(type.id));
-	$: uncertifiedAdvancedCount = marketProfile.supportsAdvancedOrders ? advancedOrderTypes().filter((type) => !isAdvancedOrderCertified(type)).length : 0;
+	$: availableQuickTypes = QUICK_ORDER_TYPES.filter((type) => marketProfile.allowedOrderTypes.includes(type.id) || (marketProfile.supportsAdvancedOrders && isAdvancedOrderType(type.id)));
 	$: allTypes = availableOrderTypeGroups.flatMap((g) => g.types);
 	$: currentType = allTypes.find((t) => t.id === $orderType) ?? allTypes[0];
 	$: persistence = persistenceClass($orderType);
@@ -114,8 +127,50 @@
 	$: marginRequired = marketProfile.usesMargin ? notionalValue / $orderLeverage : 0;
 	$: venueMaxLeverage = marketProfile.maxLeverage;
 	$: if ($orderLeverage > venueMaxLeverage) orderLeverage.set(venueMaxLeverage);
-	$: maxSize = (availableMargin * (marketProfile.leverageEnabled ? Math.min($orderLeverage, venueMaxLeverage) : 1)) / ($selectedMarket?.lastPrice || 1);
 	$: baseAsset = $selectedMarket?.baseToken ?? 'Asset';
+	$: selectedPosition = !$privacyMode && $isConnected && $accountSyncStatus === 'live' ? $positions.find((position) => marketMatches($selectedMarket, position.apiCoin, position.marketKey)) : undefined;
+	$: orderPreview = estimateOrderPreview({
+		book: $marketDataStatus === 'live' ? $orderBook : EMPTY_ORDER_BOOK,
+		side: $orderSide,
+		orderType: $orderType,
+		size: $orderSize,
+		limitPrice: $orderPrice,
+		postOnly: $postOnly,
+		reduceOnly: $reduceOnly,
+		accountLive: $isConnected && $accountSyncStatus === 'live' && !$privacyMode,
+		position: selectedPosition ? { side: selectedPosition.side, size: selectedPosition.size } : undefined
+	});
+
+	function previewPrice(value: number | undefined): string {
+		return value === undefined ? '—' : formatPrice(value, $selectedMarket?.priceDecimals ?? 2);
+	}
+	function previewSize(value: number): string {
+		return formatSize(value);
+	}
+	function previewStatusLabel(status: OrderPreview['status']): string {
+		return {
+			'not-applicable': 'Not applicable',
+			unavailable: 'Waiting for live book',
+			resting: 'Resting limit',
+			estimated: 'Estimated fill',
+			insufficient: 'Insufficient depth',
+			'post-only-crossing': 'Post-only would cross'
+		}[status];
+	}
+	function previewNotional(value: number | undefined): string {
+		if ($privacyMode) return '••••••';
+		return value === undefined ? '—' : `$${value.toFixed(2)}`;
+	}
+	function previewFee(preview: OrderPreview): string {
+		if ($privacyMode) return '••••••';
+		return preview.estimatedFee === null ? 'Unavailable — fee tier not loaded' : `$${preview.estimatedFee.toFixed(4)}`;
+	}
+	function previewSlippage(value: number | undefined): string {
+		return value === undefined ? '—' : `${value.toFixed(2)} bps`;
+	}
+	function previewReduceOnly(preview: OrderPreview): string {
+		return preview.reduceOnly.message;
+	}
 
 
 	function setSide(side: OrderSide) {
@@ -142,7 +197,7 @@
 		if (value) postOnly.set(false);
 	}
 	function pickType(id: OrderType) {
-		if (!marketProfile.allowedOrderTypes.includes(id) && !marketProfile.supportsAdvancedOrders) { submitError = `Order type ${id} is not supported for this market`; return; }
+		if (!marketProfile.allowedOrderTypes.includes(id) && !(marketProfile.supportsAdvancedOrders && isAdvancedOrderType(id))) { submitError = `Order type ${id} is not supported for this market`; return; }
 		if (!isAdvancedOrderCertified(id)) {
 			submitError = unavailableOrderTypeMessage(id);
 			return;
@@ -210,29 +265,45 @@
 			submitError = marketProfile.readOnlyReason ?? 'This market is read-only';
 			return;
 		}
+		if (!marketProfile.allowedOrderTypes.includes($orderType) && !(marketProfile.supportsAdvancedOrders && isAdvancedOrderType($orderType))) {
+			submitError = `Order type ${$orderType} is not supported for this market`;
+			return;
+		}
+		if (!isAdvancedOrderCertified($orderType)) {
+			submitError = unavailableOrderTypeMessage($orderType);
+			return;
+		}
 		if (['limit', 'stop_limit'].includes($orderType) && (!$orderPrice || !Number.isFinite($orderPrice) || $orderPrice <= 0)) {
 			submitError = `${$orderType === 'stop_limit' ? 'Limit' : 'Order'} price is required`;
 			return;
 		}
 		submitting = true;
-		const algoTypes: OrderType[] = ['twap', 'adaptive_twap', 'vwap', 'pov', 'break_even', 'maker', 'conditional_ladder', 'scale', 'chase', 'oco', 'trailing_stop', 'swarm', 'iceberg', 'ping_pong'];
+		const inputStartedUs = monotonicNowUs();
+		const submittedOrderType = $orderType;
+		let inputSubmitRecorded = false;
+		const recordSubmit = (submitted: boolean) => {
+			if (!submitted || inputSubmitRecorded) return;
+			inputSubmitRecorded = true;
+			recordInputToSubmit(inputStartedUs, monotonicNowUs());
+		};
 		try {
-			if (algoTypes.includes($orderType)) {
+			if (isAlgorithmOrderType(submittedOrderType)) {
 				const result = await startAlgoOrder({
 					side: $orderSide,
-					type: $orderType,
+					type: submittedOrderType,
 					size: $orderSize,
 					price: $orderPrice ?? undefined,
 					triggerPrice: $advancedConfig.triggerPrice,
 					reduceOnly: $reduceOnly,
 					postOnly: $postOnly,
-				algo: { type: $orderType as 'twap' | 'adaptive_twap' | 'vwap' | 'pov' | 'break_even' | 'maker' | 'conditional_ladder' | 'scale' | 'chase' | 'oco' | 'trailing_stop' | 'swarm' | 'iceberg' | 'ping_pong', config: $advancedConfig as Record<string, unknown> }
+					algo: { type: submittedOrderType, config: $advancedConfig as Record<string, unknown> }
 				});
+				recordSubmit(result.executionAttempted === true);
 				if (!result.ok) submitError = result.error ?? 'Algo failed';
 			} else {
 				const result = await placeOrder({
 					side: $orderSide,
-					type: $orderType,
+					type: submittedOrderType,
 					price: $orderPrice ?? undefined,
 					triggerPrice: needsTrigger ? $advancedConfig.triggerPrice : undefined,
 					triggerKind: needsTrigger ? 'stop' : undefined,
@@ -251,6 +322,7 @@
 						skew: $advancedConfig.autoTakeProfitSkew ?? 1
 					}
 				});
+				recordSubmit(result.data !== undefined);
 				if (!result.ok) {
 					submitError = result.error ?? 'Order failed';
 				} else {
@@ -398,22 +470,28 @@
 			Sell {baseAsset}
 		</button>
 	</div>
+	{#if $selectedMarket.kind === 'hip3Perp'}
+		<div data-testid="hip3-routing-disclosure" role="note" class="flex items-center justify-between gap-2 rounded border border-terminal-cyan/30 bg-terminal-cyan/5 px-2 py-1.5 text-3xs">
+			<span class="font-medium text-terminal-cyan">HIP-3 route</span>
+			<span class="text-right text-terminal-text-muted">{$selectedMarket.dex ?? 'DEX unavailable'} · API coin {$selectedMarket.apiCoin}</span>
+		</div>
+	{/if}
+
 
 	<!-- Order Form -->
 	<div class="flex-1 overflow-y-auto p-2.5 space-y-2.5 scrollbar-none">
 		<div class="grid grid-cols-4 gap-1">
 			{#each availableQuickTypes as quick}
+				{@const certified = isAdvancedOrderCertified(quick.id)}
 				<button data-action-id="ui.src.lib.components.orderticket.button.hc5d9ff4cb4"
-					class="py-1.5 rounded text-2xs font-medium {$orderType === quick.id ? 'bg-terminal-cyan/15 text-terminal-cyan ring-1 ring-terminal-cyan/40' : 'bg-terminal-bg text-terminal-text-muted hover:text-terminal-text'}"
+					class="py-1.5 rounded text-2xs font-medium {certified ? ($orderType === quick.id ? 'bg-terminal-cyan/15 text-terminal-cyan ring-1 ring-terminal-cyan/40' : 'bg-terminal-bg text-terminal-text-muted hover:text-terminal-text') : 'cursor-not-allowed opacity-60'}"
 					onclick={() => pickType(quick.id)}
+					disabled={!certified}
+					aria-disabled={!certified}
+					title={certified ? quick.desc : unavailableOrderTypeMessage(quick.id)}
 				>{quick.label}</button>
 			{/each}
 		</div>
-		{#if uncertifiedAdvancedCount > 0}
-			<div class="rounded border border-terminal-yellow/20 bg-terminal-yellow/5 px-2 py-1.5 text-3xs text-terminal-text-muted" data-testid="advanced-certification-status">
-				{uncertifiedAdvancedCount} advanced strategies are listed in the order-type menu but locked pending funded-testnet lifecycle and reconnect certification.
-			</div>
-		{/if}
 
 		<!-- Account-scoped order presets. Values are local UI intent only and are
 		     revalidated by the execution boundary before signing. -->
@@ -457,12 +535,11 @@
 						<div class="px-2 py-1 text-3xs uppercase tracking-wide text-terminal-text-muted bg-terminal-bg-tertiary/40">{g.group}</div>
 						{#each g.types as t}
 							{@const certified = isAdvancedOrderCertified(t.id)}
-							<button data-action-id="ui.src.lib.components.orderticket.button.hd2a4b6e82a"
-								class="w-full text-left px-2.5 py-1.5 transition-colors flex flex-col
-									   {certified ? 'hover:bg-terminal-bg-hover' : 'cursor-not-allowed opacity-60'}
-									   {t.id === $orderType ? 'bg-terminal-cyan/10' : ''}"
+							<button data-action-id="ui.src.lib.components.orderticket.button.hd2a4b6e82"
+								class="w-full text-left px-2.5 py-1.5 transition-colors flex flex-col {certified ? 'hover:bg-terminal-bg-hover' : 'cursor-not-allowed opacity-60'} {t.id === $orderType ? 'bg-terminal-cyan/10' : ''}"
 								onclick={() => pickType(t.id)}
 								disabled={!certified}
+								aria-disabled={!certified}
 								title={certified ? t.desc : unavailableOrderTypeMessage(t.id)}
 							>
 								<span class="flex items-center gap-1 text-2xs font-medium {t.id === $orderType ? 'text-terminal-cyan' : 'text-terminal-text'}">{t.label}{#if !certified}<span class="rounded bg-terminal-yellow/10 px-1 text-3xs text-terminal-yellow">Testnet certification required</span>{/if}</span>
@@ -561,6 +638,27 @@
 				/>
 			</div>
 		{/if}
+		<div data-testid="order-preview" class="rounded border border-terminal-border/60 bg-terminal-bg-secondary p-2 space-y-1.5">
+			<div class="flex items-center justify-between">
+				<span class="text-3xs uppercase tracking-wide text-terminal-text-muted">Order preview</span>
+				<span class="text-3xs text-terminal-cyan">{previewStatusLabel(orderPreview.status)}</span>
+				{#if orderPreview.status === 'unavailable' || orderPreview.status === 'insufficient' || orderPreview.status === 'post-only-crossing'}
+					<span data-testid="order-preview-live-status" role="status" aria-live="polite" class="sr-only">{previewStatusLabel(orderPreview.status)}</span>
+				{/if}
+			</div>
+			<div class="grid grid-cols-2 gap-x-3 gap-y-1 text-3xs tabular-nums">
+				<div class="flex justify-between gap-2"><span class="text-terminal-text-muted">Best</span><span class="font-mono">{previewPrice(orderPreview.bestPrice)}</span></div>
+				<div class="flex min-w-0 justify-between gap-2"><span class="text-terminal-text-muted">Depth</span><span class="min-w-0 break-words text-right font-mono">{previewSize(orderPreview.filledSize)} / {previewSize(orderPreview.effectiveSize)} · {previewSize(orderPreview.displayedDepthSize)} displayed</span></div>
+				<div class="flex justify-between gap-2"><span class="text-terminal-text-muted">Avg fill</span><span class="font-mono">{previewPrice(orderPreview.averageFillPrice)}</span></div>
+				<div class="flex justify-between gap-2"><span class="text-terminal-text-muted">Slippage</span><span class="font-mono">{previewSlippage(orderPreview.slippageBps)}</span></div>
+				<div class="flex justify-between gap-2"><span class="text-terminal-text-muted">Notional</span><span class="font-mono">{previewNotional(orderPreview.estimatedNotional)}</span></div>
+				<div class="col-span-2 flex justify-between gap-2"><span class="text-terminal-text-muted">Fee estimate</span><span class="min-w-0 text-right font-mono">{previewFee(orderPreview)}</span></div>
+			</div>
+			<div class="border-t border-terminal-border/40 pt-1 text-3xs">
+				<span class="text-terminal-text-muted">Reduce-only ·{' '}</span><span class={orderPreview.reduceOnly.status === 'reduces' || orderPreview.reduceOnly.status === 'capped' ? 'text-terminal-green' : 'text-terminal-text-secondary'}>{previewReduceOnly(orderPreview)}</span>
+			</div>
+		</div>
+
 
 		<!-- ===== Advanced parameter blocks ===== -->
 		<details class="rounded border border-terminal-border/60 bg-terminal-bg-secondary" data-testid="advanced-order-options">
@@ -633,7 +731,7 @@
 					<label class="flex items-center justify-between text-2xs"><span class="text-terminal-text-secondary">Start price</span><input data-action-id="ui.src.lib.components.orderticket.input.h432ec94ce5" type="number" value={$advancedConfig.autoTakeProfitStartPrice ?? 0} oninput={(event) => updateCfg('autoTakeProfitStartPrice', +event.currentTarget.value)} class="w-24 terminal-input text-2xs py-1 px-1.5 text-right" step="0.1" /></label>
 					<label class="flex items-center justify-between text-2xs"><span class="text-terminal-text-secondary">End price</span><input data-action-id="ui.src.lib.components.orderticket.input.h06b376128d" type="number" value={$advancedConfig.autoTakeProfitEndPrice ?? 0} oninput={(event) => updateCfg('autoTakeProfitEndPrice', +event.currentTarget.value)} class="w-24 terminal-input text-2xs py-1 px-1.5 text-right" step="0.1" /></label>
 					<label class="flex items-center justify-between text-2xs"><span class="text-terminal-text-secondary">Levels</span><input data-action-id="ui.src.lib.components.orderticket.input.hd10325bc25" type="number" value={$advancedConfig.autoTakeProfitLevels ?? 3} oninput={(event) => updateCfg('autoTakeProfitLevels', +event.currentTarget.value)} class="w-20 terminal-input text-2xs py-1 px-1.5 text-right" min="2" max="100" /></label>
-					<p class="text-3xs text-terminal-text-muted">Entry is blocked if the requested range is not profitable. Scale still needs its own funded-testnet certification.</p>
+					<p class="text-3xs text-terminal-text-muted">Entry is blocked if the requested range is not profitable. Scale orders still use the same execution-boundary risk and market checks as every other order.</p>
 				{/if}
 			</div>
 		{/if}
@@ -873,7 +971,8 @@
 		</details>
 	</div>
 	<!-- Submit -->
-	<div class="p-2 border-t border-terminal-border flex-shrink-0">
+	<div class="p-2 border-t border-terminal-border flex-shrink-0 space-y-2">
+		<PositionMarketActions />
 		<div data-testid="order-persistence-class" class="mb-1.5 rounded border border-terminal-border/60 bg-terminal-bg-secondary px-2 py-1.5 text-3xs">
 			<span class={persistence.local ? 'text-terminal-yellow' : 'text-terminal-cyan'}>{persistence.label}</span>
 			<span class="text-terminal-text-muted"> · {persistence.detail}</span>

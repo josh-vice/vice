@@ -15,7 +15,6 @@ import {
 } from '$lib/stores';
 import type { CLICommand } from '$lib/types';
 import { placeOrder, startAlgoOrder, cancelOrder, fetchOpenOrders, fetchPositions } from '$lib/hl/orders';
-import { isAdvancedOrderCertified, unavailableOrderTypeMessage } from '$lib/execution/capabilities';
 import { deleteCliPreference, expandCliInput, loadCliPreferences, setCliPreference } from './preferences';
 
 const SUPPORTED_ALGOS = new Set(['twap', 'adaptive_twap', 'vwap', 'pov', 'break_even', 'maker', 'conditional_ladder', 'scale', 'chase', 'swarm', 'iceberg', 'ping_pong', 'oco', 'trailing_stop']);
@@ -523,36 +522,35 @@ async function runSingleCliCommand(input: string, alreadyExpanded = false): Prom
 	}
 
 	if (lower === 'help' || lower === '?') {
-		const advancedHelp = isAdvancedOrderCertified('twap') ? ' | twap | scale' : '';
 		return cmd(
 			input,
-			`Commands: buy|sell [size] [symbol] @ [price|market]${advancedHelp} | cancel all | pos | balance | repeat <1-10> <command>`,
+			'Commands: buy|sell [size] [symbol] @ [price|market] | twap | adaptive-twap | vwap | pov | breakeven | maker | conditional-ladder | scale | chase | swarm | iceberg | pingpong | oco | trail | cancel all | pos | balance | repeat <1-10> <command>',
 			'info'
 		);
 	}
 
 	if (lower.startsWith('buy ') || lower.startsWith('b ')) return handleBuySell(trimmed, 'buy');
 	if (lower.startsWith('sell ') || lower.startsWith('s ')) return handleBuySell(trimmed, 'sell');
-	if (lower.startsWith('twap ')) return isAdvancedOrderCertified('twap') ? handleAlgo(trimmed, 'twap') : cmd(input, unavailableOrderTypeMessage('twap'), 'error');
-	if (lower.startsWith('adaptive-twap ') || lower.startsWith('adaptive ')) return isAdvancedOrderCertified('adaptive_twap') ? handleAlgo(trimmed, 'adaptive_twap') : cmd(input, unavailableOrderTypeMessage('adaptive_twap'), 'error');
-	if (lower.startsWith('vwap ')) return isAdvancedOrderCertified('vwap') ? handleAlgo(trimmed, 'vwap') : cmd(input, unavailableOrderTypeMessage('vwap'), 'error');
-	if (lower.startsWith('pov ')) return isAdvancedOrderCertified('pov') ? handleAlgo(trimmed, 'pov') : cmd(input, unavailableOrderTypeMessage('pov'), 'error');
-	if (lower.startsWith('breakeven ')) return isAdvancedOrderCertified('break_even') ? handleAlgo(trimmed, 'break_even') : cmd(input, unavailableOrderTypeMessage('break_even'), 'error');
-	if (lower.startsWith('maker ')) return isAdvancedOrderCertified('maker') ? handleAlgo(trimmed, 'maker') : cmd(input, unavailableOrderTypeMessage('maker'), 'error');
-	if (lower.startsWith('conditional-ladder ') || lower.startsWith('conditional_ladder ')) return isAdvancedOrderCertified('conditional_ladder') ? handleAlgo(trimmed, 'conditional_ladder') : cmd(input, unavailableOrderTypeMessage('conditional_ladder'), 'error');
-	if (lower.startsWith('scale ')) return isAdvancedOrderCertified('scale') ? handleAlgo(trimmed, 'scale') : cmd(input, unavailableOrderTypeMessage('scale'), 'error');
-	if (lower.startsWith('chase ')) return isAdvancedOrderCertified('chase') ? handleAlgo(trimmed, 'chase') : cmd(input, unavailableOrderTypeMessage('chase'), 'error');
-	if (lower.startsWith('swarm ')) return isAdvancedOrderCertified('swarm') ? handleAlgo(trimmed, 'swarm') : cmd(input, unavailableOrderTypeMessage('swarm'), 'error');
-	if (lower.startsWith('iceberg ')) return isAdvancedOrderCertified('iceberg') ? handleAlgo(trimmed, 'iceberg') : cmd(input, unavailableOrderTypeMessage('iceberg'), 'error');
-	if (lower.startsWith('pingpong ') || lower.startsWith('ping-pong ')) return isAdvancedOrderCertified('ping_pong') ? handleAlgo(trimmed, 'ping_pong') : cmd(input, unavailableOrderTypeMessage('ping_pong'), 'error');
-	if (lower.startsWith('oco ')) return isAdvancedOrderCertified('oco') ? handleAlgo(trimmed, 'oco') : cmd(input, unavailableOrderTypeMessage('oco'), 'error');
-	if (lower.startsWith('trail ') || lower.startsWith('trailing ')) return isAdvancedOrderCertified('trailing_stop') ? handleAlgo(trimmed, 'trailing_stop') : cmd(input, unavailableOrderTypeMessage('trailing_stop'), 'error');
+	if (lower.startsWith('twap ')) return handleAlgo(trimmed, 'twap');
+	if (lower.startsWith('adaptive-twap ') || lower.startsWith('adaptive ')) return handleAlgo(trimmed, 'adaptive_twap');
+	if (lower.startsWith('vwap ')) return handleAlgo(trimmed, 'vwap');
+	if (lower.startsWith('pov ')) return handleAlgo(trimmed, 'pov');
+	if (lower.startsWith('breakeven ')) return handleAlgo(trimmed, 'break_even');
+	if (lower.startsWith('maker ')) return handleAlgo(trimmed, 'maker');
+	if (lower.startsWith('conditional-ladder ') || lower.startsWith('conditional_ladder ')) return handleAlgo(trimmed, 'conditional_ladder');
+	if (lower.startsWith('scale ')) return handleAlgo(trimmed, 'scale');
+	if (lower.startsWith('chase ')) return handleAlgo(trimmed, 'chase');
+	if (lower.startsWith('swarm ')) return handleAlgo(trimmed, 'swarm');
+	if (lower.startsWith('iceberg ')) return handleAlgo(trimmed, 'iceberg');
+	if (lower.startsWith('pingpong ') || lower.startsWith('ping-pong ')) return handleAlgo(trimmed, 'ping_pong');
+	if (lower.startsWith('oco ')) return handleAlgo(trimmed, 'oco');
+	if (lower.startsWith('trail ') || lower.startsWith('trailing ')) return handleAlgo(trimmed, 'trailing_stop');
 	if (lower.startsWith('cancel')) return handleCancel(trimmed);
 	if (lower === 'pos' || lower === 'positions') return handlePositions(trimmed);
 	if (lower === 'bal' || lower === 'balance') return handleBalance(trimmed);
 
 	const first = lower.split(/\s+/)[0];
-	if (SUPPORTED_ALGOS.has(first) && isAdvancedOrderCertified(first as Parameters<typeof isAdvancedOrderCertified>[0])) {
+	if (SUPPORTED_ALGOS.has(first)) {
 		return cmd(input, `${first} is supported — use full syntax (e.g. twap buy 1 BTC 30m). Type help.`, 'error');
 	}
 

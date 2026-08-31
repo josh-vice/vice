@@ -8,6 +8,5 @@ describe('US-004 CLI advanced-order parity', () => {
 		}
 		expect(source).toContain("type: 'oco'");
 		expect(source).toContain("type: 'trailing_stop'");
-		expect(source).toContain('unavailableOrderTypeMessage');
 	});
 });

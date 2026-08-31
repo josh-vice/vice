@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 
 describe('conditional ladder release surface', () => {
-	test('is independently certified and persists the trigger intent', async () => {
+	test('is catalogued and persists the trigger intent', async () => {
 		const capability = await Bun.file(new URL('./capabilities.ts', import.meta.url)).text();
 		const execution = await Bun.file(new URL('./conditionalLadder.ts', import.meta.url)).text();
 		const orders = await Bun.file(new URL('../hl/orders.ts', import.meta.url)).text();

@@ -35,6 +35,9 @@ const CERTIFICATION_ENV_KEYS: Partial<Record<OrderType, string>> = {
 	maker: 'VITE_HL_CERTIFIED_MAKER',
 	conditional_ladder: 'VITE_HL_CERTIFIED_CONDITIONAL_LADDER'
 };
+export function isAdvancedOrderType(type: OrderType): boolean {
+	return ADVANCED_ORDER_TYPES.has(type);
+}
 
 /**
  * Advanced order types are a release capability, not a UI preference. The

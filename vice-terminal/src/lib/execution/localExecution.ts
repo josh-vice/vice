@@ -13,7 +13,7 @@ import {
 import { formatVenuePrice, formatVenueSize } from './venueFormat';
 import { buildScaleLevels } from './scaleMath';
 import { hyperliquidNetwork } from '$lib/hl/network';
-import { recordDispatchLatency, recordExecutionAck } from './telemetry';
+import { recordDispatchLatency, recordExecutionAck, recordRecoveryLatency } from './telemetry';
 import { deterministicCloid, reservePersistedSequence, sequenceStorageKey } from './commandIdentity';
 import { withOneTransportRetry } from './retryPolicy';
 import { parseVenueError } from './venueErrors';
@@ -324,7 +324,7 @@ class LocalExecutionClient {
 		const receiveUs = nowUs();
 		const sendUs = nowUs();
 		const expiresAfter = executionExpiresAfter();
-		beginExecutionCommand({ commandId, network: hyperliquidNetwork.network, account: this.mainAddress!, sequence, kind: 'twap', cloids: [], targetTwapId: twapId, venueOrderIds: [] });
+		beginExecutionCommand({ commandId, network: hyperliquidNetwork.network, account: this.mainAddress!, sequence, kind: 'cancel', cloids: [], targetTwapId: twapId, venueOrderIds: [] });
 		try {
 			await exchange.twapCancel({ a: market.assetId, t: twapId }, { expiresAfter });
 			finishExecutionCommand(this.mainAddress!, commandId, { status: 'accepted', venueOrderIds: [String(twapId)] });
@@ -612,6 +612,8 @@ class LocalExecutionClient {
 	private async reconcilePersistedCommands(): Promise<void> {
 		const unresolved = unresolvedExecutionCommands(this.mainAddress!);
 		if (unresolved.length === 0) return;
+		const recoveryStartedUs = nowUs();
+		try {
 		const projections = await Promise.all([
 			this.allDexOpenOrders(),
 			this.info!.userFills({ user: this.mainAddress! })
@@ -625,7 +627,7 @@ class LocalExecutionClient {
 					: { status: 'uncertain', venueOrderIds: [], error: 'No authoritative projection found after restart; manual reconciliation required' });
 				continue;
 			}
-			if (command.kind === 'twap') {
+			if (command.kind === 'twap' || (command.kind === 'cancel' && command.targetTwapId != null)) {
 				if (command.targetTwapId == null) {
 					finishExecutionCommand(this.mainAddress!, command.commandId, {
 						status: 'uncertain',
@@ -665,9 +667,13 @@ class LocalExecutionClient {
 			}
 			const target = projections[0].find((order) => String(order.oid) === command.targetOrderId);
 			if (command.kind === 'cancel') {
-				finishExecutionCommand(this.mainAddress!, command.commandId, target
-					? { status: 'rejected', venueOrderIds: [command.targetOrderId!], error: 'Cancel was not applied; order remains open after restart' }
-					: { status: 'reconciled', venueOrderIds: [command.targetOrderId!] });
+				if (command.targetOrderId == null) {
+					finishExecutionCommand(this.mainAddress!, command.commandId, { status: 'uncertain', venueOrderIds: [], error: 'Cancel target identity is missing; manual reconciliation required' });
+				} else {
+					finishExecutionCommand(this.mainAddress!, command.commandId, target
+						? { status: 'rejected', venueOrderIds: [command.targetOrderId], error: 'Cancel was not applied; order remains open after restart' }
+						: { status: 'reconciled', venueOrderIds: [command.targetOrderId] });
+				}
 				continue;
 			}
 			if (command.kind === 'modify') {
@@ -697,6 +703,9 @@ class LocalExecutionClient {
 		if (unresolvedExecutionCommands(this.mainAddress!).length > 0) {
 			throw new Error('Unresolved execution outcomes require authoritative reconciliation before new trading');
 		}
+		} finally {
+			recordRecoveryLatency(recoveryStartedUs, nowUs());
+		}
 	}
 
 	private ack(commandId: string, sequence: number, receiveUs: number, sendUs: number, accepted: boolean, venueOrderIds: string[], error?: string, uncertain = false, reconciled = false): ExecutionAck {
@@ -723,7 +732,12 @@ class LocalExecutionClient {
 		void import('$lib/hl/account')
 				.then(({ refreshAccountSnapshot }) => refreshAccountSnapshot())
 				.catch(() => undefined);
-		if (uncertain) void this.reconcileUncertainCommand(commandId).catch(() => undefined);
+		if (uncertain) {
+			const recoveryStartedUs = nowUs();
+			void this.reconcileUncertainCommand(commandId)
+				.catch(() => undefined)
+				.finally(() => recordRecoveryLatency(recoveryStartedUs, nowUs()));
+		}
 		return ack;
 	}
 

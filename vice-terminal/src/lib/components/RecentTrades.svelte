@@ -14,7 +14,7 @@
 
 	<div data-testid="recent-trades" data-feed-status={$marketDataStatus} data-row-count={visibleTrades.length} data-unfiltered-row-count={$recentTrades.length} class="h-full flex flex-col bg-terminal-bg-panel">
 	<div class="h-8 px-2 border-b border-terminal-border flex items-center text-2xs">
-		<span class="text-terminal-text-secondary">Market trades</span>
+		<span class="text-terminal-text-secondary">Market trades <span data-testid="trade-window-limit" class="text-3xs text-terminal-text-muted">latest 100</span></span>
 		<select data-action-id="ui.src.lib.components.recenttrades.select.h87265ff754" aria-label="Minimum trade notional" bind:value={minimumNotional} class="ml-auto max-w-[86px] bg-terminal-bg-secondary text-3xs text-terminal-text-secondary outline-none">
 			<option value={0}>All trades</option>
 			<option value={1000}>≥ $1K</option>
@@ -26,11 +26,6 @@
 	{#if minimumNotional > 0}
 		<div data-testid="trade-notional-filter" class="px-2 py-0.5 border-b border-terminal-border text-3xs text-terminal-cyan">Showing trades ≥ ${minimumNotional.toLocaleString()}</div>
 	{/if}
-	<details data-testid="trade-liquidation-source" class="border-b border-terminal-border px-2 py-0.5 text-3xs text-terminal-text-muted">
-		<summary data-action-id="ui.src.lib.components.recenttrades.summary.h1a78dcfed1" class="cursor-pointer">Liquidation labels unavailable</summary>
-		<span role="note">Hyperliquid's public trades feed does not classify liquidation orders.</span>
-	</details>
-
 	<div class="grid grid-cols-3 px-2 py-1 text-3xs text-terminal-text-muted border-b border-terminal-border">
 		<div>Price ({quoteAsset})</div>
 		<div class="text-right">Size ({baseAsset})</div>

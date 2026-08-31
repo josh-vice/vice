@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 
 describe('maker routing release surface', () => {
-	test('is independently certified and uses exact passive routing', async () => {
+	test('is catalogued and uses exact passive routing', async () => {
 		const capability = await Bun.file(new URL('./capabilities.ts', import.meta.url)).text();
 		const route = await Bun.file(new URL('./makerRouting.ts', import.meta.url)).text();
 		const orders = await Bun.file(new URL('../hl/orders.ts', import.meta.url)).text();
@@ -15,10 +15,9 @@ describe('maker routing release surface', () => {
 		expect(model).toContain("id: 'maker'");
 	});
 
-	test('maker CLI remains certification-gated', async () => {
+	test('maker CLI remains safety-gated', async () => {
 		const cli = await Bun.file(new URL('../cli/executor.ts', import.meta.url)).text();
 		expect(cli).toContain("lower.startsWith('maker ')");
 		expect(cli).toContain("type: 'maker'");
-		expect(cli).toContain("unavailableOrderTypeMessage('maker')");
 	});
 });

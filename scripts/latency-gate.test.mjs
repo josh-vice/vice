@@ -16,6 +16,26 @@ describe('measured latency evidence boundary', () => {
 		expect(parseLatencyEvidence(valid)).toEqual(valid);
 	});
 
+	test('validates optional percentile and phase timing extensions', () => {
+		const extended = {
+			...valid,
+			samples: [{ ...valid.samples[0], storeToPaintMs: 3 }],
+			dispatchSamples: [{ ...valid.dispatchSamples[0], inputToSubmitMs: 12 }],
+			inputToSubmitSamples: [12],
+			recoverySamples: [7],
+			percentiles: {
+				sourceToStore: { count: 1, p50: 1, p95: 1, p99: 1, max: 1 },
+				storeToPaint: { count: 1, p50: 3, p95: 3, p99: 3, max: 3 },
+				feedToFrameReady: { count: 1, p50: 8, p95: 8, p99: 8, max: 8 },
+				inputToSubmit: { count: 1, p50: 12, p95: 12, p99: 12, max: 12 },
+				recovery: { count: 1, p50: 7, p95: 7, p99: 7, max: 7 }
+			}
+		};
+		expect(parseLatencyEvidence(extended)).toEqual(extended);
+		expect(() => parseLatencyEvidence({ ...extended, inputToSubmitSamples: [-1] })).toThrow('inputToSubmitSamples');
+		expect(() => parseLatencyEvidence({ ...extended, samples: [{ ...extended.samples[0], storeToPaintMs: Number.NaN }] })).toThrow('storeToPaintMs');
+	});
+
 	test('rejects missing or synthetic-shaped evidence metadata', () => {
 		for (const field of ['schemaVersion', 'source', 'network', 'capturedAt', 'runtimeHealth', 'samples']) {
 			const copy = { ...valid };

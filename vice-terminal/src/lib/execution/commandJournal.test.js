@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { assertNoUnresolvedExecutionCommands, beginExecutionCommand, clearExecutionJournal, finishExecutionCommand, loadExecutionJournal, unresolvedExecutionCommands } from './commandJournal';
+import { assertNoUnresolvedExecutionCommands, beginExecutionCommand, clearExecutionJournal, exportExecutionAudit, finishExecutionCommand, loadExecutionJournal, replayExecutionAudit, replayStoredExecutionAudit, unresolvedExecutionCommands } from './commandJournal';
 
 describe('US-002 durable execution journal', () => {
 	test('persists pending and uncertain order outcomes across reloads', () => {
@@ -51,4 +51,122 @@ describe('US-002 durable execution journal', () => {
 		]);
 		clearExecutionJournal('0x123');
 	});
+
+	test('skips malformed exported journal entries and rejects malformed replay fields', () => {
+		const malformed = { commandId: 'bad', network: 'testnet', sequence: 1, kind: 'place', cloids: [], venueOrderIds: [], status: 'accepted', updatedAt: 1 };
+		expect(() => exportExecutionAudit('0xabc', [malformed])).not.toThrow();
+		expect(exportExecutionAudit('0xabc', [malformed]).entries).toEqual([]);
+		const replay = replayExecutionAudit({
+			schema: 1,
+			kind: 'vice.execution-audit',
+			network: 'testnet',
+			account: '0xabc',
+			entries: [{ commandId: 'bad-field', sequence: 1, kind: 'modify', cloids: [], targetPrice: 100, status: 'accepted', venueOrderIds: [], updatedAt: 1 }]
+		});
+		expect(replay.valid).toBe(false);
+		expect(replay.finalState).toBe('invalid');
+	});
+
+	test('replays raw local journal identity before sanitization', () => {
+		const values = new Map();
+		globalThis.localStorage = { getItem: (key) => values.get(key) ?? null, setItem: (key, value) => values.set(key, value), removeItem: (key) => values.delete(key) };
+		values.set('vice.execution.journal.v1:testnet:0xabc', JSON.stringify([
+			{ commandId: 'wrong-network', network: 'mainnet', account: '0xabc', sequence: 1, kind: 'place', cloids: ['0x1'], status: 'accepted', venueOrderIds: [], updatedAt: 1 }
+		]));
+		const replay = replayStoredExecutionAudit('0xabc');
+		expect(replay.valid).toBe(false);
+		expect(replay.finalState).toBe('invalid');
+		expect(replay.errors.join(' ')).toContain('invalid identity');
+		clearExecutionJournal('0xabc');
+	});
+
+	test('reports malformed stored journal JSON instead of treating it as clean', () => {
+		const values = new Map();
+		globalThis.localStorage = { getItem: (key) => values.get(key) ?? null, setItem: (key, value) => values.set(key, value), removeItem: (key) => values.delete(key) };
+		values.set('vice.execution.journal.v1:testnet:0xabc', '{');
+		const replay = replayStoredExecutionAudit('0xabc');
+		expect(replay).toMatchObject({ valid: false, finalState: 'invalid', entriesReplayed: 0 });
+		expect(replay.errors).toContain('Stored execution journal is invalid JSON');
+		clearExecutionJournal('0xabc');
+	});
+
+	test('reports a non-array stored journal payload as invalid', () => {
+		const values = new Map();
+		globalThis.localStorage = { getItem: (key) => values.get(key) ?? null, setItem: (key, value) => values.set(key, value), removeItem: (key) => values.delete(key) };
+		values.set('vice.execution.journal.v1:testnet:0xabc', '{}');
+		const replay = replayStoredExecutionAudit('0xabc');
+		expect(replay).toMatchObject({ valid: false, finalState: 'invalid', entriesReplayed: 0 });
+		expect(replay.errors).toContain('Stored execution journal must be an array');
+		clearExecutionJournal('0xabc');
+	});
+
+	test('replays exported lifecycle state without mutating storage', () => {
+		const audit = {
+			schema: 1,
+			kind: 'vice.execution-audit',
+			network: 'testnet',
+			account: '0xabc',
+			entries: [
+				{ commandId: 'place-1', sequence: 1, kind: 'place', cloids: ['0x1'], status: 'accepted', venueOrderIds: ['17'], updatedAt: 1 },
+				{ commandId: 'place-2', sequence: 2, kind: 'place', cloids: ['0x2'], status: 'uncertain', venueOrderIds: [], updatedAt: 2 },
+				{ commandId: 'place-3', sequence: 3, kind: 'place', cloids: ['0x3'], status: 'reconciled', venueOrderIds: ['18'], updatedAt: 3 }
+			]
+		};
+		const replay = replayExecutionAudit(audit);
+		expect(replay).toMatchObject({
+			valid: true,
+			finalState: 'unresolved',
+			entriesReplayed: 3,
+			accepted: 1,
+			rejected: 0,
+			unknown: 1,
+			reconciled: 1,
+			unresolvedCommandIds: ['place-2'],
+			errors: []
+		});
+	});
+
+	test('replays TWAP cancellation records with their target identity', () => {
+		const replay = replayExecutionAudit({
+			schema: 1,
+			kind: 'vice.execution-audit',
+			network: 'testnet',
+			account: '0xabc',
+			entries: [{ commandId: 'twap-cancel', sequence: 1, kind: 'cancel', cloids: [], targetTwapId: 7, status: 'accepted', venueOrderIds: ['7'], updatedAt: 1 }]
+		});
+		expect(replay).toMatchObject({ valid: true, finalState: 'clean', entriesReplayed: 1, accepted: 1 });
+	});
+
+	test('reports duplicate and out-of-sequence audit records', () => {
+		const replay = replayExecutionAudit({
+			schema: 1,
+			kind: 'vice.execution-audit',
+			network: 'testnet',
+			account: '0xabc',
+			entries: [
+				{ commandId: 'duplicate', sequence: 2, kind: 'place', cloids: ['0x1'], status: 'accepted', venueOrderIds: [], updatedAt: 1 },
+				{ commandId: 'duplicate', sequence: 1, kind: 'place', cloids: ['0x2'], status: 'rejected', venueOrderIds: [], updatedAt: 2 }
+			]
+		});
+		expect(replay.valid).toBe(false);
+		expect(replay.finalState).toBe('invalid');
+		expect(replay.errors.join(' ')).toContain('duplicates commandId');
+		expect(replay.errors.join(' ')).toContain('out of sequence');
+	});
+	test('rejects distinct audit records sharing a sequence', () => {
+		const replay = replayExecutionAudit({
+			schema: 1,
+			kind: 'vice.execution-audit',
+			network: 'testnet',
+			account: '0xabc',
+			entries: [
+				{ commandId: 'place-1', sequence: 1, kind: 'place', cloids: ['0x1'], status: 'accepted', venueOrderIds: [], updatedAt: 1 },
+				{ commandId: 'place-2', sequence: 1, kind: 'place', cloids: ['0x2'], status: 'accepted', venueOrderIds: [], updatedAt: 2 }
+			]
+		});
+		expect(replay.valid).toBe(false);
+		expect(replay.finalState).toBe('invalid');
+		expect(replay.errors.join(' ')).toContain('duplicates sequence');
+	});
+
 });

@@ -20,18 +20,30 @@ describe('runtime feed latency telemetry', () => {
 		resetLatencyForTest();
 	});
 
+	test('keeps source-to-store latency non-negative under clock skew', () => {
+		resetLatencyForTest();
+		markFeedReceive('skew', 1, 20);
+		markStoreCommit('skew', 1, 10);
+		markFeedReceive('skew', 2, 30);
+		markStoreCommit('skew', 2, Number.NaN);
+		expect(latencySnapshot()).toMatchObject({ storeCount: 1, storeP50: 0 });
+		resetLatencyForTest();
+	});
+
 	test('pairs out-of-order feeds by causal key instead of FIFO position', () => {
 		resetLatencyForTest();
 		markFeedReceive('book', 1, 1);
 		markFeedReceive('book', 2, 2);
-		markStoreCommit('book', 2);
+		markStoreCommit('book', 2, 10);
 		markUiFrameReady(20);
 		expect(causalFeedLatencySamples()).toEqual([
-			expect.objectContaining({ feed: 'book', sequence: 2 })
+			expect.objectContaining({ feed: 'book', sequence: 2, storeToPaintMs: 10 })
 		]);
 		expect(causalFeedLatencySamples()).not.toEqual([
 			expect.objectContaining({ sequence: 1 })
 		]);
+		const snapshot = latencySnapshot();
+		expect(snapshot).toMatchObject({ p50: 18, p95: 18, p99: 18, storeP50: 8, storeP95: 8, storeP99: 8, storeToPaintP50: 10, storeToPaintP95: 10, storeToPaintP99: 10 });
 		resetLatencyForTest();
 	});
 

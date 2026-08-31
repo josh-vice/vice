@@ -5,8 +5,13 @@ export interface FeedKey {
 
 export interface FeedFrameReadySample extends FeedKey {
 	receivedAt: number;
+	storedAt: number;
 	frameReadyAt: number;
+	/** Source receipt to UI frame-ready latency. */
 	latencyMs: number;
+	/** Svelte-store commit to UI frame-ready latency. */
+	storeToFrameReadyMs: number;
+
 }
 
 export interface FeedStoreSample extends FeedKey {
@@ -35,7 +40,7 @@ const MAX_SAMPLES = 1024;
 const samples: FeedFrameReadySample[] = [];
 const storeSamples: FeedStoreSample[] = [];
 const pendingStoreReceives = new Map<string, { key: FeedKey; receivedAt: number }>();
-const pendingPaintReceives = new Map<string, { key: FeedKey; receivedAt: number }>();
+const pendingPaintReceives = new Map<string, { key: FeedKey; receivedAt: number; storedAt: number }>();
 let frameReadyScheduled = false;
 let lastFrameReadyAt: number | undefined;
 let runtimeObserverStop: (() => void) | undefined;
@@ -62,8 +67,10 @@ function feedKeyId(key: FeedKey): string {
 	return `${key.feed}\u0000${key.sequence}`;
 }
 
-function recordFrameReady(key: FeedKey, receivedAt: number, frameReadyAt: number): void {
-	samples.push({ ...key, receivedAt, frameReadyAt, latencyMs: frameReadyAt - receivedAt });
+function recordFrameReady(key: FeedKey, receivedAt: number, storedAt: number, frameReadyAt: number): void {
+	const latencyMs = Math.max(0, frameReadyAt - receivedAt);
+	const storeToFrameReadyMs = Math.max(0, frameReadyAt - storedAt);
+	samples.push({ ...key, receivedAt, storedAt, frameReadyAt, latencyMs, storeToFrameReadyMs });
 	if (samples.length > MAX_SAMPLES) samples.shift();
 }
 
@@ -94,16 +101,17 @@ export function dropFeedReceive(feed: string, sequence: number): void {
 	pendingPaintReceives.delete(id);
 }
 /** Mark the point at which a specific market event committed to its Svelte store. */
-export function markStoreCommit(feed: string, sequence: number): void {
+export function markStoreCommit(feed: string, sequence: number, storedAt = performance.now()): void {
 	const key = feedKey(feed, sequence);
-	if (!key) return;
-	const pending = pendingStoreReceives.get(feedKeyId(key));
+	if (!key || !Number.isFinite(storedAt)) return;
+	const id = feedKeyId(key);
+	const pending = pendingStoreReceives.get(id);
 	if (!pending) return;
-	pendingStoreReceives.delete(feedKeyId(key));
-	const storedAt = performance.now();
-	storeSamples.push({ ...key, receivedAt: pending.receivedAt, storedAt, latencyMs: storedAt - pending.receivedAt });
+	pendingStoreReceives.delete(id);
+	const latencyMs = Math.max(0, storedAt - pending.receivedAt);
+	storeSamples.push({ ...key, receivedAt: pending.receivedAt, storedAt, latencyMs });
 	if (storeSamples.length > MAX_SAMPLES) storeSamples.shift();
-	pendingPaintReceives.set(feedKeyId(key), { key, receivedAt: pending.receivedAt });
+	pendingPaintReceives.set(feedKeyId(key), { key, receivedAt: pending.receivedAt, storedAt });
 	while (pendingPaintReceives.size > MAX_SAMPLES) pendingPaintReceives.delete(pendingPaintReceives.keys().next().value!);
 	runtimeHealth.maxFrameReadyQueueDepth = Math.max(runtimeHealth.maxFrameReadyQueueDepth, pendingPaintReceives.size);
 	scheduleFrameReady();
@@ -126,24 +134,59 @@ export function markUiFrameReady(frameReadyAt = performance.now()): void {
 	}
 	lastFrameReadyAt = frameReadyAt;
 	for (const [id, pending] of pendingPaintReceives) {
-		recordFrameReady(pending.key, pending.receivedAt, frameReadyAt);
+		recordFrameReady(pending.key, pending.receivedAt, pending.storedAt, frameReadyAt);
 		pendingPaintReceives.delete(id);
 	}
 }
 
-export function latencySnapshot(): { count: number; p50: number; p99: number; max: number; storeCount: number; storeP50: number; storeP99: number; storeMax: number } {
-	if (samples.length === 0 && storeSamples.length === 0) return { count: 0, p50: 0, p99: 0, max: 0, storeCount: 0, storeP50: 0, storeP99: 0, storeMax: 0 };
+function percentile(values: number[], fraction: number): number {
+	if (values.length === 0) return 0;
+	return values[Math.min(values.length - 1, Math.floor(values.length * fraction))] ?? 0;
+}
+
+export function latencySnapshot(): {
+	count: number;
+	p50: number;
+	p95: number;
+	p99: number;
+	max: number;
+	storeCount: number;
+	storeP50: number;
+	storeP95: number;
+	storeP99: number;
+	storeMax: number;
+	storeToPaintCount: number;
+	storeToPaintP50: number;
+	storeToPaintP95: number;
+	storeToPaintP99: number;
+	storeToPaintMax: number;
+} {
+	if (samples.length === 0 && storeSamples.length === 0) {
+		return {
+			count: 0, p50: 0, p95: 0, p99: 0, max: 0,
+			storeCount: 0, storeP50: 0, storeP95: 0, storeP99: 0, storeMax: 0,
+			storeToPaintCount: 0, storeToPaintP50: 0, storeToPaintP95: 0, storeToPaintP99: 0, storeToPaintMax: 0
+		};
+	}
 	const values = samples.map((sample) => sample.latencyMs).sort((a, b) => a - b);
 	const storeValues = storeSamples.map((sample) => sample.latencyMs).sort((a, b) => a - b);
+	const storeToPaintValues = samples.map((sample) => sample.storeToFrameReadyMs).sort((a, b) => a - b);
 	return {
 		count: values.length,
-		p50: values[Math.floor(values.length * 0.5)] ?? 0,
-		p99: values[Math.min(values.length - 1, Math.floor(values.length * 0.99))] ?? 0,
-		max: values[values.length - 1] ?? 0,
+		p50: percentile(values, 0.5),
+		p95: percentile(values, 0.95),
+		p99: percentile(values, 0.99),
+		max: values.at(-1) ?? 0,
 		storeCount: storeValues.length,
-		storeP50: storeValues[Math.floor(storeValues.length * 0.5)] ?? 0,
-		storeP99: storeValues[Math.min(storeValues.length - 1, Math.floor(storeValues.length * 0.99))] ?? 0,
-		storeMax: storeValues[storeValues.length - 1] ?? 0
+		storeP50: percentile(storeValues, 0.5),
+		storeP95: percentile(storeValues, 0.95),
+		storeP99: percentile(storeValues, 0.99),
+		storeMax: storeValues.at(-1) ?? 0,
+		storeToPaintCount: storeToPaintValues.length,
+		storeToPaintP50: percentile(storeToPaintValues, 0.5),
+		storeToPaintP95: percentile(storeToPaintValues, 0.95),
+		storeToPaintP99: percentile(storeToPaintValues, 0.99),
+		storeToPaintMax: storeToPaintValues.at(-1) ?? 0
 	};
 }
 
@@ -156,11 +199,13 @@ export function feedStoreLatencySamples(): number[] {
 export function feedFrameReadyLatencySamples(): number[] {
 	return samples.map((sample) => sample.latencyMs);
 }
-export function causalFeedLatencySamples(): Array<{ feed: string; sequence: number; receiptToStoreMs: number; feedToFrameReadyMs: number }> {
+export function causalFeedLatencySamples(): Array<{ feed: string; sequence: number; receiptToStoreMs: number; storeToPaintMs: number; feedToFrameReadyMs: number }> {
 	const frameByKey = new Map(samples.map((sample) => [feedKeyId(sample), sample]));
 	return storeSamples.flatMap((sample) => {
 		const frame = frameByKey.get(feedKeyId(sample));
-		return frame ? [{ feed: sample.feed, sequence: sample.sequence, receiptToStoreMs: sample.latencyMs, feedToFrameReadyMs: frame.latencyMs }] : [];
+		return frame
+			? [{ feed: sample.feed, sequence: sample.sequence, receiptToStoreMs: sample.latencyMs, storeToPaintMs: frame.storeToFrameReadyMs, feedToFrameReadyMs: frame.latencyMs }]
+			: [];
 	});
 }
 

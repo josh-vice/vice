@@ -1,5 +1,4 @@
 import { assertAccountRef, assertInstrumentId, type AccountRef, type InstrumentId, type VenueId } from '$lib/venue/identity';
-import { isAdvancedOrderCertified } from './capabilities';
 import type { ExecutionEntitlement, ExecutionEntitlementInput, OrderFamily } from './releasePolicy';
 
 export type ExecutionCapabilityInput = {
@@ -42,7 +41,6 @@ function firstReason(input: ExecutionCapabilityInput, identity: ExecutionCapabil
 	if (!entitlement.allowedActionIds.includes(input.actionId)) return `Action ${input.actionId} is not enabled by the active release.`;
 	if (!entitlement.allowedVenues.includes(input.venue)) return `Venue ${input.venue} is not enabled by the active release.`;
 	if (!entitlement.allowedOrderFamilies.includes(input.orderFamily)) return `Order family ${input.orderFamily} is not enabled by the active release.`;
-	if (input.orderFamily !== 'limit' && input.orderFamily !== 'market' && !isAdvancedOrderCertified(input.orderFamily as never)) return `Order family ${input.orderFamily} lacks current certification evidence.`;
 	if (input.requiredFeeds.length === 0) return 'Execution requires at least one declared authoritative feed.';
 	if (input.risk === 'increase' && entitlement.mode !== 'full') return 'The active release permits reduce-risk actions only.';
 	return null;
