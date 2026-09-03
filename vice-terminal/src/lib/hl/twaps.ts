@@ -18,8 +18,9 @@ type VenueTwap = {
 };
 
 export function normalizeTwapHistory(history: VenueTwap[]): TwapJob[] {
-	return history
-		.map((item) => ({
+	const latestById = new Map<string, TwapJob>();
+	for (const item of history) {
+		const job: TwapJob = {
 			id: item.twapId == null ? `history-${item.state.timestamp}` : String(item.twapId),
 			twapId: item.twapId,
 			market: item.state.coin,
@@ -34,6 +35,9 @@ export function normalizeTwapHistory(history: VenueTwap[]): TwapJob[] {
 			updatedAt: item.time * 1000,
 			status: item.status.status === 'activated' ? ('active' as const) : item.status.status,
 			error: item.status.status === 'error' ? item.status.description : undefined
-		}))
-		.sort((a, b) => b.updatedAt - a.updatedAt);
+		};
+		const previous = latestById.get(job.id);
+		if (!previous || job.updatedAt >= previous.updatedAt) latestById.set(job.id, job);
+	}
+	return [...latestById.values()].sort((a, b) => b.updatedAt - a.updatedAt);
 }

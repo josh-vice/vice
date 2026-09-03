@@ -23,4 +23,12 @@ describe('authoritative account identity', () => {
 		expect(result.marketKey).toBeUndefined();
 		expect(result.market).toBe('BTC-USD-PERP');
 	});
+
+	test('account snapshot mapping preserves the registry default for every row', async () => {
+		const source = await Bun.file(new URL('./account.ts', import.meta.url)).text();
+		expect(source).toContain('.map((order: ViceOrder) => hydrateMarketIdentity(order))');
+		expect(source).toContain('.map((position: VicePosition) => hydrateMarketIdentity(position))');
+		expect(source).toContain('.map((fill: ViceFill) => hydrateMarketIdentity(fill))');
+		expect(source).not.toContain('.map(hydrateMarketIdentity)');
+	});
 });

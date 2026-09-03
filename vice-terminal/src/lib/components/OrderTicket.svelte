@@ -382,7 +382,7 @@ const EMPTY_ORDER_BOOK: OrderBook = { bids: [], asks: [], spread: 0, spreadPerce
 	function localDateTimeInput(value: number | undefined): string {
 		if (!value || !Number.isFinite(value)) return '';
 		const local = new Date(value - new Date(value).getTimezoneOffset() * 60_000);
-		return local.toISOString().slice(0, 16);
+		return local.toISOString().slice(0, 19);
 	}
 
 	$: if ($orderPrice != null) {
@@ -691,7 +691,7 @@ const EMPTY_ORDER_BOOK: OrderBook = { bids: [], asks: [], spread: 0, spreadPerce
 					<label class="flex items-center justify-between text-2xs"><span class="text-terminal-text-secondary">Candle interval</span><select data-action-id="ui.src.lib.components.orderticket.select.h42d329838d" value={$advancedConfig.conditionalTriggerInterval ?? $chartTimeframe} onchange={(e) => updateCfg('conditionalTriggerInterval', e.currentTarget.value as '1m' | '5m' | '15m' | '1h' | '4h' | '1D')} class="terminal-input text-2xs py-1 px-1.5"><option value="1m">1m</option><option value="5m">5m</option><option value="15m">15m</option><option value="1h">1h</option><option value="4h">4h</option><option value="1D">1D</option></select></label>
 				{/if}
 				{#if ($advancedConfig.conditionalTriggerSource ?? 'priceCross') === 'time'}
-					<label class="flex items-center justify-between text-2xs"><span class="text-terminal-text-secondary">Local fire time</span><input data-action-id="ui.src.lib.components.orderticket.input.had97eee9aa" aria-label="Conditional ladder local fire time" type="datetime-local" value={localDateTimeInput($advancedConfig.conditionalTriggerAtMs)} onchange={(e) => updateCfg('conditionalTriggerAtMs', new Date(e.currentTarget.value).getTime())} class="terminal-input text-2xs py-1 px-1.5" /></label>
+					<label class="flex items-center justify-between text-2xs"><span class="text-terminal-text-secondary">Local fire time</span><input data-action-id="ui.src.lib.components.orderticket.input.had97eee9aa" aria-label="Conditional ladder local fire time" type="datetime-local" step="1" value={localDateTimeInput($advancedConfig.conditionalTriggerAtMs)} onchange={(e) => updateCfg('conditionalTriggerAtMs', new Date(e.currentTarget.value).getTime())} class="terminal-input text-2xs py-1 px-1.5" /></label>
 				{:else}
 					{#if ($advancedConfig.conditionalTriggerSource ?? 'priceCross') === 'syntheticPair'}
 						<label class="flex items-center justify-between text-2xs"><span class="text-terminal-text-secondary">Reference market</span><input data-action-id="ui.src.lib.components.orderticket.input.h1a9f63d7ef" aria-label="Conditional pair reference market" list="conditional-pair-markets" value={$advancedConfig.conditionalPairMarketKey ?? ''} onchange={(e) => updateCfg('conditionalPairMarketKey', e.currentTarget.value)} class="w-40 terminal-input text-2xs py-1 px-1.5" placeholder="Exact market key" /><datalist id="conditional-pair-markets">{#each $marketRegistry.filter((market) => market.marketKey !== $selectedMarket?.marketKey) as market (market.marketKey)}<option value={market.marketKey}>{market.apiCoin}</option>{/each}</datalist></label>
@@ -786,6 +786,7 @@ const EMPTY_ORDER_BOOK: OrderBook = { bids: [], asks: [], spread: 0, spreadPerce
 		{#if $orderType === 'break_even'}
 			<div class="bg-terminal-bg rounded p-2 space-y-1.5">
 				<span class="text-3xs text-terminal-text-muted uppercase">Break-even protection</span>
+				<label class="flex items-center justify-between text-2xs"><span class="text-terminal-text-secondary">Entry price</span><input data-action-id="ui.src.lib.components.orderticket.input.h4b8b2e64f1" type="number" value={$advancedConfig.breakEvenEntryPrice ?? $selectedPosition?.entryPrice ?? $selectedMarket?.lastPrice ?? 0} oninput={(e) => updateCfg('breakEvenEntryPrice', +e.currentTarget.value)} class="w-24 terminal-input text-2xs py-1 px-1.5 text-right" step="0.1" /></label>
 				<label class="flex items-center justify-between text-2xs"><span class="text-terminal-text-secondary">Trigger distance</span><input data-action-id="ui.src.lib.components.orderticket.input.h03a8b51df9" type="number" value={$advancedConfig.breakEvenTrigger ?? 0} oninput={(e) => updateCfg('breakEvenTrigger', +e.currentTarget.value)} class="w-20 terminal-input text-2xs py-1 px-1.5 text-right" min="0.00000001" step="0.1" /></label>
 				<label class="flex items-center justify-between text-2xs"><span class="text-terminal-text-secondary">Entry offset</span><input data-action-id="ui.src.lib.components.orderticket.input.h06a78dbec8" type="number" value={$advancedConfig.breakEvenOffset ?? 0} oninput={(e) => updateCfg('breakEvenOffset', +e.currentTarget.value)} class="w-20 terminal-input text-2xs py-1 px-1.5 text-right" min="0" step="0.1" /></label>
 				<label class="flex items-center gap-2 text-2xs text-terminal-text-secondary"><input data-action-id="ui.src.lib.components.orderticket.input.h4df9c435a5" type="checkbox" checked={$advancedConfig.deadmanEnabled ?? false} onchange={(e) => updateCfg('deadmanEnabled', e.currentTarget.checked)} class="accent-terminal-red" /><span>Arm account-wide dead-man switch</span></label>
@@ -979,6 +980,9 @@ const EMPTY_ORDER_BOOK: OrderBook = { bids: [], asks: [], spread: 0, spreadPerce
 		</div>
 		{#if tradingKillSwitchActive()}
 			<p class="text-3xs text-terminal-red mb-1.5">{tradingKillSwitchMessage()}</p>
+		{/if}
+		{#if submitError}
+			<p data-testid="order-submit-error" role="alert" class="text-3xs text-terminal-red mb-1.5">{submitError}</p>
 		{/if}
 		{#if $isConnected && $executionStatus !== 'live'}
 			<p class="text-3xs text-terminal-text-muted mb-1.5">

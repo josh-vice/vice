@@ -95,7 +95,7 @@ export async function seedMarketTaxonomyFixture(page) {
 	});
 	await page.addInitScript(() => {
 		const perp = {
-			marketKey: 'perp:BTC', apiCoin: 'BTC', assetId: 0, kind: 'corePerp', dex: null,
+			marketKey: 'perp:BTC', apiCoin: 'BTC', assetId: 3, kind: 'corePerp', dex: null,
 			baseToken: 'BTC', quoteToken: 'USD', szDecimals: 5, priceDecimals: 1, maxLeverage: 50,
 			symbol: 'BTC-USD-PERP', name: 'BTC Perpetual', type: 'perp', lastPrice: 70000,
 			change24h: 100, changePercent24h: 0.14, volume24h: 1000000
@@ -110,7 +110,7 @@ export async function seedMarketTaxonomyFixture(page) {
 			symbol: 'BTC-USDC', name: 'BTC / USDC', type: 'spot', maxLeverage: undefined
 		};
 		localStorage.setItem('vice.hl.market-catalog.v1', JSON.stringify({
-			network: 'mainnet', savedAt: Date.now(), markets: [perp, hip3, spot]
+			network: 'testnet', savedAt: Date.now(), markets: [perp, hip3, spot]
 		}));
 	});
 }

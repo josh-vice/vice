@@ -17,7 +17,7 @@ import { recordDispatchLatency, recordExecutionAck, recordRecoveryLatency } from
 import { deterministicCloid, reservePersistedSequence, sequenceStorageKey } from './commandIdentity';
 import { withOneTransportRetry } from './retryPolicy';
 import { parseVenueError } from './venueErrors';
-import { venueError, venueIds } from './venueResponse';
+import { venueCancelOutcome, venueError, venueIds, venueResponseHasAcceptedPendingStatuses } from './venueResponse';
 import { marketMatches } from '$lib/chart/chartModel';
 import { executionOwnerLease, executionOwnerScope } from './executionOwner';
 import { assertTradingAllowed, assertFreshExecutionState } from './releaseSafety';
@@ -200,17 +200,20 @@ class LocalExecutionClient {
 		try {
 			const response = await withOneTransportRetry(() => exchange.order({
 				orders,
-				// Venue-managed positionTpsl keeps exit size proportional to the
-				// authoritative position through partial fills, reconnects, and
-				// position changes. normalTpsl is fixed-size and can over-close a
-				// partially filled entry.
-				grouping: intent.orderType === 'bracket' ? 'positionTpsl' : 'na'
+				// Brackets are order-form parent/child groups. Hyperliquid's
+				// positionTpsl grouping accepts standalone TP/SL orders for an
+				// existing position; it rejects an entry mixed into the group.
+				// normalTpsl is the venue grouping for an entry plus its fixed-size
+				// TP/SL children.
+				grouping: intent.orderType === 'bracket' ? 'normalTpsl' : 'na'
 			}, { expiresAfter }));
 			const error = venueError(response);
 			const orderIds = venueIds(response);
-				const outcome = classifyVenueResponse(error, orderIds, orders.length);
-				finishExecutionCommand(this.mainAddress!, commandId, { status: outcome.status, venueOrderIds: orderIds, error: outcome.error });
-				return this.ack(commandId, sequence, receiveUs, sendUs, outcome.accepted, orderIds, outcome.error, outcome.uncertain);
+			const outcome = intent.orderType === 'bracket' && !error && venueResponseHasAcceptedPendingStatuses(response, orders.length, orderIds)
+				? { status: 'accepted' as const, accepted: true, uncertain: false }
+				: classifyVenueResponse(error, orderIds, orders.length);
+			finishExecutionCommand(this.mainAddress!, commandId, { status: outcome.status, venueOrderIds: orderIds, error: outcome.error });
+			return this.ack(commandId, sequence, receiveUs, sendUs, outcome.accepted, orderIds, outcome.error, outcome.uncertain);
 		} catch (error) {
 			const reconciled = await this.reconcileCloids(cloids);
 			if (reconciled.complete) {
@@ -222,7 +225,12 @@ class LocalExecutionClient {
 				finishExecutionCommand(this.mainAddress!, commandId, { status: 'uncertain', venueOrderIds: reconciled.orderIds, error: errorMessage });
 				return this.ack(commandId, sequence, receiveUs, sendUs, false, reconciled.orderIds, errorMessage, true);
 			}
-			finishExecutionCommand(this.mainAddress!, commandId, { status: 'uncertain', venueOrderIds: [], error: `Execution outcome uncertain: ${parseVenueError(error).message}` });
+			const semanticError = parseVenueError(error);
+			if (semanticError.code !== 'unknown' && !semanticError.retryable) {
+				finishExecutionCommand(this.mainAddress!, commandId, { status: 'rejected', venueOrderIds: [], error: semanticError.message });
+				return this.ack(commandId, sequence, receiveUs, sendUs, false, [], semanticError.message, false, false);
+			}
+			finishExecutionCommand(this.mainAddress!, commandId, { status: 'uncertain', venueOrderIds: [], error: `Execution outcome uncertain: ${semanticError.message}` });
 			return this.ack(
 				commandId,
 				sequence,
@@ -230,7 +238,7 @@ class LocalExecutionClient {
 				sendUs,
 				false,
 				[],
-				`Execution outcome uncertain: ${parseVenueError(error).message}`,
+				`Execution outcome uncertain: ${semanticError.message}`,
 				true,
 				false
 			);
@@ -250,9 +258,14 @@ class LocalExecutionClient {
 		const expiresAfter = executionExpiresAfter();
 		beginExecutionCommand({ commandId, network: hyperliquidNetwork.network, account: this.mainAddress!, sequence, kind: 'cancel', cloids: [], targetOrderId: orderId, venueOrderIds: [] });
 		try {
-			await exchange.cancel({ cancels: [{ a: market.assetId, o: Number(orderId) }] }, { expiresAfter });
-			finishExecutionCommand(this.mainAddress!, commandId, { status: 'accepted', venueOrderIds: [orderId] });
-			return this.ack(commandId, sequence, receiveUs, sendUs, true, [orderId]);
+			const response = await exchange.cancel({ cancels: [{ a: market.assetId, o: Number(orderId) }] }, { expiresAfter });
+			const outcome = venueCancelOutcome(response);
+			if (!outcome.accepted) {
+				finishExecutionCommand(this.mainAddress!, commandId, { status: outcome.uncertain ? 'uncertain' : 'rejected', venueOrderIds: [orderId], error: outcome.error });
+				return this.ack(commandId, sequence, receiveUs, sendUs, false, [orderId], outcome.error, outcome.uncertain === true, false);
+			}
+			finishExecutionCommand(this.mainAddress!, commandId, { status: outcome.reconciled ? 'reconciled' : 'accepted', venueOrderIds: [orderId] });
+			return this.ack(commandId, sequence, receiveUs, sendUs, true, [orderId], undefined, false, outcome.reconciled);
 		} catch (error) {
 			const status = await this.orderStatus(Number(orderId));
 			if (status?.status === 'order' && status.order.status !== 'open' && status.order.status !== 'triggered') {
@@ -298,18 +311,24 @@ class LocalExecutionClient {
 					t: params.randomize
 				}
 			}, { expiresAfter });
-				const status = response.response.data.status;
-				if ('error' in status) {
-					const errorMessage = parseVenueError(String(status.error)).message;
-					finishExecutionCommand(this.mainAddress!, commandId, { status: 'rejected', venueOrderIds: [], error: errorMessage });
-					return this.ack(commandId, sequence, receiveUs, sendUs, false, [], errorMessage);
+			const status = response.response.data.status;
+			if ('error' in status) {
+				const errorMessage = parseVenueError(String(status.error)).message;
+				finishExecutionCommand(this.mainAddress!, commandId, { status: 'rejected', venueOrderIds: [], error: errorMessage });
+				return this.ack(commandId, sequence, receiveUs, sendUs, false, [], errorMessage);
 			}
 			const twapId = String(status.running.twapId);
 			finishExecutionCommand(this.mainAddress!, commandId, { status: 'accepted', venueOrderIds: [twapId] });
 			return this.ack(commandId, sequence, receiveUs, sendUs, true, [twapId]);
 		} catch (error) {
-			finishExecutionCommand(this.mainAddress!, commandId, { status: 'uncertain', venueOrderIds: [], error: error instanceof Error ? error.message : 'TWAP outcome uncertain' });
-			return this.ack(commandId, sequence, receiveUs, sendUs, false, [], error instanceof Error ? error.message : 'TWAP failed', true);
+			const semanticError = parseVenueError(error);
+			if (semanticError.code !== 'unknown' && !semanticError.retryable) {
+				finishExecutionCommand(this.mainAddress!, commandId, { status: 'rejected', venueOrderIds: [], error: semanticError.message });
+				return this.ack(commandId, sequence, receiveUs, sendUs, false, [], semanticError.message, false, false);
+			}
+			const message = semanticError.code === 'unknown' ? semanticError.message : `TWAP outcome uncertain: ${semanticError.message}`;
+			finishExecutionCommand(this.mainAddress!, commandId, { status: 'uncertain', venueOrderIds: [], error: message });
+			return this.ack(commandId, sequence, receiveUs, sendUs, false, [], message, true);
 		}
 	}
 
@@ -326,7 +345,14 @@ class LocalExecutionClient {
 		const expiresAfter = executionExpiresAfter();
 		beginExecutionCommand({ commandId, network: hyperliquidNetwork.network, account: this.mainAddress!, sequence, kind: 'cancel', cloids: [], targetTwapId: twapId, venueOrderIds: [] });
 		try {
-			await exchange.twapCancel({ a: market.assetId, t: twapId }, { expiresAfter });
+			const response = await exchange.twapCancel({ a: market.assetId, t: twapId }, { expiresAfter });
+			const status = response.response?.data?.status;
+			if (status !== 'success') {
+				const detail = typeof status === 'object' && status !== null && typeof (status as { error?: unknown }).error === 'string'
+					? parseVenueError(String((status as { error: string }).error)).message
+					: 'TWAP cancel response did not contain exactly one authoritative status';
+				throw new Error(detail);
+			}
 			finishExecutionCommand(this.mainAddress!, commandId, { status: 'accepted', venueOrderIds: [String(twapId)] });
 			return this.ack(commandId, sequence, receiveUs, sendUs, true, [String(twapId)]);
 		} catch (error) {
@@ -339,8 +365,9 @@ class LocalExecutionClient {
 				finishExecutionCommand(this.mainAddress!, commandId, { status: 'rejected', venueOrderIds: [String(twapId)], error: 'Cancel was not applied; TWAP remains active' });
 				return this.ack(commandId, sequence, receiveUs, sendUs, false, [String(twapId)], 'Cancel was not applied; TWAP remains active', false, true);
 			}
-			finishExecutionCommand(this.mainAddress!, commandId, { status: 'uncertain', venueOrderIds: [], error: `TWAP cancel outcome uncertain: ${error instanceof Error ? error.message : 'transport failure'}` });
-			return this.ack(commandId, sequence, receiveUs, sendUs, false, [], `TWAP cancel outcome uncertain: ${error instanceof Error ? error.message : 'transport failure'}`, true);
+			const message = `TWAP cancel outcome uncertain: ${error instanceof Error ? error.message : 'transport failure'}`;
+			finishExecutionCommand(this.mainAddress!, commandId, { status: 'uncertain', venueOrderIds: [], error: message });
+			return this.ack(commandId, sequence, receiveUs, sendUs, false, [], message, true);
 		}
 	}
 
@@ -428,9 +455,9 @@ class LocalExecutionClient {
 			const response = await withOneTransportRetry(() => exchange.order({ orders, grouping: 'na' }, { expiresAfter }));
 			const error = venueError(response);
 			const orderIds = venueIds(response);
-				const outcome = classifyVenueResponse(error, orderIds, orders.length);
-				finishExecutionCommand(this.mainAddress!, commandId, { status: outcome.status, venueOrderIds: orderIds, error: outcome.error });
-				return this.ack(commandId, sequence, receiveUs, sendUs, outcome.accepted, orderIds, outcome.error, outcome.uncertain);
+			const outcome = classifyVenueResponse(error, orderIds, orders.length);
+			finishExecutionCommand(this.mainAddress!, commandId, { status: outcome.status, venueOrderIds: orderIds, error: outcome.error });
+			return this.ack(commandId, sequence, receiveUs, sendUs, outcome.accepted, orderIds, outcome.error, outcome.uncertain);
 		} catch (error) {
 			const reconciled = await this.reconcileCloids(cloids);
 			if (reconciled.complete) {
@@ -442,8 +469,13 @@ class LocalExecutionClient {
 				finishExecutionCommand(this.mainAddress!, commandId, { status: 'uncertain', venueOrderIds: reconciled.orderIds, error: errorMessage });
 				return this.ack(commandId, sequence, receiveUs, sendUs, false, reconciled.orderIds, errorMessage, true);
 			}
-			finishExecutionCommand(this.mainAddress!, commandId, { status: 'uncertain', venueOrderIds: [], error: `Scale outcome uncertain: ${parseVenueError(error).message}` });
-			return this.ack(commandId, sequence, receiveUs, sendUs, false, [], `Scale outcome uncertain: ${parseVenueError(error).message}`, true);
+			const semanticError = parseVenueError(error);
+			if (semanticError.code !== 'unknown' && !semanticError.retryable) {
+				finishExecutionCommand(this.mainAddress!, commandId, { status: 'rejected', venueOrderIds: [], error: semanticError.message });
+				return this.ack(commandId, sequence, receiveUs, sendUs, false, [], semanticError.message, false, false);
+			}
+			finishExecutionCommand(this.mainAddress!, commandId, { status: 'uncertain', venueOrderIds: [], error: `Scale outcome uncertain: ${semanticError.message}` });
+			return this.ack(commandId, sequence, receiveUs, sendUs, false, [], `Scale outcome uncertain: ${semanticError.message}`, true);
 		}
 	}
 
@@ -555,6 +587,22 @@ class LocalExecutionClient {
 		} catch {
 			return null;
 		}
+	}
+
+	/** Read one child outcome when a snapshot no longer contains its open row. */
+	async getOrderOutcome(orderId: string): Promise<{ status: 'open' | 'filled' | 'closed' | 'unknown'; filled: number; remaining: number }> {
+		const projection = await this.orderStatus(Number(orderId));
+		if (!projection || projection.status !== 'order') return { status: 'unknown', filled: 0, remaining: 0 };
+		const order = projection.order.order;
+		const original = Number(order.origSz);
+		const remaining = Number(order.sz);
+		const validSizes = Number.isFinite(original) && Number.isFinite(remaining) && original >= 0 && remaining >= 0 && remaining <= original;
+		const filled = validSizes ? Math.max(0, original - remaining) : 0;
+		const status = projection.order.status;
+		if (status === 'filled') return { status: 'filled', filled, remaining: 0 };
+		if (!validSizes) return { status: 'unknown', filled: 0, remaining: 0 };
+		if (status === 'open' || status === 'triggered') return { status: 'open', filled, remaining };
+		return { status: 'closed', filled, remaining };
 	}
 
 	/** Query the complete venue order projection for lost-ack recovery. */

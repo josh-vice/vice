@@ -57,6 +57,7 @@ async function tick(jobId: string): Promise<void> {
 		return;
 	}
 	const { localExecution } = await import('./localExecution');
+	if (!running.has(jobId)) return;
 	if (!localExecution.isReady()) {
 		save(transitionLocalAlgoJob(job, 'paused', 'Secure trading is locked; resume after unlocking the local agent'));
 		stopTimer(jobId);
@@ -81,11 +82,25 @@ async function tick(jobId: string): Promise<void> {
 		let current = get(openOrders).find((order) => order.id === job!.currentOrderId);
 		if (!current) {
 			await import('$lib/hl/orders').then(({ fetchOpenOrders }) => fetchOpenOrders());
+			if (!running.has(jobId)) return;
 			current = get(openOrders).find((order) => order.id === job!.currentOrderId);
 		}
 		if (!current) {
-			const filled = get(fills).filter((fill) => fill.orderId === job!.currentOrderId).reduce((sum, fill) => sum + fill.size, 0);
-				const remaining = Math.max(0, job!.remainingSize - filled);
+			const currentOrderId = job.currentOrderId;
+			const outcome = await localExecution.getOrderOutcome(currentOrderId);
+			if (!running.has(jobId)) return;
+			// Do not clear the child identity while the venue still reports an open
+			// order. That state can include a partial fill and must not trigger a
+			// replacement child.
+			if (outcome.status === 'open') return;
+			if (outcome.status === 'unknown') {
+				save(transitionLocalAlgoJob(job, 'paused', 'Child order outcome is unknown; reconcile before replacing it'));
+				stopTimer(jobId);
+				return;
+			}
+			const observedFilled = Math.max(get(fills).filter((fill) => fill.orderId === currentOrderId).reduce((sum, fill) => sum + fill.size, 0), outcome.filled);
+			const filled = Math.min(job!.remainingSize, observedFilled);
+			const remaining = Math.max(0, job!.remainingSize - filled);
 			if (remaining <= 0) {
 				save(transitionLocalAlgoJob({ ...job, remainingSize: 0 }, 'completed'));
 				if (job.deadmanMs) await localExecution.clearDeadman();
@@ -102,19 +117,45 @@ async function tick(jobId: string): Promise<void> {
 			stopTimer(jobId);
 			return;
 		}
-		job = { ...job, remainingSize: Math.min(job.remainingSize, current.remaining), updatedAt: Date.now() };
-		save(job);
-		const cancelled = await import('$lib/hl/orders').then(({ cancelOrder }) => cancelOrder(current!.id, job!.apiCoin));
-		if (!cancelled.ok) {
+		const cancelled = await localExecution.cancelOrder(market, current.id);
+		if (!running.has(jobId)) return;
+		if (!cancelled.accepted) {
 			save(transitionLocalAlgoJob(job, 'failed', cancelled.error ?? 'Could not cancel previous child order'));
 			stopTimer(jobId);
 			return;
 		}
-		job = { ...job, currentOrderId: undefined, chases: job.chases + 1, updatedAt: Date.now() };
+		// A cancel can race a fill. Re-read the terminal order projection before
+		// clearing the child identity; otherwise a stale residual size could be
+		// submitted a second time after the original child filled.
+		const cancelledOutcome = await localExecution.getOrderOutcome(current.id);
+		if (!running.has(jobId)) return;
+		if (cancelledOutcome.status === 'open' || cancelledOutcome.status === 'unknown') {
+			save(transitionLocalAlgoJob(job, 'paused', cancelledOutcome.status === 'open'
+				? 'Previous child remains open after cancellation; reconcile before replacing it'
+				: 'Previous child cancellation outcome is unknown; reconcile before replacing it'));
+			stopTimer(jobId);
+			return;
+		}
+		const cancelledFilled = cancelledOutcome.status === 'filled'
+			? Math.max(job.remainingSize, cancelledOutcome.filled)
+			: Math.min(job.remainingSize, cancelledOutcome.filled);
+		const remainingAfterCancel = Math.max(0, job.remainingSize - cancelledFilled);
+		if (remainingAfterCancel <= 0) {
+			save(transitionLocalAlgoJob({ ...job, remainingSize: 0 }, 'completed'));
+			if (job.deadmanMs) await localExecution.clearDeadman();
+			stopTimer(jobId);
+			return;
+		}
+		job = { ...job, currentOrderId: undefined, remainingSize: remainingAfterCancel, chases: job.chases + 1, updatedAt: Date.now() };
 		save(job);
 	}
+	if (!running.has(jobId)) return;
 	if (job.deadmanMs) {
 		const deadman = await localExecution.armDeadman(job.deadmanMs);
+		if (!running.has(jobId)) {
+			if (deadman.accepted) await localExecution.clearDeadman();
+			return;
+		}
 		if (!deadman.accepted) {
 			save(transitionLocalAlgoJob(job, 'failed', deadman.error ?? 'Dead-man switch could not be armed before child placement'));
 			stopTimer(jobId);
@@ -122,6 +163,7 @@ async function tick(jobId: string): Promise<void> {
 		}
 	}
 
+	if (!running.has(jobId)) return;
 	const dispatching = { ...job, pendingChildCommandId: crypto.randomUUID(), updatedAt: Date.now() };
 	save(dispatching);
 	const ack = await localExecution.placeOrder(market, {
@@ -135,14 +177,24 @@ async function tick(jobId: string): Promise<void> {
 		commandId: dispatching.pendingChildCommandId
 	});
 	if (!ack.accepted || ack.venueOrderIds.length !== 1) {
-		save({ ...transitionLocalAlgoJob(dispatching, ack.uncertain ? 'paused' : 'failed', ack.error ?? 'Chase child placement failed'), pendingChildCommandId: ack.uncertain ? dispatching.pendingChildCommandId : undefined });
-		stopTimer(jobId);
+		if (running.has(jobId)) {
+			save({ ...transitionLocalAlgoJob(dispatching, ack.uncertain ? 'paused' : 'failed', ack.error ?? 'Chase child placement failed'), pendingChildCommandId: ack.uncertain ? dispatching.pendingChildCommandId : undefined });
+			stopTimer(jobId);
+		}
+		return;
+	}
+	if (!running.has(jobId)) {
+		await localExecution.cancelOrder(market, ack.venueOrderIds[0]);
 		return;
 	}
 	const next = { ...dispatching, pendingChildCommandId: undefined, currentOrderId: ack.venueOrderIds[0], childOrderIds: [...dispatching.childOrderIds, ack.venueOrderIds[0]], updatedAt: Date.now() };
 	save(next);
 	if (next.deadmanMs) {
 		const deadman = await localExecution.armDeadman(next.deadmanMs);
+		if (!running.has(jobId)) {
+			if (deadman.accepted) await localExecution.clearDeadman();
+			return;
+		}
 		if (!deadman.accepted) {
 			save(transitionLocalAlgoJob(next, 'failed', deadman.error ?? 'Dead-man switch could not be armed'));
 			stopTimer(jobId);
@@ -162,7 +214,7 @@ function startTimer(jobId: string): void {
 	running.add(jobId);
 	timers.set(jobId, setInterval(() => void tickGuard.run(jobId, () => tick(jobId)).catch((error) => {
 		const job = loadLocalAlgoJobs('chase').find((candidate) => candidate.id === jobId);
-		if (job) save(transitionLocalAlgoJob(job, 'failed', error instanceof Error ? error.message : 'Chase tick failed'));
+		if (job?.status === 'running') save(transitionLocalAlgoJob(job, 'failed', error instanceof Error ? error.message : 'Chase tick failed'));
 		stopTimer(jobId);
 	}), 250));
 	void tickGuard.run(jobId, () => tick(jobId));
@@ -180,17 +232,19 @@ export async function startChase(market: MarketDescriptor, params: ChaseParams):
 	};
 	save(job);
 	running.add(id);
-	await tick(id);
+	try {
+		await tick(id);
+	} catch (error) {
+		const current = loadLocalAlgoJobs('chase').find((candidate) => candidate.id === id);
+		if (current?.status === 'running') save(transitionLocalAlgoJob(current, 'paused', error instanceof Error ? error.message : 'Chase could not start'));
+		stopTimer(id);
+	}
 	const started = loadLocalAlgoJobs('chase').find((candidate) => candidate.id === id);
 	if (!started || started.status !== 'running' || !started.currentOrderId) {
 		stopTimer(id);
 		return { ok: false, error: started?.error ?? 'Chase could not place its first child order' };
 	}
-	timers.set(id, setInterval(() => void tickGuard.run(id, () => tick(id)).catch((error) => {
-		const current = loadLocalAlgoJobs('chase').find((candidate) => candidate.id === id);
-		if (current) save(transitionLocalAlgoJob(current, 'failed', error instanceof Error ? error.message : 'Chase tick failed'));
-		stopTimer(id);
-	}), 250));
+	startTimer(id);
 	return { ok: true, jobId: id };
 }
 

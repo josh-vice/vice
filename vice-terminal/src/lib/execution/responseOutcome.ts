@@ -19,15 +19,21 @@ export function classifyVenueResponse(
 	expectedOrderCount: number
 ): VenueResponseOutcome {
 	const partial = venueOrderIds.length > 0 && venueOrderIds.length < expectedOrderCount;
-	if (error || partial) {
-		const uncertain = venueOrderIds.length > 0;
+	const countMismatch = venueOrderIds.length !== expectedOrderCount;
+	if (error || countMismatch) {
+		// An empty, non-error response is not proof of rejection: the venue may
+		// have accepted a child while the response was truncated. Conversely,
+		// extra IDs are also unsafe to treat as a complete expected batch.
+		const uncertain = venueOrderIds.length > 0 || !error;
 		return {
 			status: uncertain ? 'uncertain' : 'rejected',
 			accepted: false,
 			uncertain,
 			error: partial
 				? `Partial venue acceptance (${venueOrderIds.length}/${expectedOrderCount}); ${error ?? 'authoritative child status is required'}`
-				: error
+				: error ?? (countMismatch
+					? `Venue response contained ${venueOrderIds.length}/${expectedOrderCount} venue order ids; authoritative child status is required`
+					: undefined)
 		};
 	}
 	return { status: 'accepted', accepted: true, uncertain: false };

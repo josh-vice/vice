@@ -1,6 +1,6 @@
 import type { ISubscription } from '@nktkas/hyperliquid';
 import { get } from 'svelte/store';
-import type { MarketDescriptor } from '$lib/types';
+import type { Fill as ViceFill, MarketDescriptor, Order as ViceOrder, Position as VicePosition } from '$lib/types';
 import { getTradingSubscriptionClient, getTradingTransport } from './client';
 import {
 	activeSubaccount,
@@ -37,9 +37,12 @@ const snapshotCoordinator = createSnapshotCoordinator(async (): Promise<boolean>
 		if (!response.ok) throw new Error('Account snapshot failed');
 		const snapshot = await response.json();
 		if (address !== currentAddress || generation !== accountGeneration) return false;
-		openOrders.set((snapshot.orders ?? []).map(hydrateMarketIdentity));
-		positions.set((snapshot.positions ?? []).map(hydrateMarketIdentity));
-		fills.set((snapshot.fills ?? []).map(hydrateMarketIdentity));
+		// Do not pass hydrateMarketIdentity directly to Array.map: map supplies
+		// the numeric index as the second argument, which would override the
+		// registry default and fail with `registry.find is not a function`.
+		openOrders.set((snapshot.orders ?? []).map((order: ViceOrder) => hydrateMarketIdentity(order)));
+		positions.set((snapshot.positions ?? []).map((position: VicePosition) => hydrateMarketIdentity(position)));
+		fills.set((snapshot.fills ?? []).map((fill: ViceFill) => hydrateMarketIdentity(fill)));
 		twapJobs.set(snapshot.twaps ?? []);
 		balances.set(snapshot.balances ?? []);
 		activeSubaccount.update((account) => ({ ...account, ...(snapshot.account ?? {}) }));

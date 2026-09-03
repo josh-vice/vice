@@ -296,8 +296,9 @@ export interface AdvancedOrderConfig {
 	takeProfit?: number;
 	stopLoss?: number;
 	triggerPrice?: number;
-	// Trailing
+	// Trailing / break-even protection
 	trailOffset?: number;
+	breakEvenEntryPrice?: number;
 	breakEvenTrigger?: number;
 	breakEvenOffset?: number;
 	// Ping pong

@@ -5,10 +5,11 @@ import {
 	deriveSpotAssetId,
 	applyPerpCategories,
 	indexNamedPerpDexes,
-	createCoreBtcBootstrapMarket
-	, hyperliquidInstrumentId
-	, canonicalSpotAssets
-	, canonicalSpotSizeDecimals
+	createCoreBtcBootstrapMarket,
+	coreBtcAssetId,
+	hyperliquidInstrumentId,
+	canonicalSpotAssets,
+	canonicalSpotSizeDecimals
 } from './markets';
 
 describe('Hyperliquid market identity', () => {
@@ -102,7 +103,9 @@ describe('Hyperliquid market identity', () => {
 		const market = createCoreBtcBootstrapMarket();
 		expect(market.marketKey).toBe('perp:BTC');
 		expect(market.apiCoin).toBe('BTC');
-		expect(market.assetId).toBe(0);
+		expect(coreBtcAssetId('mainnet')).toBe(0);
+		expect(coreBtcAssetId('testnet')).toBe(3);
+		expect(market.assetId).toBe(coreBtcAssetId());
 		expect(market.lastPrice).toBe(0);
 		expect(market.volume24h).toBe(0);
 	});
@@ -110,7 +113,9 @@ describe('Hyperliquid market identity', () => {
 	test('warm catalog uses only validated same-network authoritative identities', async () => {
 		const source = await Bun.file(new URL('./markets.ts', import.meta.url)).text();
 		expect(source).toContain("const MARKET_CATALOG_CACHE_KEY = 'vice.hl.market-catalog.v1';");
-		expect(source).toContain("parsed.network !== hyperliquidPublicNetwork.network");
+		expect(source).toContain("parsed.network !== hyperliquidTradingNetwork.network");
+		expect(source).toContain('const transport = new HttpTransport({ isTestnet: hyperliquidTradingNetwork.isTestnet });');
+		expect(source).not.toContain('hyperliquidPublicNetwork.isTestnet');
 		expect(source).toContain("marketCatalogStatus.set('stale');");
 		expect(source).toContain("marketCatalogStatus.set(hasWarmCatalog ? 'stale' : 'connecting');");
 		expect(source).toContain('writeCachedMarketCatalog(markets);');

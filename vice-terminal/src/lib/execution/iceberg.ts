@@ -9,6 +9,7 @@ import { recoverPendingChildDispatch } from './childDispatchRecovery';
 
 type IcebergParams = { side: 'buy' | 'sell'; totalSize: number; displaySize: number; price: number; deadmanMs?: number };
 const timers = new Map<string, ReturnType<typeof setInterval>>();
+const running = new Set<string>();
 const tickGuard = createTickGuard();
 
 function sync(): void { localAlgoJobs.set(loadLocalAlgoJobs()); }
@@ -24,12 +25,14 @@ function stop(jobId: string): void {
 	const timer = timers.get(jobId);
 	if (timer) clearInterval(timer);
 	timers.delete(jobId);
+	running.delete(jobId);
 }
 
 async function tick(jobId: string): Promise<void> {
 	let job = loadLocalAlgoJobs('iceberg').find((candidate) => candidate.id === jobId);
 	if (!job || job.status !== 'running') { stop(jobId); return; }
 	const { localExecution } = await import('./localExecution');
+	if (!running.has(jobId)) return;
 	if (!localExecution.isReady()) {
 		save(transitionLocalAlgoJob(job, 'paused', 'Secure trading is locked; resume after unlocking the local agent'));
 		stop(jobId);
@@ -46,14 +49,23 @@ async function tick(jobId: string): Promise<void> {
 	if (job.currentOrderId) {
 		let current = get(openOrders).find((order) => order.id === job!.currentOrderId);
 		if (!current) {
+			const currentOrderId = job.currentOrderId;
 			await import('$lib/hl/orders').then(({ fetchOpenOrders }) => fetchOpenOrders());
-			current = get(openOrders).find((order) => order.id === job!.currentOrderId);
+			if (!running.has(jobId)) return;
+			current = get(openOrders).find((order) => order.id === currentOrderId);
 		}
 		if (current) return;
-		const sliceFilled = get(fills)
-			.filter((fill) => fill.orderId === job!.currentOrderId)
-			.reduce((sum, fill) => sum + fill.size, 0);
-		if (sliceFilled <= 0) {
+		const currentOrderId = job.currentOrderId;
+		const outcome = await localExecution.getOrderOutcome(currentOrderId);
+		if (!running.has(jobId)) return;
+		// Keep the current child when the authoritative venue still reports it
+		// open; the local account projection may simply be behind.
+		if (outcome.status === 'open') return;
+		const observedSliceFilled = Math.max(get(fills)
+			.filter((fill) => fill.orderId === currentOrderId)
+			.reduce((sum, fill) => sum + fill.size, 0), outcome.filled);
+		const sliceFilled = Math.min(job.remainingSize, observedSliceFilled);
+		if (sliceFilled <= 0 || outcome.status === 'unknown') {
 			save(transitionLocalAlgoJob(job, 'paused', 'Iceberg child disappeared without an authoritative fill'));
 			stop(jobId);
 			return;
@@ -72,18 +84,27 @@ async function tick(jobId: string): Promise<void> {
 	const sliceSize = Math.min(job.displaySize, job.remainingSize);
 	if (job.deadmanMs) {
 		const deadman = await localExecution.armDeadman(job.deadmanMs);
+		if (!running.has(jobId)) {
+			if (deadman.accepted) await localExecution.clearDeadman();
+			return;
+		}
 		if (!deadman.accepted) {
 			save(transitionLocalAlgoJob(job, 'failed', deadman.error ?? 'Dead-man switch could not be armed before child placement'));
 			stop(jobId);
 			return;
 		}
 	}
+	if (!running.has(jobId)) return;
 	const dispatching = { ...job, pendingChildCommandId: crypto.randomUUID(), updatedAt: Date.now() };
 	save(dispatching);
 	const ack = await localExecution.placeOrder(market, {
 		coin: market.apiCoin, isBuy: job.side === 'buy', size: sliceSize, limitPrice: job.price,
 		reduceOnly: false, tif: 'Gtc', orderType: 'limit', commandId: dispatching.pendingChildCommandId
 	});
+	if (!running.has(jobId)) {
+		for (const orderId of ack.venueOrderIds) await localExecution.cancelOrder(market, orderId);
+		return;
+	}
 	if (!ack.accepted || ack.venueOrderIds.length !== 1) {
 		save({ ...transitionLocalAlgoJob(dispatching, ack.uncertain ? 'paused' : 'failed', ack.error ?? 'Iceberg child placement failed'), pendingChildCommandId: ack.uncertain ? dispatching.pendingChildCommandId : undefined });
 		stop(jobId);
@@ -93,6 +114,10 @@ async function tick(jobId: string): Promise<void> {
 	save(placed);
 	if (placed.deadmanMs) {
 		const deadman = await localExecution.armDeadman(placed.deadmanMs);
+		if (!running.has(jobId)) {
+			if (deadman.accepted) await localExecution.clearDeadman();
+			return;
+		}
 		if (!deadman.accepted) {
 			save(transitionLocalAlgoJob(placed, 'failed', deadman.error ?? 'Dead-man switch could not be armed'));
 			stop(jobId);
@@ -102,9 +127,10 @@ async function tick(jobId: string): Promise<void> {
 
 function startTimer(jobId: string): void {
 	if (timers.has(jobId)) return;
+	running.add(jobId);
 	timers.set(jobId, setInterval(() => void tickGuard.run(jobId, () => tick(jobId)).catch((error) => {
 		const job = loadLocalAlgoJobs('iceberg').find((candidate) => candidate.id === jobId);
-		if (job) save(transitionLocalAlgoJob(job, 'failed', error instanceof Error ? error.message : 'Iceberg reconciliation failed'));
+		if (job?.status === 'running') save(transitionLocalAlgoJob(job, 'failed', error instanceof Error ? error.message : 'Iceberg reconciliation failed'));
 		stop(jobId);
 	}), 500));
 	void tickGuard.run(jobId, () => tick(jobId));
@@ -120,8 +146,15 @@ export async function startIceberg(market: MarketDescriptor, params: IcebergPara
 		price: params.price, dispatchRecoveryVersion: 1, childOrderIds: [], filledSize: 0, deadmanMs: params.deadmanMs,
 		status: 'running', createdAt: Date.now(), updatedAt: Date.now()
 	};
+	running.add(job.id);
 	save(job);
-	await tick(job.id);
+	try {
+		await tick(job.id);
+	} catch (error) {
+		const current = loadLocalAlgoJobs('iceberg').find((candidate) => candidate.id === job.id);
+		if (current?.status === 'running') save(transitionLocalAlgoJob(current, 'paused', error instanceof Error ? error.message : 'Iceberg could not start'));
+		stop(job.id);
+	}
 	const started = loadLocalAlgoJobs('iceberg').find((candidate) => candidate.id === job.id);
 	if (!started || started.status !== 'running' || !started.currentOrderId) {
 		stop(job.id);
@@ -144,6 +177,7 @@ export async function resumeIceberg(jobId: string): Promise<void> {
 	if (job.restartRecoveryRequired) return;
 	const recovered = recoverPendingDispatch(job);
 	if (recovered.pendingChildCommandId) return;
+	running.add(jobId);
 	save({ ...recovered, status: 'running', error: undefined, updatedAt: Date.now() });
 	startTimer(jobId);
 }

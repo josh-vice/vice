@@ -22,6 +22,6 @@ describe('local execution account boundary', () => {
 		const start = source.indexOf('async cancelOrder(');
 		const end = source.indexOf('\n\tasync placeTwap(', start);
 		const block = source.slice(start, end);
-		expect(block).toContain('return this.ack(commandId, sequence, receiveUs, sendUs, true, [orderId]);');
+		expect(block).toContain('return this.ack(commandId, sequence, receiveUs, sendUs, true, [orderId], undefined, false, outcome.reconciled);');
 	});
 });

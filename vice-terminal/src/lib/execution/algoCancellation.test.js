@@ -12,6 +12,15 @@ describe('US-004 child cancellation safety', () => {
 		expect(result).toEqual({ ok: false, error: 'venue timeout' });
 	});
 
+	test('continues attempting later children after an earlier failure', async () => {
+		const seen = [];
+		await expect(cancelAlgoChildren(['11', '12'], async (id) => {
+			seen.push(id);
+			return id === '11' ? { ok: false, error: 'timeout' } : { ok: true };
+		})).resolves.toEqual({ ok: false, error: 'timeout' });
+		expect(seen).toEqual(['11', '12']);
+	});
+
 	test('does not transmit for absent child IDs', async () => {
 		let calls = 0;
 		await expect(cancelAlgoChildren([undefined], async () => { calls += 1; return { ok: true }; })).resolves.toEqual({ ok: true });

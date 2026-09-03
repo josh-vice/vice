@@ -15,9 +15,13 @@ import {
 } from '$lib/stores';
 import type { MarketDescriptor } from '$lib/types';
 import { assertInstrumentId, type InstrumentId } from '$lib/venue/identity';
-import { hyperliquidPublicNetwork } from './network';
+import { hyperliquidTradingNetwork } from './network';
 
-const transport = new HttpTransport({ isTestnet: hyperliquidPublicNetwork.isTestnet });
+// Execution descriptors must be built from the account/execution network. The
+// read-only public feed may intentionally be split to another network, but
+// Hyperliquid asset IDs are network-specific (for example BTC is 0 on
+// mainnet and 3 on testnet).
+const transport = new HttpTransport({ isTestnet: hyperliquidTradingNetwork.isTestnet });
 let refreshPromise: Promise<MarketDescriptor[]> | null = null;
 let refreshTimer: ReturnType<typeof setInterval> | null = null;
 const baselineWaiters: Array<(markets: MarketDescriptor[]) => void> = [];
@@ -41,7 +45,7 @@ export function readCachedMarketCatalog(): MarketDescriptor[] {
 		const parsed = JSON.parse(localStorage.getItem(MARKET_CATALOG_CACHE_KEY) ?? 'null') as CachedMarketCatalog | null;
 		if (
 			!parsed ||
-			parsed.network !== hyperliquidPublicNetwork.network ||
+			parsed.network !== hyperliquidTradingNetwork.network ||
 			!Array.isArray(parsed.markets) ||
 			parsed.markets.length === 0 ||
 			parsed.markets.length > 10_000 ||
@@ -63,7 +67,7 @@ function writeCachedMarketCatalog(markets: MarketDescriptor[]): void {
 	try {
 		localStorage.setItem(
 			MARKET_CATALOG_CACHE_KEY,
-			JSON.stringify({ network: hyperliquidPublicNetwork.network, savedAt: Date.now(), markets })
+			JSON.stringify({ network: hyperliquidTradingNetwork.network, savedAt: Date.now(), markets })
 		);
 	} catch {
 		// Cache is an optimization only; storage quotas/private browsing must not
@@ -163,11 +167,16 @@ export function deriveSpotAssetId(index: number): number {
 	return 10_000 + index;
 }
 
+/** BTC's core-perp index is network-specific; never reuse mainnet asset 0 on testnet. */
+export function coreBtcAssetId(network = hyperliquidTradingNetwork.network): number {
+	return network === 'testnet' ? 3 : 0;
+}
+
 export function createCoreBtcBootstrapMarket(): MarketDescriptor {
 	return withHyperliquidInstrument({
 		marketKey: 'perp:BTC',
 		apiCoin: 'BTC',
-		assetId: 0,
+		assetId: coreBtcAssetId(),
 		kind: 'corePerp',
 		dex: null,
 		baseToken: 'BTC',

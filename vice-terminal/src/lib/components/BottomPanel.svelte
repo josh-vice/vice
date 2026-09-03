@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { positions, openOrders, fills, bottomPanelTab, marketRegistry, twapJobs, localAlgoJobs, deadmanStatus, isConnected, walletAddress, accountSyncStatus, orderBook, selectedMarket, selectMarket, selectMarketForExecution } from '$lib/stores';
+	import { positions, openOrders, fills, bottomPanelTab, marketRegistry, twapJobs, localAlgoJobs, deadmanStatus, isConnected, walletAddress, accountSyncStatus, orderBook, selectedMarket, selectMarket, selectMarketForExecution, balances, totalEquity } from '$lib/stores';
 	import { exportExecutionAudit, replayStoredExecutionAudit } from '$lib/execution/commandJournal';
 	import { executionTelemetry } from '$lib/execution/telemetry';
 	import { automationTriggerTelemetry } from '$lib/execution/automationTelemetry';
@@ -361,6 +361,10 @@
 	$: visiblePositions = privateStateLive ? $positions : [];
 	$: visibleOrders = privateStateLive ? $openOrders : [];
 	$: visibleFills = privateStateLive ? $fills : [];
+	$: visibleBalances = privateStateLive ? $balances : [];
+	function formatBalanceNumber(value: number): string {
+		return Number.isFinite(value) ? value.toLocaleString('en-US', { maximumFractionDigits: 8 }) : '—';
+	}
 	$: totalUnrealizedPnl = privateStateLive ? $positions.reduce((sum, p) => sum + p.unrealizedPnl, 0) : 0;
 	function positionDescriptor(positionId: string) {
 		const position = $positions.find((candidate) => candidate.id === positionId);
@@ -405,6 +409,9 @@
 			<button data-action-id="ui.src.lib.components.bottompanel.button.hea0249a068" role="tab" aria-selected={$bottomPanelTab === 'twaps'} aria-controls="account-panel-content"
 				class="px-3 py-1.5 text-2xs font-medium border-b-2 {$bottomPanelTab === 'twaps' ? 'border-terminal-cyan text-terminal-cyan' : 'border-transparent text-terminal-text-secondary hover:text-terminal-text'}"
 				onclick={() => bottomPanelTab.set('twaps')}>TWAP ({$privacyMode ? '—' : $twapJobs.filter((job) => job.status === 'active').length})</button>
+			<button data-action-id="ui.src.lib.components.bottompanel.button.balances-tab" role="tab" aria-selected={$bottomPanelTab === 'balances'} aria-controls="account-panel-content"
+				class="px-3 py-1.5 text-2xs font-medium border-b-2 {$bottomPanelTab === 'balances' ? 'border-terminal-cyan text-terminal-cyan' : 'border-transparent text-terminal-text-secondary hover:text-terminal-text'}"
+				onclick={() => bottomPanelTab.set('balances')}>Balances</button>
 			<button data-action-id="ui.src.lib.components.bottompanel.button.ha633966a3d" role="tab" aria-selected={$bottomPanelTab === 'fills'} aria-controls="account-panel-content"
 				class="px-3 py-1.5 text-2xs font-medium border-b-2 {$bottomPanelTab === 'fills' ? 'border-terminal-cyan text-terminal-cyan' : 'border-transparent text-terminal-text-secondary hover:text-terminal-text'}"
 				onclick={() => bottomPanelTab.set('fills')}>Trade History</button>
@@ -651,6 +658,38 @@
 					<td class="cell-md text-right"><div class="flex justify-end gap-1">{#if job.type === 'chase'}{#if job.status === 'running'}<button data-action-id="ui.src.lib.components.bottompanel.button.h57d9501fb8" class="px-1.5 py-0.5 rounded bg-terminal-yellow/15 text-terminal-yellow" onclick={() => pauseChase(job.id)}>PAUSE</button>{:else if !job.restartRecoveryRequired && (job.status === 'paused' || job.status === 'failed')}<button data-action-id="ui.src.lib.components.bottompanel.button.h2117e2c558" class="px-1.5 py-0.5 rounded bg-terminal-green/15 text-terminal-green" onclick={() => resumeChase(job.id)}>RESUME</button>{/if}{#if ['running', 'paused', 'failed'].includes(job.status)}<button data-action-id="ui.src.lib.components.bottompanel.button.h1dc7bd5bdb" class="px-1.5 py-0.5 rounded bg-terminal-red/15 text-terminal-red" onclick={() => cancelChase(job.id)}>CANCEL</button><button data-action-id="ui.src.lib.components.bottompanel.button.h8df941a259" class="px-1.5 py-0.5 rounded bg-terminal-red/30 text-terminal-red" onclick={() => cancelChase(job.id, true)}>STOP</button>{/if}{:else if job.type === 'oco'}{#if job.status === 'running'}<button data-action-id="ui.src.lib.components.bottompanel.button.hb133adb8b9" class="px-1.5 py-0.5 rounded bg-terminal-yellow/15 text-terminal-yellow" onclick={() => pauseOco(job.id)}>PAUSE</button>{:else if !job.restartRecoveryRequired && (job.status === 'paused' || job.status === 'failed')}<button data-action-id="ui.src.lib.components.bottompanel.button.he7c3267146" class="px-1.5 py-0.5 rounded bg-terminal-green/15 text-terminal-green" onclick={() => resumeOco(job.id)}>RESUME</button>{/if}{#if ['running', 'paused', 'failed'].includes(job.status)}<button data-action-id="ui.src.lib.components.bottompanel.button.he5f4993d5b" class="px-1.5 py-0.5 rounded bg-terminal-red/15 text-terminal-red" onclick={() => cancelOco(job.id)}>CANCEL</button><button data-action-id="ui.src.lib.components.bottompanel.button.h9bf2be05d2" class="px-1.5 py-0.5 rounded bg-terminal-red/30 text-terminal-red" onclick={() => cancelOco(job.id, true)}>STOP</button>{/if}{:else if job.type === 'trailing'}{#if job.status === 'running'}<button data-action-id="ui.src.lib.components.bottompanel.button.h5181a6d51e" class="px-1.5 py-0.5 rounded bg-terminal-yellow/15 text-terminal-yellow" onclick={() => pauseTrailing(job.id)}>PAUSE</button>{:else if !job.restartRecoveryRequired && (job.status === 'paused' || job.status === 'failed')}<button data-action-id="ui.src.lib.components.bottompanel.button.hfafa552fd3" class="px-1.5 py-0.5 rounded bg-terminal-green/15 text-terminal-green" onclick={() => resumeTrailing(job.id)}>RESUME</button>{/if}{#if ['running', 'paused', 'failed'].includes(job.status)}<button data-action-id="ui.src.lib.components.bottompanel.button.h53e5af7576" class="px-1.5 py-0.5 rounded bg-terminal-red/15 text-terminal-red" onclick={() => cancelTrailing(job.id)}>CANCEL</button><button data-action-id="ui.src.lib.components.bottompanel.button.h5069ee0c59" class="px-1.5 py-0.5 rounded bg-terminal-red/30 text-terminal-red" onclick={() => cancelTrailing(job.id, true)}>STOP</button>{/if}{:else}{#if job.status === 'running'}<button data-action-id="ui.src.lib.components.bottompanel.button.hbab67be478" class="px-1.5 py-0.5 rounded bg-terminal-yellow/15 text-terminal-yellow" onclick={() => pauseAlgo(job.id, job.type)}>PAUSE</button>{:else if canResumeAlgo(job)}<button data-action-id="ui.src.lib.components.bottompanel.button.h8a38e6a903" class="px-1.5 py-0.5 rounded bg-terminal-green/15 text-terminal-green" onclick={() => resumeAlgo(job.id, job.type)}>RESUME</button>{/if}{#if ['running', 'paused', 'failed'].includes(job.status)}<button data-action-id="ui.src.lib.components.bottompanel.button.h978e5b7f74" class="px-1.5 py-0.5 rounded bg-terminal-red/15 text-terminal-red" onclick={() => cancelAlgo(job.id, job.type)}>CANCEL</button><button data-action-id="ui.src.lib.components.bottompanel.button.h5b4fbba339" class="px-1.5 py-0.5 rounded bg-terminal-red/30 text-terminal-red" onclick={() => cancelAlgo(job.id, job.type, true)}>STOP</button>{/if}{/if}</div></td>
 				</tr>{/each}</tbody>
 			</table>
+		{:else if $bottomPanelTab === 'balances'}
+			<div class="px-3 py-1.5 border-b border-terminal-border flex items-center justify-between gap-2 text-3xs text-terminal-text-muted">
+				<span>Perp account value plus spot token balances. USDC row is the perp collateral.</span>
+				{#if privateStateLive}
+					<span class="font-mono text-terminal-text">Account Equity <span class="text-terminal-green">${$totalEquity.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></span>
+				{/if}
+			</div>
+			<table class="w-full text-2xs">
+				<thead class="sticky top-0 bg-terminal-bg-secondary"><tr class="text-terminal-text-muted">
+					<th class="cell-md text-left font-normal">Asset</th>
+					<th class="cell-md text-right font-normal">Total</th>
+					<th class="cell-md text-right font-normal">Available</th>
+					<th class="cell-md text-right font-normal">In Orders</th>
+					<th class="cell-md text-right font-normal">Unrealized P&L</th>
+					<th class="cell-md text-right font-normal">Equity</th>
+				</tr></thead>
+				<tbody>
+					{#each visibleBalances as balance (balance.asset)}
+						<tr class="border-b border-terminal-border/30 hover:bg-terminal-bg-hover">
+							<td class="cell-md font-medium text-terminal-cyan">{balance.asset}</td>
+							<td class="cell-md text-right font-mono">{formatBalanceNumber(balance.total)}</td>
+							<td class="cell-md text-right font-mono">{formatBalanceNumber(balance.available)}</td>
+							<td class="cell-md text-right font-mono">{formatBalanceNumber(balance.inOrders)}</td>
+							<td class="cell-md text-right font-mono {balance.unrealizedPnl >= 0 ? 'text-terminal-green' : 'text-terminal-red'}">{balance.unrealizedPnl >= 0 ? '+' : ''}{formatBalanceNumber(balance.unrealizedPnl)}</td>
+							<td class="cell-md text-right font-mono">{formatBalanceNumber(balance.equity)}</td>
+						</tr>
+					{/each}
+				</tbody>
+			</table>
+			{#if privateStateLive && visibleBalances.length === 0}
+				<div class="flex items-center justify-center h-32 text-terminal-text-muted text-sm">No balances found for this account.</div>
+			{/if}
 		{:else if $bottomPanelTab === 'fills'}
 			<table class="w-full text-2xs">
 				<thead class="sticky top-0 bg-terminal-bg-secondary"><tr class="text-terminal-text-muted">

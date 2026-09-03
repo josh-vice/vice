@@ -280,7 +280,7 @@ const DEFAULT_ADVANCED_CONFIG: AdvancedOrderConfig = {
 export const advancedConfig: Writable<AdvancedOrderConfig> = writable({ ...DEFAULT_ADVANCED_CONFIG });
 
 // UI state
-export const bottomPanelTab: Writable<'positions' | 'orders' | 'twaps' | 'algos' | 'fills'> = writable('positions');
+export const bottomPanelTab: Writable<'positions' | 'orders' | 'twaps' | 'algos' | 'balances' | 'fills'> = writable('positions');
 export const bottomPanelHeight: Writable<number> = writable(250);
 export const searchQuery: Writable<string> = writable('');
 export const hotkeysEnabled: Writable<boolean> = writable(true);

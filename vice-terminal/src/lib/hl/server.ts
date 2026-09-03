@@ -7,7 +7,8 @@ import { boundedReadMap } from './boundedReads';
 let publicInfoClient: InfoClient | null = null;
 let tradingInfoClient: InfoClient | null = null;
 export const READ_TIMEOUT_MS = 10_000;
-export const READ_RETRY_DELAY_MS = 100;
+export const READ_RETRY_DELAY_MS = 250;
+export const READ_RATE_LIMIT_DELAY_MS = 2_000;
 const PERP_DEX_CACHE_MS = 5 * 60_000;
 const EVIDENCE_CORE_ONLY =
 	hyperliquidTradingNetwork.isTestnet && (process.env as Record<string, string | undefined>).VICE_HL_EVIDENCE_CORE_ONLY === 'true';
@@ -29,8 +30,11 @@ export async function withReadTimeout<T>(label: string, operation: () => Promise
 	}
 }
 
-/** Retry only idempotent public reads; never use this boundary for mutations. */
-export async function withReadRetry<T>(label: string, operation: () => Promise<T>, attempts = 2): Promise<T> {
+/** Retry only idempotent public reads; never use this boundary for mutations.
+ * Hyperliquid throttles the shared Info API with 429s; treating those as
+ * fatal here both killed the SvelteKit dev server (unhandled rejection) and
+ * permanently degraded account sync. Back off hard on 429, softly otherwise. */
+export async function withReadRetry<T>(label: string, operation: () => Promise<T>, attempts = 3): Promise<T> {
 	let lastError: unknown;
 	for (let attempt = 0; attempt < attempts; attempt += 1) {
 		try {
@@ -38,11 +42,16 @@ export async function withReadRetry<T>(label: string, operation: () => Promise<T
 		} catch (error) {
 			lastError = error;
 			if (attempt === attempts - 1) throw error;
-			await new Promise((resolve) => setTimeout(resolve, READ_RETRY_DELAY_MS * 2 ** attempt));
+			const errorText = `${error instanceof Error ? error.message : ''} ${error instanceof Error && error.cause instanceof Error ? error.cause.message : ''}`;
+			const delayMs = /429|rate.?limit|too many requests/i.test(errorText)
+				? READ_RATE_LIMIT_DELAY_MS * (attempt + 1)
+				: READ_RETRY_DELAY_MS * 2 ** attempt;
+			await new Promise((resolve) => setTimeout(resolve, delayMs));
 		}
 	}
 	throw lastError instanceof Error ? lastError : new Error(`${label} failed`);
 }
+
 
 function getPublicReadOnlyInfo(): InfoClient {
 	if (!publicInfoClient) {
@@ -184,8 +193,8 @@ export async function fetchHlBook(coin: string): Promise<{ coin: string; bestBid
 		// Info API for an unnecessarily large book during startup and makes the
 		// smoke/proxy read use the same venue shape as the live surface.
 		const book = await getPublicReadOnlyInfo().l2Book({ coin, nSigFigs: 5 });
-			const bids = book?.levels?.[0] ?? [];
-			const asks = book?.levels?.[1] ?? [];
+		const bids = book?.levels?.[0] ?? [];
+		const asks = book?.levels?.[1] ?? [];
 		const bestBid = bids[0] ? Number(bids[0].px) : 0;
 		const bestAsk = asks[0] ? Number(asks[0].px) : 0;
 		return { coin, bestBid, bestAsk, spread: bestAsk - bestBid, timestamp: Date.now() };
@@ -263,9 +272,9 @@ export async function fetchHlAccountSnapshotUnbounded(address: string) {
 	const user = address as `0x${string}`;
 	const [perpSlices, spotState, userFills, twapHistory] = await Promise.all([
 		fetchPerpAccountSlices(address),
-		client.spotClearinghouseState({ user }),
-		client.userFills({ user }),
-		client.twapHistory({ user })
+		withReadRetry('Hyperliquid spot clearinghouse state', () => client.spotClearinghouseState({ user })),
+		withReadRetry('Hyperliquid user fills', () => client.userFills({ user })),
+		withReadRetry('Hyperliquid twap history', () => client.twapHistory({ user }))
 	]);
 	const orders = mapPerpOrders(perpSlices);
 	const positions = mapPerpPositions(perpSlices);

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from 'bun:test';
-import { assertFreshExecutionState, assertTradingAllowed, setRemoteReleaseHalt, tradingKillSwitchActive } from './releaseSafety.ts';
+import { assertFreshExecutionState, assertTradingAllowed, setRemoteReleaseHalt, startReleasePolicyMonitor, tradingKillSwitchActive } from './releaseSafety.ts';
 
 afterEach(() => setRemoteReleaseHalt(false));
 
@@ -21,5 +21,10 @@ describe('release safety policy', () => {
 	test('keeps reduce-risk recovery available during a remote halt', () => {
 		setRemoteReleaseHalt(true);
 		expect(() => assertTradingAllowed('false', 'reduce')).not.toThrow();
+	});
+	test('does not apply the mainnet policy monitor to testnet execution', () => {
+		const stop = startReleasePolicyMonitor('0x0000000000000000000000000000000000000001');
+		expect(tradingKillSwitchActive('false')).toBe(false);
+		stop();
 	});
 });

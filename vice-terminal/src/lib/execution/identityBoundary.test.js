@@ -27,7 +27,8 @@ describe('execution identity boundary', () => {
 	test('order entry requires the selected live feed to match the exact requested market', async () => {
 		const source = await Bun.file(new URL('../hl/orders.ts', import.meta.url)).text();
 		expect(source).toContain("market.marketKey !== descriptor.marketKey");
-		expect(source).toContain('const marketPrice = params.price ?? descriptor.lastPrice ?? 0;');
+		expect(source).toContain('const bookPrice = params.side === \'buy\' ? get(orderBook).asks[0]?.price : get(orderBook).bids[0]?.price;');
+		expect(source).toContain('const marketPrice = params.price ?? bookPrice ?? descriptor.lastPrice ?? 0;');
 		expect(source).toContain("selected.marketKey !== market.marketKey");
 	});
 	test('algorithm entry rejects metadata-only markets before importing local execution', async () => {

@@ -290,9 +290,9 @@ and must never affect trading or live feeds on failure.
 ## 6. Venue-native persistence (authoritative, not stored by Vice)
 
 - Surface: accepted Hyperliquid orders — limit, market, stop, stop-limit,
-  bracket, and native TWAP — live on the venue after acceptance and survive
-  browser close. Disclosed on the order ticket before submission (venue-native
-  set: `['limit','market','stop','stop_limit','bracket','twap']`; disclosure
+  bracket, maker route, and native TWAP — live on the venue after acceptance
+  and survive browser close. Disclosed on the order ticket before submission
+  (venue-native set: `['limit','market','stop','stop_limit','bracket','twap','maker']`; disclosure
   copy: "The venue manages this order after it is accepted. It can survive
   this browser closing.").
 - Role: the venue is the authoritative record; Vice reads venue state via the

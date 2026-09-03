@@ -1,5 +1,5 @@
 import { get } from 'svelte/store';
-import { selectedMarket, marketRegistry, openOrders, walletAddress, orderBook } from '$lib/stores';
+import { accountSyncStatus, isConnected, marketDataStatus, selectedMarket, marketRegistry, openOrders, walletAddress, orderBook } from '$lib/stores';
 import type { MarketDescriptor, OrderSide, OrderType } from '$lib/types';
 import type { ExecutionAck } from '$lib/execution/client';
 import { refreshAccountSnapshot } from './account';
@@ -64,9 +64,14 @@ export async function placeOrder(params: PlaceOrderParams): Promise<{ ok: boolea
 	let ack: ExecutionAck | undefined;
 	try {
 		const { localExecution } = await import('$lib/execution/localExecution');
-		const marketPrice = params.price ?? descriptor.lastPrice ?? 0;
+		const bookPrice = params.side === 'buy' ? get(orderBook).asks[0]?.price : get(orderBook).bids[0]?.price;
+		const marketPrice = params.price ?? bookPrice ?? descriptor.lastPrice ?? 0;
+		// Hyperliquid market orders are bounded IOC-style limits. Anchor the
+		// bound to the authoritative live crossing quote, not the mark/oracle
+		// (which can diverge materially on testnet), so a normal market order
+		// neither rests as a far-away order nor violates the venue oracle band.
 		const executionPrice = params.type === 'market'
-			? marketPrice * (params.side === 'buy' ? 1.03 : 0.97)
+			? marketPrice * (params.side === 'buy' ? 1.001 : 0.999)
 			: marketPrice;
 		const autoTakeProfitError = !params.reduceOnly && params.type !== 'stop' && params.type !== 'stop_limit'
 			? validateAutoTakeProfit(params.side, executionPrice, params.autoTakeProfit)
@@ -210,6 +215,12 @@ export async function startAlgoOrder(params: PlaceOrderParams): Promise<{ ok: bo
 	if (!selected || selected.marketKey !== market.marketKey) {
 		return { ok: false, error: 'Select the requested market so its live feed is authoritative before trading' };
 	}
+	try {
+		const { assertFreshExecutionState } = await import('$lib/execution/releaseSafety');
+		assertFreshExecutionState(get(isConnected), get(accountSyncStatus), get(marketDataStatus));
+	} catch (error) {
+		return { ok: false, error: error instanceof Error ? error.message : 'Trading is paused until authoritative state is live' };
+	}
 	if (params.type !== 'twap' && params.type !== 'adaptive_twap' && params.type !== 'vwap' && params.type !== 'pov' && params.type !== 'break_even' && params.type !== 'maker' && params.type !== 'conditional_ladder' && params.type !== 'scale' && params.type !== 'chase' && params.type !== 'oco' && params.type !== 'trailing_stop' && params.type !== 'iceberg' && params.type !== 'swarm' && params.type !== 'ping_pong') {
 		return { ok: false, error: 'This algorithm is unavailable until signed child-intent orchestration is complete.' };
 	}
@@ -325,7 +336,7 @@ export async function startAlgoOrder(params: PlaceOrderParams): Promise<{ ok: bo
 			return withAttempt(startBreakEven(market, {
 				side: params.side,
 				size: params.size,
-				entryPrice: Number(params.algo?.config.entryPrice ?? params.price ?? market.lastPrice),
+				entryPrice: Number(params.algo?.config.breakEvenEntryPrice ?? params.algo?.config.entryPrice ?? params.price ?? market.lastPrice),
 				triggerDistance: Number(params.algo?.config.breakEvenTrigger ?? 0),
 				offset: Number(params.algo?.config.breakEvenOffset ?? 0),
 				deadmanMs: params.algo?.config.deadmanEnabled ? Number(params.algo?.config.deadmanMs ?? 30_000) : undefined

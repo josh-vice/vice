@@ -15,4 +15,12 @@ describe('US-004 OCO reconciliation', () => {
 	test('pauses on unexplained child disappearance', () => {
 		expect(reconcileOcoChildren({ takeProfitOpen: false, stopLossOpen: true, takeProfitFilled: false, stopLossFilled: false }).state).toBe('paused');
 	});
+	test('does not hide a partial sibling fill behind a complete child', () => {
+		const decision = reconcileOcoChildren({ takeProfitOpen: false, stopLossOpen: true, takeProfitFilled: true, stopLossFilled: false, stopLossPartiallyFilled: true });
+		expect(decision).toEqual({ state: 'paused', reason: 'Both OCO children traded; reconcile the resulting position' });
+	});
+	test('pauses when both children report fills or one outcome is unknown', () => {
+		expect(reconcileOcoChildren({ takeProfitOpen: false, stopLossOpen: false, takeProfitFilled: true, stopLossFilled: true })).toEqual({ state: 'paused', reason: 'Both OCO children report fills; reconcile the resulting position' });
+		expect(reconcileOcoChildren({ takeProfitOpen: true, stopLossOpen: true, takeProfitFilled: false, stopLossFilled: false, stopLossUnknown: true })).toEqual({ state: 'paused', reason: 'An OCO child outcome is unknown; reconcile before changing protection' });
+	});
 });

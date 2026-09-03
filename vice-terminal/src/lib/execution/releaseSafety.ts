@@ -26,6 +26,14 @@ export function setRemoteReleaseHalt(halted: boolean): void {
 	}
 }
 export function startReleasePolicyMonitor(wallet: string, intervalMs = 5_000): () => void {
+	// Release policy is a mainnet entitlement boundary. Testnet execution is
+	// intentionally local and must not be halted just because the production
+	// policy endpoint is absent in local development.
+	if (hyperliquidNetwork.network !== 'mainnet') {
+		stopReleasePolicyMonitor();
+		setRemoteReleaseHalt(false);
+		return () => undefined;
+	}
 	if (typeof window === 'undefined') return () => undefined;
 	const poll = async () => {
 		try {

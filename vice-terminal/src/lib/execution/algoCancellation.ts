@@ -9,9 +9,14 @@ export async function cancelAlgoChildren(
 	orderIds: Array<string | undefined>,
 	cancel: (orderId: string) => Promise<ChildCancelResult>
 ): Promise<ChildCancelResult> {
+	let firstError: string | undefined;
 	for (const orderId of orderIds.filter((value): value is string => Boolean(value))) {
-		const result = await cancel(orderId);
-		if (!result.ok) return { ok: false, error: result.error ?? `Child order ${orderId} cancellation was not confirmed` };
+		try {
+			const result = await cancel(orderId);
+			if (!result.ok) firstError ??= result.error ?? `Child order ${orderId} cancellation was not confirmed`;
+		} catch (error) {
+			firstError ??= error instanceof Error ? error.message : `Child order ${orderId} cancellation was not confirmed`;
+		}
 	}
-	return { ok: true };
+	return firstError ? { ok: false, error: firstError } : { ok: true };
 }

@@ -18,6 +18,16 @@ describe('batched venue response safety', () => {
 		expect(result.uncertain).toBe(true);
 	});
 
+	test('treats an empty non-error response as uncertain', () => {
+		const result = classifyVenueResponse(undefined, [], 1);
+		expect(result).toEqual({
+			status: 'uncertain',
+			accepted: false,
+			uncertain: true,
+			error: 'Venue response contained 0/1 venue order ids; authoritative child status is required'
+		});
+	});
+
 	test('keeps a complete rejection deterministic and retry-free', () => {
 		expect(classifyVenueResponse('insufficient margin', [], 2)).toEqual({
 		status: 'rejected',

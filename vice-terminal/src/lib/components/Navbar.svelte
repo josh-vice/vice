@@ -271,12 +271,9 @@
 					<div class="w-1.5 h-1.5 rounded-full {healthColor($walletStatus)}"></div>
 					<span class="text-xs font-mono">{$privacyMode ? '••••••' : formatAddress($walletAddress)}</span>
 				</div>
-				<button data-action-id="wallet.disconnect" class="p-1.5 rounded text-terminal-text-secondary hover:text-terminal-red hover:bg-terminal-red-bg" onclick={disconnectWallet} title="Disconnect">
-					<LogOut class="w-4 h-4" />
-				</button>
-				<button data-action-id="auth.logout" class="p-1.5 rounded text-terminal-text-secondary hover:text-terminal-red hover:bg-terminal-red-bg" onclick={logoutBeta} title="Log out of beta session" aria-label="Log out of beta session">
-					<LogOut class="w-4 h-4" />
-				</button>
+			<button data-action-id="auth.logout" class="p-1.5 rounded text-terminal-text-secondary hover:text-terminal-red hover:bg-terminal-red-bg" onclick={logoutBeta} title="Log out" aria-label="Log out">
+				<LogOut class="w-4 h-4" />
+			</button>
 			</div>
 		{:else}
 			<button data-action-id="ui.src.lib.components.navbar.button.h8b70c2a332"

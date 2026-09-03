@@ -49,7 +49,7 @@ export const QUICK_ORDER_TYPES: OrderTypeDefinition[] = [
 	{ id: 'bracket', label: 'TP/SL', desc: 'Entry with take-profit & stop-loss' }
 ];
 
-export const VENUE_NATIVE_ORDER_TYPES = new Set<OrderType>(['limit', 'market', 'stop', 'stop_limit', 'bracket', 'twap']);
+export const VENUE_NATIVE_ORDER_TYPES = new Set<OrderType>(['limit', 'market', 'stop', 'stop_limit', 'bracket', 'twap', 'maker']);
 
 export function persistenceClass(type: OrderType): { label: string; detail: string; local: boolean } {
 	if (VENUE_NATIVE_ORDER_TYPES.has(type)) {
