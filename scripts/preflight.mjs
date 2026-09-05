@@ -14,10 +14,17 @@ for await (const relative of glob.scan({ cwd: resolve(root, 'vice-terminal/src')
 }
 if (violations.length) throw new Error(`Custody boundary violations:\n${violations.join('\n')}`);
 
-const network = (process.env.VITE_HL_TRADING_NETWORK ?? (process.env.VITE_HL_NETWORK === 'mainnet' ? 'mainnet' : 'testnet')).toLowerCase();
-if (!['testnet', 'mainnet'].includes(network)) throw new Error(`Invalid VITE_HL_TRADING_NETWORK=${network}`);
-if (network === 'mainnet' && process.env.VITE_HL_MAINNET_ACK !== 'I_ACCEPT_REAL_MAINNET_TRADING') throw new Error('Mainnet release is locked: missing VITE_HL_MAINNET_ACK=I_ACCEPT_REAL_MAINNET_TRADING');
-if (network === 'mainnet') {
+const releaseCheck = process.env.VICE_RELEASE_CHECK?.trim().toLowerCase() === 'true';
+const configuredTradingNetwork = process.env.VITE_HL_TRADING_NETWORK?.trim().toLowerCase();
+if (releaseCheck && !configuredTradingNetwork) throw new Error('Mainnet release requires VITE_HL_TRADING_NETWORK=mainnet');
+if (releaseCheck && configuredTradingNetwork !== 'mainnet') throw new Error('Mainnet release requires VITE_HL_TRADING_NETWORK=mainnet');
+const network = configuredTradingNetwork ?? 'mainnet';
+const builderRevenueEnabled = process.env.VITE_HL_ENABLE_BUILDER_REVENUE === 'true';
+if (network === 'mainnet' && builderRevenueEnabled) {
+	if (releaseCheck) throw new Error('Builder revenue is disabled until its live fee path is certified');
+}
+if (releaseCheck && process.env.VITE_HL_MAINNET_ACK !== 'I_ACCEPT_REAL_MAINNET_TRADING') throw new Error('Mainnet release is locked: missing VITE_HL_MAINNET_ACK=I_ACCEPT_REAL_MAINNET_TRADING');
+if (releaseCheck && network === 'mainnet') {
 	if (process.env.VICE_BETA_REQUIRED?.trim().toLowerCase() !== 'true') throw new Error('Mainnet release requires VICE_BETA_REQUIRED=true');
 	for (const key of ['UPSTASH_REDIS_REST_URL', 'UPSTASH_REDIS_REST_TOKEN', 'VICE_BETA_SESSION_SECRET']) if (!process.env[key]?.trim()) throw new Error(`Mainnet release requires ${key}`);
 	const evidence = await readMainnetEvidence(process.env.VICE_MAINNET_EVIDENCE);

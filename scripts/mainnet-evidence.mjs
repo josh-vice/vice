@@ -6,6 +6,24 @@ export const REQUIRED_STORIES = ['US-002', 'US-003', 'US-004'];
 export const REQUIRED_TRADING_ACTIONS = ['wallet.connect', 'order.submit', 'order.reconcile', 'order.modify', 'order.cancel', 'order.scale', 'position.close', 'position.reverse', 'position.flatten', 'algo.start', 'algo.cancel', 'deadman.arm', 'deadman.clear', 'release.reconcile'];
 export const REQUIRED_EXECUTION_FEATURES = ['limit', 'market', 'stop', 'stop_limit', 'bracket', 'twap', 'adaptive_twap', 'vwap', 'pov', 'scale', 'chase', 'swarm', 'iceberg', 'oco', 'ping_pong', 'trailing_stop', 'break_even', 'maker', 'conditional_ladder', 'reverse', 'flatten', 'deadman'];
 export const REQUIRED_EVIDENCE_ACTIONS = [...new Set([...REQUIRED_TRADING_ACTIONS, ...REQUIRED_EXECUTION_FEATURES])];
+export const REQUIRED_BETA_EVIDENCE_ACTIONS = [
+	'wallet.connect',
+	'order.submit',
+	'order.reconcile',
+	'order.cancel',
+	'position.flatten',
+	'deadman.arm',
+	'deadman.clear',
+	'release.reconcile'
+];
+export const REQUIRED_BETA_EXECUTION_FEATURES = ['limit', 'market'];
+export const REQUIRED_BETA_STORIES = ['US-002'];
+
+function profileRequirements(profile) {
+	if (profile === 'beta') return { actionIds: REQUIRED_BETA_EVIDENCE_ACTIONS, featureIds: REQUIRED_BETA_EXECUTION_FEATURES, storyIds: REQUIRED_BETA_STORIES };
+	if (profile === 'full') return { actionIds: REQUIRED_EVIDENCE_ACTIONS, featureIds: REQUIRED_EXECUTION_FEATURES, storyIds: REQUIRED_STORIES };
+	throw new Error(`VICE_RELEASE_PROFILE must be beta or full, received ${profile}`);
+}
 
 function fullSha(value) {
 	return typeof value === 'string' && /^[a-f0-9]{40}$/i.test(value);
@@ -35,7 +53,7 @@ function validateObservedActions(value, expected) {
 	if (missing.length) throw new Error(`actionResults missing passed scenarios: ${missing.join(', ')}`);
 }
 
-export function validateMainnetEvidence(value, { expectedActionIds, expectedCriterionIds, expectedStreamIds, expectedSha } = {}) {
+export function validateMainnetEvidence(value, { expectedActionIds, expectedCriterionIds, expectedStreamIds, expectedStoryIds, expectedSha } = {}) {
 	if (!value || typeof value !== 'object') throw new Error('mainnet evidence must be an object');
 	if (value.schemaVersion !== EVIDENCE_SCHEMA_VERSION) throw new Error(`mainnet evidence schemaVersion must be ${EVIDENCE_SCHEMA_VERSION}`);
 	if (value.network !== 'mainnet') throw new Error('mainnet evidence network must be mainnet');
@@ -59,7 +77,7 @@ export function validateMainnetEvidence(value, { expectedActionIds, expectedCrit
 	if (value.uncertainOutcomes !== 0) throw new Error('mainnet evidence contains uncertain outcomes');
 	if (value.duplicateOrders !== 0) throw new Error('mainnet evidence contains duplicate orders');
 	if (!Array.isArray(value.venueOrderIds) || value.venueOrderIds.length === 0) throw new Error('mainnet evidence must include venue order IDs');
-	for (const story of REQUIRED_STORIES) {
+	for (const story of expectedStoryIds ?? REQUIRED_STORIES) {
 		if (!value.stories?.[story] || value.stories[story].passes < 2) throw new Error(`${story} requires at least two mainnet passes`);
 		if (value.stories[story].reconnect !== true || value.stories[story].restart !== true) throw new Error(`${story} requires reconnect and restart evidence`);
 	}
@@ -83,11 +101,15 @@ if (import.meta.main) {
 	const run = async () => {
 		const root = resolve(import.meta.dir, '..');
 		const streamCatalog = await Bun.file(resolve(root, 'docs/data/stream-catalog.json')).json();
+		const profile = (process.env.VICE_RELEASE_PROFILE ?? 'full').trim().toLowerCase();
+		const { actionIds, featureIds, storyIds } = profileRequirements(profile);
 		const evidence = await readMainnetEvidence(process.env.VICE_MAINNET_EVIDENCE ?? process.argv[2], {
-			expectedActionIds: REQUIRED_EVIDENCE_ACTIONS,
-			expectedStreamIds: streamCatalog.streams.map((stream) => stream.id)
+			expectedActionIds: actionIds,
+			expectedStreamIds: streamCatalog.streams.map((stream) => stream.id),
+			expectedStoryIds: storyIds
 		});
-		exactCoverage(evidence.features, REQUIRED_EXECUTION_FEATURES, 'features');
+		exactCoverage(evidence.features, featureIds, 'features');
+		console.log(`Mainnet evidence schema v2 (${profile}) passed.`);
 	};
-	run().then(() => console.log('Mainnet evidence schema v2 passed.')).catch((error) => { console.error(`Mainnet evidence validation failed: ${error.message}`); process.exit(1); });
+	run().catch((error) => { console.error(`Mainnet evidence validation failed: ${error.message}`); process.exit(1); });
 }

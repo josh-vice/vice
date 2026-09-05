@@ -95,14 +95,58 @@ shell is a previously-fetched SSR response — never synthesized data. Trading
 and account endpoints (`/api/*`) are **never cached**; an offline client
 shows the OFFLINE banner and keeps trading fail-closed.
 
+## Monitoring and alerting
+
+The minimum closed-beta monitoring path is the public, sanitized
+`/api/health` endpoint plus the scheduled GitHub Actions workflow
+`.github/workflows/production-monitor.yml`. The endpoint checks mainnet
+configuration, release identity, durable beta-store reachability, and the
+Hyperliquid public market API. The workflow runs every five minutes and a
+failed workflow produces the repository owner's normal GitHub notification.
+Set the workflow secret `VICE_PRODUCTION_URL` to the production origin only;
+never put credentials in the workflow or URL.
+
+Vercel's Logs, Analytics, Speed Insights, and Observability panels are useful
+additional provider telemetry. Grafana is optional for this closed beta; it is
+not required unless we need custom dashboards, long-retention metrics, or
+cross-service alert routing. Browser-local feed/account/execution diagnostics
+remain in the redacted support bundle because private wallet state and signed
+commands must not be sent to a hosted metrics service.
+
 ## Rollback
 
-Rollback is a normal re-deploy of the previous `viceterminal` build in the
-dashboard ("Deployments → ⋯ → Redeploy" on the last known-good deployment).
-Because the service worker precaches the current build and only activates on a
-deliberate reload, a rollback that returns the old bundle is picked up by the
-same update handshake on each client's next reload. No database migration or
-secret rotation is required — the app is stateless and self-signing.
+For the first release, create two production deployments from the same reviewed
+SHA so rollback has a known-good target. Record both deployment URLs/IDs in the
+release evidence, then run:
+
+```sh
+VICE_ROLLBACK_TARGET=<first-production-deployment-url-or-id> \\
+VICE_PRODUCTION_URL=<production-origin> \\
+VICE_RELEASE_SHA=<full-reviewed-sha> \\
+bun run rollback:vercel
+```
+
+The rollback helper invokes the supported Vercel rollback command and then reads
+`/api/meta` from production. It exits nonzero unless both `commit` and
+`releaseBuild` equal the expected full SHA. After rollback, run the health probe
+and deployed smoke again. The service worker activates updates only after a
+user-controlled reload, so do not force a reload during an active trade.
+
+## First deployment flow
+
+1. Create/import a dedicated Vercel project for this repository under the
+   intended account. Set Root Directory to `vice-terminal` and keep production
+   deployment manual.
+2. Configure the production-only variables in the Vercel dashboard, including
+   durable beta auth, Redis, release identity, policy, evidence paths, and the
+   three named owners. Never configure wallet keys or agent secrets there.
+3. Build and verify the exact candidate SHA locally, deploy it, and record the
+   resulting production URL and deployment ID.
+4. Run `VICE_DEPLOYMENT_URL=<url> VICE_RELEASE_SHA=<sha> bun run test:deployed`.
+5. Run `VICE_PRODUCTION_URL=<url> bun run monitor:production` or dispatch the
+   scheduled workflow after storing its URL secret.
+6. Do not create beta invitations until the final aggregate release gate is
+   green.
 
 ## Ownership & safety
 

@@ -1,5 +1,16 @@
 import { WebSocketTransport, SubscriptionClient, HttpTransport, InfoClient } from '@nktkas/hyperliquid';
 import { hyperliquidPublicNetwork, hyperliquidTradingNetwork } from './network';
+import { getSdkReconnectionDelayMs } from './reliability';
+
+const WS_RECONNECT_OPTIONS = {
+	maxRetries: Infinity,
+	connectionTimeout: 10_000,
+	reconnectionDelay: getSdkReconnectionDelayMs
+} as const;
+
+function websocketOptions(isTestnet: boolean) {
+	return { isTestnet, reconnect: WS_RECONNECT_OPTIONS };
+}
 
 let publicTransport: WebSocketTransport | null = null;
 let publicSubClient: SubscriptionClient | null = null;
@@ -15,7 +26,7 @@ let tradingInfoClient: InfoClient | null = null;
 
 export function getPublicTransport(): WebSocketTransport {
 	if (!publicTransport) {
-		publicTransport = new WebSocketTransport({ isTestnet: hyperliquidPublicNetwork.isTestnet });
+		publicTransport = new WebSocketTransport(websocketOptions(hyperliquidPublicNetwork.isTestnet));
 	}
 	return publicTransport;
 }
@@ -29,7 +40,7 @@ export function getPublicSubscriptionClient(): SubscriptionClient {
 
 export function getPublicBookTransport(): WebSocketTransport {
 	if (!publicBookTransport) {
-		publicBookTransport = new WebSocketTransport({ isTestnet: hyperliquidPublicNetwork.isTestnet });
+		publicBookTransport = new WebSocketTransport(websocketOptions(hyperliquidPublicNetwork.isTestnet));
 	}
 	return publicBookTransport;
 }
@@ -50,7 +61,7 @@ export function getPublicInfoClient(): InfoClient {
 
 export function getTradingTransport(): WebSocketTransport {
 	if (!tradingTransport) {
-		tradingTransport = new WebSocketTransport({ isTestnet: hyperliquidTradingNetwork.isTestnet });
+		tradingTransport = new WebSocketTransport(websocketOptions(hyperliquidTradingNetwork.isTestnet));
 	}
 	return tradingTransport;
 }

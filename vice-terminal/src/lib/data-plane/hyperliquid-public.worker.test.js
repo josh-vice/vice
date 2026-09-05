@@ -19,6 +19,7 @@ class FakeWebSocket {
 	emit(type, value = {}) { for (const listener of this.listeners.get(type) ?? []) listener(value); }
 	open() { this.readyState = FakeWebSocket.OPEN; this.emit('open'); }
 	message(frame) { this.emit('message', { data: JSON.stringify(frame) }); }
+	rawMessage(data) { this.emit('message', { data }); }
 	close() { this.readyState = 3; this.emit('close'); }
 }
 
@@ -93,5 +94,15 @@ describe('Hyperliquid public worker lifecycle', () => {
 		first.message({ channel: 'allMids', data: { mids: { BTC: '1' } } });
 		expect(port.messages).toHaveLength(afterReconnect);
 		expect(beforeClose).toBeGreaterThan(0);
+	});
+
+	test('rejects an oversized raw frame before parsing or state delivery', () => {
+		const port = endpoint();
+		connect(port, 'mainnet');
+		const socket = FakeWebSocket.instances.filter((candidate) => candidate.url.includes('api.hyperliquid.xyz')).at(-1);
+		socket.open();
+		socket.rawMessage('x'.repeat(512 * 1024 + 1));
+		expect(port.messages.at(-1)).toMatchObject({ type: 'status', network: 'mainnet', status: 'error' });
+		expect(port.messages.at(-1).reason).toContain('safety limit');
 	});
 });

@@ -18,4 +18,11 @@ describe('Hyperliquid public transport boundaries', () => {
 		expect(source).toContain('publicBookSubClient = null;');
 		expect(source).toContain('publicInfoClient = null;');
 	});
+
+	test('configures the SDK for persistent, observable reconnects', async () => {
+		const source = await Bun.file(new URL('./client.ts', import.meta.url)).text();
+		expect(source).toContain('maxRetries: Infinity');
+		expect(source).toContain('connectionTimeout: 10_000');
+		expect(source).toContain('reconnectionDelay: getSdkReconnectionDelayMs');
+	});
 });

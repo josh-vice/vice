@@ -1,11 +1,13 @@
 import { describe, expect, test } from 'bun:test';
 import { advancedOrderTypes, certificationEnvKey, isAdvancedOrderCertified, unavailableOrderTypeMessage } from './capabilities.ts';
 
+const mainnetRelease = process.env.VITE_HL_TRADING_NETWORK?.trim().toLowerCase() === 'mainnet';
+
 describe('US-004 advanced capability release gate', () => {
 	test('keeps advanced types unavailable until explicitly certified', () => {
 		expect(isAdvancedOrderCertified('twap', undefined)).toBe(false);
 		expect(isAdvancedOrderCertified('scale', 'false')).toBe(false);
-		expect(isAdvancedOrderCertified('twap', 'true', 'true')).toBe(true);
+		expect(isAdvancedOrderCertified('twap', 'true', 'true')).toBe(!mainnetRelease);
 	});
 
 	test('keeps basic and simple conditional order types available', () => {
@@ -24,7 +26,7 @@ describe('US-004 advanced capability release gate', () => {
 		expect(isAdvancedOrderCertified('oco', 'true', 'false')).toBe(false);
 		expect(isAdvancedOrderCertified('oco', 'false', 'true')).toBe(false);
 		expect(isAdvancedOrderCertified('oco', 'true', undefined)).toBe(false);
-		expect(isAdvancedOrderCertified('oco', 'true', 'true')).toBe(true);
+		expect(isAdvancedOrderCertified('oco', 'true', 'true')).toBe(!mainnetRelease);
 	});
 
 	test('requires a named certification flag for every advanced family', () => {

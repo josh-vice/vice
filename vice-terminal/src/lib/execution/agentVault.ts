@@ -22,6 +22,17 @@ interface AgentRecord {
 	salt: string;
 }
 
+export function isAgentApprovalCurrent(
+	extraAgents: ReadonlyArray<{ address: string; validUntil: number }>,
+	agentAddress: string,
+	now = Date.now()
+): boolean {
+	const normalizedAddress = agentAddress.toLowerCase();
+	return extraAgents.some(
+		(agent) => agent.address.toLowerCase() === normalizedAddress && Number.isFinite(agent.validUntil) && agent.validUntil > now
+	);
+}
+
 export interface AgentSession {
 	mainAddress: Address;
 	agent: PrivateKeyAccount;
@@ -108,6 +119,14 @@ async function decryptPrivateKey(record: AgentRecord, signature: Hex): Promise<H
 	return new TextDecoder().decode(plaintext) as Hex;
 }
 
+async function assertAgentApprovalCurrent(mainAddress: Address, agentAddress: Address): Promise<void> {
+	const info = new InfoClient({ transport: new HttpTransport({ isTestnet: isTestnet() }) });
+	const extraAgents = await info.extraAgents({ user: mainAddress });
+	if (!isAgentApprovalCurrent(extraAgents, agentAddress)) {
+		throw new Error('The device-local trading agent is not currently approved or has expired; enable secure trading again.');
+	}
+}
+
 function readRecord(mainAddress: Address): AgentRecord | null {
 	try {
 		const parsed = JSON.parse(localStorage.getItem(storageKey(mainAddress)) ?? 'null') as AgentRecord | null;
@@ -188,6 +207,7 @@ export async function unlockOrCreateAgent(
 		if (agent.address.toLowerCase() !== record.agentAddress.toLowerCase()) {
 			throw new Error('Encrypted agent identity check failed');
 		}
+		await assertAgentApprovalCurrent(mainAddress, agent.address);
 	} else {
 		const privateKey = generatePrivateKey();
 		agent = privateKeyToAccount(privateKey);

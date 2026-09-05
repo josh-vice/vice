@@ -106,6 +106,9 @@ jobs:
           restore-keys: |
             bun-
       - name: Production build (terminal)
+        env:
+          VITE_HL_TRADING_NETWORK: mainnet
+          VITE_HL_MAINNET_ACK: I_ACCEPT_REAL_MAINNET_TRADING
         run: bun run build
 
   # ---- Production hydrated E2E (no credentials) ----------------------------
@@ -131,7 +134,9 @@ jobs:
         run: bunx playwright install --with-deps chromium
       - name: Run non-mutating hydrated E2E suite
         env:
-          VITE_HL_NETWORK: testnet
+          VITE_HL_NETWORK: mainnet
+          VITE_HL_TRADING_NETWORK: mainnet
+          VITE_HL_MAINNET_ACK: I_ACCEPT_REAL_MAINNET_TRADING
         run: bun run test:e2e
 
   # ---- Required aggregation gate ------------------------------------------

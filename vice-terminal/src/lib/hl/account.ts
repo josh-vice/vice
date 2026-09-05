@@ -15,6 +15,8 @@ import {
 } from '$lib/stores';
 import { hydrateMarketIdentity } from './accountIdentity';
 import { createSnapshotCoordinator } from './snapshotCoordinator';
+import { bindBrowserLifecycle, isBrowserOnline } from './browserLifecycle';
+import { getMarketReconnectDelayMs } from './reliability';
 
 let subscriptions: ISubscription[] = [];
 let activeAssetSubscription: ISubscription | null = null;
@@ -23,8 +25,10 @@ let currentAddress = '';
 let refreshTimer: ReturnType<typeof setTimeout> | null = null;
 let reconciliationTimer: ReturnType<typeof setInterval> | null = null;
 let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+let reconnectAttempt = 0;
 let reconnectInFlight: Promise<void> | null = null;
-let transportHealthBound = false;
+let boundTransportSocket: EventTarget | null = null;
+let browserLifecycleUnbind: (() => void) | null = null;
 let accountGeneration = 0;
 
 const snapshotCoordinator = createSnapshotCoordinator(async (): Promise<boolean> => {
@@ -57,9 +61,9 @@ const snapshotCoordinator = createSnapshotCoordinator(async (): Promise<boolean>
 });
 
 function bindTransportHealth(): void {
-	if (transportHealthBound) return;
 	const socket = getTradingTransport().socket;
-	transportHealthBound = true;
+	if (boundTransportSocket === socket) return;
+	boundTransportSocket = socket;
 	socket.addEventListener('close', () => {
 		if (!currentAddress) return;
 		accountSyncStatus.set('stale');
@@ -73,7 +77,9 @@ function bindTransportHealth(): void {
 }
 
 function scheduleSubscriptionRecovery(address: string): void {
+	if (!isBrowserOnline()) return;
 	if (reconnectTimer) clearTimeout(reconnectTimer);
+	const attempt = reconnectAttempt++;
 	reconnectTimer = setTimeout(() => {
 		reconnectTimer = null;
 		if (address !== currentAddress || reconnectInFlight) return;
@@ -84,7 +90,7 @@ function scheduleSubscriptionRecovery(address: string): void {
 			.finally(() => {
 				reconnectInFlight = null;
 			});
-	}, 250);
+	}, getMarketReconnectDelayMs(attempt));
 }
 
 function scheduleSnapshot(address: string): void {
@@ -100,10 +106,23 @@ export async function refreshAccountSnapshot(address = currentAddress): Promise<
 }
 
 export async function startAccountSubscriptions(address: string): Promise<void> {
-	await stopAccountSubscriptions();
+	await stopAccountSubscriptions(true);
 	accountGeneration += 1;
 	currentAddress = address;
 	bindTransportHealth();
+	browserLifecycleUnbind = bindBrowserLifecycle({
+		onResume: () => {
+			if (!currentAddress) return;
+			accountSyncStatus.set('stale');
+			scheduleSnapshot(currentAddress);
+			scheduleSubscriptionRecovery(currentAddress);
+		},
+		onOffline: () => {
+			if (!currentAddress) return;
+			accountSyncStatus.set('stale');
+			activeAssetSyncStatus.set('stale');
+		}
+	});
 	// A transient Info API failure must not prevent the WebSocket recovery path
 	// from being installed. Keep private state non-actionable until a snapshot
 	// succeeds, while order/fill/account events can trigger the next attempt.
@@ -155,6 +174,7 @@ export async function startAccountSubscriptions(address: string): Promise<void> 
 			void refreshAccountSnapshot(address).catch(() => undefined);
 		}
 	}, 15_000);
+	reconnectAttempt = 0;
 }
 
 /** Keep the selected market's account/asset stream aligned with the chart. */
@@ -204,8 +224,10 @@ export async function setActiveAccountAsset(market?: Pick<MarketDescriptor, 'api
 	}
 }
 
-export async function stopAccountSubscriptions(): Promise<void> {
+export async function stopAccountSubscriptions(preserveRecoveryAttempt = false): Promise<void> {
 	accountGeneration += 1;
+	browserLifecycleUnbind?.();
+	browserLifecycleUnbind = null;
 	currentAddress = '';
 	if (refreshTimer) clearTimeout(refreshTimer);
 	refreshTimer = null;
@@ -213,6 +235,7 @@ export async function stopAccountSubscriptions(): Promise<void> {
 	reconciliationTimer = null;
 	if (reconnectTimer) clearTimeout(reconnectTimer);
 	reconnectTimer = null;
+	if (!preserveRecoveryAttempt) reconnectAttempt = 0;
 	await Promise.all(
 		subscriptions.map(async (subscription) => {
 			try {

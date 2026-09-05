@@ -1,4 +1,5 @@
 import type { HyperliquidNetwork } from '$lib/hl/networkPolicy';
+import { HL_WS_RELIABILITY_LIMITS, utf8ByteLength } from '$lib/hl/reliability';
 
 export type PublicPlaneRequest =
 	| { type: 'connect'; network: HyperliquidNetwork }
@@ -29,6 +30,20 @@ export type PublicPlaneEvent =
 	| { type: 'trades'; network: HyperliquidNetwork; epoch: number; sequence: number; receivedAtMs: number; receivedAtMonoMs: number; coin: string; trades: PublicPlaneTrade[] }
 	| { type: 'candle'; network: HyperliquidNetwork; epoch: number; sequence: number; receivedAtMs: number; receivedAtMonoMs: number; coin: string; interval: string; candle: PublicPlaneCandle }
 	| { type: 'status'; network: HyperliquidNetwork; epoch: number; status: 'connecting' | 'open' | 'closed' | 'error'; reason?: string };
+
+/** Keep untrusted venue frames bounded before they reach JSON.parse/state. */
+export const PUBLIC_PLANE_MAX_FRAME_BYTES = HL_WS_RELIABILITY_LIMITS.publicFrame.maxBytes;
+
+export function publicPlaneFrameByteLength(value: string): number {
+	return utf8ByteLength(value);
+}
+
+export function isPublicPlaneFrameWithinLimit(
+	value: string,
+	maxBytes = PUBLIC_PLANE_MAX_FRAME_BYTES
+): boolean {
+	return publicPlaneFrameByteLength(value) <= maxBytes;
+}
 
 export function hyperliquidWsUrl(network: HyperliquidNetwork): string {
 	return network === 'mainnet' ? 'wss://api.hyperliquid.xyz/ws' : 'wss://api.hyperliquid-testnet.xyz/ws';

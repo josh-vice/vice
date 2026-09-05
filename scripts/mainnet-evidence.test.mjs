@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { validateMainnetEvidence } from './mainnet-evidence.mjs';
+import { validateMainnetEvidence, REQUIRED_BETA_EVIDENCE_ACTIONS, REQUIRED_BETA_EXECUTION_FEATURES, REQUIRED_EVIDENCE_ACTIONS, REQUIRED_EXECUTION_FEATURES } from './mainnet-evidence.mjs';
 
 const valid = {
 	schemaVersion: 2,
@@ -26,8 +26,29 @@ const valid = {
 };
 
 describe('mainnet funded-evidence boundary', () => {
+	test('beta profile is an explicit strict subset of the full execution profile', () => {
+		expect(REQUIRED_BETA_EXECUTION_FEATURES).toEqual(['limit', 'market']);
+		expect(REQUIRED_BETA_EXECUTION_FEATURES.every((feature) => REQUIRED_EXECUTION_FEATURES.includes(feature))).toBe(true);
+		expect(REQUIRED_BETA_EVIDENCE_ACTIONS).toEqual([
+			'wallet.connect',
+			'order.submit',
+			'order.reconcile',
+			'order.cancel',
+			'position.flatten',
+			'deadman.arm',
+			'deadman.clear',
+			'release.reconcile'
+		]);
+		expect(REQUIRED_BETA_EVIDENCE_ACTIONS.every((action) => REQUIRED_EVIDENCE_ACTIONS.includes(action))).toBe(true);
+		expect(REQUIRED_EVIDENCE_ACTIONS.length).toBeGreaterThan(REQUIRED_BETA_EVIDENCE_ACTIONS.length);
+	});
 	test('accepts complete repeated funded story evidence', () => {
 		expect(validateMainnetEvidence(valid)).toEqual(valid);
+	});
+	test('supports profile-specific story coverage without weakening defaults', () => {
+		const betaEvidence = { ...valid, stories: { 'US-002': valid.stories['US-002'] } };
+		expect(validateMainnetEvidence(betaEvidence, { expectedStoryIds: ['US-002'] })).toEqual(betaEvidence);
+		expect(() => validateMainnetEvidence(betaEvidence, { expectedStoryIds: ['US-002', 'US-003'] })).toThrow('US-003');
 	});
 
 	for (const [field, value] of [['uncertainOutcomes', 1], ['duplicateOrders', 1]]) {

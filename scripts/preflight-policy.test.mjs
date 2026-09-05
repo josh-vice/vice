@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 
 const source = await Bun.file(new URL('./preflight.mjs', import.meta.url)).text();
+const viteConfig = await Bun.file(new URL('../vice-terminal/vite.config.ts', import.meta.url)).text();
 
 describe('mainnet promotion policy wiring', () => {
 	test('requires funded evidence, allowlist, and measured latency on mainnet', () => {
@@ -9,6 +10,17 @@ describe('mainnet promotion policy wiring', () => {
 		expect(source).toContain("await runLatencyGate(process.env.VICE_LATENCY_EVIDENCE)");
 		expect(source).toContain("latency.network !== 'mainnet'");
 		expect(source).toContain('!latency.pass');
+	});
+
+	test('fails closed when the trading network is not explicitly configured', () => {
+		expect(source).toContain("const configuredTradingNetwork = process.env.VITE_HL_TRADING_NETWORK?.trim().toLowerCase();");
+		expect(source).toContain("if (releaseCheck && !configuredTradingNetwork) throw new Error('Mainnet release requires VITE_HL_TRADING_NETWORK=mainnet')");
+	});
+
+	test('locks production builds to explicit mainnet configuration', () => {
+		expect(viteConfig).toContain('mainnetBuildGuard');
+		expect(viteConfig).toContain('VITE_HL_TRADING_NETWORK');
+		expect(viteConfig).toContain('VITE_HL_MAINNET_ACK');
 	});
 
 	test('does not require builder revenue configuration when revenue is disabled', () => {

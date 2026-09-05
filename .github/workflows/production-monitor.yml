@@ -1,0 +1,30 @@
+name: Production monitor
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production-monitor
+  cancel-in-progress: true
+
+jobs:
+  health:
+    name: Mainnet beta health probe
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Probe public health endpoint
+        env:
+          VICE_PRODUCTION_URL: ${{ secrets.VICE_PRODUCTION_URL }}
+        run: |
+          set -euo pipefail
+          test -n "$VICE_PRODUCTION_URL"
+          url="${VICE_PRODUCTION_URL%/}/api/health"
+          response="$(curl --fail-with-body --silent --show-error --retry 2 --retry-delay 1 --max-time 15 "$url")"
+          printf '%s\n' "$response" | jq -e '(.ok == true) and (.network == "mainnet") and (all(.checks[]; .ok == true))' >/dev/null
+          printf 'Production health passed for %s\n' "$url"

@@ -1,6 +1,10 @@
 import { describe, expect, test } from 'bun:test';
 import { assertNoUnresolvedExecutionCommands, beginExecutionCommand, clearExecutionJournal, exportExecutionAudit, finishExecutionCommand, loadExecutionJournal, replayExecutionAudit, replayStoredExecutionAudit, unresolvedExecutionCommands } from './commandJournal';
 
+const configuredNetwork = process.env.VITE_HL_TRADING_NETWORK?.trim().toLowerCase() === 'mainnet' ? 'mainnet' : 'testnet';
+const oppositeNetwork = configuredNetwork === 'mainnet' ? 'testnet' : 'mainnet';
+const journalKey = (account) => `vice.execution.journal.v1:${configuredNetwork}:${account.toLowerCase()}`;
+
 describe('US-002 durable execution journal', () => {
 	test('persists pending and uncertain order outcomes across reloads', () => {
 		const values = new Map();
@@ -70,8 +74,8 @@ describe('US-002 durable execution journal', () => {
 	test('replays raw local journal identity before sanitization', () => {
 		const values = new Map();
 		globalThis.localStorage = { getItem: (key) => values.get(key) ?? null, setItem: (key, value) => values.set(key, value), removeItem: (key) => values.delete(key) };
-		values.set('vice.execution.journal.v1:testnet:0xabc', JSON.stringify([
-			{ commandId: 'wrong-network', network: 'mainnet', account: '0xabc', sequence: 1, kind: 'place', cloids: ['0x1'], status: 'accepted', venueOrderIds: [], updatedAt: 1 }
+		values.set(journalKey('0xabc'), JSON.stringify([
+			{ commandId: 'wrong-network', network: oppositeNetwork, account: '0xabc', sequence: 1, kind: 'place', cloids: ['0x1'], status: 'accepted', venueOrderIds: [], updatedAt: 1 }
 		]));
 		const replay = replayStoredExecutionAudit('0xabc');
 		expect(replay.valid).toBe(false);
@@ -83,7 +87,7 @@ describe('US-002 durable execution journal', () => {
 	test('reports malformed stored journal JSON instead of treating it as clean', () => {
 		const values = new Map();
 		globalThis.localStorage = { getItem: (key) => values.get(key) ?? null, setItem: (key, value) => values.set(key, value), removeItem: (key) => values.delete(key) };
-		values.set('vice.execution.journal.v1:testnet:0xabc', '{');
+		values.set(journalKey('0xabc'), '{');
 		const replay = replayStoredExecutionAudit('0xabc');
 		expect(replay).toMatchObject({ valid: false, finalState: 'invalid', entriesReplayed: 0 });
 		expect(replay.errors).toContain('Stored execution journal is invalid JSON');
@@ -93,7 +97,7 @@ describe('US-002 durable execution journal', () => {
 	test('reports a non-array stored journal payload as invalid', () => {
 		const values = new Map();
 		globalThis.localStorage = { getItem: (key) => values.get(key) ?? null, setItem: (key, value) => values.set(key, value), removeItem: (key) => values.delete(key) };
-		values.set('vice.execution.journal.v1:testnet:0xabc', '{}');
+		values.set(journalKey('0xabc'), '{}');
 		const replay = replayStoredExecutionAudit('0xabc');
 		expect(replay).toMatchObject({ valid: false, finalState: 'invalid', entriesReplayed: 0 });
 		expect(replay.errors).toContain('Stored execution journal must be an array');

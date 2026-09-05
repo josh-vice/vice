@@ -1,5 +1,5 @@
 /// <reference lib="webworker" />
-import { hyperliquidWsUrl, type PublicPlaneCandle, type PublicPlaneEvent, type PublicPlaneRequest, type PublicPlaneTrade } from './protocol';
+import { hyperliquidWsUrl, isPublicPlaneFrameWithinLimit, type PublicPlaneCandle, type PublicPlaneEvent, type PublicPlaneRequest, type PublicPlaneTrade } from './protocol';
 
 type Network = 'testnet' | 'mainnet';
 type Endpoint = {
@@ -138,6 +138,10 @@ function ensureSocket(network: Network): void {
 	socket.addEventListener('message', (event) => {
 		const socketState = sockets.get(network);
 		if (!socketState || socketState.epoch !== epoch || typeof event.data !== 'string') return;
+		if (!isPublicPlaneFrameWithinLimit(event.data)) {
+			publish(network, { type: 'status', network, epoch, status: 'error', reason: 'Hyperliquid public frame exceeded the safety limit' });
+			return;
+		}
 		try {
 			const frame = JSON.parse(event.data) as { channel?: string; data?: unknown };
 			const receivedAtMs = Date.now();

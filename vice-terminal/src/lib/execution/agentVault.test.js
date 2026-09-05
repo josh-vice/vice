@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { assertConnectedAccount, assertProviderAccount } from './agentVault.ts';
+import { assertConnectedAccount, assertProviderAccount, isAgentApprovalCurrent } from './agentVault.ts';
 
 describe('US-002 local signer custody boundary', () => {
 	test('requires the provider to expose the exact displayed account', () => {
@@ -16,6 +16,14 @@ describe('US-002 local signer custody boundary', () => {
 		await expect(assertProviderAccount(provider, '0xabcd')).resolves.toBeUndefined();
 		const switched = { request: async () => ['0x5678'] };
 		await expect(assertProviderAccount(switched, '0xabcd')).rejects.toThrow('account changed');
+	});
+
+	test('requires a current venue approval for a reopened local agent', () => {
+		const now = 1_000;
+		const agent = '0x00000000000000000000000000000000000000Aa';
+		expect(isAgentApprovalCurrent([{ address: agent, validUntil: now + 1 }], agent, now)).toBe(true);
+		expect(isAgentApprovalCurrent([{ address: agent, validUntil: now }], agent, now)).toBe(false);
+		expect(isAgentApprovalCurrent([{ address: '0x00000000000000000000000000000000000000Bb', validUntil: now + 1 }], agent, now)).toBe(false);
 	});
 
 });

@@ -3,7 +3,7 @@ import { createHash } from 'node:crypto';
 import { readFile, mkdir, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { readStreamCatalog, validateStreamCatalog } from './stream-catalog.mjs';
-import { readMainnetEvidence, REQUIRED_EVIDENCE_ACTIONS, REQUIRED_EXECUTION_FEATURES } from './mainnet-evidence.mjs';
+import { readMainnetEvidence, REQUIRED_BETA_EVIDENCE_ACTIONS, REQUIRED_BETA_EXECUTION_FEATURES } from './mainnet-evidence.mjs';
 import { verifyManifest } from './release-manifest.mjs';
 
 const root = resolve(import.meta.dir, '..');
@@ -54,18 +54,19 @@ if (manifest?.commit && process.env.VICE_MAINNET_RELEASE_BUILD?.trim() !== manif
 for (const owner of ['VICE_BETA_SUPPORT_OWNER', 'VICE_INCIDENT_OWNER', 'VICE_RELEASE_OWNER']) if (!process.env[owner]?.trim()) errors.push(`${owner} is not assigned`);
 if (evidencePath && streamCatalog) {
 	try {
-		await readMainnetEvidence(evidencePath, { expectedSha: expectedSha ?? undefined, expectedActionIds: REQUIRED_EVIDENCE_ACTIONS, expectedStreamIds: streamCatalog.streams.map((stream) => stream.id) }).then((evidence) => {
-			requireCoverage(evidence.features, REQUIRED_EXECUTION_FEATURES, 'features');
+		await readMainnetEvidence(evidencePath, { expectedSha: expectedSha ?? undefined, expectedActionIds: REQUIRED_BETA_EVIDENCE_ACTIONS, expectedStreamIds: streamCatalog.streams.map((stream) => stream.id) }).then((evidence) => {
+			requireCoverage(evidence.features, REQUIRED_BETA_EXECUTION_FEATURES, 'features');
 		});
 	} catch (error) {
 		errors.push(`mainnet evidence is incomplete: ${error instanceof Error ? error.message : 'invalid evidence'}`);
 	}
 }
+const deploymentUrl = option('--deployment') ?? process.env.VICE_DEPLOYED_URL?.trim() ?? null;
 if (manifest) {
-	const deploymentError = await probeDeployment(option('--deployment'), manifest.commit);
+	const deploymentError = await probeDeployment(deploymentUrl, manifest.commit);
 	if (deploymentError) errors.push(deploymentError);
 }
-const report = { schemaVersion: 1, generatedAt: new Date().toISOString(), commit: manifest?.commit ?? null, deployment: option('--deployment'), ready: errors.length === 0, errors };
+const report = { schemaVersion: 1, generatedAt: new Date().toISOString(), commit: manifest?.commit ?? null, deployment: deploymentUrl, ready: errors.length === 0, errors };
 report.sha256 = createHash('sha256').update(JSON.stringify(report)).digest('hex');
 await mkdir(resolve(root, 'release'), { recursive: true });
 await writeFile(resolve(root, 'release/readiness-report.json'), JSON.stringify(report, null, 2) + '\n');

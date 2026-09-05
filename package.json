@@ -34,10 +34,13 @@
     "test:release-manifest": "bun test scripts/release-manifest.test.mjs",
     "test:mainnet-guardrails": "bun test scripts/mainnet-guardrails.test.mjs",
     "test:deployed": "bun scripts/deployed-smoke.mjs",
+    "monitor:production": "bun scripts/monitor-production.mjs",
+    "test:production-auth": "bun scripts/production-auth-smoke.mjs",
+    "rollback:vercel": "bun scripts/rollback-vercel.mjs",
     "release:verify": "bun scripts/release-manifest.mjs --release --verify",
     "beta:readiness": "bun scripts/beta-readiness.mjs",
     "preflight": "bun scripts/preflight.mjs",
-    "check": "bun run preflight && bun run typecheck && bun run test:svelte && bun run test:frontend && bun run build",
+    "check": "bun run preflight && bun run typecheck && bun run test:svelte && bun run test:frontend && VITE_HL_TRADING_NETWORK=mainnet VITE_HL_MAINNET_ACK=I_ACCEPT_REAL_MAINNET_TRADING bun run build",
     "test:release": "bun scripts/release-gate.mjs"
   },
   "overrides": {

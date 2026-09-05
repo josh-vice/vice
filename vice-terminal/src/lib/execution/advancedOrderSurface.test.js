@@ -16,6 +16,19 @@ describe('US-004 advanced order surface', () => {
 		expect(source).toContain('if (!isAdvancedOrderCertified($orderType))');
 	});
 
+	test('uses the selected position as a plain reactive value in break-even defaults', async () => {
+		const source = await Bun.file(new URL('../components/OrderTicket.svelte', import.meta.url)).text();
+		expect(source).toContain('$advancedConfig.breakEvenEntryPrice ?? selectedPosition?.entryPrice');
+		expect(source).not.toContain('$advancedConfig.breakEvenEntryPrice ?? $selectedPosition?.entryPrice');
+	});
+
+	test('does not expose a dead server-side advanced-order start route', async () => {
+		const route = await Bun.file(new URL('../../routes/api/algo/start/+server.ts', import.meta.url)).exists();
+		expect(route).toBe(false);
+		const source = await Bun.file(new URL('../hl/orders.ts', import.meta.url)).text();
+		expect(source).not.toContain('/api/algo/start');
+	});
+
 	test('keeps the full 15-type catalog discoverable while execution remains gated', async () => {
 		const source = await Bun.file(new URL('../hl/orders.ts', import.meta.url)).text();
 		const model = await Bun.file(new URL('../orderTicketModel.ts', import.meta.url)).text();

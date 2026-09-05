@@ -69,6 +69,9 @@ jobs:
         # A release binds the REAL built artifact (the SvelteKit/Vercel output)
         # so the artifact checksum is meaningful. Build output is never cached
         # across SHAs — it is produced fresh and bound to this commit.
+        env:
+          VITE_HL_TRADING_NETWORK: mainnet
+          VITE_HL_MAINNET_ACK: I_ACCEPT_REAL_MAINNET_TRADING
         run: |
           set -euo pipefail
           bun run build

@@ -33,6 +33,8 @@ import { startHyperliquidPublicPlane, type PublicPlaneSession } from '$lib/data-
 import { hyperliquidBookEvent } from '$lib/venue/hyperliquid';
 import { loadCachedCandleHistory, saveCachedCandleHistory } from './candleCache';
 import { ALL_MIDS_STALE_THRESHOLD_MS, CONTEXT_STALE_THRESHOLD_MS, FEED_STALE_THRESHOLD_MS, REQUIRED_MARKET_FEEDS, allMidsAreFresh, contextIsHealthy, feedsAreHealthy, type RequiredMarketFeed, type FeedTimestamps } from './feedHealth';
+import { bindBrowserLifecycle, isBrowserOnline } from './browserLifecycle';
+import { getMarketReconnectDelayMs } from './reliability';
 
 type ActiveSubs = {
 	l2Book?: ISubscription;
@@ -51,8 +53,10 @@ let midsSubActive = false;
 let marketGeneration = 0;
 let marketHealthTimer: ReturnType<typeof setInterval> | null = null;
 let marketReconnectTimer: ReturnType<typeof setTimeout> | null = null;
+let marketReconnectAttempt = 0;
 let marketTransportHealthBound = false;
 let bookTransportHealthBound = false;
+let browserLifecycleUnbind: (() => void) | null = null;
 let selectedMarketUnsubscribe: (() => void) | null = null;
 let marketSwitchQueue: Promise<void> = Promise.resolve();
 let marketSwitchRequest = 0;
@@ -148,6 +152,7 @@ function markMarketFeedAlive(feed: RequiredMarketFeed): void {
 	if ((get(marketDataStatus) === 'stale' || get(marketDataStatus) === 'connecting') && selectedMarketFeedsAreHealthy()) {
 		marketDataStatus.set('live');
 	}
+	if (selectedMarketFeedsAreHealthy()) marketReconnectAttempt = 0;
 }
 
 function selectedMarketFeedsAreHealthy(now = Date.now()): boolean {
@@ -199,13 +204,14 @@ async function unsubscribeAll(): Promise<void> {
 }
 
 function scheduleMarketRecovery(): void {
-	if (!currentCoin || marketReconnectTimer) return;
+	if (!currentCoin || marketReconnectTimer || !isBrowserOnline()) return;
+	const attempt = marketReconnectAttempt++;
 	marketReconnectTimer = setTimeout(() => {
 		marketReconnectTimer = null;
 		void recoverMarketFeeds().catch((error) => {
 			console.warn('[hl] market feed recovery failed; waiting for the next socket event:', error);
 		});
-	}, 250);
+	}, getMarketReconnectDelayMs(attempt));
 }
 
 async function recoverMarketFeeds(): Promise<void> {
@@ -792,11 +798,29 @@ export async function startHlFeeds(initialCoin?: string): Promise<void> {
 	loadBookSigFigs();
 	loadBookDepth();
 	feedLifecycle += 1;
+	marketReconnectAttempt = 0;
 	marketDataStatus.set('connecting');
 	candleDataStatus.set('connecting');
 	marketContextStatus.set('connecting');
 	startMarketHealthWatchdog();
 	bindMarketTransportHealth();
+	if (!browserLifecycleUnbind) {
+		browserLifecycleUnbind = bindBrowserLifecycle({
+			onResume: () => {
+				if (!currentCoin) return;
+				marketDataStatus.set('stale');
+				candleDataStatus.set('stale');
+				marketContextStatus.set('stale');
+				scheduleMarketRecovery();
+			},
+			onOffline: () => {
+				if (!currentCoin) return;
+				marketDataStatus.set('stale');
+				candleDataStatus.set('stale');
+				marketContextStatus.set('stale');
+			}
+		});
+	}
 	try {
 		// Establish the selected BTC identity and its critical feeds before any
 		// broad catalog HTTP enrichment. Hyperliquid shares one Info rate-limit
@@ -851,6 +875,8 @@ export async function startHlFeeds(initialCoin?: string): Promise<void> {
 
 export async function stopHlFeeds(): Promise<void> {
 	feedLifecycle += 1;
+	browserLifecycleUnbind?.();
+	browserLifecycleUnbind = null;
 	selectedMarketUnsubscribe?.();
 	selectedMarketUnsubscribe = null;
 	if (marketReconnectTimer) clearTimeout(marketReconnectTimer);
@@ -871,6 +897,7 @@ export async function stopHlFeeds(): Promise<void> {
 	stopMarketRegistryRefresh();
 	++marketGeneration;
 	marketFeedStartedAt = 0;
+	marketReconnectAttempt = 0;
 	midsSubActive = false;
 	if (marketHealthTimer) clearInterval(marketHealthTimer);
 	marketHealthTimer = null;

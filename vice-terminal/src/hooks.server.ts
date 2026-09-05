@@ -27,6 +27,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 	const isLogin = pathname === '/login';
 	const isLoginApi = pathname === '/api/beta/login';
 	const isLogoutApi = pathname === '/api/beta/logout';
+	const isPublicDiagnostic = pathname === '/api/meta' || pathname === '/api/health';
 	const isPublicAsset = isStaticAsset(pathname);
 	if (gateEnabled) {
 		try {
@@ -43,7 +44,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 		if (isLogin) throw redirect(303, '/');
 		return withSecurityHeaders(await resolve(event), pathname, event.url.protocol);
 	}
-	if (isLoginApi || isLogoutApi) return withSecurityHeaders(await resolve(event), pathname, event.url.protocol);
+	if (isLoginApi || isLogoutApi || isPublicDiagnostic) return withSecurityHeaders(await resolve(event), pathname, event.url.protocol);
 	if (isPublicAsset && !pathname.startsWith('/api/')) return withSecurityHeaders(await resolve(event), pathname, event.url.protocol);
 	if (isLogin) {
 		if (identity) throw redirect(303, safeReturnTarget(event.url));
