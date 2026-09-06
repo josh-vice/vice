@@ -21,10 +21,16 @@ jobs:
       - name: Probe public health endpoint
         env:
           VICE_PRODUCTION_URL: ${{ secrets.VICE_PRODUCTION_URL }}
+          VICE_RELEASE_SHA: ${{ secrets.VICE_RELEASE_SHA }}
         run: |
           set -euo pipefail
           test -n "$VICE_PRODUCTION_URL"
+          test -n "$VICE_RELEASE_SHA"
+          printf '%s' "$VICE_RELEASE_SHA" | grep -Eq '^[a-fA-F0-9]{40}$'
           url="${VICE_PRODUCTION_URL%/}/api/health"
           response="$(curl --fail-with-body --silent --show-error --retry 2 --retry-delay 1 --max-time 15 "$url")"
           printf '%s\n' "$response" | jq -e '(.ok == true) and (.network == "mainnet") and (all(.checks[]; .ok == true))' >/dev/null
-          printf 'Production health passed for %s\n' "$url"
+          meta_url="${VICE_PRODUCTION_URL%/}/api/meta"
+          meta="$(curl --fail-with-body --silent --show-error --retry 2 --retry-delay 1 --max-time 15 "$meta_url")"
+          printf '%s\n' "$meta" | jq -e --arg sha "$VICE_RELEASE_SHA" '(.network == "mainnet") and (.commit == $sha) and (.releaseBuild == $sha)' >/dev/null
+          printf 'Production health and immutable identity passed for %s\n' "$url"

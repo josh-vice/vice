@@ -9,7 +9,7 @@ describe('US-004 advanced order surface', () => {
 		for (const type of advancedOrderTypes()) expect(model).toContain(`id: '${type}'`);
 		expect(source).toContain('marketProfile.supportsAdvancedOrders && isAdvancedOrderType(type.id)');
 		expect(source).toContain('isAdvancedOrderCertified');
-		expect(source).toContain('Testnet certification required');
+		expect(source).toContain('Live certification required');
 		expect(source).toContain('disabled={!certified}');
 		expect(source).toContain('unavailableOrderTypeMessage(t.id)');
 		expect(source).toContain('availableQuickTypes = QUICK_ORDER_TYPES.filter');

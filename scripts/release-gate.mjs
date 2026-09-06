@@ -24,7 +24,8 @@ const commands = [
 	['test:latency'],
 	['test:soak:mainnet'],
 	['test:deployed'],
-	['beta:readiness']
+	['beta:readiness'],
+	['test:production-auth']
 ];
 const results = [];
 for (const args of commands) {
@@ -46,9 +47,10 @@ for (const args of commands) {
 	results.push({ command: `bun run ${args.join(' ')}`, startedAt, finishedAt: new Date().toISOString(), status: result.success ? 'passed' : 'failed', exitCode: result.exitCode ?? 1 });
 }
 mkdirSync(resolve(root, 'release'), { recursive: true });
-writeFileSync(resolve(root, 'release/test-summary.json'), JSON.stringify({ schemaVersion: 2, run: 'release-gate', generatedAt: new Date().toISOString(), results, passed: results.filter((result) => result.status === 'passed').length, failed: results.filter((result) => result.status === 'failed').length }, null, 2) + '\n');
+const summaryPath = process.env.VICE_RELEASE_GATE_SUMMARY?.trim() ?? 'release/release-gate-summary.json';
+writeFileSync(resolve(root, summaryPath), JSON.stringify({ schemaVersion: 2, run: 'release-gate', generatedAt: new Date().toISOString(), results, passed: results.filter((result) => result.status === 'passed').length, failed: results.filter((result) => result.status === 'failed').length }, null, 2) + '\n');
 if (results.some((result) => result.status === 'failed')) {
-	console.error(`\nRelease blocked: ${results.filter((result) => result.status === 'failed').length} required checks failed. See release/test-summary.json.`);
+	console.error(`\nRelease blocked: ${results.filter((result) => result.status === 'failed').length} required checks failed. See ${summaryPath}.`);
 	process.exit(1);
 }
 console.log('\nTrading terminal release gate passed.');

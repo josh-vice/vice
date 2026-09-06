@@ -193,6 +193,7 @@ function startMarketHealthWatchdog(): void {
 async function unsubscribeAll(): Promise<void> {
 	publicPlane?.stop();
 	publicPlane = null;
+	midsSubActive = false;
 	for (const sub of Object.values(activeSubs)) {
 		try {
 			await sub?.unsubscribe();
@@ -205,6 +206,9 @@ async function unsubscribeAll(): Promise<void> {
 
 function scheduleMarketRecovery(): void {
 	if (!currentCoin || marketReconnectTimer || !isBrowserOnline()) return;
+	for (const feed of REQUIRED_MARKET_FEEDS) lastMarketFeedAt[feed] = 0;
+	marketDataStatus.set('stale');
+	candleDataStatus.set('stale');
 	const attempt = marketReconnectAttempt++;
 	marketReconnectTimer = setTimeout(() => {
 		marketReconnectTimer = null;
@@ -219,12 +223,15 @@ async function recoverMarketFeeds(): Promise<void> {
 	const coin = currentCoin;
 	const timeframe = currentTimeframe;
 	if (!coin || !timeframe) return;
+	// Invalidate the old identity before stopping the shared plane. A close event
+	// emitted during teardown must not enqueue another recovery for the stale
+	// market generation.
+	currentCoin = '';
+	currentTimeframe = '';
 	await unsubscribeAll();
 	// Force subscribeMarket through its reconnect path while retaining the
 	// existing HTTP baseline and chart state until a new stream is live.
-		currentCoin = '';
-		currentTimeframe = '';
-		midsSubActive = false;
+	midsSubActive = false;
 	for (const feed of REQUIRED_MARKET_FEEDS) lastMarketFeedAt[feed] = 0;
 	lastPerpContextAt = 0;
 	lastSpotContextAt = 0;
@@ -323,9 +330,12 @@ function scheduleBookCommit(generation: number, epoch: number): void {
 	});
 }
 
-function canonicalBookEvent(book: OrderBook, generation: number, subscriptionEpoch: number, eventTimeMs?: number, eventSequence = ++bookEventOrdinal): ReturnType<typeof hyperliquidBookEvent> {
+function canonicalBookEvent(book: OrderBook, generation: number, subscriptionEpoch: number, eventTimeMs?: number, eventSequence = ++bookEventOrdinal): ReturnType<typeof hyperliquidBookEvent> | null {
 	const market = get(marketRegistry).find((candidate) => candidate.apiCoin === currentCoin);
-	if (!market) throw new Error(`Hyperliquid book event market identity is unavailable: ${currentCoin}`);
+	// Catalog refreshes can briefly replace the registry while the selected
+	// market remains visible. An unidentifiable frame is not authoritative and
+	// must not become a liveness signal or trigger an unnecessary reconnect.
+	if (!market) return null;
 	// The grouping is captured at commit time because a grouping change tears
 	// down and rebuilds the book subscription with a fresh epoch; a frame from
 	// the old grouping is dropped by the epoch check before reaching here.
@@ -472,11 +482,13 @@ async function loadMarketSnapshots(coin: string, generation: number, bookEpoch: 
 			// frame for this subscription, never let a slower HTTP response replace it.
 			if (generation === marketGeneration && bookEpoch === bookSubscriptionEpoch && liveBookFrameEpoch !== bookEpoch) {
 				try {
-					orderBook.set(canonicalBookEvent(normalizedBook, generation, bookEpoch, book.value.time).payload);
-					markMarketFeedAlive('book');
-					loaded = true;
+					const canonical = canonicalBookEvent(normalizedBook, generation, bookEpoch, book.value.time);
+					if (canonical) {
+						orderBook.set(canonical.payload);
+						loaded = true;
+					}
 				} catch (error) {
-					console.warn('[hl] canonical book snapshot rejected:', error);
+					console.warn('[hl] canonical book snapshot dropped:', error);
 				}
 			}
 		} else console.warn('[hl] order book snapshot was malformed or crossed');
@@ -487,7 +499,6 @@ async function loadMarketSnapshots(coin: string, generation: number, bookEpoch: 
 		for (const trade of [...normalizedTrades].reverse()) upsertTradeCandle(trade, generation);
 		// An empty REST window is not proof that the trade stream is healthy.
 		if (normalizedTrades.length > 0) {
-			markMarketFeedAlive('trades');
 			loaded = true;
 		}
 	}
@@ -523,10 +534,12 @@ async function subscribeMarketNow(apiCoin: string, timeframe?: string): Promise<
 		liveCandle.set(null);
 		hydrateCachedCandleHistory(coin, tf, generation);
 		lastCandleEventAt = 0;
+		for (const feed of REQUIRED_MARKET_FEEDS) lastMarketFeedAt[feed] = 0;
 		candleDataStatus.set('connecting');
 		recentTrades.set([]);
 		orderBook.set({ bids: [], asks: [], spread: 0, spreadPercent: 0 });
 		marketDataStatus.set('connecting');
+		void warmAllMidsSnapshot(coin, generation);
 
 		let snapshotLoaded = false;
 		try {
@@ -557,18 +570,18 @@ async function subscribeMarketNow(apiCoin: string, timeframe?: string): Promise<
 					return;
 				}
 				const sequence = ++bookEventOrdinal;
-				markFeedReceive('book', sequence);
-				markMarketFeedAlive('book');
+				let canonical: ReturnType<typeof hyperliquidBookEvent> | null;
 				try {
-					pendingBook = canonicalBookEvent(normalizedBook, generation, bookEpoch, data.time, sequence);
-					liveBookFrameEpoch = bookEpoch;
+					canonical = canonicalBookEvent(normalizedBook, generation, bookEpoch, data.time, sequence);
 				} catch (error) {
-					dropFeedReceive('book', sequence);
-					console.warn('[hl] canonical book event rejected:', error);
-					marketDataStatus.set('stale');
-					scheduleMarketRecovery();
+					console.warn('[hl] canonical book frame dropped:', error);
 					return;
 				}
+				if (!canonical) return;
+				markFeedReceive('book', sequence);
+				markMarketFeedAlive('book');
+				pendingBook = canonical;
+				liveBookFrameEpoch = bookEpoch;
 				pendingBookSequences.push(sequence);
 				scheduleBookCommit(generation, bookEpoch);
 			});
@@ -650,18 +663,18 @@ export function resubscribeOrderBook(apiCoin: string): Promise<void> {
 				return;
 			}
 			const sequence = ++bookEventOrdinal;
-			markFeedReceive('book', sequence);
-			markMarketFeedAlive('book');
+			let canonical: ReturnType<typeof hyperliquidBookEvent> | null;
 			try {
-				pendingBook = canonicalBookEvent(normalizedBook, generation, bookEpoch, data.time, sequence);
-				liveBookFrameEpoch = bookEpoch;
+				canonical = canonicalBookEvent(normalizedBook, generation, bookEpoch, data.time, sequence);
 			} catch (error) {
-				dropFeedReceive('book', sequence);
-				console.warn('[hl] canonical book event rejected:', error);
-				marketDataStatus.set('stale');
-				scheduleMarketRecovery();
+				console.warn('[hl] canonical book frame dropped:', error);
 				return;
 			}
+			if (!canonical) return;
+			markFeedReceive('book', sequence);
+			markMarketFeedAlive('book');
+			pendingBook = canonical;
+			liveBookFrameEpoch = bookEpoch;
 			pendingBookSequences.push(sequence);
 			scheduleBookCommit(generation, bookEpoch);
 		});
@@ -681,6 +694,50 @@ async function unsubscribeMarketFeeds(): Promise<void> {
 			/* ignore */
 		}
 		activeSubs[key] = undefined;
+	}
+}
+
+function applyAllMidsSnapshot(mids: Record<string, string>, receivedAtMs = Date.now()): boolean {
+	const markets = get(marketRegistry);
+	ensureMarketIndex(markets);
+	const selected = get(selectedMarket);
+	const snapshotSelectedMid = selected?.apiCoin ? mids[selected.apiCoin] : undefined;
+	const selectedPrice = snapshotSelectedMid === undefined ? Number.NaN : parseFloat(snapshotSelectedMid);
+	const previousSelectedPrice = selected?.lastPrice;
+	const selectedUpdate = Number.isFinite(selectedPrice) && selectedPrice > 0;
+	for (const [apiCoin, mid] of Object.entries(mids)) {
+		const price = parseFloat(mid);
+		if (!Number.isFinite(price) || price <= 0) continue;
+		const market = marketByApiCoin.get(apiCoin);
+		if (!market) continue;
+		market.lastPrice = price;
+		market.markPrice = price;
+		lastAllMidByApiCoin.set(apiCoin, receivedAtMs);
+		if (selected?.apiCoin !== apiCoin) pendingCatalogQuotes.set(apiCoin, price);
+	}
+	marketRegistry.set(markets);
+	catalogQueueDepthMax = Math.max(catalogQueueDepthMax, pendingCatalogQuotes.size);
+	if (pendingCatalogQuotes.size > 0) scheduleCatalogQuoteFlush();
+	if (selected && selectedUpdate) {
+		selectedMarket.update((market) => market ? { ...market, lastPrice: selectedPrice, markPrice: selectedPrice } : market);
+		const currentOrderPrice = get(orderPrice);
+		if (
+			!get(priceInputFocused) &&
+			(currentOrderPrice === null || currentOrderPrice === 0 || currentOrderPrice === previousSelectedPrice)
+		) {
+			orderPrice.set(selectedPrice);
+		}
+	}
+	return selectedUpdate;
+}
+
+async function warmAllMidsSnapshot(coin: string, generation: number): Promise<void> {
+	try {
+		const mids = await withTimeout(getPublicInfoClient().allMids(), STARTUP_HTTP_TIMEOUT_MS, 'all mids snapshot');
+		if (generation !== marketGeneration || coin !== currentCoin) return;
+		if (applyAllMidsSnapshot(mids)) markMarketFeedAlive('mids');
+	} catch {
+		// The websocket all-mids stream remains authoritative if the warm HTTP read is unavailable.
 	}
 }
 

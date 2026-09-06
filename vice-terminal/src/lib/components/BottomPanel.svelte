@@ -572,9 +572,9 @@
 				<span class="text-3xs text-terminal-text-muted">Cancel known orders only. Every order must match a registered API coin and market key.</span>
 				{#if !cancelAllConfirm}
 					<div class="flex gap-1">
-						<button data-action-id="ui.src.lib.components.bottompanel.button.h95d5ab29ba" class="rounded border border-terminal-border px-1.5 py-0.5 text-3xs text-terminal-text-muted hover:text-terminal-text disabled:opacity-50" disabled={cancelAllBusy} onclick={() => (cancelAllConfirm = 'buy')}>CANCEL BIDS</button>
-						<button data-action-id="ui.src.lib.components.bottompanel.button.h19636da2ee" class="rounded border border-terminal-border px-1.5 py-0.5 text-3xs text-terminal-text-muted hover:text-terminal-text disabled:opacity-50" disabled={cancelAllBusy} onclick={() => (cancelAllConfirm = 'sell')}>CANCEL ASKS</button>
-						<button data-action-id="ui.src.lib.components.bottompanel.button.h38c1066eca" class="rounded border border-terminal-red/60 px-1.5 py-0.5 text-3xs text-terminal-red hover:bg-terminal-red/10 disabled:opacity-50" disabled={cancelAllBusy} onclick={() => (cancelAllConfirm = 'both')}>CANCEL ALL</button>
+						<button data-action-id="ui.src.lib.components.bottompanel.button.h95d5ab29ba" class="rounded border border-terminal-border px-1.5 py-0.5 text-3xs text-terminal-text-muted hover:text-terminal-text disabled:opacity-50" disabled={cancelAllBusy || !privateStateLive} onclick={() => (cancelAllConfirm = 'buy')}>CANCEL BIDS</button>
+						<button data-action-id="ui.src.lib.components.bottompanel.button.h19636da2ee" class="rounded border border-terminal-border px-1.5 py-0.5 text-3xs text-terminal-text-muted hover:text-terminal-text disabled:opacity-50" disabled={cancelAllBusy || !privateStateLive} onclick={() => (cancelAllConfirm = 'sell')}>CANCEL ASKS</button>
+						<button data-action-id="ui.src.lib.components.bottompanel.button.h38c1066eca" class="rounded border border-terminal-red/60 px-1.5 py-0.5 text-3xs text-terminal-red hover:bg-terminal-red/10 disabled:opacity-50" disabled={cancelAllBusy || !privateStateLive} onclick={() => (cancelAllConfirm = 'both')}>CANCEL ALL</button>
 					</div>
 				{:else}
 					<div class="flex items-center gap-1 text-3xs text-terminal-yellow">

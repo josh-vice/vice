@@ -85,7 +85,7 @@
 		{@const activeChange = $selectedMarket.changePercent24h}
 		{@const statsHealth = $marketContextStatus}
 		{@const statsLabel = healthLabel(statsHealth)}
-		<div class="flex min-h-10 bg-terminal-bg-secondary border-b border-terminal-border items-center px-3 gap-4 text-xs overflow-hidden scrollbar-none">
+		<div class="hidden lg:flex min-h-10 bg-terminal-bg-secondary border-b border-terminal-border items-center px-3 gap-4 text-xs overflow-hidden scrollbar-none">
 			<!-- Symbol + Price -->
 			<div class="flex items-center gap-3 flex-shrink-0">
 				<div class="flex items-center gap-2">
@@ -171,7 +171,7 @@
 		<!-- TAB: Trade — chart fills screen, mini book below, sticky CTA bar -->
 		<div class="flex-1 min-h-0 flex flex-col {mobileTab === 'trade' ? '' : 'hidden'}">
 			<!-- Instrument header (FTX style: back arrow + symbol + price) -->
-					<div data-testid="mobile-market-disclosure" class="flex gap-2 overflow-x-auto whitespace-nowrap text-3xs text-terminal-text-muted">
+					<div data-testid="mobile-market-disclosure" class="flex min-h-7 flex-shrink-0 items-center gap-3 overflow-x-auto border-b border-terminal-border bg-terminal-bg-secondary px-3 py-1 whitespace-nowrap text-3xs text-terminal-text-muted scrollbar-none">
 						<span>Venue: Hyperliquid</span>
 						<span>API: <b class="font-mono text-terminal-text">{$selectedMarket?.apiCoin ?? 'Unavailable'}</b></span>
 						<span>Base/quote: <b class="font-mono text-terminal-text">{$selectedMarket?.baseToken ?? 'Unavailable'} / {$selectedMarket?.quoteToken ?? 'Unavailable'}</b></span>

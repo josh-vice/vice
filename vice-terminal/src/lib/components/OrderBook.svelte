@@ -6,7 +6,7 @@
 	import { resubscribeOrderBook } from '$lib/hl/subscriptions';
 	import { cancelOrder, modifyOrderPrice, placeOrder, fetchOpenOrders } from '$lib/hl/orders';
 	import { wouldCrossSpread } from '$lib/chart/tradingMath';
-	import { tick } from 'svelte';
+	import { onDestroy, tick } from 'svelte';
 	import { topOfBookImbalance } from '$lib/bookAnalytics';
 	import { marketCapabilities } from '$lib/marketCapabilities';
 	import { marketMatches } from '$lib/chart/chartModel';
@@ -28,6 +28,7 @@
 	let ignoreNextPlacement = false;
 	let followLastPrice = true;
 	let suppressLadderScroll = false;
+	let suppressLadderScrollTimer: ReturnType<typeof setTimeout> | undefined;
 	let recenterPending = false;
 	let ladderCenter: HTMLDivElement | undefined;
 
@@ -52,7 +53,11 @@
 			if (!followLastPrice || draggingOrderId || !ladderCenter) return;
 			suppressLadderScroll = true;
 			ladderCenter.scrollIntoView({ block: 'center' });
-			queueMicrotask(() => { suppressLadderScroll = false; });
+			if (suppressLadderScrollTimer) clearTimeout(suppressLadderScrollTimer);
+			suppressLadderScrollTimer = setTimeout(() => {
+				suppressLadderScroll = false;
+				suppressLadderScrollTimer = undefined;
+			}, 250);
 		});
 	}
 
@@ -62,8 +67,25 @@
 	}
 
 	function onLadderScroll(): void {
-		if (!suppressLadderScroll) followLastPrice = false;
+		if (suppressLadderScroll) {
+			suppressLadderScroll = false;
+			if (suppressLadderScrollTimer) clearTimeout(suppressLadderScrollTimer);
+			suppressLadderScrollTimer = undefined;
+			return;
+		}
+		followLastPrice = false;
 	}
+
+	function onLadderUserScroll(): void {
+		suppressLadderScroll = false;
+		if (suppressLadderScrollTimer) clearTimeout(suppressLadderScrollTimer);
+		suppressLadderScrollTimer = undefined;
+		followLastPrice = false;
+	}
+
+	onDestroy(() => {
+		if (suppressLadderScrollTimer) clearTimeout(suppressLadderScrollTimer);
+	});
 
 
 	function ordersAtPrice(price: number) {
@@ -235,7 +257,7 @@
 
 	{#if hasBook}
 		<div data-testid="order-book-live" class="contents">
-		<div data-action-id="dom.ladder.scroll" data-testid="dom-ladder-viewport" class="flex-1 min-h-0 overflow-y-auto scrollbar-none" onscroll={onLadderScroll}>
+		<div data-action-id="dom.ladder.scroll" data-testid="dom-ladder-viewport" role="region" aria-label="Order book ladder" class="flex-1 min-h-0 overflow-y-auto scrollbar-none" onscroll={onLadderScroll} onwheel={onLadderUserScroll} ontouchmove={onLadderUserScroll}>
 			<div class="flex-1 min-h-0 overflow-hidden flex flex-col justify-end">
 				{#each visibleAsks as ask (ask.price)}
 					<div class="relative">

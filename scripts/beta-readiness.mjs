@@ -23,10 +23,20 @@ function requireCoverage(actual, expected, field) {
 async function probeDeployment(url, expectedSha) {
 	if (!url) return 'deployment URL is required';
 	try {
-		const response = await fetch(new URL('/api/meta', url), { headers: { accept: 'application/json' }, cache: 'no-store' });
-		if (!response.ok) return `deployment /api/meta returned ${response.status}`;
-		const meta = await response.json();
-		return meta?.commit === expectedSha && meta?.releaseBuild === expectedSha ? null : 'deployment identity does not match manifest SHA';
+		const metaResponse = await fetch(new URL('/api/meta', url), { headers: { accept: 'application/json' }, cache: 'no-store' });
+		if (!metaResponse.ok) return `deployment /api/meta returned ${metaResponse.status}`;
+		const meta = await metaResponse.json();
+		if (meta?.commit !== expectedSha || meta?.releaseBuild !== expectedSha) return 'deployment identity does not match manifest SHA';
+		const healthResponse = await fetch(new URL('/api/health', url), { headers: { accept: 'application/json' }, cache: 'no-store' });
+		if (!healthResponse.ok) return `deployment /api/health returned ${healthResponse.status}`;
+		const health = await healthResponse.json();
+		const failedChecks = Object.entries(health?.checks ?? {})
+			.filter(([, check]) => check?.ok !== true)
+			.map(([name]) => name);
+		if (health?.ok !== true || health?.network !== 'mainnet' || failedChecks.length > 0) {
+			return `deployment health checks failed${failedChecks.length ? `: ${failedChecks.join(', ')}` : ''}`;
+		}
+		return null;
 	} catch {
 		return 'deployment identity probe failed';
 	}
@@ -51,6 +61,10 @@ const evidencePath = process.env.VICE_MAINNET_EVIDENCE?.trim();
 if (!evidencePath) errors.push('VICE_MAINNET_EVIDENCE is not configured');
 if (!process.env.VICE_MAINNET_RELEASE_BUILD?.trim()) errors.push('VICE_MAINNET_RELEASE_BUILD is not configured');
 if (manifest?.commit && process.env.VICE_MAINNET_RELEASE_BUILD?.trim() !== manifest.commit) errors.push('VICE_MAINNET_RELEASE_BUILD does not match manifest commit');
+if (process.env.VICE_BETA_REQUIRED?.trim().toLowerCase() !== 'true') errors.push('VICE_BETA_REQUIRED=true is required for a closed beta');
+for (const name of ['VICE_BETA_SESSION_SECRET', 'UPSTASH_REDIS_REST_URL', 'UPSTASH_REDIS_REST_TOKEN']) {
+	if (!process.env[name]?.trim()) errors.push(`${name} is not configured`);
+}
 for (const owner of ['VICE_BETA_SUPPORT_OWNER', 'VICE_INCIDENT_OWNER', 'VICE_RELEASE_OWNER']) if (!process.env[owner]?.trim()) errors.push(`${owner} is not assigned`);
 if (evidencePath && streamCatalog) {
 	try {
@@ -61,7 +75,7 @@ if (evidencePath && streamCatalog) {
 		errors.push(`mainnet evidence is incomplete: ${error instanceof Error ? error.message : 'invalid evidence'}`);
 	}
 }
-const deploymentUrl = option('--deployment') ?? process.env.VICE_DEPLOYED_URL?.trim() ?? null;
+const deploymentUrl = option('--deployment') ?? process.env.VICE_DEPLOYMENT_URL?.trim() ?? process.env.VICE_DEPLOYED_URL?.trim() ?? null;
 if (manifest) {
 	const deploymentError = await probeDeployment(deploymentUrl, manifest.commit);
 	if (deploymentError) errors.push(deploymentError);

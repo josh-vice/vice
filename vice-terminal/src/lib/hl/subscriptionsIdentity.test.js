@@ -125,7 +125,47 @@ describe('exact feed identity boundary', () => {
 		const source = await Bun.file(new URL('./subscriptions.ts', import.meta.url)).text();
 		expect(source).toContain("selectedMarketFeedsAreHealthy() ? 'live' : snapshotLoaded ? 'stale' : 'connecting'");
 		expect(source).toContain("get(marketDataStatus) === 'stale' || get(marketDataStatus) === 'connecting'");
-		expect(source).not.toContain("await loadCandleHistory(coin, tf, generation);\n\t\t\tmarketDataStatus.set('live');");
+		expect(source).not.toContain("await loadCandleHistory(coin, tf, generation);\n			marketDataStatus.set('live');");
+	});
+
+	test('HTTP baselines stay stale until post-reconnect book and trade frames arrive', async () => {
+		const source = await Bun.file(new URL('./subscriptions.ts', import.meta.url)).text();
+		const snapshotSection = source.slice(source.indexOf('async function loadMarketSnapshots'), source.indexOf('function requireRegisteredApiCoin'));
+		expect(snapshotSection).not.toContain("markMarketFeedAlive('book')");
+		expect(snapshotSection).not.toContain("markMarketFeedAlive('trades')");
+		expect(source).toContain('void warmAllMidsSnapshot(coin, generation);');
+	});
+
+	test('market switches clear prior selected-feed freshness before subscribing', async () => {
+		const source = await Bun.file(new URL('./subscriptions.ts', import.meta.url)).text();
+		const switchSection = source.slice(source.indexOf('if (coin !== currentCoin)'), source.indexOf('const bookSubscriptionPromise'));
+		expect(switchSection).toContain('for (const feed of REQUIRED_MARKET_FEEDS) lastMarketFeedAt[feed] = 0;');
+	});
+
+	test('scheduled recovery invalidates cached freshness before its backoff timer', async () => {
+		const source = await Bun.file(new URL('./subscriptions.ts', import.meta.url)).text();
+		const recovery = source.slice(source.indexOf('function scheduleMarketRecovery'), source.indexOf('async function recoverMarketFeeds'));
+		expect(recovery).toContain('for (const feed of REQUIRED_MARKET_FEEDS) lastMarketFeedAt[feed] = 0;');
+		expect(recovery).toContain("marketDataStatus.set('stale');");
+		expect(recovery).toContain("candleDataStatus.set('stale');");
+	});
+
+	test('recovery tears down and recreates the shared all-mids plane', async () => {
+		const source = await Bun.file(new URL('./subscriptions.ts', import.meta.url)).text();
+		const unsubscribe = source.slice(source.indexOf('async function unsubscribeAll'), source.indexOf('function scheduleMarketRecovery'));
+		const recovery = source.slice(source.indexOf('async function recoverMarketFeeds'), source.indexOf('function bindMarketTransportHealth'));
+		expect(unsubscribe).toContain('midsSubActive = false;');
+		expect(recovery.indexOf("currentCoin = '';" )).toBeLessThan(recovery.indexOf('await unsubscribeAll();'));
+		expect(recovery).toContain('await subscribeAllMids();');
+	});
+
+	test('book freshness is recorded only after exact market identity acceptance', async () => {
+		const source = await Bun.file(new URL('./subscriptions.ts', import.meta.url)).text();
+		expect(source).toContain('if (!market) return null;');
+		const callback = source.slice(source.indexOf('const bookSubscriptionPromise'), source.indexOf('// Candle history owns the largest visible surface.'));
+		expect(callback.indexOf('canonical = canonicalBookEvent')).toBeGreaterThanOrEqual(0);
+		expect(callback.indexOf('canonical = canonicalBookEvent')).toBeLessThan(callback.indexOf("markFeedReceive('book'"));
+		expect(callback).not.toContain('canonical book event rejected');
 	});
 
 	test('silent open sockets recover after the startup delivery deadline', async () => {
@@ -183,7 +223,7 @@ describe('exact feed identity boundary', () => {
 		expect(source).toContain('pendingBookEpoch === bookSubscriptionEpoch');
 		expect(source).toContain('const normalizedBook = normalizeL2Book(data);');
 		expect(source).toContain('if (!normalizedBook) {');
-		expect(source).toContain('pendingBook = canonicalBookEvent(normalizedBook, generation, bookEpoch, data.time, sequence);');
+		expect(source).toContain('pendingBook = canonical;');
 		expect(source).toContain('scheduleBookCommit(generation, bookEpoch);');
 		// The live handler defers to the coalescing scheduler rather than
 		// committing straight to the store on every raw WS frame.
@@ -198,7 +238,7 @@ describe('exact feed identity boundary', () => {
 		expect(source).toContain('activeSubs.l2Book = await getPublicBookSubscriptionClient().l2Book');
 		expect(source).toContain('bindMarketSocketHealth(getPublicBookTransport().socket, feedLifecycle);');
 		expect(source).toContain("import { hyperliquidBookEvent } from '$lib/venue/hyperliquid';");
-		expect(source).toContain('pendingBook = canonicalBookEvent(normalizedBook, generation, bookEpoch, data.time, sequence);');
+		expect(source).toContain('pendingBook = canonical;');
 		expect(source).toContain('orderBook.set(pendingBook.payload);');
 		expect(source).toContain('const sequence = ++bookEventOrdinal;');
 	});
@@ -207,8 +247,8 @@ describe('exact feed identity boundary', () => {
 		const source = await Bun.file(new URL('./subscriptions.ts', import.meta.url)).text();
 		expect(source).toContain('async function loadMarketSnapshots(coin: string, generation: number, bookEpoch: number): Promise<boolean> {');
 		expect(source).toContain('generation === marketGeneration && bookEpoch === bookSubscriptionEpoch && liveBookFrameEpoch !== bookEpoch');
-		expect(source).toContain('orderBook.set(canonicalBookEvent(normalizedBook, generation, bookEpoch, book.value.time).payload);');
-		expect(source.match(/pendingBook = canonicalBookEvent\(normalizedBook, generation, bookEpoch, data\.time, sequence\);/g)).toHaveLength(2);
+		expect(source).toContain('const canonical = canonicalBookEvent(normalizedBook, generation, bookEpoch, book.value.time);');
+		expect(source.match(/canonical = canonicalBookEvent\(normalizedBook, generation, bookEpoch, data\.time, sequence\);/g)).toHaveLength(2);
 		expect(source.match(/liveBookFrameEpoch = bookEpoch;/g)).toHaveLength(2);
 	});
 });

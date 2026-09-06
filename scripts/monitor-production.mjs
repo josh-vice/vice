@@ -2,7 +2,8 @@
 const productionUrl = process.env.VICE_PRODUCTION_URL?.trim();
 const expectedSha = process.env.VICE_RELEASE_SHA?.trim();
 if (!productionUrl) throw new Error('VICE_PRODUCTION_URL is required');
-if (expectedSha && !/^[a-f0-9]{40}$/i.test(expectedSha)) throw new Error('VICE_RELEASE_SHA must be a full commit SHA when supplied');
+if (!expectedSha) throw new Error('VICE_RELEASE_SHA is required for immutable production monitoring');
+if (!/^[a-f0-9]{40}$/i.test(expectedSha)) throw new Error('VICE_RELEASE_SHA must be a full commit SHA');
 
 async function getJson(path) {
 	const controller = new AbortController();
@@ -28,7 +29,7 @@ if (failedChecks.length) throw new Error(`production health checks failed: ${fai
 
 const meta = await getJson('/api/meta');
 if (!meta.response.ok || meta.body?.network !== 'mainnet') throw new Error(`production metadata failed (${meta.response.status})`);
-if (expectedSha && (meta.body?.commit !== expectedSha || meta.body?.releaseBuild !== expectedSha)) {
+if (meta.body?.commit !== expectedSha || meta.body?.releaseBuild !== expectedSha) {
 	throw new Error('production metadata does not match VICE_RELEASE_SHA');
 }
 

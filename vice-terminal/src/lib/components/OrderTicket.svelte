@@ -542,7 +542,7 @@ const EMPTY_ORDER_BOOK: OrderBook = { bids: [], asks: [], spread: 0, spreadPerce
 								aria-disabled={!certified}
 								title={certified ? t.desc : unavailableOrderTypeMessage(t.id)}
 							>
-								<span class="flex items-center gap-1 text-2xs font-medium {t.id === $orderType ? 'text-terminal-cyan' : 'text-terminal-text'}">{t.label}{#if !certified}<span class="rounded bg-terminal-yellow/10 px-1 text-3xs text-terminal-yellow">Testnet certification required</span>{/if}</span>
+								<span class="flex items-center gap-1 text-2xs font-medium {t.id === $orderType ? 'text-terminal-cyan' : 'text-terminal-text'}">{t.label}{#if !certified}<span class="rounded bg-terminal-yellow/10 px-1 text-3xs text-terminal-yellow">Live certification required</span>{/if}</span>
 								<span class="text-3xs text-terminal-text-muted">{certified ? t.desc : unavailableOrderTypeMessage(t.id)}</span>
 							</button>
 						{/each}

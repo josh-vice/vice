@@ -35,6 +35,11 @@ function validatePolicy(policy: PolicyRecord): PolicyRecord {
 	if (!DECIMAL.test(policy.perOrderCapUsd) || !DECIMAL.test(policy.aggregateCapUsd) || policy.aggregateCapUsd === '0' || !Number.isSafeInteger(policy.expiresAt) || !Number.isSafeInteger(policy.updatedAt) || !SHA256.test(policy.approvalSha256)) throw new Error('release policy is malformed');
 	return { ...policy, allowedWallets: wallets as string[] };
 }
+function assertPolicyBoundToRuntime(policy: PolicyRecord): PolicyRecord {
+	const runtimeReleaseBuild = process.env.VICE_MAINNET_RELEASE_BUILD?.trim() ?? '';
+	if (!RELEASE_SHA.test(runtimeReleaseBuild) || policy.releaseBuild !== runtimeReleaseBuild) throw new Error('release policy is not bound to the running release');
+	return policy;
+}
 async function loadPolicy(): Promise<PolicyRecord> {
 	const redisUrl = process.env.UPSTASH_REDIS_REST_URL?.trim();
 	const redisToken = process.env.UPSTASH_REDIS_REST_TOKEN?.trim();
@@ -48,7 +53,7 @@ async function loadPolicy(): Promise<PolicyRecord> {
 		raw = process.env.VICE_RELEASE_POLICY_JSON.trim();
 	}
 	if (!raw) throw new Error('durable release policy is required');
-	return validatePolicy(JSON.parse(raw) as PolicyRecord);
+	return assertPolicyBoundToRuntime(validatePolicy(JSON.parse(raw) as PolicyRecord));
 }
 function responseHeaders(): HeadersInit {
 	return { 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' };

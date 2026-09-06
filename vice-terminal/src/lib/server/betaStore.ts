@@ -117,7 +117,9 @@ export async function recordBetaTester(tester: Omit<BetaTesterRecord, 'createdAt
 
 export async function isBetaSessionActive(identity: { testerId?: string; sessionVersion?: number; expiresAt?: number }): Promise<boolean> {
 	if (!identity.testerId || !Number.isInteger(identity.sessionVersion) || !Number.isFinite(identity.expiresAt)) return false;
-	if ((identity.expiresAt as number) <= Date.now()) return false;
+	// Session tokens carry Unix timestamps in seconds; tester records use
+	// milliseconds. Normalize the token boundary before comparing it to now.
+	if ((identity.expiresAt as number) * 1_000 <= Date.now()) return false;
 	const current = await getBetaTester(identity.testerId);
 	return Boolean(current && current.status === 'active' && current.sessionVersion === identity.sessionVersion && current.expiresAt > Date.now());
 }

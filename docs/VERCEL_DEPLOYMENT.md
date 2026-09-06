@@ -48,7 +48,7 @@ deployment-time secrets/configuration and are intentionally absent here.
 | `VICE_BETA_REQUIRED` | Durable beta gate switch | Production + preview |
 | `VICE_BETA_SESSION_SECRET` | Server-only HMAC secret | Production + preview |
 | `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN` | Durable beta sessions, revocation, and throttling | Production + preview |
-| `VICE_RELEASE_POLICY_JSON` | Server-only wallet/action/venue caps and halt policy | Production only |
+| `VICE_RELEASE_POLICY_JSON` | Server-only local/preview policy fallback; production policy is loaded from Redis | Local + preview only |
 | `VICE_MAINNET_EVIDENCE` | Exact-build funded mainnet evidence manifest | Production only |
 | `VICE_LATENCY_EVIDENCE` | Mainnet client latency telemetry | Production only |
 | `VICE_MAINNET_ALLOWLIST` | Approved mainnet wallet addresses | Production only |
@@ -57,6 +57,11 @@ deployment-time secrets/configuration and are intentionally absent here.
 | `VITE_HL_ENABLE_BUILDER_REVENUE` | Enable optional builder/referral revenue | Production only |
 | `VITE_HL_BUILDER_ADDRESS` | Builder fee recipient (only if revenue enabled) | Production only |
 
+**Production policy storage:** write the validated policy JSON to the durable
+Redis key `vice:release-policy:active` before deployment. The production route
+intentionally ignores `VICE_RELEASE_POLICY_JSON`; that variable is only the
+local/preview fallback.
+
 **No signing keys, vault paths, or credential values are ever stored in Vercel
 env.** Wallet/agent keys live inside the browser-local encrypted vault. Do not
 add `owner.json`, `taker.json`, or any private key as an env var or file.
@@ -64,7 +69,9 @@ add `owner.json`, `taker.json`, or any private key as an env var or file.
 ## Deployment flow (human-gated)
 
 1. Check out the exact release SHA and run `bun run test:release`. The aggregate
-   writes `release/test-summary.json`; every hard check affects its exit status.
+   writes `release/release-gate-summary.json`; the immutable build summary used
+   by the release manifest remains `release/test-summary.json`. Every hard check
+   affects the aggregate gate exit status.
 2. Build once, create `release/vice-manifest.json`, and verify it with
    `bun scripts/release-manifest.mjs --verify ... --expected-sha=<full-sha>`.
 3. Publish that immutable artifact through the release workflow. Vercel builds
