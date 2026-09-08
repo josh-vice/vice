@@ -3,6 +3,7 @@ import type { ChartCandle } from '$lib/types';
 const CACHE_KEY = 'vice.hl.candle-history.v1';
 const CACHE_VERSION = 1;
 const MAX_ENTRIES = 8;
+const MAX_SESSION_ENTRIES = 16;
 const MAX_CANDLES = 1_500;
 const MAX_AGE_MS = 24 * 60 * 60 * 1_000;
 
@@ -21,6 +22,34 @@ type CandleCache = {
 	version: number;
 	entries: CandleCacheEntry[];
 };
+
+type SessionCandleCacheEntry = {
+	savedAt: number;
+	candles: ChartCandle[];
+};
+
+// A session cache avoids reparsing localStorage when a trader cycles through
+// markets. It is deliberately separate from the durable cache so a successful
+// in-session snapshot remains available even when storage is disabled.
+const sessionCandleCache = new Map<string, SessionCandleCacheEntry>();
+
+function cacheIdentity(network: string, marketKey: string, apiCoin: string, interval: string): string {
+	return `${network}\u0000${marketKey}\u0000${apiCoin}\u0000${interval}`;
+}
+
+function rememberSessionCandleHistory(
+	network: string,
+	marketKey: string,
+	apiCoin: string,
+	interval: string,
+	candles: ChartCandle[],
+	now: number
+): void {
+	const key = cacheIdentity(network, marketKey, apiCoin, interval);
+	sessionCandleCache.delete(key);
+	sessionCandleCache.set(key, { savedAt: now, candles: candles.map((candle) => ({ ...candle })) });
+	while (sessionCandleCache.size > MAX_SESSION_ENTRIES) sessionCandleCache.delete(sessionCandleCache.keys().next().value!);
+}
 
 function browserStorage(): StorageLike | null {
 	return typeof localStorage === 'undefined' ? null : localStorage;
@@ -89,6 +118,28 @@ export function loadCachedCandleHistory(
 	return entry.candles.map((candle) => ({ ...candle }));
 }
 
+/** Read the fastest valid history available for a dataset. */
+export function loadFastCachedCandleHistory(
+	network: string,
+	marketKey: string,
+	apiCoin: string,
+	interval: string,
+	storage: StorageLike | null = browserStorage(),
+	now = Date.now()
+): ChartCandle[] {
+	const key = cacheIdentity(network, marketKey, apiCoin, interval);
+	const session = sessionCandleCache.get(key);
+	if (session && Number.isFinite(session.savedAt) && session.savedAt <= now + 60_000 && now - session.savedAt <= MAX_AGE_MS && validCandles(session.candles)) {
+		// Refresh the LRU position without exposing the mutable internal array.
+		rememberSessionCandleHistory(network, marketKey, apiCoin, interval, session.candles, session.savedAt);
+		return session.candles.map((candle) => ({ ...candle }));
+	}
+	if (session) sessionCandleCache.delete(key);
+	const cached = loadCachedCandleHistory(network, marketKey, apiCoin, interval, storage, now);
+	if (cached.length > 0) rememberSessionCandleHistory(network, marketKey, apiCoin, interval, cached, now);
+	return cached;
+}
+
 export function saveCachedCandleHistory(
 	network: string,
 	marketKey: string,
@@ -98,9 +149,10 @@ export function saveCachedCandleHistory(
 	storage: StorageLike | null = browserStorage(),
 	now = Date.now()
 ): void {
-	if (!storage) return;
 	const bounded = candles.slice(-MAX_CANDLES);
 	if (!validCandles(bounded)) return;
+	rememberSessionCandleHistory(network, marketKey, apiCoin, interval, bounded, now);
+	if (!storage) return;
 	const cache = readCache(storage);
 	const entries = cache.entries.filter(
 		(entry) =>

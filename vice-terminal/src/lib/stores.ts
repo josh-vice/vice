@@ -5,7 +5,8 @@ import { firstMarketForType } from './marketSelectionModel';
 import { emptyFatFingerLimits, type FatFingerLimits } from './execution/fatFinger';
 import { onTimeframeChanged, startHlFeeds, stopHlFeeds } from './hl';
 import { type HealthStatus } from './productionTruth';
-import { hyperliquidNetwork } from './hl/network';
+import { hyperliquidNetwork, hyperliquidPublicNetwork } from './hl/network';
+import { loadFastCachedCandleHistory } from './hl/candleCache';
 import { marketCapabilities } from './marketCapabilities';
 import {
 	type EnablementReporter,
@@ -27,6 +28,10 @@ export const spotMarketsList: Writable<MarketDescriptor[]> = writable([]);
 // updates one small object instead of copying the entire history array.
 export const chartCandles: Writable<ChartCandle[]> = writable([]);
 export const liveCandle: Writable<ChartCandle | null> = writable(null);
+export type ChartHistoryStatus = 'idle' | 'loading' | 'ready' | 'error';
+/** History loading is separate from candle-feed health so a first live tick
+ * cannot paint a misleading one-bar chart while REST history is in flight. */
+export const chartHistoryStatus: Writable<ChartHistoryStatus> = writable('idle');
 export const chartTimeframe: Writable<string> = writable('1h');
 
 // Chart trading UX (Insilico-style)
@@ -310,7 +315,11 @@ export const totalEquity: Readable<number> = derived(
 );
 
 // Actions
-function resetMarketBoundState(market: MarketDescriptor | null): void {
+function sameMarket(left: MarketDescriptor | null, right: MarketDescriptor | null): boolean {
+	return Boolean(left && right && left.marketKey === right.marketKey && left.apiCoin === right.apiCoin);
+}
+
+function resetMarketBoundState(market: MarketDescriptor | null, preserveChart = false): void {
 	orderType.set('limit');
 	orderSide.set('buy');
 	orderPrice.set(market && market.lastPrice > 0 ? market.lastPrice : null);
@@ -327,16 +336,32 @@ function resetMarketBoundState(market: MarketDescriptor | null): void {
 	chartDraft.set({});
 	chartInteraction.set({ kind: 'idle' });
 	chartActiveField.set('entry');
-	chartCandles.set([]);
-	liveCandle.set(null);
+	if (!preserveChart) {
+		const cached = market
+			? loadFastCachedCandleHistory(hyperliquidPublicNetwork.network, market.marketKey, market.apiCoin, get(chartTimeframe))
+			: [];
+		if (cached.length > 0) {
+			// Populate both stores in the same synchronous selection turn. The chart
+			// can therefore switch to a previously visited market without exposing
+			// an empty or one-candle intermediate dataset.
+			chartCandles.set(cached.slice(0, -1));
+			liveCandle.set(cached[cached.length - 1]);
+			chartHistoryStatus.set('ready');
+		} else {
+			chartCandles.set([]);
+			liveCandle.set(null);
+			chartHistoryStatus.set(market ? 'loading' : 'idle');
+		}
+	}
 	orderBook.set(emptyOrderBook);
 	recentTrades.set([]);
 	marketDataStatus.set('connecting');
 }
 
 export function selectMarket(market: MarketDescriptor) {
+	const previous = get(selectedMarket);
 	selectedMarket.set(market);
-	resetMarketBoundState(market);
+	resetMarketBoundState(market, sameMarket(previous, market));
 	void import('./hl/account')
 		.then(({ setActiveAccountAsset }) => setActiveAccountAsset(market))
 		.catch((e) => console.error('[hl] active account asset change failed:', e));
@@ -347,8 +372,9 @@ export async function selectMarketForExecution(market: MarketDescriptor, timeout
 	if (typeof window === 'undefined' || !Number.isFinite(timeoutMs) || timeoutMs <= 0) return false;
 	const registered = get(marketRegistry).find((candidate) => candidate.marketKey === market.marketKey && candidate.apiCoin === market.apiCoin);
 	if (!registered) return false;
-	resetMarketBoundState(registered);
+	const previous = get(selectedMarket);
 	selectedMarket.set(registered);
+	resetMarketBoundState(registered, sameMarket(previous, registered));
 	try {
 		const { setActiveAccountAsset } = await import('./hl/account');
 		await setActiveAccountAsset(registered);

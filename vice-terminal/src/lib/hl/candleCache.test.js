@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { loadCachedCandleHistory, saveCachedCandleHistory } from './candleCache';
+import { loadCachedCandleHistory, loadFastCachedCandleHistory, saveCachedCandleHistory } from './candleCache';
 
 function memoryStorage() {
 	const values = new Map();
@@ -48,5 +48,11 @@ describe('public candle-history cache', () => {
 		}
 		expect(loadCachedCandleHistory('testnet', 'perp:COIN-9', 'COIN-9', '1h', storage, 20_000)).toEqual(candles(109));
 		expect(loadCachedCandleHistory('testnet', 'perp:COIN-0', 'COIN-0', '1h', storage, 20_000)).toEqual([]);
+	});
+
+	test('uses the in-session history even when durable storage is unavailable', () => {
+		const history = candles(200);
+		saveCachedCandleHistory('testnet', 'perp:SESSION', 'SESSION', '1h', history, null, 30_000);
+		expect(loadFastCachedCandleHistory('testnet', 'perp:SESSION', 'SESSION', '1h', null, 30_100)).toEqual(history);
 	});
 });

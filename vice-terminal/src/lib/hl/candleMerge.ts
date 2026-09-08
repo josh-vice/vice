@@ -2,6 +2,26 @@ import type { ChartCandle } from '$lib/types';
 
 export type TradeCandleInput = { price: number; size: number; timestamp: number };
 
+/** Keep chart input sorted, unique, and safe for lightweight-charts.setData(). */
+export function canonicalizeCandles(candles: ChartCandle[]): ChartCandle[] {
+	const byTime = new Map<number, ChartCandle>();
+	for (const candle of candles) {
+		const volume = candle.volume ?? 0;
+		if (
+			!Number.isFinite(candle.time) || candle.time <= 0 ||
+			!Number.isFinite(candle.open) || candle.open <= 0 ||
+			!Number.isFinite(candle.high) || candle.high <= 0 ||
+			!Number.isFinite(candle.low) || candle.low <= 0 ||
+			!Number.isFinite(candle.close) || candle.close <= 0 ||
+			!Number.isFinite(volume) || volume < 0 ||
+			candle.high < Math.max(candle.open, candle.close, candle.low) ||
+			candle.low > Math.min(candle.open, candle.close, candle.high)
+		) continue;
+		byTime.set(candle.time, { ...candle, volume });
+	}
+	return [...byTime.values()].sort((a, b) => a.time - b.time);
+}
+
 /** Build/update an OHLCV candle from venue trades without synthetic values. */
 export function mergeTradeIntoCandles(
 	candles: ChartCandle[],
@@ -43,12 +63,14 @@ export function mergeCandleSnapshot(
 	snapshot: ChartCandle[],
 	liveCandles: ChartCandle[]
 ): ChartCandle[] {
-	if (snapshot.length === 0) return [...liveCandles].sort((a, b) => a.time - b.time);
+	const authoritative = canonicalizeCandles(snapshot);
+	const live = canonicalizeCandles(liveCandles);
+	if (authoritative.length === 0) return live;
 
-	const lastSnapshotTime = snapshot[snapshot.length - 1].time;
-	const merged = [...snapshot];
-	for (const candle of liveCandles) {
+	const lastSnapshotTime = authoritative[authoritative.length - 1].time;
+	const merged = [...authoritative];
+	for (const candle of live) {
 		if (candle.time > lastSnapshotTime) merged.push(candle);
 	}
-	return merged.sort((a, b) => a.time - b.time);
+	return canonicalizeCandles(merged);
 }

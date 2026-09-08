@@ -14,6 +14,7 @@ import {
 	spotMarketsList,
 	chartCandles,
 	liveCandle,
+	chartHistoryStatus,
 	chartTimeframe,
 	marketCatalogStatus,
 	orderPrice,
@@ -26,12 +27,12 @@ import { dropFeedReceive, markFeedReceive, markFeedReconnect, markStoreCommit } 
 import { createCoreBtcBootstrapMarket, readCachedMarketCatalog, startMarketRegistryRefresh, stopMarketRegistryRefresh } from './markets';
 import { hyperliquidPublicNetwork } from './network';
 import { applyAllDexPerpContexts, applySpotContexts } from './liveMarketUpdates';
-import { mergeCandleSnapshot, mergeTradeIntoCandles } from './candleMerge';
+import { canonicalizeCandles, mergeCandleSnapshot, mergeTradeIntoCandles } from './candleMerge';
 import { RECENT_TRADES_LIMIT, mergeRecentTrades } from '$lib/tradeTape';
 import { bookSigFigs, loadBookDepth, loadBookSigFigs } from '$lib/bookGrouping';
 import { startHyperliquidPublicPlane, type PublicPlaneSession } from '$lib/data-plane/hyperliquidPublicPlane';
 import { hyperliquidBookEvent } from '$lib/venue/hyperliquid';
-import { loadCachedCandleHistory, saveCachedCandleHistory } from './candleCache';
+import { loadFastCachedCandleHistory, saveCachedCandleHistory } from './candleCache';
 import { ALL_MIDS_STALE_THRESHOLD_MS, CONTEXT_STALE_THRESHOLD_MS, FEED_STALE_THRESHOLD_MS, REQUIRED_MARKET_FEEDS, allMidsAreFresh, contextIsHealthy, feedsAreHealthy, type RequiredMarketFeed, type FeedTimestamps } from './feedHealth';
 import { bindBrowserLifecycle, isBrowserOnline } from './browserLifecycle';
 import { getMarketReconnectDelayMs } from './reliability';
@@ -126,6 +127,8 @@ function markMarketContextAlive(kind: 'perp' | 'spot'): void {
 }
 
 const STARTUP_HTTP_TIMEOUT_MS = 4_000;
+const CANDLE_HISTORY_ATTEMPTS = 3;
+const CANDLE_HISTORY_RETRY_DELAYS_MS = [250, 750];
 
 async function withTimeout<T>(promise: Promise<T>, timeoutMs: number, label: string): Promise<T> {
 	let timer: ReturnType<typeof setTimeout> | undefined;
@@ -293,6 +296,16 @@ function markCandleFeedAlive(): void {
 	if (get(candleDataStatus) === 'stale' || get(candleDataStatus) === 'connecting') candleDataStatus.set('live');
 }
 
+function candleHistoryIsCurrent(coin: string, interval: string, generation: number): boolean {
+	return generation === marketGeneration && coin === currentCoin && interval === currentTimeframe && get(selectedMarket)?.apiCoin === coin;
+}
+
+/** Let the real-time trade/candle stream render if the history endpoint is
+ * unavailable. A later retry can still replace that fallback authoritatively. */
+function allowCandleHistoryFallback(coin: string, interval: string, generation: number): void {
+	if (candleHistoryIsCurrent(coin, interval, generation) && get(chartHistoryStatus) === 'loading') chartHistoryStatus.set('error');
+}
+
 let pendingBook: ReturnType<typeof hyperliquidBookEvent> | null = null;
 let pendingBookGeneration = -1;
 let pendingBookEpoch = -1;
@@ -397,17 +410,33 @@ function upsertTradeCandle(trade: { price: number; size: number; timestamp: numb
 }
 
 async function loadCandleHistory(coin: string, interval: string, generation: number): Promise<void> {
+	const endTime = Date.now();
+	const intervalMs = INTERVAL_MS[interval] ?? 60 * 60_000;
+	const startTime = endTime - intervalMs * 1_500;
+	const request = () => getPublicInfoClient().candleSnapshot({
+		coin,
+		interval: toHlInterval(interval),
+		startTime,
+		endTime
+	});
+	let data: Awaited<ReturnType<typeof request>> | undefined;
+	let lastError: unknown;
+
 	try {
-		const endTime = Date.now();
-		const intervalMs = INTERVAL_MS[interval] ?? 60 * 60_000;
-		const startTime = endTime - intervalMs * 1_500;
-		const data = await getPublicInfoClient().candleSnapshot({
-			coin,
-			interval: toHlInterval(interval),
-			startTime,
-			endTime
-		});
-		const candles = data.map((c) =>
+		for (let attempt = 0; attempt < CANDLE_HISTORY_ATTEMPTS; attempt += 1) {
+			if (!candleHistoryIsCurrent(coin, interval, generation)) return;
+			try {
+				data = await withTimeout(request(), STARTUP_HTTP_TIMEOUT_MS, 'candle history');
+				break;
+			} catch (error) {
+				lastError = error;
+				if (attempt === CANDLE_HISTORY_ATTEMPTS - 1) throw error;
+				await new Promise((resolve) => setTimeout(resolve, CANDLE_HISTORY_RETRY_DELAYS_MS[attempt] ?? 750));
+			}
+		}
+		if (!data) throw lastError instanceof Error ? lastError : new Error('candle history returned no response');
+
+		const candles = canonicalizeCandles(data.map((c) =>
 			normalizeCandle({
 				t: c.t,
 				T: c.T,
@@ -420,27 +449,26 @@ async function loadCandleHistory(coin: string, interval: string, generation: num
 				v: c.v,
 				n: c.n
 			} as CandleEvent)
-		);
+		));
 		const marketKey = get(marketRegistry).find((market) => market.apiCoin === coin)?.marketKey;
-		if (
-			generation !== marketGeneration ||
-			coin !== currentCoin ||
-			interval !== currentTimeframe ||
-			!marketKey
-		) {
-			return;
-		}
+		if (!candleHistoryIsCurrent(coin, interval, generation) || !marketKey) return;
+
 		const inProgress = get(liveCandle);
 		const liveDuringFlight = inProgress ? [...get(chartCandles), inProgress] : get(chartCandles);
 		const merged = mergeCandleSnapshot(candles, liveDuringFlight);
-		if (merged.length === 0) return;
+		if (merged.length === 0) {
+			allowCandleHistoryFallback(coin, interval, generation);
+			return;
+		}
 		// The REST snapshot is the authoritative history baseline. Keep the
 		// in-progress bar separate so lightweight-charts receives all committed
 		// bars immediately instead of only the final candle.
 		chartCandles.set(merged.slice(0, -1));
 		liveCandle.set(merged[merged.length - 1]);
 		saveCachedCandleHistory(hyperliquidPublicNetwork.network, marketKey, coin, interval, merged);
+		chartHistoryStatus.set('ready');
 	} catch (e) {
+		allowCandleHistoryFallback(coin, interval, generation);
 		console.warn('[hl] candle snapshot failed:', e);
 	}
 }
@@ -448,19 +476,16 @@ async function loadCandleHistory(coin: string, interval: string, generation: num
 function renderCachedCandleHistory(coin: string, interval: string): boolean {
 	const marketKey = get(marketRegistry).find((market) => market.apiCoin === coin)?.marketKey;
 	if (!marketKey) return false;
-	const cached = loadCachedCandleHistory(hyperliquidPublicNetwork.network, marketKey, coin, interval);
+	const cached = loadFastCachedCandleHistory(hyperliquidPublicNetwork.network, marketKey, coin, interval);
 	if (cached.length === 0) return false;
 	chartCandles.set(cached.slice(0, -1));
 	liveCandle.set(cached[cached.length - 1]);
+	chartHistoryStatus.set('ready');
 	return true;
 }
 
 function hydrateCachedCandleHistory(coin: string, interval: string, generation: number): void {
-	if (
-		generation !== marketGeneration ||
-		coin !== currentCoin ||
-		interval !== currentTimeframe
-	) return;
+	if (!candleHistoryIsCurrent(coin, interval, generation)) return;
 	renderCachedCandleHistory(coin, interval);
 }
 
@@ -475,6 +500,7 @@ async function loadMarketSnapshots(coin: string, generation: number, bookEpoch: 
 		STARTUP_HTTP_TIMEOUT_MS,
 		'public market snapshot'
 	);
+	if (generation !== marketGeneration || coin !== currentCoin || get(selectedMarket)?.apiCoin !== coin) return false;
 	if (book.status === 'fulfilled' && book.value) {
 		const normalizedBook = normalizeL2Book(book.value);
 		if (normalizedBook) {
@@ -525,13 +551,18 @@ async function subscribeMarketNow(apiCoin: string, timeframe?: string): Promise<
 	const bookClient = getPublicBookSubscriptionClient();
 
 	if (coin !== currentCoin) {
-		await unsubscribeMarketFeeds();
+		// Advance the selected identity before teardown. This immediately makes
+		// old callbacks stale, starts history loading without waiting on socket
+		// unsubscribe handshakes, and lets a cached dataset appear on the same
+		// turn as the market selection.
 		const generation = ++marketGeneration;
+		const bookEpoch = ++bookSubscriptionEpoch;
 		currentCoin = coin;
 		currentTimeframe = tf;
 		marketFeedStartedAt = Date.now();
 		chartCandles.set([]);
 		liveCandle.set(null);
+		chartHistoryStatus.set('loading');
 		hydrateCachedCandleHistory(coin, tf, generation);
 		lastCandleEventAt = 0;
 		for (const feed of REQUIRED_MARKET_FEEDS) lastMarketFeedAt[feed] = 0;
@@ -539,22 +570,27 @@ async function subscribeMarketNow(apiCoin: string, timeframe?: string): Promise<
 		recentTrades.set([]);
 		orderBook.set({ bids: [], asks: [], spread: 0, spreadPercent: 0 });
 		marketDataStatus.set('connecting');
+		pendingBook = null;
+		pendingBookSequences = [];
+		liveBookFrameEpoch = -1;
 		void warmAllMidsSnapshot(coin, generation);
 
 		let snapshotLoaded = false;
 		try {
-			// Start the low-latency socket subscriptions before waiting on HTTP.
-			// A rate-limited or stalled REST snapshot must not prevent live frames
-			// from reaching the terminal.
-			const bookEpoch = ++bookSubscriptionEpoch;
-			liveBookFrameEpoch = -1;
+			// Start the history request before socket teardown. The chart store stays
+			// suppressed while this baseline is in flight, so a first live tick never
+			// paints the misleading one-candle intermediate state.
 			const candleHistoryPromise = withTimeout(
 				loadCandleHistory(coin, tf, generation),
 				STARTUP_HTTP_TIMEOUT_MS,
 				'candle history'
 			).catch((error) => {
+				allowCandleHistoryFallback(coin, tf, generation);
 				console.warn('[hl] candle history delayed; continuing with cached history and live trades:', error);
 			});
+			// Socket unsubscribe is serialized, but it must not delay the HTTP
+			// request or prevent the new live subscriptions from being installed.
+			await unsubscribeMarketFeeds();
 			const snapshotPromise = loadMarketSnapshots(coin, generation, bookEpoch).catch((error) => {
 				console.warn('[hl] public market snapshot failed; continuing with websocket feeds:', error);
 				return false;
@@ -562,7 +598,7 @@ async function subscribeMarketNow(apiCoin: string, timeframe?: string): Promise<
 			publicPlane?.setTrades(coin);
 			publicPlane?.setCandle(coin, toHlInterval(tf));
 			const bookSubscriptionPromise = bookClient.l2Book({ coin, nSigFigs: get(bookSigFigs) }, (data) => {
-				if (bookEpoch !== bookSubscriptionEpoch) return;
+				if (generation !== marketGeneration || get(selectedMarket)?.apiCoin !== coin || bookEpoch !== bookSubscriptionEpoch) return;
 				const normalizedBook = normalizeL2Book(data);
 				if (!normalizedBook) {
 					marketDataStatus.set('stale');
@@ -585,9 +621,9 @@ async function subscribeMarketNow(apiCoin: string, timeframe?: string): Promise<
 				pendingBookSequences.push(sequence);
 				scheduleBookCommit(generation, bookEpoch);
 			});
-			// Candle history owns the largest visible surface. Do not place it behind
-			// a separate order-book socket handshake; both startup paths run now.
-			await candleHistoryPromise;
+			// History and both selected-market sockets are independent. Do not hold
+			// the subscription lifecycle behind a slow candle endpoint.
+			void candleHistoryPromise;
 			activeSubs.l2Book = await bookSubscriptionPromise;
 			activeSubs.l2Book?.failureSignal?.addEventListener('abort', scheduleMarketRecovery, { once: true });
 			snapshotLoaded = await snapshotPromise;
@@ -616,12 +652,13 @@ async function subscribeMarketNow(apiCoin: string, timeframe?: string): Promise<
 		currentTimeframe = tf;
 		chartCandles.set([]);
 		liveCandle.set(null);
+		chartHistoryStatus.set('loading');
 		hydrateCachedCandleHistory(coin, tf, generation);
 		lastCandleEventAt = 0;
 		candleDataStatus.set('connecting');
 
 		publicPlane?.setCandle(coin, toHlInterval(tf));
-		await loadCandleHistory(coin, tf, generation);
+		void loadCandleHistory(coin, tf, generation);
 	}
 }
 
@@ -734,7 +771,7 @@ function applyAllMidsSnapshot(mids: Record<string, string>, receivedAtMs = Date.
 async function warmAllMidsSnapshot(coin: string, generation: number): Promise<void> {
 	try {
 		const mids = await withTimeout(getPublicInfoClient().allMids(), STARTUP_HTTP_TIMEOUT_MS, 'all mids snapshot');
-		if (generation !== marketGeneration || coin !== currentCoin) return;
+		if (generation !== marketGeneration || coin !== currentCoin || get(selectedMarket)?.apiCoin !== coin) return;
 		if (applyAllMidsSnapshot(mids)) markMarketFeedAlive('mids');
 	} catch {
 		// The websocket all-mids stream remains authoritative if the warm HTTP read is unavailable.
@@ -757,6 +794,7 @@ export async function subscribeAllMids(): Promise<void> {
 			}
 			if (event.type === 'trades') {
 				if (event.coin !== currentCoin) return;
+				if (get(selectedMarket)?.apiCoin !== currentCoin) return;
 				markFeedReceive('trades', event.sequence, event.receivedAtMonoMs);
 				markMarketFeedAlive('trades');
 				const trades = event.trades;
@@ -768,7 +806,8 @@ export async function subscribeAllMids(): Promise<void> {
 				return;
 			}
 			if (event.type === 'candle') {
-				if (event.coin !== currentCoin || event.interval !== toHlInterval(currentTimeframe)) return;
+				if (event.coin !== currentCoin) return;
+				if (get(selectedMarket)?.apiCoin !== currentCoin || event.interval !== toHlInterval(currentTimeframe)) return;
 				markFeedReceive('candle', event.sequence, event.receivedAtMonoMs);
 				markMarketFeedAlive('trades');
 				upsertCandle(event.candle, marketGeneration);
@@ -893,8 +932,8 @@ export async function startHlFeeds(initialCoin?: string): Promise<void> {
 			marketRegistry.set(markets);
 			perpMarketsList.set(markets.filter((market) => market.kind === 'corePerp' || market.kind === 'hip3Perp'));
 			spotMarketsList.set(markets.filter((market) => market.kind === 'spot'));
-			if (!get(selectedMarket) && markets[0]) selectedMarket.set(markets[0]);
 		}
+		if (!get(selectedMarket) && markets[0]) selectedMarket.set(markets[0]);
 		const selected = get(selectedMarket);
 		const coin = selected?.apiCoin ?? markets.find((market) => market.marketKey === 'perp:BTC')?.apiCoin ?? initialCoin;
 		if (!coin) throw new Error('No exact Hyperliquid market identity is available');
@@ -966,6 +1005,7 @@ export async function stopHlFeeds(): Promise<void> {
 	recentTrades.set([]);
 	chartCandles.set([]);
 	liveCandle.set(null);
+	chartHistoryStatus.set('idle');
 	lastCandleEventAt = 0;
 	marketDataStatus.set('idle');
 	candleDataStatus.set('idle');

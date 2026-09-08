@@ -4,6 +4,7 @@
 		selectedMarket,
 		chartCandles,
 		liveCandle,
+		chartHistoryStatus,
 		chartTimeframe,
 		openOrders,
 		positions,
@@ -409,7 +410,7 @@
 
 		candlestickSeries.setData(candleData);
 		volumeSeries.setData(volumeData);
-		renderLiveCandle(live);
+		if ($chartHistoryStatus !== 'loading') renderLiveCandle(live);
 		appliedFirstTime = candles[0]?.time ?? live?.time ?? null;
 		appliedLastTime = candles[candles.length - 1]?.time ?? null;
 		appliedLength = candles.length;
@@ -561,7 +562,8 @@
 	// $liveCandle/$chartCandles must stay textually referenced here so Svelte's
 	// dependency tracking re-runs this block on every tick, not just when
 	// hoveringChart toggles.
-	$: if (!hoveringChart && ($liveCandle || $chartCandles.length)) legend = legendFromCandle(currentDisplayCandle());
+	$: if ($chartHistoryStatus === 'loading') legend = null;
+	$: if ($chartHistoryStatus !== 'loading' && !hoveringChart && ($liveCandle || $chartCandles.length)) legend = legendFromCandle(currentDisplayCandle());
 
 	// Reapply price-axis precision whenever the selected market's decimals change.
 	$: if (candlestickSeries && $selectedMarket) {
@@ -586,7 +588,7 @@
 	// chartCandles now changes only at reset/bar-close boundaries (never per
 	// tick), so this block only needs to decide whether a full setData reset
 	// is required; it never re-paints the last bar directly.
-	$: if ($chartCandles.length && candlestickSeries && volumeSeries) {
+	$: if ($chartCandles.length && candlestickSeries && volumeSeries && $chartHistoryStatus !== 'loading') {
 		const datasetKey = chartDatasetKey($selectedMarket, $chartTimeframe);
 		const first = $chartCandles[0];
 		const last = $chartCandles[$chartCandles.length - 1];
@@ -617,7 +619,7 @@
 	// The in-progress bar renders via O(1) series.update() on every tick; the
 	// committed history array above is touched only at reset/bar-close
 	// boundaries, keeping per-tick cost independent of history size.
-	$: if ($liveCandle && candlestickSeries && volumeSeries) {
+	$: if ($liveCandle && candlestickSeries && volumeSeries && $chartHistoryStatus !== 'loading') {
 		renderLiveCandle($liveCandle);
 	}
 
@@ -748,7 +750,7 @@
 	<div data-action-id="chart.surface"
 		data-testid="trading-chart"
 		data-feed-status={$marketDataStatus}
-		data-candle-count={$chartCandles.length + ($liveCandle ? 1 : 0)}
+		data-candle-count={$chartCandles.length + ($liveCandle && $chartHistoryStatus !== 'loading' ? 1 : 0)}
 		class="flex-1 relative"
 		bind:this={chartContainer}
 		oncontextmenu={onChartContextMenu}
@@ -767,10 +769,10 @@
 				<span class="text-terminal-text-muted">Vol</span><span class="text-terminal-text-secondary">{formatSize(legend.volume)}</span>
 			</div>
 		{/if}
-		{#if $chartCandles.length === 0 && !$liveCandle}
+		{#if $chartHistoryStatus === 'loading' || ($chartCandles.length === 0 && !$liveCandle)}
 			<div class="absolute inset-0 z-10 flex items-center justify-center pointer-events-none">
-				<div class="rounded border border-terminal-border bg-terminal-bg/90 px-3 py-2 text-2xs {$marketDataStatus === 'error' ? 'text-terminal-red' : 'text-terminal-text-muted'}">
-					{unavailableFeedMessage('price history', $marketDataStatus)}
+				<div class="rounded border border-terminal-border bg-terminal-bg/90 px-3 py-2 text-2xs {$chartHistoryStatus === 'loading' ? 'text-terminal-text-muted' : $marketDataStatus === 'error' ? 'text-terminal-red' : 'text-terminal-text-muted'}">
+					{$chartHistoryStatus === 'loading' ? 'Loading price history…' : unavailableFeedMessage('price history', $marketDataStatus)}
 				</div>
 			</div>
 		{/if}

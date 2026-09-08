@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { mergeCandleSnapshot, mergeTradeIntoCandles } from './candleMerge';
+import { canonicalizeCandles, mergeCandleSnapshot, mergeTradeIntoCandles } from './candleMerge';
 
 const candle = (time, close, volume) => ({
 	time,
@@ -11,6 +11,17 @@ const candle = (time, close, volume) => ({
 });
 
 describe('authoritative candle history merge', () => {
+	test('canonicalizes duplicate and out-of-order venue bars before rendering', () => {
+		expect(canonicalizeCandles([
+			candle(102, 112, 1),
+			candle(100, 110, 2),
+			candle(100, 111, 3),
+		])).toEqual([
+			candle(100, 111, 3),
+			candle(102, 112, 1),
+		]);
+	});
+
 	test('keeps snapshot OHLCV when a live candle has the same timestamp', () => {
 		expect(mergeCandleSnapshot(
 			[candle(100, 110, 42)],
