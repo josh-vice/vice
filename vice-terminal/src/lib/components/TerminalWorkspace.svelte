@@ -49,6 +49,7 @@
 	let mobileBookTab: 'book' | 'trades' = 'book';
 	// Bottom sheet for order entry
 	let orderSheetOpen = false;
+	let isDesktop: boolean | null = null;
 	let statsNow = Date.now();
 	$: marketClass = describeMarketClass($selectedMarket);
 	$: marketProfile = marketCapabilities($selectedMarket);
@@ -62,10 +63,17 @@
 	onMount(() => {
 		loadPrivacyMode();
 		loadWorkspacePreset();
+		const desktopQuery = window.matchMedia('(min-width: 1024px)');
+		const updateWorkspace = (event: MediaQueryListEvent | MediaQueryList) => {
+			isDesktop = event.matches;
+		};
+		updateWorkspace(desktopQuery);
+		desktopQuery.addEventListener('change', updateWorkspace);
 		const stopAlerts = startPriceAlertMonitoring();
 		const stopSounds = startSoundNotifications();
 		const timer = setInterval(() => { statsNow = Date.now(); }, 1_000);
 		return () => {
+			desktopQuery.removeEventListener('change', updateWorkspace);
 			stopAlerts();
 			stopSounds();
 			clearInterval(timer);
@@ -155,13 +163,14 @@
 			</div>
 	{/if}
 
-	<!-- Desktop workspace: Dockview owns presentation only; all trading paths stay shared. -->
-	<div class="flex-1 overflow-hidden hidden lg:flex min-h-0"><WorkspaceHost /></div>
-
+	{#if isDesktop === true}
+		<!-- Desktop workspace: Dockview owns presentation only; all trading paths stay shared. -->
+		<div class="flex-1 overflow-hidden min-h-0"><WorkspaceHost /></div>
+	{:else if isDesktop === false}
 	<!-- ============================================================ -->
-	<!-- MOBILE — focused markets and trading layout (hidden on lg+) -->
+	<!-- MOBILE — focused markets and trading layout -->
 	<!-- ============================================================ -->
-	<div class="flex-1 flex flex-col overflow-hidden lg:hidden min-h-0">
+	<div class="flex-1 flex flex-col overflow-hidden min-h-0">
 
 		<!-- TAB: Markets -->
 		<div class="flex-1 min-h-0 {mobileTab === 'markets' ? 'flex flex-col' : 'hidden'}">
@@ -276,7 +285,7 @@
 		</div>
 
 	<!-- Mobile Bottom Tab Bar -->
-	<nav class="lg:hidden flex-shrink-0 h-14 border-t border-terminal-border bg-terminal-bg-secondary flex items-stretch safe-area-pb">
+	<nav class="flex-shrink-0 h-14 border-t border-terminal-border bg-terminal-bg-secondary flex items-stretch safe-area-pb">
 		{#each mobileTabs as tab}
 			{@const active = mobileTab === tab.id}
 			<button data-action-id="ui.src.lib.components.terminalworkspace.button.h8272f5fb11"
@@ -297,6 +306,7 @@
 
 	<!-- Order Bottom Sheet (slides up over everything) -->
 	<MobileOrderSheet bind:open={orderSheetOpen} />
+	{/if}
 
 	<!-- CLI Panel (overlay) -->
 	<CLIPanel />

@@ -3,7 +3,7 @@ import type { MarketDescriptor, OrderBook, Position, Order, Fill, Balance, Trade
 import { marketMatchesWatchlistQuery } from './marketWatchlist';
 import { firstMarketForType } from './marketSelectionModel';
 import { emptyFatFingerLimits, type FatFingerLimits } from './execution/fatFinger';
-import { onTimeframeChanged, startHlFeeds, stopHlFeeds } from './hl';
+import { onTimeframeChanged, startHlFeeds, stopHlFeeds } from './hl/subscriptions';
 import { type HealthStatus } from './productionTruth';
 import { hyperliquidNetwork, hyperliquidPublicNetwork } from './hl/network';
 import { loadFastCachedCandleHistory } from './hl/candleCache';

@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "description": "Low-latency, non-custodial Hyperliquid trading terminal.",
+  "packageManager": "bun@1.3.14",
   "workspaces": [
     "vice-terminal"
   ],

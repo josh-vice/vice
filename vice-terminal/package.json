@@ -12,7 +12,6 @@
   "dependencies": {
     "@nktkas/hyperliquid": "^0.32.2",
     "dockview": "^7.0.4",
-    "effect": "^4.0.0-rc.112",
     "html2canvas": "^1.4.1",
     "lightweight-charts": "5.2.0",
     "lucide-svelte": "^0.511.0",

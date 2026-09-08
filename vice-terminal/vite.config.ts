@@ -20,6 +20,9 @@ function mainnetBuildGuard(): Plugin {
 
 export default defineConfig({
 	plugins: [mainnetBuildGuard(), sveltekit()],
+	ssr: {
+		noExternal: ['@nktkas/hyperliquid', '@nktkas/rews', 'valibot']
+	},
 	server: {
 		fs: {
 			allow: ['.']
