@@ -255,18 +255,6 @@ export async function fetchHlOrderStatus(address: string, coin: string, orderId:
 	});
 }
 
-export async function fetchHlOpenOrders(address: string): Promise<ViceOrder[]> {
-	return withReadTimeout('Hyperliquid open orders', async () => {
-		return mapPerpOrders(await fetchPerpAccountSlices(address));
-	});
-}
-
-export async function fetchHlPositions(address: string): Promise<VicePosition[]> {
-	return withReadTimeout('Hyperliquid positions', async () => {
-		return mapPerpPositions(await fetchPerpAccountSlices(address));
-	});
-}
-
 export async function fetchHlAccountSnapshotUnbounded(address: string) {
 	const client = getTradingReadOnlyInfo();
 	const user = address as `0x${string}`;
