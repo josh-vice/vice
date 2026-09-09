@@ -77,6 +77,6 @@ describe('BloFin public market catalog', () => {
 		response.data.push({ ...response.data[1], instId: 'SOL-USDT', state: 'suspended' });
 		expect(normalizeBlofinInstruments(response)).toHaveLength(2);
 		expect(() => normalizeBlofinInstruments({ code: '500', msg: 'failure', data: [] })).toThrow('successful');
-		expect(() => normalizeBlofinInstruments({ code: '0', msg: 'success', data: {} })).toThrow('data');
+		expect(() => normalizeBlofinInstruments({ code: '0', msg: 'success', data: {} as unknown as BlofinInstrumentsResponse['data'] })).toThrow('data');
 	});
 });

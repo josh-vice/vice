@@ -21,6 +21,8 @@ export interface BlofinInstrumentsResponse {
 	data: BlofinInstrumentRecord[];
 }
 
+export type BlofinFetcher = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
+
 export interface BlofinMarket {
 	marketKey: string;
 	apiCoin: string;
@@ -34,7 +36,7 @@ export interface BlofinMarket {
 	priceIncrement: string;
 	sizeIncrement: string;
 	maxLeverage: number;
-	status: 'live';
+	status: 'live' | 'suspended';
 	symbol: string;
 	name: string;
 	instrument: InstrumentId;
@@ -116,7 +118,7 @@ export function normalizeBlofinInstruments(response: BlofinInstrumentsResponse):
 }
 
 export async function loadBlofinMarkets(input: {
-	fetcher?: typeof fetch;
+	fetcher?: BlofinFetcher;
 	signal?: AbortSignal;
 } = {}): Promise<BlofinMarket[]> {
 	const fetcher = input.fetcher ?? fetch;

@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, test } from 'bun:test';
 import type { CredentialInput } from '$lib/credentials/types';
-import { signBlofinRest } from './auth.ts';
-import { blofinRestRequest } from './rest.ts';
+import { signBlofinRest } from './auth';
+import { blofinRestRequest } from './rest';
 
 const SECRET = 'rest-test-secret-do-not-log';
 const CREDENTIALS: CredentialInput = {
@@ -28,8 +28,8 @@ function requestHeaders(init: RequestInit | undefined): Headers {
 	return new Headers(init?.headers);
 }
 
-function installFetch(handler: typeof fetch): void {
-	globalThis.fetch = handler;
+function installFetch(handler: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>): void {
+	globalThis.fetch = handler as typeof fetch;
 }
 
 afterEach(() => {

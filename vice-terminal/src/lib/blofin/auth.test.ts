@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from 'bun:test';
-import { signBlofinRest } from './auth.ts';
+import { signBlofinRest } from './auth';
 
 const SECRET = 'test-secret-do-not-log';
 const TIMESTAMP = '1597026383085';
