@@ -2,7 +2,7 @@ import type { RequestHandler } from './$types';
 import { json } from '@sveltejs/kit';
 import { createHmac } from 'node:crypto';
 import { assertBetaConfiguration, betaGateEnabled, setBetaSession, verifyDurableInviteCode, verifyInviteCode } from '$lib/server/betaAuth';
-import { consumeBetaRateLimit } from '$lib/server/betaStore';
+import { betaStoreConfigured, consumeBetaRateLimit } from '$lib/server/betaStore';
 
 const MAX_BODY_BYTES = 512;
 const WINDOW_MS = 15 * 60 * 1000;
@@ -45,7 +45,7 @@ export const POST: RequestHandler = async ({ request, cookies, url, getClientAdd
 			const value = form.get('code');
 			if (typeof value === 'string') code = value;
 		}
-		if (process.env.VICE_BETA_REQUIRED?.trim().toLowerCase() === 'true') {
+		if (betaStoreConfigured()) {
 			const ipHash = privacyHash(getClientAddress());
 			const attemptHash = privacyHash(code.trim());
 			const [ipLimit, attemptLimit] = await Promise.all([
