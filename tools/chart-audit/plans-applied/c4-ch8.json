@@ -1,9 +1,0 @@
-{
-  "course": 4,
-  "chapterId": 8,
-  "title": "Open Interest",
-  "module": "Determining Control",
-  "edits": [],
-  "alreadyGood": ["introChart", "lessonChart", "quiz.chart"],
-  "notes": "All three OI charts teach the PRICE-vs-OI RELATIONSHIP as a concept, not a priced trade. introChart (band ~41-107) illustrates 'Price Falling + OI Rising = strongest bearish signal' via the OI subpanel + 4 narrating markPoints; no locatable level (entry/stop/target) is taught in the intro text, so nothing to add. lessonChart (band ~71-101) teaches the only concrete level in the chapter: 'when this occurs at a DBS zone it is a high-probability reversal signal' — and that DBS level is already drawn as a teal markLine at yAxis 71 with the correct capitulation framing; the lesson bullets teach OI configurations, not entry/stop/target prices, so no trade levels are owed. quiz.chart is a cutIndex:12 decision (band ~54-107); pre-cut correctly draws no markLines/markPoints (no spoiler), and revealMarkPoints (dataIndex 3,7,12,15 — all in 0-15 range, pink for bearish OI, gold for the risk verdict) annotate the outcome post-answer. The explanation's passing reference to a 'DBS zone' gives no specific price for THIS scenario (which is the falling-price + rising-OI case, not the capitulation/DBS reversal case), so no markLine is justified there. Auditor's alreadyComplete verdict on all three slots is correct; coordinate sanity, text-justification, slot-fit, and color convention all check out. No gaps to add or fix."
-}

@@ -1,12 +1,52 @@
 {
-  "name": "liquidity-theory",
+  "name": "vice-terminal",
   "version": "1.0.0",
   "private": true,
-  "description": "Liquidity Theory — a free, interactive crypto trading course (static site, no dependencies).",
+  "description": "Low-latency, non-custodial Hyperliquid trading terminal.",
+  "packageManager": "bun@1.3.14",
+  "workspaces": [
+    "vice-terminal"
+  ],
   "scripts": {
-    "build": "node tools/gen-seo.js && node tools/gen-academy.js"
+    "dev": "cd vice-terminal && bun run dev",
+    "build": "cd vice-terminal && bun run build",
+    "typecheck": "cd vice-terminal && bunx tsc --noEmit -p tsconfig.source.json",
+    "test:svelte": "cd vice-terminal && bunx svelte-check --tsconfig ./tsconfig.source.json",
+    "test:frontend": "cd vice-terminal && bun test src/lib",
+    "test:catalog": "cd vice-terminal && bun test src/lib/hl/markets.test.js src/lib/hl/liveMarketUpdates.test.js src/lib/hl/accountIdentity.test.js src/lib/hl/candleMerge.test.js",
+    "test:contract": "cd vice-terminal && bun test src/lib/execution/identityBoundary.test.js src/lib/execution/venueFormat.test.js src/lib/execution/expiry.test.js",
+    "test:chaos": "cd vice-terminal && bun test src/lib/execution/commandIdentity.test.js src/lib/execution/retryPolicy.test.js src/lib/execution/commandJournal.test.js src/lib/execution/reconcileCloid.test.js src/lib/execution/localExecutionPartialAcceptance.test.js src/lib/execution/reconciliationCompleteness.test.js src/lib/execution/algoCancellation.test.js src/lib/hl/snapshotCoordinator.test.js",
+    "test:mobile": "cd vice-terminal && bun test src/lib/mobileParity.test.js",
+    "test:load": "cd vice-terminal && bun test src/lib/execution/commandIdentity.test.js src/lib/execution/latencyGates.test.js src/lib/execution/responseOutcome.test.js src/lib/chart/overlayScheduling.test.js",
+    "test:bundle": "bun test scripts/bundle-budget.test.mjs && bun scripts/bundle-budget.mjs",
+    "test:latency:boundary": "bun test scripts/latency-gate.test.mjs",
+    "test:security": "bun run preflight",
+    "test:streams": "bun test scripts/stream-catalog.test.mjs && bun scripts/stream-catalog.mjs",
+    "test:streams:mainnet": "bun scripts/streams-mainnet.mjs",
+    "test:latency": "bun test scripts/latency-gate.test.mjs && bun scripts/latency-gate.mjs",
+    "test:soak:mainnet": "bun scripts/soak-mainnet.mjs",
+    "test:live-feed": "bun scripts/live-feed-smoke.mjs",
+    "test:e2e": "bun test scripts/e2e-gate.test.mjs && bun scripts/e2e-gate.mjs",
+    "test:e2e:static": "bun test scripts/e2e-gate.test.mjs",
+    "test:e2e:mainnet": "bun test scripts/e2e-gate.test.mjs && VICE_E2E_MAINNET=1 bun scripts/e2e-gate.mjs --funded",
+    "test:release-evidence": "bun test scripts/mainnet-evidence.test.mjs",
+    "test:mainnet-evidence": "bun test scripts/mainnet-evidence.test.mjs && bun scripts/mainnet-evidence.mjs",
+    "test:release-approval": "bun test scripts/release-approval.test.mjs",
+    "test:release-manifest": "bun test scripts/release-manifest.test.mjs",
+    "test:mainnet-guardrails": "bun test scripts/mainnet-guardrails.test.mjs",
+    "test:deployed": "bun scripts/deployed-smoke.mjs",
+    "monitor:production": "bun scripts/monitor-production.mjs",
+    "test:production-auth": "bun scripts/production-auth-smoke.mjs",
+    "rollback:vercel": "bun scripts/rollback-vercel.mjs",
+    "release:verify": "bun scripts/release-manifest.mjs --release --verify",
+    "beta:readiness": "bun scripts/beta-readiness.mjs",
+    "preflight": "bun scripts/preflight.mjs",
+    "check": "bun run preflight && bun run typecheck && bun run test:svelte && bun run test:frontend && VITE_HL_TRADING_NETWORK=mainnet VITE_HL_MAINNET_ACK=I_ACCEPT_REAL_MAINNET_TRADING bun run build",
+    "test:release": "bun scripts/release-gate.mjs"
   },
-  "dependencies": {
-    "@vercel/analytics": "^2.0.1"
+  "overrides": {
+    "cookie": "^0.7.0",
+    "valibot": "^1.4.2",
+    "nanoid": "^3.3.17"
   }
 }

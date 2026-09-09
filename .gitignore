@@ -46,6 +46,7 @@ openclaw-workspace-state.json
 .codex/
 .openclaw/
 .claude/
+.hermes/
 .anthropic_key
 
 # session archives live outside the repo (…/.openclaw/workspace-archive)
@@ -53,7 +54,18 @@ Backup-*/
 
 # assistant/session tooling — never part of the site
 /skills/
-/scripts/
 skills-lock.json
 tmp_audit*/
 sweep_report.md
+
+# Local build output for the integrated terminal and gateway
+/.svelte-kit/
+/vice-terminal/.svelte-kit/
+/vice-backend/target/
+
+# Hydrated E2E runtime artifacts (trace/video/screenshot/console evidence on
+# failure, sanitized by scripts/e2e-gate.mjs) — never commit
+/scripts/e2e/.artifacts/
+/scripts/e2e/perf-evidence/
+/release/
+/vice-terminal/e2e/.e2e-artifacts/

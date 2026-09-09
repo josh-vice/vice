@@ -1,0 +1,182 @@
+name: release
+
+# Produces an immutable release artifact + manifest, or verifies a prior
+# manifest. NEVER deploys or publishes by default: staging publish/deploy lives
+# in a SEPARATE approval-gated workflow (see staging-smoke.yml). This workflow
+# only builds, binds build-SHA + lockfile-hash + artifact-checksum evidence,
+# and uploads the artifact with a bounded retention.
+on:
+  workflow_dispatch:
+    inputs:
+      verify:
+        description: 'Verify an existing checked-out manifest path (or use artifact-run-id + artifact-name)'
+        required: false
+        default: ''
+      verify-run-id:
+        description: 'Release workflow run ID containing the manifest/artifact to verify'
+        required: false
+        default: ''
+      verify-artifact-name:
+        description: 'Uploaded release artifact name'
+        required: false
+        default: ''
+      expected-sha:
+        description: 'Full commit SHA bound to the release artifact'
+        required: false
+        default: ''
+  push:
+    tags:
+      - 'v*'
+      - 'beta-*'
+
+permissions:
+  contents: read
+  actions: read
+  id-token: write
+  attestations: write
+  # write to the release/packages scope.
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build-release:
+    name: Build immutable release artifact + manifest
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    if: github.event_name != 'workflow_dispatch' || inputs.verify == ''
+    steps:
+      - name: Clean checkout (exact ref, full history for tag resolution)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Setup Bun (pinned)
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.9
+      - name: Frozen install (lockfile-pinned)
+        run: bun install --frozen-lockfile
+      - name: Cache Bun install (lockfile-keyed)
+        uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: bun-${{ hashFiles('bun.lock') }}
+          restore-keys: |
+            bun-
+
+      - name: Build the deploy artifact
+        # A release binds the REAL built artifact (the SvelteKit/Vercel output)
+        # so the artifact checksum is meaningful. Build output is never cached
+        # across SHAs — it is produced fresh and bound to this commit.
+        env:
+          VITE_HL_TRADING_NETWORK: mainnet
+          VITE_HL_MAINNET_ACK: I_ACCEPT_REAL_MAINNET_TRADING
+          VITE_RELEASE_BUILD: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          bun run build
+          echo "Artifact dir: vice-terminal/.vercel/output"
+          find vice-terminal/.vercel/output -type f | wc -l
+
+      - name: Collect gate test summary
+        # Deterministic, non-hosted source/unit gate summary recorded into the
+        # manifest so the artifact is bound to the test state that produced it.
+        run: bun scripts/release-test-summary.mjs
+      - name: Bind policy, approval, and observation inputs
+        env:
+          VICE_RELEASE_POLICY: ${{ vars.VICE_RELEASE_POLICY_PATH }}
+          VICE_RELEASE_APPROVAL: ${{ vars.VICE_RELEASE_APPROVAL_PATH }}
+          VICE_OBSERVATION_MANIFEST: ${{ vars.VICE_OBSERVATION_MANIFEST_PATH }}
+        run: |
+          set -euo pipefail
+          for path in "$VICE_RELEASE_POLICY" "$VICE_RELEASE_APPROVAL" "$VICE_OBSERVATION_MANIFEST"; do
+            test -n "$path" && test -f "$path" || { echo "::error::missing release provenance input"; exit 1; }
+          done
+          mkdir -p release/provenance
+          cp "$VICE_RELEASE_POLICY" release/provenance/policy.json
+          cp "$VICE_RELEASE_APPROVAL" release/provenance/approval.json
+          cp "$VICE_OBSERVATION_MANIFEST" release/provenance/observation.json
+
+
+      - name: Build the immutable release manifest
+        env:
+          VICE_ARTIFACT: vice-terminal/.vercel/output
+          VICE_RELEASE_SHA: ${{ github.sha }}
+          VICE_MAINNET_RELEASE_BUILD: ${{ github.sha }}
+          VICE_TEST_SUMMARY: release/test-summary.json
+          VICE_POLICY: release/provenance/policy.json
+          VICE_APPROVAL: release/provenance/approval.json
+          VICE_OBSERVATION: release/provenance/observation.json
+        run: |
+          set -euo pipefail
+          bun scripts/release-manifest.mjs --release \
+            --out release/vice-manifest.json \
+            --artifact "$VICE_ARTIFACT" \
+            --lockfile bun.lock \
+            --tests "$VICE_TEST_SUMMARY" \
+            --policy "$VICE_POLICY" \
+            --approval "$VICE_APPROVAL" \
+            --observation "$VICE_OBSERVATION" \
+            --expected-sha "$VICE_RELEASE_SHA"
+          echo "=== release manifest ==="
+          cat release/vice-manifest.json
+
+      - name: Attest release manifest provenance
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: release/vice-manifest.json
+
+      - name: Upload the immutable artifact + manifest (bounded retention)
+        uses: actions/upload-artifact@v4
+        with:
+          name: vice-release-${{ github.sha }}
+          path: |
+            release
+            vice-terminal/.vercel/output
+          if-no-files-found: error
+          retention-days: 30
+
+  verify:
+    name: Verify an existing release manifest
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    if: github.event_name == 'workflow_dispatch' && inputs.verify != ''
+    steps:
+      - name: Clean checkout at expected commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.expected-sha || github.sha }}
+          fetch-depth: 0
+      - name: Setup Bun (pinned)
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.9
+      - name: Frozen install
+        run: bun install --frozen-lockfile
+      - name: Download prior immutable artifact
+        if: inputs.verify-run-id != '' && inputs.verify-artifact-name != ''
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ inputs.verify-artifact-name }}
+          run-id: ${{ inputs.verify-run-id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: .release-artifact
+      - name: Verify the supplied manifest (fail closed if absent or tampered)
+        env:
+          VICE_RELEASE_SHA: ${{ inputs.expected-sha || github.sha }}
+        run: |
+          set -euo pipefail
+          if test -n "${{ inputs.verify-run-id }}" && test -n "${{ inputs.verify-artifact-name }}"; then
+            test -f .release-artifact/release/vice-manifest.json
+            cp .release-artifact/release/vice-manifest.json release/vice-manifest.json
+            mkdir -p release/provenance vice-terminal/.vercel
+            cp -R .release-artifact/release/provenance/. release/provenance/
+            cp -R .release-artifact/vice-terminal/.vercel/output vice-terminal/.vercel/output
+            bun scripts/release-manifest.mjs --release --verify release/vice-manifest.json
+          elif test -f "${{ inputs.verify }}"; then
+            bun scripts/release-manifest.mjs --release --verify "${{ inputs.verify }}"
+          else
+            echo "::error::Supply verify-run-id and verify-artifact-name for an uploaded immutable release artifact."
+            exit 1
+          fi

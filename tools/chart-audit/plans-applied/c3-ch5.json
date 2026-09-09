@@ -1,9 +1,0 @@
-{
-  "course": 3,
-  "chapterId": 5,
-  "title": "Executing Orders",
-  "module": "Getting Started with Derivatives",
-  "edits": [],
-  "alreadyGood": ["introChart", "lessonChart", "quiz.chart"],
-  "notes": "Independent re-derivation confirms the auditor: all three charts already draw every locatable thing the text teaches, in-band and on correct bars. introChart (concept, band ~81-110): Limit Buy Level @83 teal + Support Zone 81-86 + fill/running events — illustrates 'set price ... appears in Active Orders and order book' and the fill-on-touch concept; complete. lessonChart (the worked trade, band ~81-107): Entry @88 teal + Stop Loss @83 pink (correctly BELOW entry for a long, per 'set trigger below entry (for longs)') + Long Entry / Peak SL Running (idx6 ~= leg1 to:105) / SL Triggered events; every level and event taught is drawn; complete. quiz.chart (decision, cutIndex:9, band ~77-101): pre-cut shows only Entry @88 teal + Stop Trigger @89 pink as decision context (does NOT spoil); the no-Close-on-Trigger OUTCOME is correctly routed to revealMarkPoints at idx9 (Stop Fires), idx11 (New Short Opened), idx13 (Doubled Loss = leg4 bottom 77) in pink. Stop Trigger @89 sits ~1 above entry, which is intentional: it is the level price descends to at the cut point, not a long's protective SL. Trigger-reference concepts (Last/Index/Mark price) are non-locatable and correctly not annotated. No gaps to add, no fixes needed."
-}

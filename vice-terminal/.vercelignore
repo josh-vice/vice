@@ -1,0 +1,21 @@
+# Local and generated state
+.vercel/
+.svelte-kit/
+node_modules/
+playwright-report/
+test-results/
+coverage/
+*.log
+.DS_Store
+.env
+.env.*
+!.env.example
+
+# Development and verification inputs are not deployment inputs
+e2e/
+src/**/*.test.js
+src/**/*.test.ts
+src/**/*.spec.js
+src/**/*.spec.ts
+public/
+.env.example

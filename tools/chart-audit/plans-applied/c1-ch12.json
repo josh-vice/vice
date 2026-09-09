@@ -1,9 +1,0 @@
-{
-  "course": 1,
-  "chapterId": 12,
-  "title": "Optimizing Returns",
-  "module": "Risk Management",
-  "edits": [],
-  "alreadyGood": ["introChart", "lessonChart", "quiz.chart"],
-  "notes": "All three chart slots in this chapter are type:\"line\" concept/illustration charts with no OHLC candlestick data — per the audit rules these are skipped unless an axis value clearly needs labelling, and the one load-bearing value is already drawn. (1) introChart 'Drawdown Recovery — The Asymmetry Problem' already carries a markLine at y=100 labelled '50% loss → 100% gain needed to recover', which is exactly the single concrete fact the lesson teaches ('losing 50% requires a 100% gain to recover'); the gain-needed curve (11.1..150.0) and drawdown-size series (10..60) carry the rest of the concept. No additional locatable level is taught. (2) lessonChart 'Compounding Equity Curve — Conservative vs. Aggressive' already labels the only referenced level, y=10000 'Starting Capital'; the conservative vs aggressive/over-leveraged series ARE the lesson ('compounding is the real edge; consistent survivable returns compound exponentially'). Kelly K (0.40, 0.20) and fractional-Kelly are formula/percentage concepts, not chart-locatable price levels, so they belong in prose not on the equity-curve axis. (3) quiz.chart 'Two Equity Curves' sets hideChart:true, so the chart is never rendered and cannot be annotated; the quiz is a pure conceptual choice question. CONCUR WITH THE AUDITOR on all three slots: no gaps, no fixes. Existing markLine labels and colors are correct (pink #ff2e88 for the painful recovery asymmetry; grey #5a5a78 for the neutral baseline). Nothing to add or fix."
-}

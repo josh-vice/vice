@@ -1,0 +1,313 @@
+<script lang="ts">
+	import { accountSyncStatus, clickPlacementMode, executionStatus, isConnected, marketDataStatus, openOrders, orderBook, orderPrice, orderSize, positions, postOnly, selectedMarket } from '$lib/stores';
+	import { formatPrice, formatSize } from '$lib/format';
+	import { unavailableFeedMessage, healthLabel } from '$lib/productionTruth';
+	import { bookDepth, bookSigFigs, setBookDepth, setBookSigFigs } from '$lib/bookGrouping';
+	import { resubscribeOrderBook } from '$lib/hl/subscriptions';
+	import { cancelOrder, modifyOrderPrice, placeOrder, fetchOpenOrders } from '$lib/hl/orders';
+	import { wouldCrossSpread } from '$lib/chart/tradingMath';
+	import { onDestroy, tick } from 'svelte';
+	import { topOfBookImbalance } from '$lib/bookAnalytics';
+	import { marketCapabilities } from '$lib/marketCapabilities';
+	import { marketMatches } from '$lib/chart/chartModel';
+
+	$: baseAsset = $selectedMarket?.baseToken ?? 'Asset';
+	$: quoteAsset = $selectedMarket?.quoteToken ?? 'USD';
+	$: marketProfile = marketCapabilities($selectedMarket);
+	$: hasBook = $orderBook.bids.length > 0 || $orderBook.asks.length > 0;
+	$: bookImbalance = topOfBookImbalance($orderBook);
+	$: visibleAsks = $orderBook.asks.slice(0, $bookDepth).reverse();
+	$: visibleBids = $orderBook.bids.slice(0, $bookDepth);
+	$: maxTotal = Math.max(visibleBids.at(-1)?.total ?? 0, visibleAsks[0]?.total ?? 0);
+	$: privateStateLive = $isConnected && $executionStatus === 'live' && $accountSyncStatus === 'live' && $marketDataStatus === 'live';
+	$: canCancelKnownOrders = marketProfile.executable && $isConnected && $executionStatus === 'live' && $accountSyncStatus === 'live' && $marketDataStatus === 'live';
+	let placementError = '';
+	let placingPrice: number | null = null;
+	let cancellingOrderId = '';
+	let draggingOrderId = '';
+	let ignoreNextPlacement = false;
+	let followLastPrice = true;
+	let suppressLadderScroll = false;
+	let suppressLadderScrollTimer: ReturnType<typeof setTimeout> | undefined;
+	let recenterPending = false;
+	let ladderCenter: HTMLDivElement | undefined;
+
+	function getDepthPercent(total: number): number {
+		return maxTotal > 0 ? Math.min(100, (total / maxTotal) * 100) : 0;
+	}
+
+	function changeGrouping(value: number) {
+		setBookSigFigs(value);
+		if ($selectedMarket) void resubscribeOrderBook($selectedMarket.apiCoin);
+	}
+
+	function changeDepth(value: number) {
+		setBookDepth(value);
+	}
+
+	function scheduleLadderRecenter(): void {
+		if (!followLastPrice || draggingOrderId || !ladderCenter || recenterPending) return;
+		recenterPending = true;
+		void tick().then(() => {
+			recenterPending = false;
+			if (!followLastPrice || draggingOrderId || !ladderCenter) return;
+			suppressLadderScroll = true;
+			ladderCenter.scrollIntoView({ block: 'center' });
+			if (suppressLadderScrollTimer) clearTimeout(suppressLadderScrollTimer);
+			suppressLadderScrollTimer = setTimeout(() => {
+				suppressLadderScroll = false;
+				suppressLadderScrollTimer = undefined;
+			}, 250);
+		});
+	}
+
+	function recenterLadder(): void {
+		followLastPrice = true;
+		scheduleLadderRecenter();
+	}
+
+	function onLadderScroll(): void {
+		if (suppressLadderScroll) {
+			suppressLadderScroll = false;
+			if (suppressLadderScrollTimer) clearTimeout(suppressLadderScrollTimer);
+			suppressLadderScrollTimer = undefined;
+			return;
+		}
+		followLastPrice = false;
+	}
+
+	function onLadderUserScroll(): void {
+		suppressLadderScroll = false;
+		if (suppressLadderScrollTimer) clearTimeout(suppressLadderScrollTimer);
+		suppressLadderScrollTimer = undefined;
+		followLastPrice = false;
+	}
+
+	onDestroy(() => {
+		if (suppressLadderScrollTimer) clearTimeout(suppressLadderScrollTimer);
+	});
+
+
+	function ordersAtPrice(price: number) {
+		const decimals = $selectedMarket?.priceDecimals ?? 2;
+		const normalizedPrice = price.toFixed(decimals);
+		return canCancelKnownOrders
+			? $openOrders.filter((order) => marketMatches($selectedMarket, order.apiCoin, order.marketKey) && (order.triggerPrice ?? order.price)?.toFixed(decimals) === normalizedPrice)
+			: [];
+	}
+
+	function positionsAtPrice(price: number) {
+		const decimals = $selectedMarket?.priceDecimals ?? 2;
+		const normalizedPrice = price.toFixed(decimals);
+		return privateStateLive
+			? $positions.filter((position) => marketMatches($selectedMarket, position.apiCoin, position.marketKey) && position.entryPrice.toFixed(decimals) === normalizedPrice)
+			: [];
+	}
+
+	async function clickLadderPrice(side: 'buy' | 'sell', price: number, stop = false): Promise<void> {
+		placementError = '';
+		if (!marketProfile.executable || (stop && !marketProfile.supportsTriggers)) { placementError = marketProfile.readOnlyReason ?? 'This market does not support DOM placement'; return; }
+		if (!$clickPlacementMode) {
+			orderPrice.set(price);
+			return;
+		}
+		if (!privateStateLive || !$selectedMarket) {
+			placementError = 'DOM placement is armed but the account or selected market is not live';
+			return;
+		}
+		if ($orderSize <= 0) {
+			placementError = 'Set a positive order size before DOM placement';
+			return;
+		}
+		if (stop && $postOnly) {
+			placementError = 'Post-only cannot be used with a DOM stop order';
+			return;
+		}
+		if ($postOnly && wouldCrossSpread(side, price, $orderBook.bids[0]?.price, $orderBook.asks[0]?.price)) {
+			placementError = 'Post-only DOM order would cross the spread';
+			return;
+		}
+		placingPrice = price;
+		try {
+			const result = await placeOrder({ marketKey: $selectedMarket.marketKey, side, type: stop ? 'stop' : 'limit', price, triggerPrice: stop ? price : undefined, size: $orderSize, reduceOnly: false, postOnly: stop ? false : $postOnly });
+			if (!result.ok) placementError = result.error ?? 'DOM order was rejected';
+			else if (!(await fetchOpenOrders())) placementError = 'Order accepted but account reconciliation is unresolved';
+		} finally {
+			placingPrice = null;
+		}
+	}
+
+	async function cancelLadderOrder(orderId: string, marketIdentity?: string): Promise<boolean> {
+		placementError = '';
+		if (!marketProfile.executable) { placementError = marketProfile.readOnlyReason ?? 'This market does not support order cancellation'; return false; }
+		if (!canCancelKnownOrders) {
+			placementError = 'Enable secure trading before cancelling a known DOM order';
+			return false;
+		}
+		if (!marketIdentity) {
+			placementError = 'Order has no authoritative Hyperliquid identity; cancellation was not sent';
+			return false;
+		}
+		cancellingOrderId = orderId;
+		openOrders.update((orders) => orders.map((order) => order.id === orderId ? { ...order, pending: true, error: undefined } : order));
+		try {
+			const result = await cancelOrder(orderId, marketIdentity);
+			if (!result.ok) {
+				placementError = result.error ?? 'DOM cancel was rejected';
+				openOrders.update((orders) => orders.map((order) => order.id === orderId ? { ...order, pending: false, error: result.error } : order));
+				return false;
+			}
+			if (!await fetchOpenOrders()) {
+				placementError = 'Cancel was accepted but authoritative order reconciliation is unavailable';
+				openOrders.update((orders) => orders.map((order) => order.id === orderId ? { ...order, pending: false, error: placementError } : order));
+				return false;
+			}
+			return true;
+		} catch (error) {
+			placementError = error instanceof Error ? error.message : 'DOM cancel failed; reconcile open orders';
+			openOrders.update((orders) => orders.map((order) => order.id === orderId ? { ...order, pending: false, error: placementError } : order));
+			return false;
+		} finally {
+			cancellingOrderId = '';
+		}
+	}
+
+	function startLadderOrderDrag(event: MouseEvent, orderId: string): void {
+		event.preventDefault();
+		draggingOrderId = orderId;
+	}
+
+	async function modifyLadderOrder(orderId: string, newPrice: number): Promise<void> {
+		placementError = '';
+		if (!marketProfile.executable) {
+			placementError = marketProfile.readOnlyReason ?? 'This market does not support order modification';
+			return;
+		}
+		if (!privateStateLive) {
+			placementError = 'Account state is stale; DOM order changes are paused until reconciliation completes';
+			return;
+		}
+		const order = $openOrders.find((candidate) => candidate.id === orderId);
+		const marketIdentity = order?.apiCoin ?? order?.marketKey;
+		if (!order || !marketIdentity) {
+			placementError = 'Order has no authoritative Hyperliquid identity; modification was not sent';
+			return;
+		}
+		const decimals = $selectedMarket?.priceDecimals ?? 2;
+		if ((order.triggerPrice ?? order.price)?.toFixed(decimals) === newPrice.toFixed(decimals)) return;
+		openOrders.update((orders) => orders.map((candidate) => candidate.id === orderId ? { ...candidate, pending: true, error: undefined } : candidate));
+		try {
+			const result = await modifyOrderPrice(orderId, marketIdentity, newPrice);
+			if (!result.ok) {
+				placementError = result.error ?? 'DOM modify was rejected';
+				openOrders.update((orders) => orders.map((candidate) => candidate.id === orderId ? { ...candidate, pending: false, error: result.error } : candidate));
+				return;
+			}
+			const refreshed = await fetchOpenOrders();
+			if (!refreshed) placementError = 'Modify was accepted but authoritative order reconciliation is unavailable';
+			openOrders.update((orders) => orders.map((candidate) => candidate.id === orderId ? { ...candidate, pending: false, error: refreshed ? undefined : placementError } : candidate));
+		} catch (error) {
+			placementError = error instanceof Error ? error.message : 'DOM modify failed; reconcile open orders';
+			openOrders.update((orders) => orders.map((candidate) => candidate.id === orderId ? { ...candidate, pending: false, error: placementError } : candidate));
+		}
+	}
+
+	function finishLadderOrderDrag(price: number): void {
+		if (!draggingOrderId) return;
+		const orderId = draggingOrderId;
+		draggingOrderId = '';
+		ignoreNextPlacement = true;
+		void modifyLadderOrder(orderId, price);
+	}
+
+	function handleLadderRowClick(side: 'buy' | 'sell', price: number, event: MouseEvent): void {
+		if (ignoreNextPlacement) {
+			ignoreNextPlacement = false;
+			return;
+		}
+		void clickLadderPrice(side, price, event.shiftKey);
+	}
+
+	$: if (hasBook && $selectedMarket?.lastPrice !== undefined && !draggingOrderId) scheduleLadderRecenter();
+
+
+</script>
+
+	<div data-testid="order-book" data-feed-status={$marketDataStatus} data-row-count={$orderBook.bids.length + $orderBook.asks.length} class="h-full flex flex-col bg-terminal-bg-panel">
+	<div class="h-8 px-2 border-b border-terminal-border flex items-center justify-between text-2xs">
+		<span class="text-terminal-text-secondary">Order book</span>
+		{#if $clickPlacementMode}<span class="text-3xs text-terminal-green">DOM ARMED</span>{/if}
+		{#if hasBook}<button data-action-id="ui.src.lib.components.orderbook.button.hae500c5419" aria-label="Recenter DOM ladder" onclick={recenterLadder} class="ml-1 text-3xs text-terminal-cyan hover:underline">Center</button>{/if}
+		<span data-testid="dom-follow-status" class="text-3xs {followLastPrice ? 'text-terminal-text-muted' : 'text-terminal-yellow'}">{followLastPrice ? 'AUTO' : 'MANUAL'}</span>
+		{#if hasBook}<span data-testid="book-imbalance" title={`Displayed size imbalance across the top ${$bookDepth} validated book levels`} class="text-3xs {bookImbalance.label === 'bid' ? 'text-terminal-green' : bookImbalance.label === 'ask' ? 'text-terminal-red' : 'text-terminal-text-muted'}">{bookImbalance.label === 'unavailable' ? 'IMB —' : `IMB ${bookImbalance.imbalance >= 0 ? '+' : ''}${(bookImbalance.imbalance * 100).toFixed(0)}% ${bookImbalance.label === 'balanced' ? 'BAL' : bookImbalance.label.toUpperCase()}`}</span>{/if}
+		<select data-action-id="ui.src.lib.components.orderbook.select.h66f3c47197" aria-label="Order book precision grouping" bind:value={$bookSigFigs} onchange={(event) => changeGrouping(Number(event.currentTarget.value))} class="ml-auto bg-terminal-bg-secondary text-3xs text-terminal-text-secondary outline-none">
+			<option value={2}>2 sig</option><option value={3}>3 sig</option><option value={4}>4 sig</option><option value={5}>5 sig</option>
+		</select>
+		<select data-action-id="ui.src.lib.components.orderbook.select.h45115ede29" aria-label="Order book displayed depth" bind:value={$bookDepth} onchange={(event) => changeDepth(Number(event.currentTarget.value))} class="bg-terminal-bg-secondary text-3xs text-terminal-text-secondary outline-none">
+			<option value={12}>12 lvl</option><option value={24}>24 lvl</option><option value={50}>50 lvl</option>
+		</select>
+		<span class="text-3xs {$marketDataStatus === 'live' ? 'text-terminal-text-muted' : 'text-terminal-yellow'}">{baseAsset}/{quoteAsset}{#if $marketDataStatus !== 'live'} · {healthLabel($marketDataStatus)}{/if}</span>
+	</div>
+
+	<div class="grid grid-cols-3 px-2 py-1 text-3xs text-terminal-text-muted border-b border-terminal-border">
+		<div>Price ({quoteAsset})</div>
+		<div class="text-right">Size ({baseAsset})</div>
+		<div class="text-right">Total</div>
+	</div>
+
+	{#if hasBook}
+		<div data-testid="order-book-live" class="contents">
+		<div data-action-id="dom.ladder.scroll" data-testid="dom-ladder-viewport" role="region" aria-label="Order book ladder" class="flex-1 min-h-0 overflow-y-auto scrollbar-none" onscroll={onLadderScroll} onwheel={onLadderUserScroll} ontouchmove={onLadderUserScroll}>
+			<div class="flex-1 min-h-0 overflow-hidden flex flex-col justify-end">
+				{#each visibleAsks as ask (ask.price)}
+					<div class="relative">
+					<button data-action-id="ui.src.lib.components.orderbook.button.h48ea8e6494" aria-label={`Sell at ${ask.price}`} disabled={placingPrice !== null} class="w-full relative grid grid-cols-3 px-2 py-0.5 text-2xs tabular-nums text-left hover:bg-terminal-red-bg/70 disabled:opacity-50" onmouseup={() => finishLadderOrderDrag(ask.price)} onclick={(event) => handleLadderRowClick('sell', ask.price, event)}>
+						<span class="absolute right-0 inset-y-0 bg-terminal-red/30 pointer-events-none" style="width:{getDepthPercent(ask.total)}%"></span>
+						<span class="relative text-terminal-red">{formatPrice(ask.price)}</span>
+						<span class="relative text-right text-terminal-text-secondary">{formatSize(ask.size)}</span>
+						<span class="relative text-right text-terminal-text-muted">{formatSize(ask.total)}</span>
+					</button>
+					{#each ordersAtPrice(ask.price) as order (order.id)}
+						<button data-action-id="ui.src.lib.components.orderbook.button.h9074071889" aria-label={`Cancel ${order.side} order at ${ask.price}`} disabled={cancellingOrderId === order.id} class="absolute left-1 top-0.5 z-10 max-w-[70%] truncate rounded bg-terminal-red px-1 text-3xs text-white disabled:opacity-50" onmousedown={(event) => startLadderOrderDrag(event, order.id)} onclick={() => { draggingOrderId = ''; void cancelLadderOrder(order.id, order.apiCoin ?? order.marketKey); }}>{order.pending ? 'PENDING' : `× ${formatSize(order.remaining)}`}</button>
+					{/each}
+					{#each positionsAtPrice(ask.price) as position (position.id)}
+						<span data-testid={`dom-position-${position.id}`} class="absolute right-1 top-0.5 z-10 rounded bg-terminal-bg/90 px-1 text-3xs {position.side === 'long' ? 'text-terminal-green' : 'text-terminal-red'}">{position.side.toUpperCase()} {formatSize(position.size)}</span>
+					{/each}
+					</div>
+				{/each}
+			</div>
+
+			<div bind:this={ladderCenter} class="h-7 px-2 border-y border-terminal-border flex items-center justify-between text-2xs tabular-nums flex-shrink-0">
+				<span class="{$selectedMarket?.changePercent24h === undefined ? 'text-terminal-text-muted' : $selectedMarket.changePercent24h >= 0 ? 'text-terminal-green' : 'text-terminal-red'}">
+					{$selectedMarket ? formatPrice($selectedMarket.lastPrice) : '—'}
+				</span>
+				<span class="text-terminal-text-muted">Spread {$orderBook.spread > 0 ? formatPrice($orderBook.spread) : '—'}</span>
+			</div>
+
+			<div class="flex-1 min-h-0 overflow-hidden">
+				{#each visibleBids as bid (bid.price)}
+					<div class="relative">
+					<button data-action-id="ui.src.lib.components.orderbook.button.h55c941b334" aria-label={`Buy at ${bid.price}`} disabled={placingPrice !== null} class="w-full relative grid grid-cols-3 px-2 py-0.5 text-2xs tabular-nums text-left hover:bg-terminal-green-bg/70 disabled:opacity-50" onmouseup={() => finishLadderOrderDrag(bid.price)} onclick={(event) => handleLadderRowClick('buy', bid.price, event)}>
+						<span class="absolute right-0 inset-y-0 bg-terminal-green/30 pointer-events-none" style="width:{getDepthPercent(bid.total)}%"></span>
+						<span class="relative text-terminal-green">{formatPrice(bid.price)}</span>
+						<span class="relative text-right text-terminal-text-secondary">{formatSize(bid.size)}</span>
+						<span class="relative text-right text-terminal-text-muted">{formatSize(bid.total)}</span>
+					</button>
+					{#each ordersAtPrice(bid.price) as order (order.id)}
+						<button data-action-id="ui.src.lib.components.orderbook.button.hc5ecd0a3de" aria-label={`Cancel ${order.side} order at ${bid.price}`} disabled={cancellingOrderId === order.id} class="absolute left-1 top-0.5 z-10 max-w-[70%] truncate rounded bg-terminal-green px-1 text-3xs text-terminal-bg disabled:opacity-50" onmousedown={(event) => startLadderOrderDrag(event, order.id)} onclick={() => { draggingOrderId = ''; void cancelLadderOrder(order.id, order.apiCoin ?? order.marketKey); }}>{order.pending ? 'PENDING' : `× ${formatSize(order.remaining)}`}</button>
+					{/each}
+					{#each positionsAtPrice(bid.price) as position (position.id)}
+						<span data-testid={`dom-position-${position.id}`} class="absolute right-1 top-0.5 z-10 rounded bg-terminal-bg/90 px-1 text-3xs {position.side === 'long' ? 'text-terminal-green' : 'text-terminal-red'}">{position.side.toUpperCase()} {formatSize(position.size)}</span>
+					{/each}
+					</div>
+				{/each}
+			</div>
+		</div>
+		{#if placementError}<div role="alert" class="px-2 py-1 text-3xs text-terminal-red">{placementError}</div>{/if}
+		</div>
+	{:else}
+		<div class="flex-1 flex items-center justify-center px-4 text-center text-2xs {$marketDataStatus === 'error' ? 'text-terminal-red' : 'text-terminal-text-muted'}">
+			{unavailableFeedMessage('order book', $marketDataStatus)}
+		</div>
+	{/if}
+</div>

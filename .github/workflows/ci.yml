@@ -1,0 +1,161 @@
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches:
+      - viceterminal
+      - main
+
+# Least privilege: CI never signs, trades, publishes, or needs wallet
+# credentials. contents: read is all a clean-checkout gate requires; no token
+# is minted for publish/deploy steps (they are deliberately absent here).
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ---- Static source checks (clean checkout, pinned toolchain) -----------
+  source-checks:
+    name: Source checks (preflight / typecheck / svelte / audit)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Clean checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Setup Bun (pinned)
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.9
+      - name: Frozen install (lockfile-pinned)
+        run: bun install --frozen-lockfile
+      - name: Cache Bun install (lockfile-keyed)
+        uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: bun-${{ hashFiles('bun.lock') }}
+          restore-keys: |
+            bun-
+      - name: Custody + release policy preflight
+        run: bun run preflight
+      - name: TypeScript source typecheck
+        run: bun run typecheck
+      - name: Svelte check
+        run: bun run test:svelte
+
+  # ---- Frontend unit / policy / contract suites (deterministic, no venue) --
+  frontend-tests:
+    name: Frontend suites (unit/policy/contract/chaos/mobile/load)
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - name: Clean checkout
+        uses: actions/checkout@v4
+      - name: Setup Bun (pinned)
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.9
+      - name: Frozen install
+        run: bun install --frozen-lockfile
+      - name: Cache Bun install (lockfile-keyed)
+        uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: bun-${{ hashFiles('bun.lock') }}
+          restore-keys: |
+            bun-
+      - name: Core frontend suite
+        run: bun run test:frontend
+      - name: Catalog / market identity
+        run: bun run test:catalog
+      - name: Contract boundaries
+        run: bun run test:contract
+      - name: Chaos / reconciliation
+        run: bun run test:chaos
+      - name: Mobile parity
+        run: bun run test:mobile
+      - name: Load / latency gates
+        run: bun run test:load
+
+
+  # ---- Production terminal build ------------------------------------------
+  # Builds only the deployable Hyperliquid terminal artifact.
+  build:
+    name: Production build + artifact boundary scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - name: Clean checkout
+        uses: actions/checkout@v4
+      - name: Setup Bun (pinned)
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.9
+      - name: Frozen install
+        run: bun install --frozen-lockfile
+      - name: Cache Bun install (lockfile-keyed)
+        uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: bun-${{ hashFiles('bun.lock') }}
+          restore-keys: |
+            bun-
+      - name: Production build (terminal)
+        env:
+          VITE_HL_TRADING_NETWORK: mainnet
+          VITE_HL_MAINNET_ACK: I_ACCEPT_REAL_MAINNET_TRADING
+          VITE_RELEASE_BUILD: ${{ github.sha }}
+        run: bun run build
+
+  # ---- Production hydrated E2E (no credentials) ----------------------------
+  # Boots a real Chromium against the production build/preview and runs the
+  # non-mutating suite (test:e2e). Requires only public testnet reads — never
+  # signs, never places/modifies/cancels an order, never needs a wallet. The
+  # venue-mutating funded suite is NOT run here (it needs explicit env gates).
+  browser-e2e:
+    name: Production hydrated Chromium E2E (non-mutating)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    needs: [build]
+    steps:
+      - name: Clean checkout
+        uses: actions/checkout@v4
+      - name: Setup Bun (pinned)
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.9
+      - name: Frozen install
+        run: bun install --frozen-lockfile
+      - name: Install Chromium (Playwright)
+        run: bunx playwright install --with-deps chromium
+      - name: Run non-mutating hydrated E2E suite
+        env:
+          VITE_HL_NETWORK: mainnet
+          VITE_HL_TRADING_NETWORK: mainnet
+          VITE_HL_MAINNET_ACK: I_ACCEPT_REAL_MAINNET_TRADING
+        run: bun run test:e2e
+
+  # ---- Required aggregation gate ------------------------------------------
+  # Parallel jobs remain independent for throughput; this job is the single
+  # required status that proves the complete CI composition before promotion.
+  required-gate:
+    name: Required release-gate aggregation
+    if: always()
+    needs: [source-checks, frontend-tests, build, browser-e2e]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require every parallel gate
+        run: |
+          set -euo pipefail
+          for result in \
+            "${{ needs.source-checks.result }}" \
+            "${{ needs.frontend-tests.result }}" \
+            "${{ needs.build.result }}" \
+            "${{ needs.browser-e2e.result }}"; do
+            test "$result" = success || { echo "::error::parallel release gate result=$result"; exit 1; }
+          done

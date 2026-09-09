@@ -1,0 +1,69 @@
+name: staging-smoke
+
+# Approval-gated canary validation. This workflow downloads the immutable
+# artifact produced by release.yml; it never rebuilds source and never trades.
+on:
+  workflow_dispatch:
+    inputs:
+      artifact-run-id:
+        description: 'Release workflow run ID containing the immutable artifact'
+        required: true
+      artifact-name:
+        description: 'Release artifact name, normally vice-release-<full-sha>'
+        required: true
+      expected-sha:
+        description: 'Full commit SHA bound to the artifact'
+        required: true
+      deployment-url:
+        description: 'Already deployed canary URL for read-only smoke'
+        required: true
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: staging-smoke
+  cancel-in-progress: false
+
+jobs:
+  staging-smoke:
+    name: Approval-gated immutable-artifact canary smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    environment: staging
+    steps:
+      - name: Clean checkout at expected commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.expected-sha }}
+          fetch-depth: 0
+      - name: Setup Bun (pinned)
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.9
+      - name: Frozen install
+        run: bun install --frozen-lockfile
+      - name: Download immutable release artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ inputs.artifact-name }}
+          run-id: ${{ inputs.artifact-run-id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: .release-artifact
+      - name: Verify manifest, artifact, and exact SHA
+        env:
+          VICE_RELEASE_SHA: ${{ inputs.expected-sha }}
+        run: |
+          set -euo pipefail
+          test -f .release-artifact/release/vice-manifest.json
+          cp .release-artifact/release/vice-manifest.json release/vice-manifest.json
+          mkdir -p release/provenance vice-terminal/.vercel
+          cp -R .release-artifact/release/provenance/. release/provenance/
+          cp -R .release-artifact/vice-terminal/.vercel/output vice-terminal/.vercel/output
+          bun scripts/release-manifest.mjs --release --verify release/vice-manifest.json
+      - name: Probe deployed canary for exact identity
+        env:
+          VICE_DEPLOYMENT_URL: ${{ inputs.deployment-url }}
+          VICE_RELEASE_SHA: ${{ inputs.expected-sha }}
+        run: bun scripts/deployed-smoke.mjs

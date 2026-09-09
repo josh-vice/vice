@@ -1,9 +1,0 @@
-{
-  "course": 3,
-  "chapterId": 18,
-  "title": "The Art of Meditation",
-  "module": "Unlocking Your Potential",
-  "edits": [],
-  "alreadyGood": ["introChart", "lessonChart", "quiz.chart"],
-  "notes": "Pure psychology/meditation chapter — the lesson and intro text teach NO specific, locatable price levels (no entry/stop/target/support/resistance, no named swing/zone/Fib/neckline). The charts are metaphors for objectivity, not worked trades, so the CORE PRINCIPLE ('anything referenced when teaching must be drawn') is already satisfied: every concept the text does name is illustrated. (1) introChart is format:\"concept\" (focus->wander->notice->return loop) — a concept diagram with no OHLC; per the rules these are skipped, and its steps/checklist already annotate the taught mechanism. (2) lessonChart already draws the range-as-objectivity metaphor: teal Range Low markArea (86-91) and pink Range High markArea (93-98) with four markPoints showing the objective sell-high / buy-low reads (idx 2,6,11,12). The text teaches no numeric price, so the range is communicated as a zone, not a hard level. (3) quiz.chart correctly uses cutIndex:8 with NO pre-cut annotations (does not spoil the decision) and routes the wander/refocus outcome to revealMarkPoints (gold 'Mind Wanders (Normal)' at idx 2 & 6, teal 'Refocus' at idx 4 & 8) — a clean color-correct mapping (gold=neutral/normal event, teal=the positive refocus exercise) of the taught loop. REJECTED the auditor's sole gap: a low-confidence OPTIONAL markLine {yAxis:95,'Range High — Sell'} on lessonChart. The auditor itself flagged it 'borderline-invent' and recommended SKIP. The chapter teaches no specific price, so adding a hard 'Sell' level would invent a level the text does not teach AND be redundant with the existing pink Range High markArea — rejected on both RESTRAINT and non-redundancy grounds. Nothing to add or fix."
-}
