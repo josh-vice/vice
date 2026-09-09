@@ -1,0 +1,30 @@
+{
+  "code": "0",
+  "msg": "success",
+  "data": [
+    {
+      "instId": "BTC-USDT",
+      "instType": "SWAP",
+      "baseCurrency": "BTC",
+      "quoteCurrency": "USDT",
+      "settlementCurrency": null,
+      "contractValue": "0.001",
+      "tickSize": "0.1",
+      "lotSize": "0.1",
+      "maxLeverage": "150",
+      "state": "live"
+    },
+    {
+      "instId": "ETH-USDT",
+      "instType": "SWAP",
+      "baseCurrency": "ETH",
+      "quoteCurrency": "USDT",
+      "settlementCurrency": null,
+      "contractValue": "0.01",
+      "tickSize": "0.01",
+      "lotSize": "0.1",
+      "maxLeverage": "150",
+      "state": "live"
+    }
+  ]
+}
