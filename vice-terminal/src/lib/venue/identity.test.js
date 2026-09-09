@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { assertAccountRef, assertBookSubscriptionIdentity, assertEventEnvelope, assertInstrumentId, assertVenueCapabilities, bookSubscriptionKey, eventTimeUsFromMs, MAX_EVENT_TIMESTAMP_MS } from './identity.ts';
+import { BLOFIN_CAPABILITIES, HYPERLIQUID_CAPABILITIES } from './capabilities.ts';
 
 const instrument = {
 	instrumentKey: 'blofin:linearPerp:BTC-USDT',
@@ -53,6 +54,29 @@ describe('canonical multi-venue identity', () => {
 		expect(() => assertVenueCapabilities({ ...capabilities, supportsAmend: true })).toThrow('amend support');
 		expect(() => assertVenueCapabilities({ ...capabilities, nativeAlgorithmTypes: [] })).toThrow('native algorithm');
 		expect(() => assertVenueCapabilities({ ...capabilities, privateStreamGuarantee: 'none' })).toThrow('private-stream');
+	});
+
+	test('publishes immutable Hyperliquid and BloFin capability profiles through the canonical assertion', () => {
+		expect(assertVenueCapabilities(HYPERLIQUID_CAPABILITIES)).toBe(HYPERLIQUID_CAPABILITIES);
+		expect(assertVenueCapabilities(BLOFIN_CAPABILITIES)).toBe(BLOFIN_CAPABILITIES);
+		expect(BLOFIN_CAPABILITIES).toMatchObject({
+		venue: 'blofin',
+		products: ['linearPerp'],
+		orderTypes: ['limit', 'market', 'post_only', 'ioc'],
+		supportsHedgeMode: false,
+		supportsMarginModes: true,
+		supportsAmend: true,
+		amendSemantics: 'inPlace',
+		supportsClientOrderIds: true,
+		supportsNativeAlgorithms: false,
+		nativeAlgorithmTypes: [],
+		supportsPrivateStreams: true,
+		privateStreamGuarantee: 'authenticatedReconciliation',
+		certification: 'reviewOnly'
+	});
+		expect(Object.isFrozen(BLOFIN_CAPABILITIES)).toBe(true);
+		expect(Object.isFrozen(BLOFIN_CAPABILITIES.products)).toBe(true);
+		expect(Object.isFrozen(BLOFIN_CAPABILITIES.orderTypes)).toBe(true);
 	});
 
 	test('builds a grouping-aware book subscription key that disambiguates same-coin traffic', () => {

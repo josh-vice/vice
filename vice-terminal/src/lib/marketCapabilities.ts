@@ -1,4 +1,7 @@
 import type { MarketDescriptor, OrderType } from './types';
+import { BLOFIN_CAPABILITIES } from './venue/capabilities';
+import type { AccountRef, VenueCapabilities } from './venue/identity';
+import type { VenueEnvironment } from './venue/adapter';
 
 export type MarketAmountUnit = 'base' | 'quote';
 
@@ -30,6 +33,23 @@ export interface MarketCapabilityProfile {
 	supportsPositionLifecycle: boolean;
 	supportsAdvancedOrders: boolean;
 	meaningfulStats: MarketMeaningfulStats;
+	/** Present for venue-aware profiles; legacy Hyperliquid callers remain unchanged. */
+	supportsHedgeMode?: boolean;
+	supportsMarginModes?: boolean;
+	supportsAmend?: boolean;
+	amendSemantics?: VenueCapabilities['amendSemantics'];
+	supportsClientOrderIds?: boolean;
+	supportsNativeAlgorithms?: boolean;
+	nativeAlgorithmTypes?: readonly string[];
+	supportsWebSocketOrderEntry?: boolean;
+	supportsPrivateStreams?: boolean;
+	privateStreamGuarantee?: VenueCapabilities['privateStreamGuarantee'];
+	certification?: VenueCapabilities['certification'];
+}
+
+export interface MarketCapabilityContext {
+	account?: AccountRef | null;
+	environment?: VenueEnvironment;
 }
 
 const perpStats: MarketMeaningfulStats = Object.freeze({
@@ -48,7 +68,57 @@ const perpProfile: MarketCapabilityProfile = Object.freeze({
 	supportsPositionLifecycle: true, supportsAdvancedOrders: true, meaningfulStats: perpStats
 });
 
-export function marketCapabilities(market: MarketDescriptor | null | undefined): MarketCapabilityProfile {
+const BLOFIN_ALLOWED_ORDER_TYPES = Object.freeze(['limit', 'market'] as const);
+
+function isBlofinLinearPerp(market: MarketDescriptor): boolean {
+	return market.instrument?.venue === BLOFIN_CAPABILITIES.venue && market.instrument.product === 'linearPerp';
+}
+
+function blofinCapabilityProfile(market: MarketDescriptor, context: MarketCapabilityContext): MarketCapabilityProfile {
+	const account = context.account ?? null;
+	const environment = context.environment ?? 'demo';
+	const hasBlofinAccount = account?.venue === BLOFIN_CAPABILITIES.venue;
+	const productionLocked = environment === 'production' && BLOFIN_CAPABILITIES.certification === 'reviewOnly';
+	const readOnlyReason = !hasBlofinAccount
+		? 'Connect a BloFin account before placing an order.'
+		: productionLocked
+			? 'BloFin live execution is not certified; use demo trading'
+			: null;
+
+	return Object.freeze({
+		executable: hasBlofinAccount && !productionLocked,
+		readOnlyReason,
+		allowedOrderTypes: BLOFIN_ALLOWED_ORDER_TYPES,
+		leverageEnabled: true,
+		maxLeverage: Math.max(1, market.maxLeverage ?? 1),
+		amountUnit: 'base' as const,
+		amountUnits: ['base'] as const,
+		usesMargin: true,
+		supportsReduceOnly: false,
+		supportsPostOnly: BLOFIN_CAPABILITIES.orderTypes.includes('post_only'),
+		supportsIoc: BLOFIN_CAPABILITIES.orderTypes.includes('ioc'),
+		supportsTriggers: false,
+		supportsPositionLifecycle: false,
+		supportsAdvancedOrders: false,
+		meaningfulStats: perpStats,
+		supportsHedgeMode: BLOFIN_CAPABILITIES.supportsHedgeMode,
+		supportsMarginModes: BLOFIN_CAPABILITIES.supportsMarginModes,
+		supportsAmend: BLOFIN_CAPABILITIES.supportsAmend,
+		amendSemantics: BLOFIN_CAPABILITIES.amendSemantics,
+		supportsClientOrderIds: BLOFIN_CAPABILITIES.supportsClientOrderIds,
+		supportsNativeAlgorithms: BLOFIN_CAPABILITIES.supportsNativeAlgorithms,
+		nativeAlgorithmTypes: BLOFIN_CAPABILITIES.nativeAlgorithmTypes,
+		supportsWebSocketOrderEntry: BLOFIN_CAPABILITIES.supportsWebSocketOrderEntry,
+		supportsPrivateStreams: BLOFIN_CAPABILITIES.supportsPrivateStreams,
+		privateStreamGuarantee: BLOFIN_CAPABILITIES.privateStreamGuarantee,
+		certification: BLOFIN_CAPABILITIES.certification
+	});
+}
+
+export function marketCapabilities(
+	market: MarketDescriptor | null | undefined,
+	context: MarketCapabilityContext = {}
+): MarketCapabilityProfile {
 	if (!market || (market.kind !== 'corePerp' && market.kind !== 'hip3Perp' && market.kind !== 'spot')) {
 		return Object.freeze({
 			executable: false, readOnlyReason: 'Select a market before placing an order.', allowedOrderTypes: [],
@@ -57,6 +127,7 @@ export function marketCapabilities(market: MarketDescriptor | null | undefined):
 			supportsPositionLifecycle: false, supportsAdvancedOrders: false, meaningfulStats: spotStats
 		});
 	}
+	if (isBlofinLinearPerp(market)) return blofinCapabilityProfile(market, context);
 	if (market.kind === 'corePerp' || market.kind === 'hip3Perp') return { ...perpProfile, maxLeverage: Math.max(1, market.maxLeverage ?? 1) };
 	return Object.freeze({
 		executable: true, readOnlyReason: null, allowedOrderTypes: ['limit', 'market'] as const,
