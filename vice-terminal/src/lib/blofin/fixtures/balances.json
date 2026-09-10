@@ -1,0 +1,14 @@
+{
+  "code": "0",
+  "msg": "success",
+  "data": [
+    {
+      "currency": "USDT",
+      "balance": "10000.00",
+      "available": "8500.00",
+      "frozen": "1500.00",
+      "equity": "10025.50",
+      "unrealizedPnl": "25.50"
+    }
+  ]
+}

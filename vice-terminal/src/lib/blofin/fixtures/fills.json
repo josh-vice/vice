@@ -1,0 +1,16 @@
+{
+  "code": "0",
+  "msg": "success",
+  "data": [
+    {
+      "tradeId": "trade-1",
+      "orderId": "order-1",
+      "instId": "BTC-USDT",
+      "side": "buy",
+      "price": "34900.0",
+      "size": "0.1",
+      "fee": "0.0349",
+      "ts": "1700000000000"
+    }
+  ]
+}

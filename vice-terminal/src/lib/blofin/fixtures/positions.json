@@ -1,0 +1,19 @@
+{
+  "code": "0",
+  "msg": "success",
+  "data": [
+    {
+      "instId": "BTC-USDT",
+      "positionId": "position-1",
+      "positionSide": "net",
+      "positions": "0.1",
+      "averageOpenPrice": "35000.0",
+      "markPrice": "35100.0",
+      "liquidationPrice": "18000.0",
+      "unrealizedPnl": "10.0",
+      "realizedPnl": "2.0",
+      "leverage": "5",
+      "margin": "700.0"
+    }
+  ]
+}
