@@ -1,5 +1,6 @@
 import type { IChartApi, ISeriesApi, IPriceLine } from 'lightweight-charts';
-import type { Order } from '$lib/types';
+import type { MarketDescriptor, Order } from '$lib/types';
+import { formatChartPrice, normalizeChartPrice } from './priceNormalization';
 
 export type PriceLineEntry = {
 	orderId: string;
@@ -11,16 +12,17 @@ export type PriceLineEntry = {
 export function syncOrderPriceLines(
 	series: ISeriesApi<'Candlestick'>,
 	orders: Order[],
-	existing: Map<string, PriceLineEntry>
+	existing: Map<string, PriceLineEntry>,
+	priceOverrides: ReadonlyMap<string, number> = new Map()
 ): Map<string, PriceLineEntry> {
 	const open = orders.filter((o) => o.status === 'open' || o.status === 'partial');
 	const next = new Map<string, PriceLineEntry>();
 
 	for (const order of open) {
-		const overlayPrice = order.triggerPrice || order.price;
-		if (!overlayPrice) continue;
+		const overlayPrice = priceOverrides.get(order.id) ?? order.triggerPrice ?? order.price;
+		if (overlayPrice == null) continue;
 		const color = order.side === 'buy' ? '#2ee6c2' : '#ff3d9a';
-		const title = order.triggerPrice ? (order.type.includes('stop') ? 'STOP' : 'TP') : '';
+		const title = order.triggerPrice != null ? (order.type.includes('stop') ? 'STOP' : 'TP') : '';
 
 		const prev = existing.get(order.id);
 		if (prev && prev.price === overlayPrice) {
@@ -51,7 +53,8 @@ export function setPreviewLine(
 	series: ISeriesApi<'Candlestick'>,
 	current: IPriceLine | null,
 	price: number | null,
-	side: 'buy' | 'sell' = 'buy'
+	side: 'buy' | 'sell' = 'buy',
+	market?: Pick<MarketDescriptor, 'priceDecimals' | 'instrument'> | null
 ): IPriceLine | null {
 	if (current) series.removePriceLine(current);
 	if (price == null) return null;
@@ -62,16 +65,17 @@ export function setPreviewLine(
 		lineWidth: 2,
 		lineStyle: 2,
 		axisLabelVisible: true,
-		title: `Preview ${side.toUpperCase()} @ ${price.toFixed(2)}`
+		title: `Preview ${side.toUpperCase()} @ ${formatChartPrice(price, market)}`
 	});
 }
 
 export function priceFromClick(
-	chart: IChartApi,
+	_chart: IChartApi,
 	series: ISeriesApi<'Candlestick'>,
-	param: { point?: { x: number; y: number } }
+	param: { point?: { x: number; y: number } },
+	market?: Pick<MarketDescriptor, 'priceDecimals' | 'instrument'> | null
 ): number | null {
 	if (!param.point) return null;
 	const price = series.coordinateToPrice(param.point.y);
-	return price ?? null;
+	return normalizeChartPrice(price ?? null, market);
 }

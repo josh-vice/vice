@@ -30,3 +30,49 @@ export async function signBlofinRest(
 		throw new Error('BloFin REST signing failed');
 	}
 }
+
+
+import type { CredentialInput } from '$lib/credentials/types';
+import type { BlofinPrivateAuthenticator, BlofinPrivateTransport } from './private';
+
+export type BlofinCredentialAccess = <T>(callback: (credentials: CredentialInput) => T | PromiseLike<T>) => Promise<T>;
+
+export interface BlofinPrivateAuthenticatorOptions {
+  now?: () => number;
+  nonce?: (timestamp: string) => string;
+}
+
+/** Build the documented BloFin private login without retaining credential material. */
+export function createBlofinPrivateAuthenticator(
+  withCredentials: BlofinCredentialAccess,
+  options: BlofinPrivateAuthenticatorOptions = {}
+): BlofinPrivateAuthenticator {
+  const now = options.now ?? (() => Date.now());
+  const nonce = options.nonce ?? ((timestamp: string) => {
+    const cryptoApi = globalThis.crypto as Crypto & { randomUUID?: () => string };
+    return typeof cryptoApi?.randomUUID === 'function' ? cryptoApi.randomUUID() : timestamp;
+  });
+  return {
+    async authenticate(transport) {
+      try {
+        await withCredentials(async ({ apiKey, secret, passphrase }) => {
+          const timestamp = String(Math.trunc(now()));
+          const requestNonce = nonce(timestamp);
+          const sign = await signBlofinRest(secret, '/users/self/verify', 'GET', timestamp, requestNonce);
+          transport.send(JSON.stringify({
+            op: 'login',
+            args: [{ apiKey, passphrase, timestamp, sign, nonce: requestNonce }]
+          }));
+        });
+      } catch {
+        throw new Error('BloFin private authentication failed');
+      }
+    }
+  };
+}
+
+/** Browser-native transport boundary; no credential-bearing headers are added. */
+export function createBlofinPrivateTransport(url: string): BlofinPrivateTransport {
+  if (typeof WebSocket === 'undefined') throw new Error('BloFin private WebSocket is unavailable in this runtime');
+  return new WebSocket(url) as unknown as BlofinPrivateTransport;
+}

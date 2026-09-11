@@ -1,0 +1,16 @@
+{
+  "arg": {
+    "channel": "orders",
+    "instType": "SWAP"
+  },
+  "data": [
+    {
+      "orderId": "order-redacted-1",
+      "instId": "BTC-USDT",
+      "state": "live",
+      "side": "buy",
+      "orderType": "limit",
+      "size": "0.1"
+    }
+  ]
+}

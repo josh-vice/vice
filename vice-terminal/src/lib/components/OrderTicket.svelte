@@ -13,6 +13,7 @@
 	import { estimateOrderPreview, type OrderPreview } from '$lib/orderPreview';
 	import { marketMatches } from '$lib/chart/chartModel';
 	import { formatPrice, formatSize } from '$lib/format';
+import { priceFormatForMarket } from '$lib/chart/priceFormat';
 	import { tradingKillSwitchActive, tradingKillSwitchMessage } from '$lib/execution/releaseSafety';
 	import { privacyMode } from '$lib/privacyMode';
 	import PositionMarketActions from '$lib/components/PositionMarketActions.svelte';
@@ -102,6 +103,7 @@ const EMPTY_ORDER_BOOK: OrderBook = { bids: [], asks: [], spread: 0, spreadPerce
 	let amountUnit: 'base' | 'quote' = 'base';
 	let presetMessage = '';
 	$: marketProfile = marketCapabilities($selectedMarket);
+	$: chartPriceStep = priceFormatForMarket($selectedMarket).minMove;
 	$: if (marketProfile.amountUnit === 'quote') amountUnit = 'quote';
 	$: if (marketProfile.amountUnit === 'base') amountUnit = 'base';
 
@@ -610,7 +612,7 @@ const EMPTY_ORDER_BOOK: OrderBook = { bids: [], asks: [], spread: 0, spreadPerce
 						onfocus={() => focusChartField('entry')}
 						onblur={blurChartField}
 						class="flex-1 terminal-input text-center font-mono text-xs py-1.5"
-						step="0.1"
+						step={chartPriceStep}
 						placeholder="0.00"
 						aria-label="Order price"
 					/>
@@ -632,7 +634,7 @@ const EMPTY_ORDER_BOOK: OrderBook = { bids: [], asks: [], spread: 0, spreadPerce
 					onfocus={() => focusChartField('trigger')}
 					onblur={blurChartField}
 					class="w-full terminal-input font-mono text-xs py-1.5 px-2"
-					step="0.1"
+					step={chartPriceStep}
 					placeholder="Click chart"
 					aria-label="Trigger price"
 				/>

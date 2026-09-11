@@ -18,4 +18,12 @@ describe('major EVM wallet connection surface', () => {
 		expect(navbar).toContain('role="alert"');
 		expect(navbar).toContain('walletError');
 	});
+
+	test('always exposes an exit back to the CLI signal gate', () => {
+		expect(navbar).toContain('data-testid="logout-to-login"');
+		expect(navbar).toContain('onclick={logoutBeta}');
+		expect(navbar).toContain("fetch('/api/beta/logout'");
+		expect(navbar).toContain('disconnectWallet();');
+		expect(navbar).toContain("window.location.assign('/login')");
+	});
 });

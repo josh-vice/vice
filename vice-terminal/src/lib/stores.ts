@@ -14,6 +14,8 @@ import {
 	classifyEnablementError
 } from './execution/enablement';
 import { discoverWalletProviders, requestWalletAccounts, type DiscoveredWallet } from './walletProviders';
+import type { AccountRef, VenueId } from './venue/identity';
+import type { VenueEnvironment } from './venue/adapter';
 
 export type { HealthStatus } from './productionTruth';
 
@@ -46,6 +48,18 @@ export const clickPlacementSide: Writable<'auto' | 'buy' | 'sell'> = writable('a
 export const chartRiskPercent: Writable<number> = writable(1);
 export const marketType: Writable<MarketType> = writable('perp');
 export const selectedMarket: Writable<MarketDescriptor | null> = writable(null);
+
+// Canonical multi-venue session identity. These stores are deliberately
+// separate from wallet connectivity: a browser wallet is only one possible
+// account provider, while CEX credentials are browser-local vault records.
+export const activeVenue: Writable<VenueId> = writable('hyperliquid');
+export const activeVenueAccount: Writable<AccountRef | null> = writable(null);
+export const venueEnvironment: Writable<VenueEnvironment> = writable(hyperliquidNetwork.isTestnet ? 'testnet' : 'production');
+export type VenueSwitchStatus = 'idle' | 'switching' | 'live' | 'error';
+export const venueSwitchStatus: Writable<VenueSwitchStatus> = writable('idle');
+export const venueSwitchError: Writable<string> = writable('');
+export const venueSessionGeneration: Writable<number> = writable(0);
+
 export const cliOpen: Writable<boolean> = writable(false);
 export const cliHistory: Writable<CLICommand[]> = writable([]);
 
@@ -358,18 +372,60 @@ function resetMarketBoundState(market: MarketDescriptor | null, preserveChart = 
 	marketDataStatus.set('connecting');
 }
 
+/**
+ * Remove every venue/account-bound projection before a new session renders.
+ * Wallet connectivity is intentionally independent and is not cleared here.
+ */
+export function resetVenueSessionState(): void {
+	marketRegistry.set([]);
+	perpMarketsList.set([]);
+	spotMarketsList.set([]);
+	selectedMarket.set(null);
+	chartCandles.set([]);
+	liveCandle.set(null);
+	chartHistoryStatus.set('idle');
+	orderBook.set({ ...emptyOrderBook });
+	recentTrades.set([]);
+	positions.set([]);
+	openOrders.set([]);
+	fills.set([]);
+	twapJobs.set([]);
+	balances.set([]);
+	localAlgoJobs.set([]);
+	subaccounts.set([{ ...emptySubaccount }]);
+	activeSubaccount.set({ ...emptySubaccount });
+	activeVenueAccount.set(null);
+	marketDataStatus.set('idle');
+	candleDataStatus.set('idle');
+	marketContextStatus.set('idle');
+	marketCatalogStatus.set('idle');
+	accountSyncStatus.set('idle');
+	activeAssetSyncStatus.set('idle');
+	executionStatus.set('idle');
+	deadmanStatus.set('idle');
+	orderPrice.set(null);
+	orderSize.set(0);
+	venueSessionGeneration.set(0);
+}
+
 export function selectMarket(market: MarketDescriptor) {
 	const previous = get(selectedMarket);
 	selectedMarket.set(market);
 	resetMarketBoundState(market, sameMarket(previous, market));
-	void import('./hl/account')
-		.then(({ setActiveAccountAsset }) => setActiveAccountAsset(market))
-		.catch((e) => console.error('[hl] active account asset change failed:', e));
+	if (get(activeVenue) === 'hyperliquid' && market.instrument?.venue !== 'blofin') {
+	  void import('./hl/account')
+	.then(({ setActiveAccountAsset }) => setActiveAccountAsset(market))
+	.catch((e) => console.error('[hl] active account asset change failed:', e));
+	}
 }
 
 /** Switch the one selected public feed and wait for that exact market to prove live. */
 export async function selectMarketForExecution(market: MarketDescriptor, timeoutMs = 12_000): Promise<boolean> {
 	if (typeof window === 'undefined' || !Number.isFinite(timeoutMs) || timeoutMs <= 0) return false;
+	if (get(activeVenue) !== 'hyperliquid' || market.instrument?.venue === 'blofin') {
+	  const { selectVenueMarketForExecution } = await import('./venue/session');
+	  return selectVenueMarketForExecution(market, timeoutMs);
+	}
 	const registered = get(marketRegistry).find((candidate) => candidate.marketKey === market.marketKey && candidate.apiCoin === market.apiCoin);
 	if (!registered) return false;
 	const previous = get(selectedMarket);
@@ -720,11 +776,20 @@ let feedsStarted = false;
 export function startPriceUpdates() {
 	if (feedsStarted) return;
 	feedsStarted = true;
-	startHlFeeds().catch((e) => console.error('[hl] feed start failed:', e));
+	startHlFeeds()
+	  .then(() => venueSwitchStatus.set('live'))
+	  .catch((e) => {
+	    venueSwitchStatus.set('error');
+	    venueSwitchError.set('Hyperliquid market feed failed to start');
+	    console.error('[hl] feed start failed:', e);
+	  });
 }
 
 export function stopPriceUpdates() {
 	if (!feedsStarted) return;
 	feedsStarted = false;
-	stopHlFeeds().catch((e) => console.error('[hl] feed stop failed:', e));
+	stopHlFeeds().catch(() => {
+	  venueSwitchStatus.set('error');
+	  venueSwitchError.set('Hyperliquid market feed failed to stop');
+	});
 }

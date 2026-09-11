@@ -17,6 +17,7 @@
 	import WorkspaceHost from '$lib/components/WorkspaceHost.svelte';
 	import CLIPanel from '$lib/components/CLIPanel.svelte';
 	import MobileOrderSheet from '$lib/components/MobileOrderSheet.svelte';
+	import TerminalAtmosphere from '$lib/components/TerminalAtmosphere.svelte';
 	import { formatPrice } from '$lib/format';
 	import { describeMarketClass } from '$lib/marketClass';
 	import { marketCapabilities } from '$lib/marketCapabilities';
@@ -81,9 +82,11 @@
 	});
 </script>
 
-<div data-testid="terminal-shell" class="h-screen flex flex-col overflow-hidden bg-terminal-bg">
-	<!-- Navbar - 44px -->
-	<Navbar />
+<div data-testid="terminal-shell" class="relative isolate h-screen overflow-hidden bg-terminal-bg">
+	<TerminalAtmosphere />
+	<div class="relative z-10 flex h-full min-h-0 flex-col overflow-hidden">
+		<!-- Navbar - 44px -->
+		<Navbar />
 
 	{#if $selectedMarket}
 		{@const activeFunding = $selectedMarket.fundingRate}
@@ -308,8 +311,9 @@
 	<MobileOrderSheet bind:open={orderSheetOpen} />
 	{/if}
 
-	<!-- CLI Panel (overlay) -->
-	<CLIPanel />
+		<!-- CLI Panel (overlay) -->
+		<CLIPanel />
+	</div>
 </div>
 
 <style>

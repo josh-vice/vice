@@ -1,6 +1,4 @@
-import { json, redirect, type Handle } from '@sveltejs/kit';
-import { betaGateEnabled, betaIdentity, betaLoginRedirect, safeReturnTarget, assertBetaConfiguration } from '$lib/server/betaAuth';
-
+import { type Handle } from '@sveltejs/kit';
 function isStaticAsset(pathname: string): boolean {
 	return pathname.startsWith('/_app/') || /\.[a-z0-9]+$/i.test(pathname);
 }
@@ -22,37 +20,5 @@ function withSecurityHeaders(response: Response, pathname: string, protocol: str
 }
 
 export const handle: Handle = async ({ event, resolve }) => {
-	const pathname = event.url.pathname;
-	const gateEnabled = betaGateEnabled();
-	const isLogin = pathname === '/login';
-	const isLoginApi = pathname === '/api/beta/login';
-	const isLogoutApi = pathname === '/api/beta/logout';
-	const isPublicDiagnostic = pathname === '/api/meta' || pathname === '/api/health';
-	const isPublicAsset = isStaticAsset(pathname);
-	if (gateEnabled) {
-		try {
-			assertBetaConfiguration();
-		} catch {
-			return withSecurityHeaders(json({ ok: false, error: 'beta_misconfigured' }, { status: 503 }), pathname, event.url.protocol);
-		}
-	}
-	const identity = gateEnabled && !isLoginApi && !isLogoutApi && !isPublicAsset
-		? await betaIdentity(event.cookies)
-		: null;
-
-	if (!gateEnabled) {
-		if (isLogin) throw redirect(303, '/');
-		return withSecurityHeaders(await resolve(event), pathname, event.url.protocol);
-	}
-	if (isLoginApi || isLogoutApi || isPublicDiagnostic) return withSecurityHeaders(await resolve(event), pathname, event.url.protocol);
-	if (isPublicAsset && !pathname.startsWith('/api/')) return withSecurityHeaders(await resolve(event), pathname, event.url.protocol);
-	if (isLogin) {
-		if (identity) throw redirect(303, safeReturnTarget(event.url));
-		return withSecurityHeaders(await resolve(event), pathname, event.url.protocol);
-	}
-	if (identity) return withSecurityHeaders(await resolve(event), pathname, event.url.protocol);
-	if (pathname.startsWith('/api/')) {
-		return withSecurityHeaders(json({ ok: false, error: 'beta_auth_required' }, { status: 401 }), pathname, event.url.protocol);
-	}
-	throw redirect(303, betaLoginRedirect(event.url));
+	return withSecurityHeaders(await resolve(event), event.url.pathname, event.url.protocol);
 };

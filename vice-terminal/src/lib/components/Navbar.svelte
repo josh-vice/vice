@@ -13,6 +13,11 @@
 		marketCatalogStatus,
 		accountSyncStatus,
 		activeAssetSyncStatus,
+		activeVenue,
+		activeVenueAccount,
+		venueEnvironment,
+		venueSwitchStatus,
+		venueSwitchError,
 		selectedMarket,
 		cliOpen,
 		connectWallet,
@@ -22,21 +27,48 @@
 		setMarketType,
 		type HealthStatus
 	} from '$lib/stores';
+	import { stopVenueSession, switchToSavedVenueAccount, switchVenueSession, safeVenueError } from '$lib/venue/session';
 	import { setSoundMuted, soundMuted } from '$lib/soundNotifications';
 	import { privacyMode, setPrivacyMode } from '$lib/privacyMode';
 	import { requestWorkspaceLayoutReset, setWorkspaceLocked, setWorkspacePanel, setWorkspacePreset, workspaceLocked, workspacePanels, workspacePreset, type WorkspacePanel, type WorkspacePreset } from '$lib/workspacePreset';
 	import { DEFAULT_HOTKEYS, hotkeyFromEvent, loadHotkeys, setHotkeyBinding, type HotkeyAction, type HotkeyBindings } from '$lib/hotkeys';
 	import { canPresentAccountState, healthLabel } from '$lib/productionTruth';
-	import { Terminal, Wallet, LogOut, Volume2, VolumeX, Eye, EyeOff, Lock, Unlock, LifeBuoy } from 'lucide-svelte';
+	import { Terminal, Wallet, LogOut, Volume2, VolumeX, Eye, EyeOff, Lock, Unlock, LifeBuoy, Settings as SettingsIcon } from 'lucide-svelte';
 	import { hyperliquidPublicNetwork, hyperliquidTradingNetwork } from '$lib/hl/network';
 	import { tradingKillSwitchActive, startReleasePolicyMonitor } from '$lib/execution/releaseSafety';
 	import ReportIssue from './ReportIssue.svelte';
+	import SettingsAccounts from './SettingsAccounts.svelte';
 	import { onMount } from 'svelte';
 	import { installDiagnostics } from '$lib/diagnostics/wire';
 
 	let reportIssueOpen = $state(false);
+	let settingsOpen = $state(false);
 	let workspaceMessage = $state('');
 
+	async function selectVenue(value: "hyperliquid" | "blofin"): Promise<void> {
+		if (value === $activeVenue) return;
+		venueSwitchStatus.set("switching");
+		try {
+			if (value === "blofin") {
+				if (!$activeVenueAccount || $activeVenueAccount.venue !== "blofin") {
+					settingsOpen = true;
+					venueSwitchStatus.set("idle");
+					return;
+				}
+				await switchVenueSession({ venue: "blofin", environment: $venueEnvironment, account: $activeVenueAccount });
+				return;
+			}
+			await stopVenueSession();
+			activeVenue.set("hyperliquid");
+			venueEnvironment.set(hyperliquidTradingNetwork.isTestnet ? "testnet" : "production");
+			const { startHlFeeds } = await import("$lib/hl/subscriptions");
+			await startHlFeeds();
+			venueSwitchStatus.set("live");
+		} catch (error) {
+			venueSwitchStatus.set("error");
+			venueSwitchError.set(safeVenueError(error));
+		}
+	}
 	async function logoutBeta(): Promise<void> {
 		await fetch('/api/beta/logout', { method: 'POST', headers: { 'content-type': 'application/json' } }).catch(() => undefined);
 		disconnectWallet();
@@ -159,8 +191,24 @@
 	</div>
 
 	<div class="flex items-center gap-1.5 flex-shrink-0">
-		<span class="hidden sm:inline px-1.5 py-0.5 rounded text-3xs font-semibold uppercase bg-terminal-green/15 text-terminal-green" title="Charts, trades, order books, and market catalog">{hyperliquidPublicNetwork.network} DATA</span>
-		<span class="hidden sm:inline px-1.5 py-0.5 rounded text-3xs font-semibold uppercase {hyperliquidTradingNetwork.isTestnet ? 'bg-terminal-yellow/15 text-terminal-yellow' : 'bg-terminal-red/20 text-terminal-red'}" title="Account state and order execution">{hyperliquidTradingNetwork.network} TRADING</span>
+		<div data-testid="venue-selector" class="hidden sm:flex items-center gap-1 rounded border border-terminal-border bg-terminal-bg-secondary px-1.5 py-0.5 text-3xs" title="Active venue and account session">
+			<span class="text-terminal-text-muted">VENUE</span>
+			<select aria-label="Active venue" value={$activeVenue} onchange={(event) => void selectVenue(event.currentTarget.value as 'hyperliquid' | 'blofin')} class="bg-transparent font-semibold uppercase text-terminal-text outline-none">
+				<option value="hyperliquid">Hyperliquid</option>
+				<option value="blofin">BloFin</option>
+			</select>
+			{#if $activeVenue === 'blofin'}
+				<span class="text-terminal-text-muted">{$activeVenueAccount?.accountMode ?? $venueEnvironment}</span>
+			{/if}
+			<span class="{ $venueSwitchStatus === 'live' ? 'text-terminal-green' : $venueSwitchStatus === 'error' ? 'text-terminal-red' : 'text-terminal-yellow' }">{$venueSwitchStatus}</span>
+		</div>
+		{#if $activeVenue === 'hyperliquid'}
+			<span class="hidden sm:inline px-1.5 py-0.5 rounded text-3xs font-semibold uppercase bg-terminal-green/15 text-terminal-green" title="Charts, trades, order books, and market catalog">{hyperliquidPublicNetwork.network} DATA</span>
+			<span class="hidden sm:inline px-1.5 py-0.5 rounded text-3xs font-semibold uppercase {hyperliquidTradingNetwork.isTestnet ? 'bg-terminal-yellow/15 text-terminal-yellow' : 'bg-terminal-red/20 text-terminal-red'}" title="Account state and order execution">{hyperliquidTradingNetwork.network} TRADING</span>
+		{:else}
+			<span class="hidden sm:inline px-1.5 py-0.5 rounded text-3xs font-semibold uppercase bg-terminal-cyan/15 text-terminal-cyan" title="BloFin public market data">BLOFIN DATA</span>
+			<span class="hidden sm:inline px-1.5 py-0.5 rounded text-3xs font-semibold uppercase bg-terminal-yellow/15 text-terminal-yellow" title="BloFin execution is review-only until certification">BLOFIN DEMO / REVIEW</span>
+		{/if}
 		{#if tradingKillSwitchActive()}
 			<span class="hidden sm:inline px-1.5 py-0.5 rounded text-3xs font-semibold uppercase bg-terminal-red/20 text-terminal-red" title="New trading is disabled by release safety policy">TRADING HALTED</span>
 		{/if}
@@ -233,6 +281,12 @@
 			onclick={toggleCLI}
 			title="Toggle CLI (⌘K)"
 		><Terminal class="w-4 h-4" /></button>
+		<button data-testid="settings-accounts-open"
+			class="hidden lg:flex p-1.5 rounded text-terminal-text-secondary hover:text-terminal-text hover:bg-terminal-bg-hover"
+			onclick={() => (settingsOpen = true)}
+			title="Settings — manage encrypted venue accounts"
+			aria-label="Open account settings"
+		><SettingsIcon class="w-4 h-4" /></button>
 		<button data-action-id="ui.src.lib.components.navbar.button.hcda7934898"
 			class="hidden lg:flex p-1.5 rounded text-terminal-text-secondary hover:text-terminal-text hover:bg-terminal-bg-hover"
 			onclick={() => (reportIssueOpen = true)}
@@ -271,9 +325,6 @@
 					<div class="w-1.5 h-1.5 rounded-full {healthColor($walletStatus)}"></div>
 					<span class="text-xs font-mono">{$privacyMode ? '••••••' : formatAddress($walletAddress)}</span>
 				</div>
-			<button data-action-id="auth.logout" class="p-1.5 rounded text-terminal-text-secondary hover:text-terminal-red hover:bg-terminal-red-bg" onclick={logoutBeta} title="Log out" aria-label="Log out">
-				<LogOut class="w-4 h-4" />
-			</button>
 			</div>
 		{:else}
 			<button data-action-id="ui.src.lib.components.navbar.button.h8b70c2a332"
@@ -285,6 +336,10 @@
 				<span class="hidden sm:inline">{$walletStatus === 'connecting' ? 'Connecting…' : 'Connect'}</span>
 			</button>
 		{/if}
+		<button data-testid="logout-to-login" data-action-id="auth.logout" class="flex items-center gap-1.5 rounded border border-terminal-border px-2 py-1.5 text-terminal-text-secondary hover:border-terminal-red hover:bg-terminal-red-bg hover:text-terminal-red" onclick={logoutBeta} title="Log out to CLI signal gate" aria-label="Log out to CLI signal gate">
+			<LogOut class="w-4 h-4" />
+			<span class="hidden sm:inline text-3xs uppercase tracking-wide">Exit</span>
+		</button>
 		</div>
 		</nav>
 	{#if $walletSelectionOpen}
@@ -313,4 +368,7 @@
 	{/if}
 	{#if reportIssueOpen}
 		<ReportIssue onClose={() => (reportIssueOpen = false)} />
+	{/if}
+	{#if settingsOpen}
+		<SettingsAccounts onClose={() => (settingsOpen = false)} onAccountSelected={switchToSavedVenueAccount} />
 	{/if}

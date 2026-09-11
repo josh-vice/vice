@@ -1,22 +1,24 @@
 import type { MarketDescriptor } from '$lib/types';
+import { chartPriceMinMove, chartPricePrecision } from './priceNormalization';
 
-const DEFAULT_PRICE_PRECISION = 2;
-const MAX_PRICE_PRECISION = 8;
+const MAX_AXIS_PRECISION = 8;
 
 /**
  * Derive the lightweight-charts price-axis/crosshair format from the
- * authoritative market descriptor's decimal precision. Falls back to a
- * conservative default only when no descriptor is selected, never guesses a
- * finer precision than the venue reports.
+ * authoritative market descriptor's venue precision rule. Fixed-tick venues
+ * expose their actual increment; significant-figure and legacy markets use
+ * the finest declared decimal display step.
  */
 export function priceFormatForMarket(
-	market: Pick<MarketDescriptor, 'priceDecimals'> | null | undefined
+	market: Pick<MarketDescriptor, 'priceDecimals' | 'instrument'> | null | undefined
 ): { type: 'price'; precision: number; minMove: number } {
-	const precision = clampPrecision(market?.priceDecimals);
-	return { type: 'price', precision, minMove: Math.pow(10, -precision) };
-}
-
-function clampPrecision(value: number | undefined): number {
-	if (value === undefined || !Number.isFinite(value) || value < 0) return DEFAULT_PRICE_PRECISION;
-	return Math.min(MAX_PRICE_PRECISION, Math.round(value));
+	const precision = Math.min(MAX_AXIS_PRECISION, chartPricePrecision(market));
+	const minMove = market?.instrument?.pricePrecision?.kind === 'fixedIncrement'
+		? chartPriceMinMove(market)
+		: 10 ** -precision;
+	return {
+		type: 'price',
+		precision,
+		minMove
+	};
 }

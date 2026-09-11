@@ -1,0 +1,13 @@
+{
+  "arg": {
+    "channel": "account",
+    "instType": "SWAP"
+  },
+  "data": [
+    {
+      "ccy": "USDT",
+      "cashBal": "10000",
+      "availBal": "8500"
+    }
+  ]
+}

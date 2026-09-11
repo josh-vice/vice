@@ -1,0 +1,15 @@
+{
+  "arg": {
+    "channel": "positions",
+    "instType": "SWAP"
+  },
+  "data": [
+    {
+      "positionId": "position-redacted-1",
+      "instId": "BTC-USDT",
+      "positionSide": "net",
+      "positions": "0.1",
+      "markPrice": "35000"
+    }
+  ]
+}

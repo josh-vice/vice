@@ -22,12 +22,12 @@ export function handleChartClick(price: number): void {
 	}
 	if (update.entryPrice !== undefined) orderPrice.set(update.entryPrice);
 
-	if (get(priceInputFocused)) {
+	if (get(designerMode) || get(clickPlacementMode)) {
+		chartPreviewPrice.set(price);
 		return;
 	}
 
-	if (get(designerMode) || get(clickPlacementMode)) {
-		chartPreviewPrice.set(price);
+	if (get(priceInputFocused)) {
 		return;
 	}
 

@@ -15,6 +15,7 @@
 		chartActiveField,
 		orderSide,
 		orderSize,
+		orderType,
 		postOnly,
 		isConnected,
 		accountSyncStatus,
@@ -30,13 +31,18 @@
 	import { chartPreviewPrice } from '$lib/stores';
 	import type { IChartApi, ISeriesApi, IPriceLine, MouseEventParams, Time, AutoscaleInfo } from 'lightweight-charts';
 	import type { PriceLineEntry } from '$lib/chart/overlays';
+import type { Order } from '$lib/types';
 	import { resolveClickPlacementSide, wouldCrossSpread } from '$lib/chart/tradingMath';
 	import { priceFormatForMarket } from '$lib/chart/priceFormat';
+import { chartPriceMinMove, normalizeChartPrice, formatChartPrice } from '$lib/chart/priceNormalization';
+import { chartDraftPrice, designerDraftPresentation } from '$lib/chart/designerDraft';
+import { liveOrderPrice, liveOrderStatusLabel } from '$lib/chart/liveOrder';
 	import { markUiFrameReady } from '$lib/native/performance';
 	import { unavailableFeedMessage } from '$lib/productionTruth';
 	import { formatSize } from '$lib/format';
 	import { marketCapabilities } from '$lib/marketCapabilities';
 	import { chartDatasetKey, chartIdentity, marketMatches } from '$lib/chart/chartModel';
+	import { chartWheelZoomScale, zoomLogicalRange } from '$lib/chart/zoom';
 
 	/** Research surfaces can reuse the live chart without exposing private overlays or chart trading. */
 	export let readOnly = false;
@@ -61,7 +67,10 @@
 	let crossSpreadWarning = '';
 	let draggingOrderId: string | null = null;
 	let draggingPrice = 0;
+	let draggingDesigner = false;
+	let pendingOrderPrices = new Map<string, number>();
 	let overlayCoordinates = new Map<string, number>();
+	let draftCoordinate: number | null = null;
 	let supplementalLines = new Map<string, IPriceLine>();
 	let coordinateFrame: number | null = null;
 	let interactionError = '';
@@ -91,22 +100,202 @@
 	function priceAtEvent(e: MouseEvent): number | null {
 		if (!candlestickSeries || !chartContainer) return null;
 		const rect = chartContainer.getBoundingClientRect();
-		return candlestickSeries.coordinateToPrice(e.clientY - rect.top);
+		const rawPrice = candlestickSeries.coordinateToPrice(e.clientY - rect.top);
+		return normalizeChartPrice(rawPrice ?? null, $selectedMarket);
+	}
+
+	let designerPrice: number | null = null;
+	let designerDraftView: ReturnType<typeof designerDraftPresentation> | null = null;
+	let clickPlacementPreviewSide: 'buy' | 'sell' = 'buy';
+	let clickPlacementSideText = 'AUTO';
+	$: designerPrice = !readOnly && chartActionsEnabled && $designerMode && $chartPreviewPrice !== null
+		? chartDraftPrice($chartActiveField, $chartDraft, $chartPreviewPrice)
+		: null;
+	$: designerDraftView = designerPrice !== null && $selectedMarket
+		? designerDraftPresentation({
+			field: $chartActiveField,
+			orderType: $orderType,
+			side: $orderSide,
+			size: $orderSize,
+			baseAsset: $selectedMarket.baseToken,
+			priceText: formatChartPrice(designerPrice, $selectedMarket)
+		})
+		: null;
+	$: clickPlacementPreviewSide = $selectedMarket && $chartPreviewPrice !== null && $selectedMarket.lastPrice > 0
+		? resolveClickPlacementSide($clickPlacementSide, $chartPreviewPrice, $selectedMarket.lastPrice)
+		: $orderSide;
+	$: clickPlacementSideText = $clickPlacementSide.toUpperCase();
+
+	function toggleDesignerMode() {
+		const next = !$designerMode;
+		designerMode.set(next);
+		draggingDesigner = false;
+		if (next) {
+			clickPlacementMode.set(false);
+			crossSpreadWarning = '';
+			interactionError = '';
+		}
+		chartPreviewPrice.set(null);
+	}
+
+	function toggleClickPlacementMode() {
+		const next = !$clickPlacementMode;
+		clickPlacementMode.set(next);
+		if (next) {
+			designerMode.set(false);
+			draggingDesigner = false;
+			crossSpreadWarning = '';
+			interactionError = '';
+		}
+		chartPreviewPrice.set(null);
+	}
+
+	function updateDesignerPrice(price: number) {
+		const normalized = normalizeChartPrice(price, $selectedMarket);
+		if (normalized === null) return;
+		handleChartClick(normalized);
+	}
+
+	function startDesignerDrag(event: PointerEvent) {
+		if (readOnly || !chartActionsEnabled || !$designerMode || designerPrice === null) return;
+		event.preventDefault();
+		event.stopPropagation();
+		draggingDesigner = true;
+		(event.currentTarget as HTMLElement).setPointerCapture?.(event.pointerId);
+	}
+
+	function onDesignerPointerMove(event: PointerEvent) {
+		if (!draggingDesigner) return;
+		const price = priceAtEvent(event);
+		if (price !== null) updateDesignerPrice(price);
+	}
+
+	function onDesignerPointerUp() {
+		if (!draggingDesigner) return;
+		draggingDesigner = false;
+		scheduleOverlayCoordinates();
+	}
+
+	function nudgeDesignerPrice(direction: -1 | 1) {
+		if (designerPrice === null) return;
+		const step = chartPriceMinMove($selectedMarket, designerPrice);
+		const next = normalizeChartPrice(designerPrice + direction * step, $selectedMarket);
+		if (next !== null) updateDesignerPrice(next);
+	}
+
+	function onDesignerKeydown(event: KeyboardEvent) {
+		if (event.key === 'ArrowUp' || event.key === 'ArrowRight') {
+			event.preventDefault();
+			nudgeDesignerPrice(1);
+		} else if (event.key === 'ArrowDown' || event.key === 'ArrowLeft') {
+			event.preventDefault();
+			nudgeDesignerPrice(-1);
+		} else if (event.key === 'Escape') {
+			event.preventDefault();
+			draggingDesigner = false;
+			chartPreviewPrice.set(null);
+		}
 	}
 
 	function startOrderDrag(event: MouseEvent, orderId: string, price: number) {
 		if (readOnly) return;
-		if (!chartActionsEnabled || !privateStateLive) return;
+		if (!chartActionsEnabled || !privateStateLive || price <= 0) return;
 		event.preventDefault();
 		event.stopPropagation();
 		draggingOrderId = orderId;
 		draggingPrice = price;
 	}
 
+	function liveOrderSpreadWarning(order: Order, price: number): string | null {
+		if (!wouldCrossSpread(order.side, price, $orderBook.bids[0]?.price, $orderBook.asks[0]?.price)) return null;
+		return order.postOnly
+			? 'Post-only order cannot be moved across the spread'
+			: `${order.side === 'buy' ? 'Buy' : 'Sell'} moved across the spread — modification may execute immediately`;
+	}
+
+	async function commitOrderPrice(order: Order, newPrice: number) {
+		if (!candlestickSeries || !$selectedMarket) return;
+		if (!privateStateLive) {
+			interactionError = 'Account state is stale; chart order changes are paused until reconciliation completes';
+			return;
+		}
+		const previousPrice = liveOrderPrice(order);
+		if (previousPrice === null) {
+			interactionError = 'Order has no authoritative price; modification was not sent';
+			return;
+		}
+		const tick = chartPriceMinMove($selectedMarket, previousPrice);
+		if (Math.abs(newPrice - previousPrice) < tick / 2) {
+			scheduleOverlayCoordinates();
+			return;
+		}
+
+		const spreadWarning = liveOrderSpreadWarning(order, newPrice);
+		crossSpreadWarning = spreadWarning ?? '';
+		if (order.postOnly && spreadWarning) {
+			interactionError = spreadWarning;
+			openOrders.update((orders) =>
+				orders.map((candidate) => candidate.id === order.id ? { ...candidate, pending: false, error: spreadWarning } : candidate)
+			);
+			scheduleOverlayCoordinates();
+			return;
+		}
+
+		pendingOrderPrices.set(order.id, newPrice);
+		openOrders.update((orders) =>
+			orders.map((candidate) => candidate.id === order.id ? { ...candidate, pending: true, error: undefined } : candidate)
+		);
+		scheduleOverlayCoordinates();
+
+		const marketIdentity = order.apiCoin ?? order.marketKey;
+		if (!marketIdentity) {
+			const error = 'Order has no authoritative Hyperliquid identity; modification was not sent';
+			pendingOrderPrices.delete(order.id);
+			interactionError = error;
+			openOrders.update((orders) =>
+				orders.map((candidate) => candidate.id === order.id ? { ...candidate, pending: false, error } : candidate)
+			);
+			scheduleOverlayCoordinates();
+			return;
+		}
+
+		const result = await modifyOrderPrice(order.id, marketIdentity, newPrice);
+		pendingOrderPrices.delete(order.id);
+		if (!result.ok) {
+			interactionError = result.error ?? 'Modify rejected';
+		} else {
+			const refreshed = await fetchOpenOrders();
+			if (!refreshed) interactionError = 'Modify accepted but account reconciliation is unresolved';
+		}
+		openOrders.update((orders) =>
+			orders.map((candidate) =>
+				candidate.id === order.id
+					? { ...candidate, pending: false, error: result.ok ? undefined : result.error }
+					: candidate
+			)
+		);
+		// The authoritative order snapshot owns the final coordinate. A rejected
+		// or unresolved modify therefore returns to the last known resting price.
+		scheduleOverlayCoordinates();
+	}
+
+	function onLiveOrderKeydown(event: KeyboardEvent, order: Order) {
+		if (event.key !== 'ArrowUp' && event.key !== 'ArrowRight' && event.key !== 'ArrowDown' && event.key !== 'ArrowLeft') return;
+		event.preventDefault();
+		event.stopPropagation();
+		if (order.pending) return;
+		const currentPrice = liveOrderPrice(order);
+		if (currentPrice === null) return;
+		const direction = event.key === 'ArrowUp' || event.key === 'ArrowRight' ? 1 : -1;
+		const step = chartPriceMinMove($selectedMarket, currentPrice);
+		const nextPrice = normalizeChartPrice(currentPrice + direction * step, $selectedMarket);
+		if (nextPrice !== null) void commitOrderPrice(order, nextPrice);
+	}
+
 	function onChartMouseMove(e: MouseEvent) {
 		if (readOnly) return;
 		if (!chartActionsEnabled) return;
-		if ($clickPlacementMode) {
+		if ($clickPlacementMode && !draggingOrderId) {
 			const hoverPrice = priceAtEvent(e);
 			if (hoverPrice != null) chartPreviewPrice.set(hoverPrice);
 		}
@@ -125,72 +314,50 @@
 			draggingOrderId = null;
 			return;
 		}
-		if (!privateStateLive) {
-			draggingOrderId = null;
-			interactionError = 'Account state is stale; chart order changes are paused until reconciliation completes';
-			scheduleOverlayCoordinates();
-			return;
-		}
 		const orderId = draggingOrderId;
 		const newPrice = priceAtEvent(e) ?? draggingPrice;
 		const order = $openOrders.find((candidate) => candidate.id === orderId);
 		draggingOrderId = null;
-		if (newPrice != null) {
-				const entry = orderLines.get(orderId);
-				const tick = 10 ** -($selectedMarket.priceDecimals ?? 2);
-				if (entry && Math.abs(newPrice - entry.price) >= tick / 2) {
-				openOrders.update((orders) =>
-					orders.map((candidate) =>
-						candidate.id === orderId ? { ...candidate, pending: true } : candidate
-					)
-				);
-			const marketIdentity = order?.apiCoin ?? order?.marketKey;
-			if (!marketIdentity) {
-				interactionError = 'Order has no authoritative Hyperliquid identity; modification was not sent';
-				openOrders.update((orders) =>
-					orders.map((candidate) => candidate.id === orderId ? { ...candidate, pending: false } : candidate)
-				);
-				return;
-			}
-				const result = await modifyOrderPrice(orderId, marketIdentity, newPrice);
-					if (!result.ok) {
-						interactionError = result.error ?? 'Modify rejected';
-					} else {
-						const refreshed = await fetchOpenOrders();
-						if (!refreshed) interactionError = 'Modify accepted but account reconciliation is unresolved';
-					}
-					openOrders.update((orders) =>
-					orders.map((candidate) =>
-						candidate.id === orderId ? { ...candidate, pending: false, error: result.error } : candidate
-						)
-					);
-					// The authoritative order snapshot owns the final coordinate. This
-					// explicitly snaps a rejected preview back (with the CSS transition)
-					// and also refreshes a successful drag before the next venue event.
-					scheduleOverlayCoordinates();
-				}
+		if (!order) {
+			interactionError = 'Order disappeared before chart modification completed';
+			scheduleOverlayCoordinates();
+			return;
 		}
+		if (newPrice != null) await commitOrderPrice(order, newPrice);
 		requestAnimationFrame(markUiFrameReady);
 	}
 
 	async function cancelChartOrder(event: MouseEvent, orderId: string, market: string) {
 		if (readOnly) return;
 		if (!chartActionsEnabled) return;
+		event.preventDefault();
 		event.stopPropagation();
+		const current = $openOrders.find((order) => order.id === orderId);
+		if (!current || current.pending) return;
 		if (!privateStateLive) {
 			interactionError = 'Account state is stale; cancellation is paused until reconciliation completes';
 			return;
 		}
 		openOrders.update((orders) =>
-			orders.map((order) => (order.id === orderId ? { ...order, pending: true } : order))
+			orders.map((order) => (order.id === orderId ? { ...order, pending: true, error: undefined } : order))
 		);
 		const result = await cancelOrder(orderId, market);
 		if (result.ok) {
-			openOrders.update((orders) => orders.filter((order) => order.id !== orderId));
 			const refreshed = await fetchOpenOrders();
-			if (!refreshed) interactionError = 'Cancel accepted but account reconciliation is unresolved';
-		}
-		else {
+			if (!refreshed) {
+				const error = 'Cancel accepted but account reconciliation is unresolved';
+				interactionError = error;
+				openOrders.update((orders) =>
+					orders.map((order) => order.id === orderId ? { ...order, pending: false, error } : order)
+				);
+			} else {
+				// A successful refresh owns removal. If the venue still reports the
+				// order, clear pending and keep the authoritative row visible.
+				openOrders.update((orders) =>
+					orders.map((order) => order.id === orderId ? { ...order, pending: false, error: undefined } : order)
+				);
+			}
+		} else {
 			interactionError = result.error ?? 'Cancel rejected';
 			openOrders.update((orders) =>
 				orders.map((order) =>
@@ -198,6 +365,7 @@
 				)
 			);
 		}
+		scheduleOverlayCoordinates();
 	}
 
 	async function onChartContextMenu(event: MouseEvent) {
@@ -250,13 +418,20 @@
 
 	function updateOverlayCoordinates() {
 		if (!candlestickSeries) return;
+		const next = new Map<string, number>();
+		draftCoordinate = null;
+
+		if (!readOnly && chartActionsEnabled && $designerMode && designerPrice !== null) {
+			const coordinate = candlestickSeries.priceToCoordinate(designerPrice);
+			if (coordinate != null) draftCoordinate = coordinate;
+		}
+
 		if (!privateStateLive) {
-			overlayCoordinates = new Map();
+			overlayCoordinates = next;
 			return;
 		}
-		const next = new Map<string, number>();
 		for (const order of $openOrders.filter((candidate) => marketMatches($selectedMarket, candidate.apiCoin, candidate.marketKey))) {
-			const price = draggingOrderId === order.id ? draggingPrice : order.triggerPrice || order.price;
+			const price = draggingOrderId === order.id ? draggingPrice : pendingOrderPrices.get(order.id) ?? liveOrderPrice(order);
 			if (!price) continue;
 			const coordinate = candlestickSeries.priceToCoordinate(price);
 			if (coordinate != null) next.set(`order:${order.id}`, coordinate);
@@ -317,7 +492,7 @@
 		}
 		if (!readOnly && $designerMode) {
 			for (const [field, price] of Object.entries($chartDraft)) {
-				if (!price) continue;
+				if (!price || (field === $chartActiveField && designerPrice !== null)) continue;
 				next.set(
 					`draft:${field}`,
 					candlestickSeries.createPriceLine({
@@ -429,6 +604,26 @@
 		chart.timeScale().setVisibleLogicalRange({ from, to });
 	}
 
+	/**
+	 * Trackpad pinch gestures arrive as small ctrl+wheel deltas on desktop
+	 * browsers. lightweight-charts intentionally caps each delta at a very
+	 * small zoom step, so apply a faster range update while preserving the bar
+	 * beneath the pointer as the zoom anchor.
+	 */
+	function handleChartWheel(event: WheelEvent) {
+		if (!chart || !chartContainer || event.deltaY === 0) return;
+		const timeScale = chart.timeScale();
+		const visibleRange = timeScale.getVisibleLogicalRange();
+		if (!visibleRange) return;
+		const rect = chartContainer.getBoundingClientRect();
+		const anchor = timeScale.coordinateToLogical(event.clientX - rect.left);
+		if (anchor === null) return;
+		const zoomScale = chartWheelZoomScale(event);
+		if (zoomScale === 0) return;
+		timeScale.setVisibleLogicalRange(zoomLogicalRange(visibleRange, anchor, zoomScale));
+		if (event.cancelable) event.preventDefault();
+	}
+
 	function selectTf(tf: string) {
 		setChartTimeframe(tf);
 	}
@@ -495,7 +690,9 @@
 				minBarSpacing: 0.5
 			},
 			rightPriceScale: { borderColor: '#222238', scaleMargins: { top: 0.1, bottom: 0.2 } },
-			handleScale: { axisPressedMouseMove: true, mouseWheel: true, pinch: true },
+			// Use a custom wheel handler so precision trackpad pinches are not
+			// limited to lightweight-charts' barely-visible default step.
+			handleScale: { axisPressedMouseMove: true, mouseWheel: false, pinch: true },
 			handleScroll: { mouseWheel: true, pressedMouseMove: true, horzTouchDrag: true, vertTouchDrag: true }
 		});
 
@@ -526,6 +723,7 @@
 			chart.applyOptions({ width: chartContainer.clientWidth, height: chartContainer.clientHeight });
 		};
 		handleResize();
+		chartContainer.addEventListener('wheel', handleChartWheel, { passive: false });
 
 		appliedDatasetKey = chartDatasetKey($selectedMarket, $chartTimeframe);
 		if ($chartCandles.length > 0 || $liveCandle) applyCandles($chartCandles, true);
@@ -533,7 +731,7 @@
 		chart.subscribeClick((param) => {
 			if (readOnly || !chart || !candlestickSeries) return;
 			if (!chartActionsEnabled) return;
-			const price = priceFromClick(chart, candlestickSeries, param);
+			const price = priceFromClick(chart, candlestickSeries, param, $selectedMarket);
 			if (price == null) return;
 			handleChartClick(price);
 			const warn = warnCrossSpread($orderSide, price);
@@ -628,19 +826,20 @@
 		orderLines = syncOrderPriceLines(
 			candlestickSeries,
 			(privateStateLive ? $openOrders : []).filter((order) => marketMatches($selectedMarket, order.apiCoin, order.marketKey)),
-			orderLines
+			orderLines,
+			pendingOrderPrices
 		);
 		scheduleOverlayCoordinates();
 	}
 
-	$: if (candlestickSeries && (readOnly || $positions || $chartDraft || $designerMode || $accountSyncStatus)) {
+	$: if (candlestickSeries && (readOnly || $positions || $chartDraft || $designerMode || $chartPreviewPrice || designerPrice !== null || $accountSyncStatus)) {
 		syncSupplementalLines();
 		scheduleOverlayCoordinates();
 	}
 
 	$: if (candlestickSeries) {
 		const price = chartActionsEnabled && $clickPlacementMode ? $chartPreviewPrice : null;
-		previewLine = setPreviewLine(candlestickSeries, previewLine, price, $orderSide);
+		previewLine = setPreviewLine(candlestickSeries, previewLine, price, clickPlacementPreviewSide, $selectedMarket);
 
 	}
 	onDestroy(() => {
@@ -657,6 +856,7 @@
 		if (coordinateFrame !== null) cancelAnimationFrame(coordinateFrame);
 		coordinateFrame = null;
 		if (handleResize) window.removeEventListener('resize', handleResize);
+		if (chartContainer) chartContainer.removeEventListener('wheel', handleChartWheel);
 		resizeObserver?.disconnect();
 		resizeObserver = null;
 		if (chart) {
@@ -671,15 +871,20 @@
 <svelte:window
 	onmousemove={onChartMouseMove}
 	onmouseup={onChartMouseUp}
+	onpointermove={onDesignerPointerMove}
+	onpointerup={onDesignerPointerUp}
+	onpointercancel={onDesignerPointerUp}
 	onkeydown={(event) => {
-		if (chartActionsEnabled && event.key === 'Escape' && $clickPlacementMode) clickPlacementMode.set(false);
+		if (!chartActionsEnabled || event.key !== 'Escape') return;
+		if ($clickPlacementMode) clickPlacementMode.set(false);
+		if ($designerMode) chartPreviewPrice.set(null);
 	}}
 />
 
 <div class="h-full flex flex-col bg-terminal-bg-secondary rounded-lg overflow-hidden">
-	<div class="hidden sm:flex items-center justify-between px-4 py-2 border-b border-terminal-border">
-		<div class="flex items-center gap-4">
-			<div class="flex items-center gap-2">
+	<div data-testid="chart-header" class="hidden sm:flex flex-col gap-2 border-b border-terminal-border px-4 py-2">
+		<div data-testid="chart-header-market-context" class="min-w-0 flex flex-wrap items-center gap-x-4 gap-y-1">
+			<div class="flex shrink-0 items-center gap-2">
 				<span class="text-lg font-semibold whitespace-nowrap">{$selectedMarket?.symbol || 'Select market'}</span>
 				{#if $selectedMarket}
 					<span data-testid="chart-market-kind" class="text-xs px-2 py-0.5 rounded bg-terminal-cyan/15 text-terminal-cyan">{$selectedMarket.kind === 'spot' ? 'Spot' : 'Perpetual'}</span>
@@ -688,20 +893,20 @@
 			{#if $selectedMarket}
 				{@const hasChange = $selectedMarket.changePercent24h !== undefined}
 				{@const isPositive = ($selectedMarket.changePercent24h ?? 0) >= 0}
-				<div class="flex items-center gap-3 text-sm">
-					<span class="tabular-nums text-lg {hasChange && isPositive ? 'text-terminal-green' : hasChange ? 'text-terminal-red' : 'text-terminal-text-muted'}">
+				<div class="min-w-0 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+					<span class="whitespace-nowrap tabular-nums text-lg {hasChange && isPositive ? 'text-terminal-green' : hasChange ? 'text-terminal-red' : 'text-terminal-text-muted'}">
 						{Number.isFinite($selectedMarket.lastPrice) ? `$${$selectedMarket.lastPrice.toLocaleString('en-US', { minimumFractionDigits: $selectedMarket.priceDecimals })}` : '—'}
 					</span>
-					<span class="tabular-nums text-sm {hasChange && isPositive ? 'text-terminal-green' : hasChange ? 'text-terminal-red' : 'text-terminal-text-muted'}">
+					<span class="whitespace-nowrap tabular-nums text-sm {hasChange && isPositive ? 'text-terminal-green' : hasChange ? 'text-terminal-red' : 'text-terminal-text-muted'}">
 						{hasChange ? `${isPositive ? '+' : ''}${$selectedMarket.changePercent24h!.toFixed(2)}%` : '—'}
 					</span>
 					{#if marketProfile.meaningfulStats.markPrice && $selectedMarket.markPrice !== undefined}
-						<span class="text-terminal-text-muted text-xs">
+						<span class="whitespace-nowrap text-terminal-text-muted text-xs">
 							Mark: ${$selectedMarket.markPrice.toLocaleString('en-US', { minimumFractionDigits: $selectedMarket.priceDecimals })}
 						</span>
 					{/if}
 					{#if marketProfile.meaningfulStats.fundingRate && $selectedMarket.fundingRate !== undefined}
-						<span class="text-terminal-text-muted text-xs">
+						<span class="whitespace-nowrap text-terminal-text-muted text-xs">
 							Funding: <span class="{$selectedMarket.fundingRate >= 0 ? 'text-terminal-green' : 'text-terminal-red'}">{($selectedMarket.fundingRate * 100).toFixed(4)}%</span>
 						</span>
 					{/if}
@@ -709,34 +914,47 @@
 			{/if}
 		</div>
 
-		<div class="flex items-center gap-2">
+		<div data-testid="chart-header-controls" class="flex min-w-0 flex-wrap items-center justify-between gap-2">
 			{#if chartActionsEnabled}
-			<button data-action-id="ui.src.lib.components.chart.button.h192fc8b032"
-				class="px-2 py-1 text-2xs rounded transition-colors {$designerMode ? 'bg-terminal-cyan/20 text-terminal-cyan' : 'text-terminal-text-muted hover:text-terminal-text'}"
-				onclick={() => designerMode.update((v) => !v)}
-				title="Design draft — preview order levels on the chart before submitting from the ticket"
-			>
-				Design
-			</button>
-			<button data-action-id="ui.src.lib.components.chart.button.h19d1acde11"
-				class="hidden sm:inline-flex px-2 py-1 text-2xs rounded transition-colors {$clickPlacementMode ? 'bg-terminal-green/20 text-terminal-green' : 'text-terminal-text-muted hover:text-terminal-text'}"
-				onclick={() => clickPlacementMode.update((v) => !v)}
-				title="Click placement — right-click the chart to submit an armed limit order"
-			>
-				{$clickPlacementMode ? 'Armed' : 'Click'}
-			</button>
-			{#if $clickPlacementMode}
-				<select data-action-id="ui.src.lib.components.chart.select.h8566a45bcc" bind:value={$clickPlacementSide} class="bg-terminal-bg border border-terminal-border rounded px-1 py-1 text-2xs">
-					<option value="auto">Auto</option>
-					<option value="buy">Buy</option>
-					<option value="sell">Sell</option>
-				</select>
+				<div data-testid="chart-header-actions" class="flex min-w-0 flex-wrap items-center gap-2">
+					<button data-action-id="ui.src.lib.components.chart.button.h192fc8b032"
+						class="inline-flex items-center border border-terminal-cyan/30 px-2 py-1 text-xs font-semibold rounded transition-colors {$designerMode ? 'bg-terminal-cyan/20 text-terminal-cyan' : 'text-terminal-text-muted hover:text-terminal-text'}"
+						onclick={toggleDesignerMode}
+						aria-pressed={$designerMode}
+						data-testid="chart-designer-toggle"
+						title="Design draft — preview order levels on the chart before submitting from the ticket"
+					>
+						Design
+					</button>
+					<button data-action-id="ui.src.lib.components.chart.button.h19d1acde11"
+						class="inline-flex items-center border border-terminal-green/30 px-2 py-1 text-xs font-semibold rounded transition-colors {$clickPlacementMode ? 'bg-terminal-green/20 text-terminal-green' : 'text-terminal-text-muted hover:text-terminal-text'}"
+						onclick={toggleClickPlacementMode}
+						aria-pressed={$clickPlacementMode}
+						data-testid="chart-click-placement-toggle"
+						title="Click placement — right-click the chart to submit an armed limit order"
+					>
+						{$clickPlacementMode ? 'Armed' : 'Click'}
+					</button>
+					{#if $clickPlacementMode}
+						<select data-action-id="ui.src.lib.components.chart.select.h8566a45bcc" data-testid="chart-click-placement-side" aria-label="Click placement side" bind:value={$clickPlacementSide} class="bg-terminal-bg border border-terminal-border rounded px-1 py-1 text-2xs">
+							<option value="auto">Auto</option>
+							<option value="buy">Buy</option>
+							<option value="sell">Sell</option>
+						</select>
+						<div data-testid="chart-click-placement-status" aria-live="polite" class="hidden lg:flex flex-wrap items-center gap-2 rounded border border-terminal-green/30 bg-terminal-green/10 px-2 py-1 text-3xs text-terminal-green uppercase tracking-wide">
+							<strong>ARMED</strong>
+							<span>RIGHT CLICK TO PLACE</span>
+							<span>SIZE {formatSize($orderSize)}</span>
+							{#if $orderSize <= 0}<span class="text-terminal-yellow">SIZE UNSET</span>{/if}
+							<span>SIDE {clickPlacementSideText}</span>
+						</div>
+					{/if}
+				</div>
 			{/if}
-			{/if}
-			<div class="flex items-center gap-1 bg-terminal-bg rounded p-0.5">
+			<div data-testid="chart-header-timeframes" class="flex min-w-0 max-w-full shrink items-center gap-1 overflow-x-auto bg-terminal-bg rounded p-0.5">
 				{#each timeframes as tf}
 					<button data-action-id="ui.src.lib.components.chart.button.hf59519be41"
-						class="px-2 py-1 text-xs font-medium rounded transition-all duration-150
+						class="shrink-0 px-2 py-1 text-xs font-medium rounded transition-all duration-150
 							   {$chartTimeframe === tf ? 'bg-terminal-bg-tertiary text-terminal-green' : 'text-terminal-text-secondary hover:text-terminal-text'}"
 						onclick={() => selectTf(tf)}
 					>
@@ -746,6 +964,20 @@
 			</div>
 		</div>
 	</div>
+
+	{#if chartActionsEnabled}
+		<div data-testid="chart-mobile-actions" class="sm:hidden flex flex-col gap-1 border-b border-terminal-border bg-terminal-bg/80 px-2 py-1.5">
+			<div class="flex items-center justify-between gap-1.5">
+				<button type="button" data-testid="chart-designer-toggle-mobile" class="rounded border border-terminal-cyan/30 px-2 py-1 text-2xs {$designerMode ? 'bg-terminal-cyan/20 text-terminal-cyan' : 'text-terminal-text-muted'}" onclick={toggleDesignerMode} aria-pressed={$designerMode}>
+					{$designerMode ? 'Design · armed' : 'Design'}
+				</button>
+				<button type="button" data-testid="chart-click-placement-touch" class="rounded border border-terminal-border px-2 py-1 text-2xs text-terminal-text-muted opacity-60" disabled title="Click Placement requires a desktop right-click. Use Design on touch devices.">
+					Click placement · desktop
+				</button>
+			</div>
+			<span data-testid="chart-click-placement-touch-note" class="text-center text-2xs font-medium leading-tight uppercase tracking-wide text-terminal-text-secondary">Desktop right-click required · use Design on touch</span>
+		</div>
+	{/if}
 
 	<div data-action-id="chart.surface"
 		data-testid="trading-chart"
@@ -780,20 +1012,30 @@
 		{#each $openOrders.filter((order) => marketMatches($selectedMarket, order.apiCoin, order.marketKey)) as order (order.id)}
 			{@const y = overlayCoordinates.get(`order:${order.id}`)}
 			{#if y !== undefined}
-				<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 				<div data-action-id="chart.order-drag"
 					role="group"
 					aria-label="Open order overlay"
+					data-order-state={order.pending ? 'pending' : order.error ? 'rejected' : order.status}
 					class="absolute right-14 z-20 flex items-center rounded overflow-hidden shadow-lg tabular-nums text-3xs select-none transition-[top] duration-150 {order.side === 'buy' ? 'bg-terminal-green text-terminal-bg' : 'bg-terminal-red text-white'} {order.pending ? 'opacity-60' : ''}"
-					onmousedown={(event) => startOrderDrag(event, order.id, order.triggerPrice || order.price || 0)}
+					style={`top:${Math.max(0, y - 11)}px`}
 				>
-					<span class="cursor-ns-resize px-2 py-1">
-						{order.pending ? 'PENDING' : order.status.toUpperCase()} · {order.triggerKind === 'takeProfit' ? 'TP' : order.triggerPrice ? 'STOP' : order.side.toUpperCase()} {order.remaining} @ {(order.triggerPrice || order.price)?.toFixed($selectedMarket?.priceDecimals ?? 2)}
-					</span>
+					<button
+						type="button"
+						data-testid="chart-live-order-handle"
+						class="cursor-ns-resize px-2 py-1 focus:outline-none focus:ring-1 focus:ring-terminal-cyan"
+						disabled={order.pending}
+						aria-label={`Move ${order.side} order at ${formatChartPrice(liveOrderPrice(order), $selectedMarket)}`}
+						title="Drag to modify · Arrow keys move one venue step"
+						onmousedown={(event) => startOrderDrag(event, order.id, liveOrderPrice(order) ?? 0)}
+						onkeydown={(event) => onLiveOrderKeydown(event, order)}
+					>
+						{liveOrderStatusLabel(order)} · {order.triggerKind === 'takeProfit' ? 'TP' : order.triggerPrice !== undefined ? 'STOP' : order.side.toUpperCase()} {order.remaining} @ {formatChartPrice(liveOrderPrice(order), $selectedMarket)}
+					</button>
 					<button data-action-id="ui.src.lib.components.chart.button.hfe0d70279d"
-						class="px-1.5 py-1 bg-black/20 hover:bg-black/35"
-						aria-label="Cancel order"
-						onmousedown={(event) => event.stopPropagation()}
+						type="button"
+						class="px-1.5 py-1 bg-black/20 hover:bg-black/35 focus:outline-none focus:ring-1 focus:ring-terminal-cyan"
+						disabled={order.pending}
+						aria-label={`Cancel ${order.side} order`}
 						onclick={(event) => cancelChartOrder(event, order.id, order.apiCoin ?? order.marketKey ?? '')}
 					>×</button>
 				</div>
@@ -822,6 +1064,32 @@
 		{:else if !readOnly && $isConnected}
 			<div class="absolute top-2 left-2 z-20 rounded border border-terminal-yellow/40 bg-terminal-bg/95 px-2 py-1 text-3xs text-terminal-yellow">
 				Private chart overlays paused while account state is {$accountSyncStatus}.
+			</div>
+		{/if}
+		{#if designerDraftView && draftCoordinate !== null}
+			<div
+				data-testid="chart-designer-draft"
+				role="status"
+				aria-label={designerDraftView.ariaLabel}
+				data-draft-price={designerPrice}
+				class="absolute left-8 right-14 z-20 pointer-events-none transition-[top] duration-150"
+				style={`top:${Math.max(0, draftCoordinate - 14)}px`}
+			>
+				<div class="absolute inset-x-0 top-1/2 border-t border-dashed border-terminal-cyan/80"></div>
+				<button
+					type="button"
+					data-testid="chart-designer-draft-handle"
+					class="relative inline-flex max-w-full items-center gap-2 rounded border border-terminal-cyan/70 bg-terminal-bg/95 px-2 py-1 text-left font-mono text-3xs text-terminal-cyan shadow-lg pointer-events-auto cursor-ns-resize focus:outline-none focus:ring-1 focus:ring-terminal-cyan"
+					aria-label={designerDraftView.ariaLabel}
+					title="Drag to adjust · Arrow keys move one venue step · Escape clears preview"
+					onpointerdown={startDesignerDrag}
+					onkeydown={onDesignerKeydown}
+				>
+					<span class="inline-flex items-center gap-0.5 rounded border border-terminal-cyan/40 px-1 text-2xs leading-none text-terminal-cyan/80" aria-hidden="true">↕ DRAG</span>
+					<span class="font-semibold tracking-wide">{designerDraftView.action}</span>
+					<span class="text-terminal-text-muted">{designerDraftView.field}</span>
+					<span class="text-terminal-text">{designerDraftView.details}</span>
+				</button>
 			</div>
 		{/if}
 		<div class="absolute bottom-4 left-4 text-2xs text-terminal-text-muted bg-terminal-bg/80 px-2 py-1 rounded z-10 pointer-events-none">

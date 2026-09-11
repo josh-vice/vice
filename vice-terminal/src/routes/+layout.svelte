@@ -13,7 +13,12 @@
 	onMount(() => {
 		loadPrivacyMode();
 		privacyHydrated = true;
-		if (page.url.pathname === '/login') return;
+	});
+
+	// The root layout survives SPA navigation from the signal gate to /trade.
+	// Keep live feeds coupled to the route, not to the layout's first mount.
+	$effect(() => {
+		if (!isTerminalWorkspace) return;
 		startPriceUpdates();
 		return () => stopPriceUpdates();
 	});
